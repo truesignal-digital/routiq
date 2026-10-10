@@ -45,6 +45,16 @@
     },
     "columns": {
       "asset": "Véhicule"
+    },
+    "filters": {
+      "availabilityOptions": {
+        "IDLE": "Sans voyage depuis 5 jours ou plus"
+      }
+    },
+    "overview": {
+      "tiles": {
+        "idle": "Sans voyage depuis {days} jours ou plus"
+      }
     }
   },
   "documents": {
@@ -137,7 +147,12 @@
       "closed": "Clôturé",
       "closedWithGaps": "{count, plural, one {Clôturé, # manque} other {Clôturé, # manques}}"
     },
-    "loadFailed": "Impossible de charger les voyages. Veuillez réessayer."
+    "loadFailed": "Impossible de charger les voyages. Veuillez réessayer.",
+    "overview": {
+      "weeks": {
+        "title": "Voyages par semaine"
+      }
+    }
   },
   "maintenance": {
     "workOrders": {

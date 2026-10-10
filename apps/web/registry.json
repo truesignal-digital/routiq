@@ -354,6 +354,16 @@
           "path": "src/components/overview/to-do-list.tsx",
           "type": "registry:file",
           "target": "components/overview/to-do-list.tsx"
+        },
+        {
+          "path": "src/components/overview/profit-bars.tsx",
+          "type": "registry:file",
+          "target": "components/overview/profit-bars.tsx"
+        },
+        {
+          "path": "src/components/overview/week-columns.tsx",
+          "type": "registry:file",
+          "target": "components/overview/week-columns.tsx"
         }
       ],
       "registryDependencies": [

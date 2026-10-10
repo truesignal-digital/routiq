@@ -52,9 +52,11 @@ export function isMoneyOverview(value: unknown): value is FinanceOverviewRespons
 }
 
 /**
- * The Money Overview's figures for one range (`GET /v1/finance/overview`,
- * #660). Branch-scoped like the entries list, and under the `finance` key so
- * every decision refreshes it.
+ * The money figures every Overview reads for one range (`GET
+ * /v1/finance/overview`, #660): the Money page, and the Trucks page's profit
+ * by truck (#665). Core, so a page of another module reads it without
+ * importing Money. Branch-scoped like the entries list, and under the
+ * `finance` key so every decision refreshes it.
  */
 export function useMoneyOverview(range: OverviewRange, enabled = true) {
   const session = useActiveSession();

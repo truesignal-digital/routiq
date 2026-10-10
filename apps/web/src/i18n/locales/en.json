@@ -232,7 +232,13 @@
       "IN_SERVICE": "In service",
       "ATTENTION": "Needs attention",
       "status": "Status",
-      "category": "Class"
+      "category": "Class",
+      "availability": "Availability",
+      "availabilityOptions": {
+        "CAN_DRIVE": "Can drive",
+        "GROUNDED": "Grounded",
+        "IDLE": "Idle 5+ days"
+      }
     },
     "metrics": {
       "total": "Total",
@@ -340,6 +346,76 @@
       "category": "Class",
       "branch": "Branch",
       "registration": "Plate"
+    },
+    "page": {
+      "tabs": {
+        "label": "Page sections",
+        "overview": "Overview",
+        "documents": "Documents",
+        "list": "List"
+      }
+    },
+    "overview": {
+      "loadFailed": "Could not load the fleet's figures.",
+      "tiles": {
+        "canDrive": "Can drive",
+        "canDriveOf": "of {total, number}",
+        "canDriveInfo": "In service and not grounded today.",
+        "canDriveInfoNoGrounding": "In service today. Grounding is not counted: Maintenance is off.",
+        "grounded": "Grounded",
+        "groundedNone": "None off the road",
+        "groundedFirst": "{code} · {days, plural, =0 {since today} one {# day} other {# days}}",
+        "documentsDue": "Documents due ≤ {days} days",
+        "documentsDueNone": "Nothing due",
+        "documentsDueFirst": "First: {code} · {date}",
+        "idle": "Idle {days}+ days",
+        "idleNone": "Every vehicle worked",
+        "idleNever": "{code} · never",
+        "idleFirst": "{code} · {days, plural, one {# day} other {# days}}"
+      },
+      "due": {
+        "title": "Documents and services due",
+        "window": "Expired, and due in the next {days} days",
+        "loadFailed": "Could not load what is due.",
+        "empty": "Nothing expired and nothing due in the next {days} days.",
+        "rowTitle": "{code} · {type}",
+        "expired": "Expired {date} · {days, plural, =0 {today} one {# day ago} other {# days ago}}",
+        "dueIn": "{date} · {days, plural, =0 {today} one {in # day} other {in # days}}",
+        "serviceNotCounted": "Services by km are not counted: no service interval is recorded per vehicle yet.",
+        "truncated": "Only the first rows are shown.",
+        "openAll": "Open Documents"
+      },
+      "profit": {
+        "title": "Profit by vehicle",
+        "question": "Which vehicles earn, which lose?",
+        "questionPeriod": "Which vehicles earn, which lose? {period}, {currency}.",
+        "empty": "No vehicle has money recorded this month.",
+        "trips": "{count, plural, one {# closed} other {# closed}}",
+        "tripsKm": "{count, plural, one {# closed} other {# closed}} · {km, number} km",
+        "more": "{count, plural, one {# more vehicle in Money} other {# more vehicles in Money}}",
+        "basis": "Revenue minus expenses recorded on the vehicle",
+        "openMoney": "Open Money"
+      }
+    },
+    "documents": {
+      "columns": {
+        "asset": "Vehicle",
+        "type": "Document",
+        "expiresAt": "Expires",
+        "state": "State"
+      },
+      "expiredDays": "{days, plural, =0 {Expired today} one {Expired # day ago} other {Expired # days ago}}",
+      "dueDays": "{days, plural, =0 {Due today} one {Due in # day} other {Due in # days}}",
+      "filterLabel": "Which documents",
+      "filters": {
+        "ALL": "All",
+        "EXPIRED": "Expired",
+        "DUE_30": "Due in {days} days"
+      },
+      "loadFailed": "Could not load the documents.",
+      "loading": "Loading documents…",
+      "empty": "Nothing expired and nothing due in the next {days} days.",
+      "emptyExpired": "No document has expired."
     }
   },
   "nameMenu": {
@@ -853,7 +929,12 @@
       "activityType": "Activity type",
       "asset": "Asset",
       "from": "From",
-      "to": "To"
+      "to": "To",
+      "missing": "Missing",
+      "missingOptions": {
+        "fuel": "No fuel",
+        "km": "No km"
+      }
     },
     "viewer": {
       "open": "Open activity"
@@ -1187,6 +1268,51 @@
       "weekKm": "Km this week",
       "weekKmValue": "{km, number} km",
       "weekKmHint": "From the legs recorded"
+    },
+    "page": {
+      "tabs": {
+        "label": "Page sections",
+        "overview": "Overview",
+        "planning": "Planning",
+        "list": "List"
+      }
+    },
+    "planning": {
+      "empty": "Nothing is planned yet."
+    },
+    "overview": {
+      "openList": "See the list",
+      "tiles": {
+        "weekClosed": "Closed this week",
+        "weekClosedHint": "Of those started since Monday",
+        "openNone": "Nothing open",
+        "openOldest": "Oldest started {date}",
+        "missingData": "Closed with missing data",
+        "missingFuelKm": "{fuel, number} without fuel · {km, number} without km",
+        "missingKm": "{km, number} without km",
+        "missingDataInfo": "Closed with an exception recorded at closing. Fuel and km are checked on every closed one."
+      },
+      "weeks": {
+        "title": "Activities per week",
+        "question": "Is the work growing? Started and closed, last {count, number} weeks.",
+        "closed": "Closed",
+        "open": "Still open",
+        "column": "Week of {week}: {started, number} started, {closed, number} closed",
+        "partial": "This week is still running."
+      },
+      "todo": {
+        "title": "To do",
+        "description": "What is left to close",
+        "empty": "Nothing is left to close.",
+        "open": "{count, number} still open",
+        "oldest": "Oldest: {number}, started {date}",
+        "oldestWithTruck": "Oldest: {number} on {code}, started {date}",
+        "openList": "Open the list",
+        "noFuel": "{count, number} closed without fuel",
+        "noFuelDetail": "Add the fuel so their costs are complete.",
+        "noKm": "{count, number} closed without km",
+        "noKmDetail": "Add the km so their distances are complete."
+      }
     }
   },
   "maintenance": {
@@ -1222,7 +1348,9 @@
         "COMPLETED": "Completed",
         "REJECTED": "Rejected",
         "CANCELLED": "Cancelled"
-      }
+      },
+      "openOnly": "Showing the work orders still open.",
+      "showAll": "Show all"
     },
     "issues": {
       "tab": "Problems",
@@ -1362,6 +1490,38 @@
       "repairDays": "Average days to repair",
       "repairDaysValue": "{days, number} d",
       "repairDaysHint": "{count, plural, =0 {No repair in the last {window} days} one {# repair in the last {window} days} other {# repairs in the last {window} days}}"
+    },
+    "page": {
+      "tabs": {
+        "label": "Page sections",
+        "overview": "Overview",
+        "problems": "Problems",
+        "work-orders": "Work orders",
+        "waitingCount": "{count, plural, one {problem waiting} other {problems waiting}}"
+      }
+    },
+    "overview": {
+      "loadFailed": "Could not load the workshop's figures.",
+      "tiles": {
+        "offTheRoad": "Off the road",
+        "offTheRoadSince": "{code} · since {date}",
+        "workOrdersOpen": "Work orders open",
+        "workOrdersOpenHint": "{approval, number} waiting approval · {completion, number} waiting sign-off",
+        "repairCost": "Repair cost",
+        "repairCostHint": "{count, plural, =0 {No work order completed in the last {window} days} one {# work order completed in the last {window} days} other {# work orders completed in the last {window} days}}"
+      },
+      "todo": {
+        "title": "To do",
+        "description": "Safety first",
+        "empty": "Nothing waits in the workshop.",
+        "problem": "{code} · {description}",
+        "reported": "Reported {when}",
+        "reportedSafety": "Reported {when} · safety",
+        "triage": "Triage",
+        "open": "Open",
+        "waitingApproval": "{count, plural, one {# work order waits for approval} other {# work orders wait for approval}}",
+        "waitingCompletion": "{count, plural, one {# work order waits for sign-off} other {# work orders wait for sign-off}}"
+      }
     }
   },
   "persons": {

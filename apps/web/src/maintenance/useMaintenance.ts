@@ -24,6 +24,8 @@ function buildUrl(path: string, params: object): string {
 
 export interface UseWorkOrdersParams {
   status?: WorkOrderStatus;
+  /** Only the orders still open (submitted, approved, completion submitted). */
+  open?: boolean;
   branchId?: string;
   assetId?: string;
 }
@@ -155,7 +157,17 @@ function isMaintenanceSummary(value: unknown): value is MaintenanceSummary {
   const record = value as Record<string, unknown>;
   const average = record["averageRepairDays"];
   return (
-    ["openIssues", "openSafetyCritical", "grounded", "approvedWorkOrders", "repairsCounted", "repairWindowDays"].every(
+    [
+      "openIssues",
+      "openSafetyCritical",
+      "grounded",
+      "approvedWorkOrders",
+      "openWorkOrders",
+      "waitingApproval",
+      "waitingCompletion",
+      "repairsCounted",
+      "repairWindowDays",
+    ].every(
       (key) => typeof record[key] === "number",
     ) &&
     (average === null || typeof average === "number")

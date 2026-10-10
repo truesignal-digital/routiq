@@ -34,6 +34,15 @@ interface PageTrail {
  */
 export const PAGE_TRAILS: readonly PageTrail[] = [
   { pattern: "/assets/new", trail: [{ labelKey: "commands.register-asset.label" }] },
+  // The module pages' tabs (#665): Overview is the section itself, the others
+  // name their tab under it. Before the record patterns, or "list" reads as a
+  // vehicle or a trip.
+  { pattern: "/assets/list", trail: [{ labelKey: "assets.page.tabs.list" }] },
+  { pattern: "/assets/documents", trail: [{ labelKey: "assets.page.tabs.documents" }] },
+  { pattern: "/activities/list", trail: [{ labelKey: "activities.page.tabs.list" }] },
+  { pattern: "/activities/planning", trail: [{ labelKey: "activities.page.tabs.planning" }] },
+  { pattern: "/maintenance/problems", trail: [{ labelKey: "maintenance.page.tabs.problems" }] },
+  { pattern: "/maintenance/work-orders", trail: [{ labelKey: "maintenance.page.tabs.work-orders" }] },
   // The vehicle workspace: its sections are tabs on one record, so every
   // section shares the record's crumb and the tabs say where you are.
   ...["", "/maintenance", "/money", "/trips", "/documents", "/history", "/details"].map((section) => ({

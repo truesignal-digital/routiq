@@ -6,8 +6,10 @@ import {
 } from "@tanstack/react-router";
 import { z } from "zod";
 import {
+  ACTIVITY_MISSING_FILTERS,
   activityCompleteness,
   activityStatus,
+  ASSET_AVAILABILITY_FILTERS,
   financialEntryFilters,
   issueStatus,
   VEHICLE_HISTORY_KINDS,
@@ -16,6 +18,7 @@ import {
 import { sessionStore } from "./auth/store.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
 import { PANEL_PATTERN } from "./vehicle/model.js";
+import { FLEET_DOCUMENT_FILTERS } from "./overview/fleet-documents.js";
 import { ScreenError, ScreenPending, SectionError, SectionPending, ShellPending } from "./shell/RoutePending.js";
 import { lazyScreen, retryFailedScreens } from "./shell/lazy-screen.js";
 
@@ -25,7 +28,12 @@ import { lazyScreen, retryFailedScreens } from "./shell/lazy-screen.js";
  * and search validation run before a screen's code arrives.
  */
 const AssetRegisterScreen = lazyScreen(() => import("./screens/AssetRegisterScreen.js"), "AssetRegisterScreen");
-const AssetsStub = lazyScreen(() => import("./screens/AssetsStub.js"), "AssetsStub");
+// The Trucks page's frame, its Overview and its list load as one chunk, like
+// the Money tabs (#664); the Documents tab is the Documents module's own file.
+const TrucksFrame = lazyScreen(() => import("./assets/TrucksPage.js"), "TrucksFrame");
+const TrucksOverview = lazyScreen(() => import("./assets/TrucksPage.js"), "TrucksOverview");
+const AssetsStub = lazyScreen(() => import("./assets/TrucksPage.js"), "AssetsStub");
+const FleetDocumentsTab = lazyScreen(() => import("./documents/FleetDocumentsTab.js"), "FleetDocumentsTab");
 const BranchesScreen = lazyScreen(() => import("./screens/BranchesScreen.js"), "BranchesScreen");
 const CompanySettingsScreen = lazyScreen(() => import("./screens/CompanySettingsScreen.js"), "CompanySettingsScreen");
 const DashboardScreen = lazyScreen(() => import("./screens/DashboardScreen.js"), "DashboardScreen");
@@ -37,7 +45,10 @@ const FinanceEntriesScreen = lazyScreen(() => import("./screens/FinancePage.js")
 const FinanceScreen = lazyScreen(() => import("./screens/FinancePage.js"), "FinanceScreen");
 const FinanceOverviewScreen = lazyScreen(() => import("./screens/FinancePage.js"), "FinanceOverviewScreen");
 const FinanceApproveScreen = lazyScreen(() => import("./screens/FinancePage.js"), "FinanceApproveScreen");
-const ActivitiesScreen = lazyScreen(() => import("./screens/ActivitiesScreen.js"), "ActivitiesScreen");
+const TripsFrame = lazyScreen(() => import("./activities/TripsPage.js"), "TripsFrame");
+const TripsOverview = lazyScreen(() => import("./activities/TripsPage.js"), "TripsOverview");
+const ActivitiesScreen = lazyScreen(() => import("./activities/TripsPage.js"), "ActivitiesScreen");
+const PlanningTab = lazyScreen(() => import("./scheduling/PlanningTab.js"), "PlanningTab");
 const MaintenanceScreen = lazyScreen(() => import("./screens/MaintenanceScreen.js"), "MaintenanceScreen");
 const ActivityDetailScreen = lazyScreen(() => import("./screens/ActivityDetailScreen.js"), "ActivityDetailScreen");
 const ActivitySheetScreen = lazyScreen(() => import("./screens/ActivitySheetScreen.js"), "ActivitySheetScreen");
@@ -55,6 +66,11 @@ const NowTab = lazyScreen(() => import("./vehicle/tabs/NowTab.js"), "NowTab");
 const TripsTab = lazyScreen(() => import("./vehicle/tabs/TripsTab.js"), "TripsTab");
 
 const rootRoute = createRootRoute();
+
+/** The page's own address, not one of its tabs: where an old filtered link used to land. */
+function isBarePath(pathname: string, path: string): boolean {
+  return pathname === path || pathname === `${path}/`;
+}
 
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -84,15 +100,57 @@ const indexRoute = createRoute({
   component: DashboardScreen,
 });
 
+/**
+ * The Trucks page (#665): one header over Overview, Trucks and Documents, each
+ * tab a child route with its own address. The truck's own page and the
+ * register form sit outside the frame.
+ */
 const assetsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/assets",
-  // The overview tiles filter the list through the URL, so a tile's view is a
-  // link that survives reload and back (#302).
+  // The list's tiles moved into the Overview: an old `/assets?status=…` link
+  // lands on the Trucks tab with the same filter.
+  beforeLoad: ({ location }) => {
+    const search = location.search as { status?: unknown };
+    if (isBarePath(location.pathname, "/assets") && (search.status === "IN_SERVICE" || search.status === "ATTENTION")) {
+      throw redirect({ to: "/assets/list", search: { status: search.status }, replace: true });
+    }
+  },
+  component: TrucksFrame,
+});
+
+const assetsOverviewRoute = createRoute({
+  getParentRoute: () => assetsRoute,
+  path: "/",
+  component: TrucksOverview,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
+});
+
+const assetsListRoute = createRoute({
+  getParentRoute: () => assetsRoute,
+  path: "list",
+  // The Overview's tiles filter the list through the URL, so a tile's view is
+  // a link that survives reload and back (#302).
   validateSearch: z.object({
     status: z.enum(["IN_SERVICE", "ATTENTION"]).optional().catch(undefined),
+    availability: z.enum(ASSET_AVAILABILITY_FILTERS).optional().catch(undefined),
   }),
   component: AssetsStub,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
+});
+
+// The Documents module's tab on the Trucks page (`PAGE_TABS`).
+const assetsDocumentsRoute = createRoute({
+  getParentRoute: () => assetsRoute,
+  path: "documents",
+  validateSearch: z.object({
+    expiry: z.enum(FLEET_DOCUMENT_FILTERS).optional().catch(undefined),
+  }),
+  component: FleetDocumentsTab,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
 });
 
 const assetsNewRoute = createRoute({
@@ -256,16 +314,58 @@ const financeApproveRoute = createRoute({
   errorComponent: SectionError,
 });
 
+const TRIP_LIST_FILTERS = ["status", "completeness", "from", "to", "missing"] as const;
+
+const tripListSearch = z.object({
+  status: activityStatus.optional().catch(undefined),
+  completeness: activityCompleteness.optional().catch(undefined),
+  from: z.iso.date().optional().catch(undefined),
+  to: z.iso.date().optional().catch(undefined),
+  missing: z.enum(ACTIVITY_MISSING_FILTERS).optional().catch(undefined),
+});
+
+/**
+ * The Trips page (#665): one header over Overview, Trips and, while
+ * Scheduling is on, Planning. A trip's page and its sheet sit outside.
+ */
 const activitiesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/activities",
-  validateSearch: z.object({
-    status: activityStatus.optional().catch(undefined),
-    completeness: activityCompleteness.optional().catch(undefined),
-    from: z.iso.date().optional().catch(undefined),
-    to: z.iso.date().optional().catch(undefined),
-  }),
+  // The list's tiles moved into the Overview: an old filtered link lands on
+  // the Trips tab with the same filters.
+  beforeLoad: ({ location }) => {
+    const search = location.search as Record<string, unknown>;
+    if (isBarePath(location.pathname, "/activities") && TRIP_LIST_FILTERS.some((key) => search[key] !== undefined)) {
+      throw redirect({ to: "/activities/list", search: tripListSearch.parse(search), replace: true });
+    }
+  },
+  component: TripsFrame,
+});
+
+const activitiesOverviewRoute = createRoute({
+  getParentRoute: () => activitiesRoute,
+  path: "/",
+  component: TripsOverview,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
+});
+
+const activitiesListRoute = createRoute({
+  getParentRoute: () => activitiesRoute,
+  path: "list",
+  validateSearch: tripListSearch,
   component: ActivitiesScreen,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
+});
+
+// The Scheduling module's tab on the Trips page (`PAGE_TABS`).
+const activitiesPlanningRoute = createRoute({
+  getParentRoute: () => activitiesRoute,
+  path: "planning",
+  component: PlanningTab,
+  pendingComponent: SectionPending,
+  errorComponent: SectionError,
 });
 
 const activityRecordRoute = createRoute({
@@ -286,17 +386,51 @@ const activityDetailRoute = createRoute({
   component: ActivityDetailScreen,
 });
 
-// The screen gates itself on the MAINTENANCE module, as every module-owned
-// screen does; the nav entry disappears with the module (`sections.ts`).
+/**
+ * The Maintenance page (#665): Overview, Problems and Work orders, each with
+ * its own address. One screen draws all three, because the header's buttons
+ * and the rows' actions open the same dialogs; the child routes carry the
+ * addresses and each tab's filters.
+ */
 const maintenanceRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/maintenance",
-  validateSearch: z.object({
-    tab: z.enum(["work-orders", "issues"]).optional().catch(undefined),
-    status: workOrderStatus.optional().catch(undefined),
-    issueStatus: issueStatus.optional().catch(undefined),
-  }),
+  // The list's tiles moved into the Overview: an old `?tab=issues` or
+  // `?status=` link lands on its tab with the same filter.
+  beforeLoad: ({ location }) => {
+    const search = location.search as { tab?: unknown; status?: unknown; issueStatus?: unknown };
+    if (!isBarePath(location.pathname, "/maintenance")) return;
+    if (search.tab === "issues" || search.issueStatus !== undefined) {
+      const status = issueStatus.safeParse(search.issueStatus);
+      throw redirect({ to: "/maintenance/problems", search: status.success ? { status: status.data } : {}, replace: true });
+    }
+    if (search.tab === "work-orders" || search.status !== undefined) {
+      const status = workOrderStatus.safeParse(search.status);
+      throw redirect({ to: "/maintenance/work-orders", search: status.success ? { status: status.data } : {}, replace: true });
+    }
+  },
   component: MaintenanceScreen,
+});
+
+const maintenanceOverviewRoute = createRoute({
+  getParentRoute: () => maintenanceRoute,
+  path: "/",
+});
+
+const maintenanceProblemsRoute = createRoute({
+  getParentRoute: () => maintenanceRoute,
+  path: "problems",
+  validateSearch: z.object({ status: issueStatus.optional().catch(undefined) }),
+});
+
+const maintenanceWorkOrdersRoute = createRoute({
+  getParentRoute: () => maintenanceRoute,
+  path: "work-orders",
+  validateSearch: z.object({
+    status: workOrderStatus.optional().catch(undefined),
+    // A word, not `true`: the router reads a bare `true` as a boolean.
+    only: z.literal("open").optional().catch(undefined),
+  }),
 });
 
 const financeEntryDetailRoute = createRoute({
@@ -374,7 +508,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   appRoute.addChildren([
     indexRoute,
-    assetsRoute,
+    assetsRoute.addChildren([assetsOverviewRoute, assetsListRoute, assetsDocumentsRoute]),
     // Before the $assetId route, or "new" reads as an asset id.
     assetsNewRoute,
     assetDetailRoute.addChildren([
@@ -386,11 +520,11 @@ const routeTree = rootRoute.addChildren([
       vehicleHistoryRoute,
       vehicleDetailsRoute,
     ]),
-    activitiesRoute,
+    activitiesRoute.addChildren([activitiesOverviewRoute, activitiesListRoute, activitiesPlanningRoute]),
     // Before the $activityId route, or "record" reads as an activity id.
     activityRecordRoute,
     activityDetailRoute,
-    maintenanceRoute,
+    maintenanceRoute.addChildren([maintenanceOverviewRoute, maintenanceProblemsRoute, maintenanceWorkOrdersRoute]),
     financeRoute.addChildren([
       financeOverviewRoute,
       financeRecordRoute,
@@ -430,9 +564,13 @@ export function preloadAfterSignIn(): void {
 
 /** Most-visited first, so a slow connection fetches the likely next screen before the rest. */
 export const SCREENS_BY_USE = [
+  TrucksFrame,
+  TrucksOverview,
   AssetsStub,
   VehicleWorkspaceScreen,
   NowTab,
+  TripsFrame,
+  TripsOverview,
   ActivitiesScreen,
   FinanceScreen,
   FinanceOverviewScreen,
@@ -446,6 +584,8 @@ export const SCREENS_BY_USE = [
   DocumentsTab,
   HistoryTab,
   DetailsTab,
+  FleetDocumentsTab,
+  PlanningTab,
   FinanceRecordScreen,
   FinanceApproveScreen,
   ActivitySheetScreen,

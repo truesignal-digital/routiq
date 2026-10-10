@@ -18,6 +18,7 @@ import {
   contributionOwner,
   FIELD_SLOTS,
   installedModules,
+  PAGE_TAB_KEYS,
   installModules,
   pageOwner,
   webManifestProblems,
@@ -35,6 +36,7 @@ const CATALOGUE: SlotCatalogue = {
     recordPanels: [...PANEL_RECORD_KINDS, "readings"],
     historyKinds: VEHICLE_HISTORY_KINDS,
     fields: FIELD_SLOTS,
+    pageTabs: PAGE_TAB_KEYS,
   },
   coreNavRows: CORE_SECTION_KEYS,
   modules: MODULE_MANIFESTS.map((manifest) => manifest.code),
@@ -51,6 +53,7 @@ const empty = (code: WebModuleManifest["code"], overrides: Partial<WebModuleMani
   recordPanels: [],
   historyKinds: [],
   fields: [],
+  pageTabs: [],
   ...overrides,
 });
 

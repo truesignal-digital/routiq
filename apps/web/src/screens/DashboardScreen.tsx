@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, Navigate, useNavigate } from "@tanstack/react-router";
 import { FileText, House } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { DashboardResponse } from "@routiq/contracts";
@@ -28,6 +28,7 @@ import {
   type FinanceEntryColumnId,
 } from "@/finance/entryColumns.js";
 import { useEntries } from "@/finance/useEntries.js";
+import { roleLanding } from "@/shell/landing.js";
 import { visibleSectionGroups } from "@/shell/sections.js";
 
 const DEFAULT_RANGE: ChartRange = 90;
@@ -42,6 +43,14 @@ const RECENT_COLUMNS: readonly FinanceEntryColumnId[] = [
 ];
 
 export function DashboardScreen() {
+  const me = useMeContext();
+  // The technician opens on the Maintenance Overview (#665).
+  const landing = roleLanding(me?.role, me?.enabledModules);
+  if (landing !== "/") return <Navigate to={landing} replace />;
+  return <Home />;
+}
+
+function Home() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const me = useMeContext();

@@ -232,7 +232,13 @@
       "IN_SERVICE": "En service",
       "ATTENTION": "À surveiller",
       "status": "Statut",
-      "category": "Classe"
+      "category": "Classe",
+      "availability": "Disponibilité",
+      "availabilityOptions": {
+        "CAN_DRIVE": "Peut rouler",
+        "GROUNDED": "Immobilisé",
+        "IDLE": "Sans sortie depuis 5 jours ou plus"
+      }
     },
     "metrics": {
       "total": "Total",
@@ -340,6 +346,76 @@
       "category": "Classe",
       "branch": "Agence",
       "registration": "Immatriculation"
+    },
+    "page": {
+      "tabs": {
+        "label": "Sections de la page",
+        "overview": "Vue d'ensemble",
+        "documents": "Documents",
+        "list": "Liste"
+      }
+    },
+    "overview": {
+      "loadFailed": "Impossible de charger les chiffres du parc.",
+      "tiles": {
+        "canDrive": "Peuvent rouler",
+        "canDriveOf": "sur {total, number}",
+        "canDriveInfo": "En service et non immobilisés aujourd'hui.",
+        "canDriveInfoNoGrounding": "En service aujourd'hui. Les immobilisations ne sont pas comptées : la Maintenance est désactivée.",
+        "grounded": "Immobilisés",
+        "groundedNone": "Aucun à l'arrêt",
+        "groundedFirst": "{code} · {days, plural, =0 {depuis aujourd'hui} one {# jour} other {# jours}}",
+        "documentsDue": "Documents à échéance ≤ {days} jours",
+        "documentsDueNone": "Rien à échéance",
+        "documentsDueFirst": "Premier : {code} · {date}",
+        "idle": "Sans sortie depuis {days} jours ou plus",
+        "idleNone": "Tous ont travaillé",
+        "idleNever": "{code} · jamais",
+        "idleFirst": "{code} · {days, plural, one {# jour} other {# jours}}"
+      },
+      "due": {
+        "title": "Documents et entretiens à venir",
+        "window": "Expirés, et à échéance dans les {days} prochains jours",
+        "loadFailed": "Impossible de charger les échéances.",
+        "empty": "Rien d'expiré et rien à échéance dans les {days} prochains jours.",
+        "rowTitle": "{code} · {type}",
+        "expired": "Expiré le {date} · {days, plural, =0 {aujourd'hui} one {il y a # jour} other {il y a # jours}}",
+        "dueIn": "{date} · {days, plural, =0 {aujourd'hui} one {dans # jour} other {dans # jours}}",
+        "serviceNotCounted": "Les entretiens au kilométrage ne sont pas comptés : aucun intervalle d'entretien n'est encore enregistré par véhicule.",
+        "truncated": "Seules les premières lignes sont affichées.",
+        "openAll": "Ouvrir Documents"
+      },
+      "profit": {
+        "title": "Bénéfice par véhicule",
+        "question": "Quels véhicules gagnent, lesquels perdent ?",
+        "questionPeriod": "Quels véhicules gagnent, lesquels perdent ? {period}, {currency}.",
+        "empty": "Aucun véhicule n'a d'argent enregistré ce mois-ci.",
+        "trips": "{count, plural, one {# clôture} other {# clôtures}}",
+        "tripsKm": "{count, plural, one {# clôture} other {# clôtures}} · {km, number} km",
+        "more": "{count, plural, one {# autre véhicule dans Argent} other {# autres véhicules dans Argent}}",
+        "basis": "Recettes moins dépenses enregistrées sur le véhicule",
+        "openMoney": "Ouvrir Argent"
+      }
+    },
+    "documents": {
+      "columns": {
+        "asset": "Véhicule",
+        "type": "Document",
+        "expiresAt": "Expire le",
+        "state": "État"
+      },
+      "expiredDays": "{days, plural, =0 {Expiré aujourd'hui} one {Expiré il y a # jour} other {Expiré il y a # jours}}",
+      "dueDays": "{days, plural, =0 {Échéance aujourd'hui} one {Échéance dans # jour} other {Échéance dans # jours}}",
+      "filterLabel": "Quels documents",
+      "filters": {
+        "ALL": "Tous",
+        "EXPIRED": "Expirés",
+        "DUE_30": "À échéance dans {days} jours"
+      },
+      "loadFailed": "Impossible de charger les documents.",
+      "loading": "Chargement des documents…",
+      "empty": "Rien d'expiré et rien à échéance dans les {days} prochains jours.",
+      "emptyExpired": "Aucun document n'a expiré."
     }
   },
   "nameMenu": {
@@ -853,7 +929,12 @@
       "activityType": "Type d'activité",
       "asset": "Engin",
       "from": "Du",
-      "to": "Au"
+      "to": "Au",
+      "missing": "Manquant",
+      "missingOptions": {
+        "fuel": "Sans carburant",
+        "km": "Sans km"
+      }
     },
     "viewer": {
       "open": "Ouvrir l'activité"
@@ -1187,6 +1268,51 @@
       "weekKm": "Km cette semaine",
       "weekKmValue": "{km, number} km",
       "weekKmHint": "Selon les étapes saisies"
+    },
+    "page": {
+      "tabs": {
+        "label": "Sections de la page",
+        "overview": "Vue d'ensemble",
+        "planning": "Planification",
+        "list": "Liste"
+      }
+    },
+    "planning": {
+      "empty": "Rien n'est encore planifié."
+    },
+    "overview": {
+      "openList": "Voir la liste",
+      "tiles": {
+        "weekClosed": "Clôtures cette semaine",
+        "weekClosedHint": "Parmi les démarrages depuis lundi",
+        "openNone": "Rien en cours",
+        "openOldest": "Début le plus ancien : {date}",
+        "missingData": "Clôture avec données manquantes",
+        "missingFuelKm": "{fuel, number} sans carburant · {km, number} sans km",
+        "missingKm": "{km, number} sans km",
+        "missingDataInfo": "Clôture avec une exception enregistrée. Le carburant et les km sont vérifiés à chaque clôture."
+      },
+      "weeks": {
+        "title": "Activités par semaine",
+        "question": "Le travail augmente-t-il ? Démarrages et clôtures, {count, number} dernières semaines.",
+        "closed": "Clôture",
+        "open": "En cours",
+        "column": "Semaine du {week} : {started, number} démarrages, {closed, number} clôtures",
+        "partial": "La semaine en cours n'est pas finie."
+      },
+      "todo": {
+        "title": "À faire",
+        "description": "Ce qui reste à clôturer",
+        "empty": "Rien ne reste à clôturer.",
+        "open": "{count, number} en cours",
+        "oldest": "Depuis le {date} : {number}",
+        "oldestWithTruck": "Depuis le {date} : {number} sur {code}",
+        "openList": "Ouvrir la liste",
+        "noFuel": "{count, number} clôtures sans carburant",
+        "noFuelDetail": "Ajoutez le carburant pour que les coûts soient complets.",
+        "noKm": "{count, number} clôtures sans km",
+        "noKmDetail": "Ajoutez les km pour que les distances soient complètes."
+      }
     }
   },
   "maintenance": {
@@ -1222,7 +1348,9 @@
         "COMPLETED": "Terminé",
         "REJECTED": "Rejeté",
         "CANCELLED": "Annulé"
-      }
+      },
+      "openOnly": "Seuls les ordres de travail encore ouverts sont affichés.",
+      "showAll": "Tout afficher"
     },
     "issues": {
       "tab": "Problèmes",
@@ -1362,6 +1490,38 @@
       "repairDays": "Durée moyenne de réparation",
       "repairDaysValue": "{days, number} j",
       "repairDaysHint": "{count, plural, =0 {Aucune réparation sur {window} jours} one {# réparation sur {window} jours} other {# réparations sur {window} jours}}"
+    },
+    "page": {
+      "tabs": {
+        "label": "Sections de la page",
+        "overview": "Vue d'ensemble",
+        "problems": "Problèmes",
+        "work-orders": "Ordres de travail",
+        "waitingCount": "{count, plural, one {problème en attente} other {problèmes en attente}}"
+      }
+    },
+    "overview": {
+      "loadFailed": "Impossible de charger les chiffres de l'atelier.",
+      "tiles": {
+        "offTheRoad": "À l'arrêt",
+        "offTheRoadSince": "{code} · depuis le {date}",
+        "workOrdersOpen": "Ordres de travail ouverts",
+        "workOrdersOpenHint": "{approval, number} en attente d'approbation · {completion, number} en attente de validation",
+        "repairCost": "Coût des réparations",
+        "repairCostHint": "{count, plural, =0 {Aucun ordre de travail terminé sur {window} jours} one {# ordre de travail terminé sur {window} jours} other {# ordres de travail terminés sur {window} jours}}"
+      },
+      "todo": {
+        "title": "À faire",
+        "description": "La sécurité d'abord",
+        "empty": "Rien n'attend à l'atelier.",
+        "problem": "{code} · {description}",
+        "reported": "Signalé {when}",
+        "reportedSafety": "Signalé {when} · sécurité",
+        "triage": "Trier",
+        "open": "Ouvrir",
+        "waitingApproval": "{count, plural, one {# ordre de travail attend l'approbation} other {# ordres de travail attendent l'approbation}}",
+        "waitingCompletion": "{count, plural, one {# ordre de travail attend la validation} other {# ordres de travail attendent la validation}}"
+      }
     }
   },
   "persons": {

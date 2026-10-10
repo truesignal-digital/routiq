@@ -115,7 +115,7 @@ describe("navigation counts (#322)", () => {
     await renderSidebar(membership("TECHNICIAN"));
 
     const count = await nav().findByRole("link", { name: "1 new problem to handle" });
-    expect(count.getAttribute("href")).toBe("/maintenance?tab=issues&issueStatus=OPEN");
+    expect(count.getAttribute("href")).toBe("/maintenance/problems?status=OPEN");
     expect(document.querySelectorAll("[data-nav-count]")).toHaveLength(1);
   });
 
