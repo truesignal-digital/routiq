@@ -195,6 +195,16 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     good: [file("apps/web/src/x.ts", "queryClient.invalidateQueries({ queryKey: key });")],
   },
   {
+    id: "C1",
+    bad: [file(".github/workflows/ci.yml", "        image: postgres:17")],
+    good: [file(".github/workflows/ci.yml", "        image: mirror.gcr.io/library/postgres:17")],
+  },
+  {
+    id: "C2",
+    bad: [file("apps/web/vite.config.ts", "  define: { __APP_VERSION__: JSON.stringify(sha) },")],
+    good: [file("apps/web/vite.config.ts", '  plugins: [{ name: "routiq-version" }],')],
+  },
+  {
     id: "H6",
     bad: [file("apps/web/src/screens/X.tsx", 'import { toast } from "@/components/ui/toast.js";')],
     good: [file("apps/web/src/lib/notify.ts", 'import { toast } from "@/components/ui/toast.js";')],
@@ -660,6 +670,49 @@ describe("B1 module boundaries", () => {
     const composition = file("apps/web/src/modules/index.ts", 'import { m } from "./finance/manifest.js";');
     const declared = file("apps/web/src/finance/z.ts", 'import { useAssetOptions } from "../assets/useAssetOptions.js";');
     expect(rule("B1").check([manifest, composition, declared])).toEqual([]);
+  });
+});
+
+describe("C1 CI images off Docker Hub", () => {
+  const ci = (lines: string[]) => file(".github/workflows/ci.yml", lines.join("\n"));
+
+  it("flags a service image with no registry, and a test step without the testcontainers mirror", () => {
+    const violations = rule("C1").check([ci(["    services:", "      postgres:", "        image: postgres:17", "      - run: pnpm test"])]);
+    expect(violations.map((v) => [v.line, v.text])).toEqual([
+      [3, "image: postgres:17"],
+      [4, "- run: pnpm test"],
+    ]);
+  });
+
+  it("accepts a mirrored image and a test step that sets the prefix", () => {
+    const mirrored = ci([
+      "    env:",
+      "      TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX: mirror.gcr.io",
+      "        image: mirror.gcr.io/library/postgres:17",
+      "        image: ghcr.io/owner/thing:1",
+      "        image: localhost:5000/thing",
+      "      - run: pnpm test",
+    ]);
+    expect(rule("C1").check([mirrored])).toEqual([]);
+  });
+
+  it("leaves compose files and Dockerfiles alone", () => {
+    expect(rule("C1").check([file("docker-compose.yml", "    image: postgres:17-alpine")])).toEqual([]);
+  });
+});
+
+describe("C2 no define in the web build", () => {
+  it("flags a define block in the Vite config", () => {
+    const config = file("apps/web/vite.config.ts", "export default defineConfig({\n  define: { __APP_VERSION__: JSON.stringify(sha) },\n});");
+    expect(rule("C2").check([config]).map((v) => v.line)).toEqual([2]);
+  });
+
+  it("accepts the meta-tag plugin and defineConfig itself", () => {
+    const config = file(
+      "apps/web/vite.config.ts",
+      'export default defineConfig({\n  plugins: [{ name: "routiq-version", transformIndexHtml: () => [] }],\n});',
+    );
+    expect(rule("C2").check([config])).toEqual([]);
   });
 });
 
