@@ -1,5 +1,12 @@
 import { useQueries } from "@tanstack/react-query";
-import { waitsOn, type ModuleCode, type NavCountKey, type NavCountsResponse, type Role } from "@routiq/contracts";
+import {
+  waitsOn,
+  type ModuleCode,
+  type NavCountKey,
+  type NavCountsResponse,
+  type Role,
+  type ToggleableModuleCode,
+} from "@routiq/contracts";
 import { useMeContext } from "../auth/me.js";
 import { sessionStore, useActiveSession } from "../auth/store.js";
 import { installedModules } from "../modules/manifest.js";
@@ -42,23 +49,16 @@ function sharedFetch(): Promise<NavCountsResponse> {
 
 interface CountSource {
   key: NavCountKey;
-  module: ModuleCode;
+  module: ToggleableModuleCode;
   /** The list the count belongs to; its invalidations reach the count. */
   listKey: (slug: string | undefined) => unknown[];
 }
 
-/** Counts core still declares itself; a module's own come with its manifest. */
-const CORE_COUNTS: readonly CountSource[] = [
-  { key: "moneyWaiting", module: "FINANCE", listKey: (slug) => ["ws", slug, "finance", "approvals"] },
-];
-
+/** Every count comes with the manifest of the module whose list it counts. */
 function countSources(): CountSource[] {
-  return [
-    ...CORE_COUNTS,
-    ...installedModules().flatMap((manifest) =>
-      manifest.navCounts.map((count) => ({ ...count, module: manifest.code })),
-    ),
-  ];
+  return installedModules().flatMap((manifest) =>
+    manifest.navCounts.map((count) => ({ ...count, module: manifest.code })),
+  );
 }
 
 /**

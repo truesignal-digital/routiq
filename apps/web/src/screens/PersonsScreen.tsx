@@ -21,7 +21,6 @@ import {
 } from "@/components/data-table";
 import { ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { StatusBadge } from "@/components/status-badge.js";
 import { useMeContext } from "@/auth/me.js";
 import { useAssetRegistrationReference } from "@/assets/reference.js";
@@ -32,7 +31,7 @@ import {
 } from "@/shell/branch-scope.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import { RegisterPersonDialog } from "@/activities/RegisterPersonDialog.js";
-import { canRegisterPersons, canViewActivities } from "@/activities/permissions.js";
+import { canRegisterPersons } from "@/activities/permissions.js";
 import { usePersons } from "@/activities/usePersons.js";
 import { NotRecorded } from "@/components/not-recorded.js";
 
@@ -43,7 +42,6 @@ export function PersonsScreen() {
   const { t } = useTranslation();
   const label = useCommandLabel();
   const me = useMeContext();
-  const canView = canViewActivities(me?.enabledModules);
   const canRegister = canRegisterPersons(me?.role, me?.enabledModules);
 
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
@@ -122,16 +120,6 @@ export function PersonsScreen() {
     [t],
   );
 
-  if (me !== undefined && !canView) {
-    return (
-      <PermissionDenied
-        width="wide"
-        title={t("persons.title")}
-        icon={<Users className="size-7" aria-hidden />}
-        code={deniedCode(me.enabledModules.includes("ACTIVITIES"))}
-      />
-    );
-  }
 
   return (
     <PageContainer width="wide">

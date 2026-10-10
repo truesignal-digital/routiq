@@ -2272,6 +2272,7 @@
         "lead": "Disponible.",
         "sinceAndTrip": "En service depuis {since} ; dernière activité {lastTrip}.",
         "sinceNoTrips": "En service depuis {since} ; aucune activité pour l'instant.",
+        "sinceOnly": "En service depuis {since}.",
         "lastTripOnly": "Dernière activité {lastTrip}.",
         "noTrips": "Aucune activité pour l'instant."
       },

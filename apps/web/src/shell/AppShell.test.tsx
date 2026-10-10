@@ -228,7 +228,8 @@ describe("AppShell (sidebar frame)", () => {
 
   it("renders only module-less sections while membership is still loading", async () => {
     me.current = undefined;
-    await renderShell("/assets");
+    // A core page: a module's page waits for membership (ModulePageGate).
+    await renderShell("/");
     expect(navLinkNames()).toEqual(["Home"]);
   });
 

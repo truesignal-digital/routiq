@@ -13,7 +13,7 @@ import {
 } from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
+import { PermissionDenied } from "@/components/permission-denied.js";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -223,7 +223,7 @@ export function FinancePeriodsScreen() {
       <PermissionDenied
         title={t("finance.periods.title")}
         icon={<CalendarRange className="size-7" aria-hidden />}
-        code={deniedCode(me.enabledModules.includes("FINANCE"))}
+        code="ROLE_FORBIDDEN"
       />
     );
   }

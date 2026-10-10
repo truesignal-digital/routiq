@@ -83,7 +83,7 @@ function Workspace({ asset, me }: { asset: AssetDetail; me: MeContext }) {
     maintenance: canViewMaintenance(modules),
     money: canReadFinance(me.role, modules),
     entries: canReadFinanceEntries(me.role, modules),
-    workOrderCosts: canSeeWorkOrderCosts(me.role),
+    workOrderCosts: canSeeWorkOrderCosts(me.role, modules),
     trips: canViewActivities(modules),
     documents: canViewDocuments(me.role, modules),
   };

@@ -15,13 +15,12 @@ import {
 import { MetricStrip, type MetricTiles } from "@/components/metric-strip.js";
 import { ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { useMeContext } from "@/auth/me.js";
 import {
   useActivityColumns,
   type ActivityColumnId,
 } from "@/activities/activityColumns.js";
-import { canRecordActivities, canViewActivities } from "@/activities/permissions.js";
+import { canRecordActivities } from "@/activities/permissions.js";
 import { useActivities, useActivitySummary } from "@/activities/useActivities.js";
 import { useAssetOptions } from "@/assets/useAssetOptions.js";
 import { useCategories } from "@/documents/useCategories.js";
@@ -58,7 +57,6 @@ export function ActivitiesScreen() {
   const label = useCommandLabel();
   const navigate = useNavigate();
   const me = useMeContext();
-  const canView = canViewActivities(me?.enabledModules);
   const canRecord = canRecordActivities(me?.role, me?.enabledModules);
   const activityTypesQuery = useCategories("ACTIVITY_TYPE");
   // No branch named, so the picker follows the shell's agency like the list it
@@ -251,16 +249,6 @@ export function ActivitiesScreen() {
   const columns = useActivityColumns(LIST_COLUMNS);
   const allActivities = activitiesQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
-  if (me !== undefined && !canView) {
-    return (
-      <PermissionDenied
-        width="wide"
-        title={t("activities.title")}
-        icon={<Route className="size-7" aria-hidden />}
-        code={deniedCode(me.enabledModules.includes("ACTIVITIES"))}
-      />
-    );
-  }
 
   return (
     <PageContainer width="wide">

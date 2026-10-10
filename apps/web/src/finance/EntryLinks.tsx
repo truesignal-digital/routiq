@@ -9,8 +9,8 @@ const LINK_CLASS =
   "inline-flex min-h-11 items-center underline decoration-foreground/25 underline-offset-[3px] hover:decoration-foreground";
 
 /**
- * Which of an entry's links this viewer gets: the work order only while the
- * module that adds it (its `entry.workOrderLink` field) is on.
+ * Which of an entry's links this viewer gets: each only while the module that
+ * adds it is on (`entry.workOrderLink`, `entry.tripLink`).
  */
 export function visibleEntryLinks(
   links: FinancialEntryListItem["links"],
@@ -22,7 +22,10 @@ export function visibleEntryLinks(
       links.workOrderAssetId !== null &&
       links.workOrderDescription !== null &&
       contributes("fields", "entry.workOrderLink", enabledModules),
-    trip: links.activityId !== null && links.activityNumber !== null,
+    trip:
+      links.activityId !== null &&
+      links.activityNumber !== null &&
+      contributes("fields", "entry.tripLink", enabledModules),
   };
 }
 

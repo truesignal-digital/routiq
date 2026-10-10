@@ -77,15 +77,7 @@ describe("register affordances by role", () => {
 });
 
 describe("module gating", () => {
-  /** A workspace without the module has no fleet to show, whatever the role. */
-  it("shows the denial instead of an empty table when ASSETS is off", () => {
-    renderWith("ADMIN", ["CORE"]);
-
-    expect(screen.getByText(/module/i)).toBeDefined();
-    expect(screen.queryByRole("searchbox")).toBeNull();
-    expect(document.querySelector('a[href="/assets/new"]')).toBeNull();
-  });
-
+  // With Assets off the shell never opens this screen: modules/manifests.test.tsx.
   it("serves the fleet to a role that may not register one", () => {
     renderWith("CASHIER");
 

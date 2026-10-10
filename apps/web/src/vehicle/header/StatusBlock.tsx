@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatDate, formatRelativeTime, localizedLabel } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
+import { contributes } from "@/modules/manifest.js";
 import { useWorkOrder } from "@/maintenance/useMaintenance.js";
 import { useVehicle } from "../context.js";
 import { completionSignedOff, groundingFacts, groundingStep, situationOf, type Situation } from "../flow.js";
@@ -97,7 +98,7 @@ export function StatusBlock({ now = new Date() }: { now?: Date }) {
       tone = "success";
       Icon = ShieldCheck;
       lead = t("vehicle.status.available.lead");
-      follow = availableFollow(situation, locale, t);
+      follow = availableFollow(situation, locale, t, contributes("fields", "vehicle.lastTrip", viewer.enabledModules));
       break;
     case "notAssessed":
       lead = t("vehicle.status.notAssessed.lead");
@@ -188,8 +189,12 @@ function availableFollow(
   situation: Extract<Situation, { kind: "available" }>,
   locale: string,
   t: TFunction,
+  tripsShown: boolean,
 ): string {
   const since = situation.commissionedAt === null ? null : monthYear(situation.commissionedAt, locale);
+  // Trips' field on the vehicle (`vehicle.lastTrip`): with the module off the
+  // sentence says nothing about trips rather than "none yet".
+  if (!tripsShown) return since === null ? "" : t("vehicle.status.available.sinceOnly", { since });
   const lastTrip = situation.lastTripAt === null ? null : formatRelativeTime(situation.lastTripAt, locale);
   if (since !== null && lastTrip !== null) {
     return t("vehicle.status.available.sinceAndTrip", { since, lastTrip });

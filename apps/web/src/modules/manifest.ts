@@ -4,7 +4,7 @@ import type {
   ToggleableModuleCode,
   VehicleHistoryKind,
 } from "@routiq/contracts";
-import type { DashboardCardKey } from "../dashboard/cards.js";
+import type { HomeCardKey } from "../dashboard/cards.js";
 import { isRouteActive } from "../lib/route-match.js";
 import type { ShellSection } from "../shell/sections.js";
 import type { VehicleTab } from "../vehicle/VehicleTabsNav.js";
@@ -30,13 +30,26 @@ import type { PanelRef, VehicleActionKey } from "../vehicle/model.js";
 export const FIELD_SLOTS = [
   /** A money entry's link to the work order it pays for (finance entry page, vehicle Money). */
   "entry.workOrderLink",
+  /** A money entry's link to the trip it belongs to (finance entry page, vehicle Money). */
+  "entry.tripLink",
+  /** The fleet list's "Needs attention" tile counting grounded vehicles in its hint. */
+  "assets.attentionGrounding",
+  /** A trip's money: its entries and net on the trip's page. */
+  "trip.money",
+  /** The vehicle's status sentence naming its last trip, or that it has none. */
+  "vehicle.lastTrip",
 ] as const;
 export type FieldSlot = (typeof FIELD_SLOTS)[number];
 
-/** A sidebar row a module adds, placed after the row named by `after` in its group. */
+/** Where a module's sidebar row goes: right after, or right before, the row it names. */
+export type NavRowPlace = { after: string } | { before: string };
+
+/** A sidebar row a module adds, placed beside the row `place` names, in its group. */
 export interface ModuleNavRow extends Omit<ShellSection, "module"> {
-  after: string;
+  place: NavRowPlace;
 }
+
+const anchorOf = (place: NavRowPlace): string => ("after" in place ? place.after : place.before);
 
 /** A count on a module's row; `listKey` is the query key its list refreshes under. */
 export interface ModuleNavCount {
@@ -50,7 +63,8 @@ export interface WebModuleManifest {
   code: ToggleableModuleCode;
   navRows: readonly ModuleNavRow[];
   navCounts: readonly ModuleNavCount[];
-  homeCards: readonly DashboardCardKey[];
+  /** Home's tiles and panels. */
+  homeCards: readonly HomeCardKey[];
   vehicleTabs: readonly VehicleTab[];
   vehicleActions: readonly VehicleActionKey[];
   /** Record kinds the vehicle's panel opens from `?panel=`. */
@@ -115,7 +129,7 @@ export function contributes(
 }
 
 /** Every module's sidebar rows, each with its owner as `module`. */
-export function moduleNavRows(): Array<ShellSection & { after: string }> {
+export function moduleNavRows(): Array<ShellSection & { place: NavRowPlace }> {
   return installed.flatMap((manifest) =>
     manifest.navRows.map((row) => ({ ...row, module: manifest.code })),
   );
@@ -134,8 +148,6 @@ export function pageOwner(pathname: string): { code: ToggleableModuleCode; row: 
 /** What each core slot holds, for checking the references a manifest makes. */
 export interface SlotCatalogue {
   keys: Record<KeyedSlot, readonly string[]>;
-  /** Entries core still assigns to a module inline (`module:` on the entry); a manifest may not claim them too. */
-  inlineOwned: Partial<Record<KeyedSlot, readonly string[]>>;
   /** Sidebar rows core defines itself, by key. */
   coreNavRows: readonly string[];
   /** Codes with a contract manifest (`MODULE_MANIFESTS`). */
@@ -162,7 +174,6 @@ export function webManifestProblems(
 
   for (const slot of KEYED_SLOTS) {
     const owners = new Map<string, string>();
-    for (const key of catalogue.inlineOwned[slot] ?? []) owners.set(key, "core's inline module");
     for (const manifest of manifests) {
       for (const key of keysOf(manifest, slot)) {
         if (!catalogue.keys[slot].includes(key)) problems.push(`${manifest.code} names ${slot} "${key}", which does not exist`);
@@ -180,7 +191,8 @@ export function webManifestProblems(
     rowKeys.add(row.key);
   }
   for (const { code, row } of rows) {
-    if (!rowKeys.has(row.after)) problems.push(`sidebar row "${row.key}" of ${code} follows "${row.after}", which does not exist`);
+    const anchor = anchorOf(row.place);
+    if (!rowKeys.has(anchor)) problems.push(`sidebar row "${row.key}" of ${code} is placed by "${anchor}", which does not exist`);
   }
   return problems;
 }

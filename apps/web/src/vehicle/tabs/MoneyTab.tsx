@@ -6,7 +6,7 @@ import type { AssetFinanceResponse, FinancialEntryListItem } from "@routiq/contr
 import { FilterChips } from "@/components/filter-chips";
 import { MetricStrip, moneyMetric, type MetricTile, type MetricTiles } from "@/components/metric-strip.js";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
+import { PermissionDenied } from "@/components/permission-denied.js";
 import { RecordText } from "@/components/record-number";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -93,13 +93,13 @@ function currentMonth(): string {
 
 export function MoneyTab() {
   const { t } = useTranslation();
-  const { gates, me } = useVehicle();
+  const { gates } = useVehicle();
   if (!gates.money) {
     return (
       <PermissionDenied
         title={t("vehicle.tabs.money")}
         icon={<Receipt className="size-7" aria-hidden />}
-        code={deniedCode(me.enabledModules.includes("FINANCE"))}
+        code="ROLE_FORBIDDEN"
       />
     );
   }
@@ -475,7 +475,7 @@ function EntryRow({ entry }: { entry: FinancialEntryListItem }) {
               <span>{t(`vehicle.layers.${entry.category.layer}`)}</span>
             </>
           )}
-          {links?.activityId != null && (
+          {links?.activityId != null && contributes("fields", "entry.tripLink", viewer.enabledModules) && (
             <>
               <Sep />
               <LinkButton

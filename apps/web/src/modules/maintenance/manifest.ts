@@ -16,7 +16,7 @@ export const maintenanceManifest: WebModuleManifest = {
     {
       key: "maintenance",
       group: "daily",
-      after: "activities",
+      place: { after: "activities" },
       labelKey: "maintenance.title",
       to: "/maintenance",
       icon: Wrench,
@@ -46,5 +46,5 @@ export const maintenanceManifest: WebModuleManifest = {
   ],
   recordPanels: ["work_order", "issue"],
   historyKinds: ["MAINTENANCE"],
-  fields: ["entry.workOrderLink"],
+  fields: ["entry.workOrderLink", "assets.attentionGrounding"],
 };
