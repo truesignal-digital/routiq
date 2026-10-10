@@ -644,17 +644,181 @@ describe("planned trips (ADR-0012)", () => {
     });
   });
 
+  /**
+   * #653, ADR-0012 §4: a start also warns when its vehicle is grounded and
+   * when its driver is on another trip, live or replayed, and still commits.
+   */
+  describe("a start on a grounded vehicle or with a driver already out", () => {
+    const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
+    const crewOf = (personId: string) => [
+      { activityPersonId: randomUUID(), personId, role: "DRIVER" },
+    ];
+
+    async function groundedTruck(): Promise<string> {
+      const vehicle = await truck();
+      await api.ok(admin.token, "report-issue", {
+        issueId: randomUUID(),
+        assetId: vehicle,
+        description: "Freins qui lâchent",
+        safetyCritical: true,
+      });
+      return vehicle;
+    }
+
+    /** A trip started on its own truck with this driver, hours ago. */
+    async function onTheRoad(personId: string, hours = 3): Promise<string> {
+      const vehicle = await truck();
+      const id = await planned({ plannedAssetId: vehicle, plannedDriverPersonId: personId });
+      await api.ok(
+        admin.token,
+        "start-planned-trip",
+        startPayload(id, vehicle, { startedAt: hoursAgo(hours), crew: crewOf(personId) }),
+      );
+      return id;
+    }
+
+    for (const origin of ["HUMAN_UI", "OFFLINE_SYNC"] as const) {
+      it(`${origin}: starting on a grounded vehicle warns VEHICLE_GROUNDED`, async () => {
+        const vehicle = await groundedTruck();
+        const id = await planned({ plannedAssetId: vehicle });
+        const reply = await api.send(
+          admin.token,
+          "start-planned-trip",
+          startPayload(id, vehicle, { startedAt: hoursAgo(1) }),
+          { origin },
+        );
+        expect(reply.status, JSON.stringify(reply.body)).toBe(200);
+        expect(reply.body).toMatchObject({ recordStatus: "OPEN", warnings: ["VEHICLE_GROUNDED"] });
+        expect(reply.body).not.toHaveProperty("warningMetadata");
+      });
+
+      it(`${origin}: starting with a driver still on another open trip warns DRIVER_DOUBLE_BOOKED`, async () => {
+        const person = await registerPerson("DRIVER");
+        const stale = await onTheRoad(person);
+        const vehicle = await truck();
+        const id = await planned({ plannedAssetId: vehicle });
+        const reply = await api.send(
+          admin.token,
+          "start-planned-trip",
+          startPayload(id, vehicle, { startedAt: hoursAgo(1), crew: crewOf(person) }),
+          { origin },
+        );
+        expect(reply.status, JSON.stringify(reply.body)).toBe(200);
+        expect(reply.body).toMatchObject({
+          recordStatus: "OPEN",
+          warnings: ["DRIVER_DOUBLE_BOOKED"],
+          warningMetadata: { DRIVER_DOUBLE_BOOKED: { tripIds: [stale] } },
+        });
+        expect((await trip(stale)).status).toBe("OPEN");
+      });
+    }
+
+    it("warns DRIVER_DOUBLE_BOOKED for a PLANNED trip of the driver's whose window overlaps", async () => {
+      const person = await registerPerson("DRIVER");
+      const booked = await planned({ plannedDriverPersonId: person, plannedStartAt: hoursAgo(0.5) });
+      const vehicle = await truck();
+      const id = await planned({ plannedAssetId: vehicle });
+      const reply = await api.send(
+        admin.token,
+        "start-planned-trip",
+        startPayload(id, vehicle, { startedAt: hoursAgo(1), crew: crewOf(person) }),
+      );
+      expect(reply.body).toMatchObject({
+        warnings: ["DRIVER_DOUBLE_BOOKED"],
+        warningMetadata: { DRIVER_DOUBLE_BOOKED: { tripIds: [booked] } },
+      });
+    });
+
+    it("warns DRIVER_DOUBLE_BOOKED when the start is stamped ahead of the server clock", async () => {
+      const person = await registerPerson("DRIVER");
+      const stale = await onTheRoad(person, 1);
+      const vehicle = await truck();
+      const id = await planned({ plannedAssetId: vehicle });
+      const reply = await api.send(
+        admin.token,
+        "start-planned-trip",
+        startPayload(id, vehicle, {
+          startedAt: new Date(Date.now() + 2 * 60_000).toISOString(),
+          crew: crewOf(person),
+        }),
+      );
+      expect(reply.status, JSON.stringify(reply.body)).toBe(200);
+      expect(reply.body).toMatchObject({
+        warnings: ["DRIVER_DOUBLE_BOOKED"],
+        warningMetadata: { DRIVER_DOUBLE_BOOKED: { tripIds: [stale] } },
+      });
+    });
+
+    it("does not warn VEHICLE_GROUNDED while Maintenance is off", async () => {
+      const vehicle = await groundedTruck();
+      const id = await planned({ plannedAssetId: vehicle });
+      await setModule(ctx.db, workspaceId, "MAINTENANCE", false);
+      try {
+        const reply = await api.send(
+          admin.token,
+          "start-planned-trip",
+          startPayload(id, vehicle, { startedAt: hoursAgo(1) }),
+        );
+        expect(reply.status, JSON.stringify(reply.body)).toBe(200);
+        expect(reply.body.warnings).toEqual([]);
+      } finally {
+        await setModule(ctx.db, workspaceId, "MAINTENANCE", true);
+      }
+    });
+
+    it("OFFLINE_SYNC: a revived cancelled trip also says its vehicle is grounded", async () => {
+      const id = await cancelled();
+      const reply = await api.send(
+        admin.token,
+        "start-planned-trip",
+        startPayload(id, await groundedTruck(), { startedAt: hoursAgo(1) }),
+        { origin: "OFFLINE_SYNC" },
+      );
+      expect(reply.body).toMatchObject({
+        recordStatus: "OPEN",
+        warnings: ["TRIP_STARTED_AFTER_CANCELLATION", "VEHICLE_GROUNDED"],
+      });
+    });
+
+    it("an exact retry returns every warning of the first start", async () => {
+      const person = await registerPerson("DRIVER");
+      const vehicle = await groundedTruck();
+      const stale = await planned({ plannedAssetId: vehicle });
+      await api.ok(
+        admin.token,
+        "start-planned-trip",
+        startPayload(stale, vehicle, { startedAt: hoursAgo(3), crew: crewOf(person) }),
+        { origin: "OFFLINE_SYNC" },
+      );
+      const id = await planned({ plannedAssetId: vehicle });
+      const payload = startPayload(id, vehicle, { startedAt: hoursAgo(1), crew: crewOf(person) });
+      const envelope = { commandId: randomUUID(), idempotencyKey: `start-${id}`, origin: "OFFLINE_SYNC" };
+      const first = await api.send(admin.token, "start-planned-trip", payload, envelope);
+      expect(first.body).toMatchObject({
+        warnings: ["VEHICLE_DOUBLE_BOOKED", "VEHICLE_GROUNDED", "DRIVER_DOUBLE_BOOKED"],
+        warningMetadata: {
+          VEHICLE_DOUBLE_BOOKED: { tripIds: [stale] },
+          DRIVER_DOUBLE_BOOKED: { tripIds: [stale] },
+        },
+      });
+      const retry = await api.send(admin.token, "start-planned-trip", payload, envelope);
+      expect(retry.body).toEqual({ ...first.body, idempotentReplay: true });
+    });
+  });
+
   describe("a start that meets a changed trip (ADR-0012 §5)", () => {
     for (const origin of ["HUMAN_UI", "OFFLINE_SYNC"] as const) {
       it(`${origin}: a reassigned trip starts with the vehicle that left, off plan`, async () => {
         const planned1 = await truck();
         const left = await truck();
+        // A driver of their own: one still on another open trip would also warn DRIVER_DOUBLE_BOOKED.
+        const driverWhoLeft = await registerPerson("DRIVER");
         const id = await planned({ plannedAssetId: planned1, plannedDriverPersonId: driverPersonId });
         const reply = await api.send(
           admin.token,
           "start-planned-trip",
           startPayload(id, left, {
-            crew: [{ activityPersonId: randomUUID(), personId: otherDriverPersonId, role: "DRIVER" }],
+            crew: [{ activityPersonId: randomUUID(), personId: driverWhoLeft, role: "DRIVER" }],
           }),
           { origin },
         );

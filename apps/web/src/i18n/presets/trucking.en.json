@@ -285,6 +285,7 @@
   },
   "warnings": {
     "VEHICLE_DOUBLE_BOOKED": "This truck is already booked on another trip at the same time.",
+    "VEHICLE_GROUNDED": "This truck is grounded right now. It must be released to service before it leaves.",
     "DRIVER_DOUBLE_BOOKED": "This driver is already booked on another trip at the same time.",
     "TRIP_STARTED_AFTER_CANCELLATION": "This trip had been cancelled, but it was started offline. It is running again."
   }
