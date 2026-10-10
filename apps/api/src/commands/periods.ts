@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
-import { postingPeriods, workspaces } from "../db/schema.js";
+import { postingPeriods } from "../db/schema.js";
+import { workspaceTimezone } from "../reads/workspace-day.js";
 import { CommandError } from "./dispatcher.js";
 import type { CommandContext, Tx } from "./dispatcher.js";
 
@@ -69,11 +70,7 @@ export async function resolvePostingPeriod(
     return { periodId: economicPeriod.id, periodCode: economicCode, isLatePosting: false };
   }
 
-  const [workspace] = await tx
-    .select({ timezone: workspaces.timezone })
-    .from(workspaces)
-    .where(eq(workspaces.id, ctx.workspaceId));
-  const currentCode = currentPeriodCode(new Date(), workspace?.timezone ?? "Africa/Douala");
+  const currentCode = currentPeriodCode(new Date(), await workspaceTimezone(tx, ctx.workspaceId));
   if (currentCode === economicCode) {
     throw new CommandError(409, "PERIOD_LOCKED", { periodCode: economicCode });
   }
