@@ -76,19 +76,22 @@ describe("money read scope, role by read", () => {
 
     truckId = await registerTruck("DLA");
     ydeTruckId = await registerTruck("YDE");
-    // The driver is on the crew, so the trip is theirs to read (#545, ADR-0012
-    // §3); the other driver spent on it without being crewed.
-    const driverPersonId = randomUUID();
-    await api.ok(actors.DIRECTOR.token, "register-person", {
-      personId: driverPersonId,
-      displayName: "Chauffeur",
-      branchCode: "DLA",
-      defaultRole: "DRIVER",
-    });
-    await ctx.db
-      .update(persons)
-      .set({ membershipId: actors.DRIVER.membershipId })
-      .where(eq(persons.id, driverPersonId));
+    // Both drivers are on the crew, so the trip is theirs to read (#545,
+    // ADR-0012 §3) and to spend on (#592); each still reads only the entries
+    // they recorded on it.
+    const crewPerson = async (displayName: string, membershipId: string) => {
+      const personId = randomUUID();
+      await api.ok(actors.DIRECTOR.token, "register-person", {
+        personId,
+        displayName,
+        branchCode: "DLA",
+        defaultRole: "DRIVER",
+      });
+      await ctx.db.update(persons).set({ membershipId }).where(eq(persons.id, personId));
+      return personId;
+    };
+    const driverPersonId = await crewPerson("Chauffeur", actors.DRIVER.membershipId);
+    const otherDriverPersonId = await crewPerson("Second chauffeur", otherDriver.membershipId);
     tripId = randomUUID();
     await api.ok(actors.DIRECTOR.token, "create-activity", {
       activityId: tripId,
@@ -98,7 +101,10 @@ describe("money read scope, role by read", () => {
       primarySegmentId: randomUUID(),
       primaryAssetId: truckId,
       startedAt: "2026-08-12T05:00:00Z",
-      crew: [{ activityPersonId: randomUUID(), personId: driverPersonId, role: "DRIVER" }],
+      crew: [
+        { activityPersonId: randomUUID(), personId: driverPersonId, role: "DRIVER" },
+        { activityPersonId: randomUUID(), personId: otherDriverPersonId, role: "DRIVER" },
+      ],
     });
     workOrderId = randomUUID();
     await api.ok(actors.DIRECTOR.token, "create-work-order", {

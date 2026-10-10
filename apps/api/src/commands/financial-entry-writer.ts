@@ -1,4 +1,4 @@
-import type { CommandEnvelope, CommandWarningCode } from "@routiq/contracts";
+import type { CommandEnvelope, CommandOrigin, CommandWarningCode } from "@routiq/contracts";
 import { entryEvidenceState } from "@routiq/domain";
 import { and, eq, inArray } from "drizzle-orm";
 import {
@@ -19,6 +19,7 @@ import {
   type Tx,
 } from "./dispatcher.js";
 import { nextEntryNumber } from "./numbering.js";
+import { assertOwnTrip } from "./own-records.js";
 import { resolvePostingPeriod } from "./periods.js";
 
 export interface FinancialEntryPostingWriteRequest {
@@ -95,7 +96,7 @@ export async function writeFinancialEntry(
     envelope,
     request.branchCode,
   );
-  const category = await resolveEntryReferences(tx, ctx, request);
+  const category = await resolveEntryReferences(tx, ctx, request, envelope.origin);
 
   const entryNumber = await nextEntryNumber(
     tx,
@@ -243,6 +244,7 @@ export async function resolveEntryReferences(
     FinancialEntryFacts,
     "direction" | "categoryCode" | "categoryKind" | "categoryRefType" | "postings"
   >,
+  origin: CommandOrigin,
 ): Promise<EntryCategory> {
   const categoryMatches = await tx
     .select({
@@ -342,6 +344,10 @@ export async function resolveEntryReferences(
         referenceType: "activity",
         missing,
       });
+    }
+    // A driver puts money on their own trips only (#592).
+    for (const activityId of requestedActivityIds) {
+      await assertOwnTrip(tx, ctx, ["DRIVER"], { id: activityId }, origin);
     }
   }
 

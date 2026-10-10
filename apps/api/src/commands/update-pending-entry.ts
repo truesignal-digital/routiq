@@ -189,7 +189,7 @@ export const updatePendingEntry: CommandDefinition<UpdatePendingEntryPayload> = 
       categoryRefType: direction.categoryRefType,
     };
     assertPostingsBalance(facts);
-    const category = await resolveEntryReferences(tx, ctx, facts);
+    const category = await resolveEntryReferences(tx, ctx, facts, envelope.origin);
 
     // Under the standalone command's rules, as the sheets evaluate their
     // entries: thresholds are tenant-editable per command type, and a second
