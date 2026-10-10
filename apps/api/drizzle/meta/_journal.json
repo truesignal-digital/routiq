@@ -334,8 +334,15 @@
     {
       "idx": 47,
       "version": "7",
+      "when": 1791604216616,
+      "tag": "0047_person_logins",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
       "when": 1791642941179,
-      "tag": "0047_document_types_visite_carte_grise",
+      "tag": "0048_document_types_visite_carte_grise",
       "breakpoints": true
     }
   ]

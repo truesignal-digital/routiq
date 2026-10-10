@@ -10,20 +10,20 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { corePack } from "../provisioning/packs/core.js";
 
 const MIGRATIONS = fileURLToPath(new URL("../../drizzle", import.meta.url));
-const MIGRATION_0047 = join(MIGRATIONS, "0047_document_types_visite_carte_grise.sql");
+const MIGRATION_0048 = join(MIGRATIONS, "0048_document_types_visite_carte_grise.sql");
 const NEW_TYPES = ["CARTE_GRISE", "VISITE_TECHNIQUE"];
 
 type DocumentType = { code: string; label_fr: string; label_en: string; active: boolean };
 
 /**
- * 0047 against workspaces provisioned before it, the path a deployed box
- * takes: migrated to 0046 from a truncated journal, seeded, then brought
+ * 0048 against workspaces provisioned before it, the path a deployed box
+ * takes: migrated to 0047 from a truncated journal, seeded, then brought
  * forward by the real migrator. Its own database inside the suite's container
  * (guard T1): the backfill writes to every workspace, and the shared database
  * holds other files' workspaces.
  */
-describe("migration 0047 on workspaces that predate it", () => {
-  const databaseName = `pre0047_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
+describe("migration 0048 on workspaces that predate it", () => {
+  const databaseName = `pre0048_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   let adminPool: pg.Pool;
   let pool: pg.Pool;
   let truncatedFolder: string;
@@ -54,11 +54,11 @@ describe("migration 0047 on workspaces that predate it", () => {
     // The forced DROP DATABASE in afterAll can reach a client mid-close.
     pool.on("error", () => {});
 
-    truncatedFolder = await mkdtemp(join(tmpdir(), "routiq-pre0047-"));
+    truncatedFolder = await mkdtemp(join(tmpdir(), "routiq-pre0048-"));
     await cp(MIGRATIONS, truncatedFolder, { recursive: true });
     const journalPath = join(truncatedFolder, "meta", "_journal.json");
     const journal = JSON.parse(await readFile(journalPath, "utf8")) as { entries: Array<{ idx: number }> };
-    journal.entries = journal.entries.filter((entry) => entry.idx <= 46);
+    journal.entries = journal.entries.filter((entry) => entry.idx <= 47);
     await writeFile(journalPath, JSON.stringify(journal));
     await migrate(drizzle(pool), { migrationsFolder: truncatedFolder });
 
@@ -67,9 +67,9 @@ describe("migration 0047 on workspaces that predate it", () => {
     // papers under codes of its own, as the demo seed did before #661.
     await pool.query(`
       INSERT INTO workspaces (id, slug, name) VALUES
-        ('${ws}', 'pre-0047-${ws.slice(0, 8)}', 'Transports Pré-0047'),
-        ('${ownWs}', 'pre-0047-${ownWs.slice(0, 8)}', 'Flotte maison'),
-        ('${namedWs}', 'pre-0047-${namedWs.slice(0, 8)}', 'Transports Ngwa');
+        ('${ws}', 'pre-0048-${ws.slice(0, 8)}', 'Transports Pré-0048'),
+        ('${ownWs}', 'pre-0048-${ownWs.slice(0, 8)}', 'Flotte maison'),
+        ('${namedWs}', 'pre-0048-${namedWs.slice(0, 8)}', 'Transports Ngwa');
       INSERT INTO categories (workspace_id, kind, code, label_fr, label_en) VALUES
         ('${namedWs}', 'DOCUMENT_TYPE', 'TECHNICAL_INSPECTION', 'Visite technique', 'Technical inspection'),
         ('${namedWs}', 'DOCUMENT_TYPE', 'REGISTRATION', 'Carte Grise ', 'Registration');
@@ -83,7 +83,7 @@ describe("migration 0047 on workspaces that predate it", () => {
     await migrate(drizzle(pool), { migrationsFolder: MIGRATIONS });
 
     const before = await query(`SELECT workspace_id, kind, code, label_fr, active FROM categories ORDER BY 1, 2, 3`);
-    const statements = (await readFile(MIGRATION_0047, "utf8"))
+    const statements = (await readFile(MIGRATION_0048, "utf8"))
       .split("--> statement-breakpoint")
       .map((statement) => statement.trim())
       .filter((statement) => statement.length > 0);

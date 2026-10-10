@@ -36,6 +36,8 @@ export const APPEND_ONLY_TABLES = {
   activityPeople: { update: [], delete: "never" },
   movementLegs: { update: [], delete: "never" },
   meterReadings: { update: ["superseded_by_id", "supersede_reason"], delete: "never" },
+  /** A person's links to logins (#569): a link is ended, never rewritten or removed. */
+  personLogins: { update: ["ended_at", "ended_by_command_id"], delete: "never" },
   /**
    * Posted lines are immutable (trigger financial_postings_immutable). A
    * pending entry's author may replace its lines (#85): the delete trigger

@@ -184,6 +184,7 @@
     "SELF_ROLE_CHANGE": "Vous ne pouvez pas changer votre propre rôle ni vos agences. Demandez à la Direction.",
     "MEMBER_ROLE_NOT_GRANTABLE": "Vous ne pouvez pas donner ni retirer ce rôle. Demandez à la Direction.",
     "MEMBER_BRANCH_OUT_OF_SCOPE": "Ce membre ou ces agences sont hors de vos agences. Demandez à la Direction.",
+    "LOGIN_ALREADY_LINKED": "Cet identifiant appartient déjà à une autre personne. Déliez-le d'abord de cette personne.",
     "DIRECTOR_REQUIRES_ALL_BRANCHES": "La Direction couvre toujours toutes les agences.",
     "LAST_BRANCH": "Votre espace doit garder au moins une agence active.",
     "BRANCH_INACTIVE": "Cette agence est désactivée : aucune nouvelle opération n'est possible.",
@@ -1320,11 +1321,13 @@
     "branchEmptyHint": "Aucune personne rattachée à cette agence.",
     "active": "Actif",
     "inactive": "Inactif",
+    "noLogin": "Aucun identifiant",
     "columns": {
       "displayName": "Nom",
       "personCode": "Matricule",
       "defaultRole": "Rôle habituel",
-      "active": "Statut"
+      "active": "Statut",
+      "login": "Identifiant"
     },
     "roles": {
       "DRIVER": "Chauffeur",
@@ -1334,6 +1337,16 @@
       "MECHANIC": "Mécanicien",
       "CLERK": "Agent",
       "OTHER": "Autre"
+    },
+    "login": {
+      "person": "Personne",
+      "field": "Identifiant",
+      "placeholder": "Choisir un identifiant",
+      "option": "{name} ({username})",
+      "linkHint": "Cette personne se connecte avec l'identifiant choisi. Le travail prévu pour elle, ou avec elle dans l'équipage, s'affiche alors comme le sien.",
+      "relinkHint": "Choisissez l'identifiant avec lequel cette personne se connecte désormais. L'ancien lien reste dans l'historique.",
+      "unlinkHint": "{name} garde ses enregistrements, et l'identifiant reste. Le travail prévu pour {name} ne s'affiche plus pour cet identifiant. Le lien reste dans l'historique.",
+      "noneFree": "Aucun identifiant n'est libre. Ajoutez d'abord l'utilisateur, dans Utilisateurs."
     },
     "lead": "Les personnes avec qui votre flotte travaille : chauffeurs, mécaniciens, équipage. Une personne peut conduire sans se connecter."
   },
@@ -1399,7 +1412,10 @@
         "roleChanged": "Rôle mis à jour : {name}",
         "pinReset": "Code réinitialisé : {name}",
         "deactivated": "Utilisateur désactivé : {name}",
-        "reactivated": "Utilisateur réactivé : {name}"
+        "reactivated": "Utilisateur réactivé : {name}",
+        "loginLinked": "Identifiant lié",
+        "loginRelinked": "Identifiant changé",
+        "loginUnlinked": "Identifiant délié"
       },
       "pinResetBody": "Remettez le nouveau code à {name} : il n'apparaît plus nulle part."
     },
@@ -1508,6 +1524,9 @@
       "asset-commissioned": "Actif mis en service",
       "asset-assigned": "Actif affecté",
       "person-registered": "Personne enregistrée",
+      "person-login-linked": "Identifiant lié",
+      "person-login-relinked": "Identifiant changé",
+      "person-login-unlinked": "Identifiant délié",
       "document-added": "Document ajouté",
       "document-renewed": "Document renouvelé",
       "financial_entry-posted": "Écriture comptabilisée",
@@ -2058,6 +2077,21 @@
       "submit": "Réinitialiser le code",
       "submitting": "Réinitialisation…"
     },
+    "link-person-login": {
+      "label": "Lier un identifiant",
+      "submit": "Lier l'identifiant",
+      "submitting": "Liaison…",
+      "relink": {
+        "label": "Changer d'identifiant",
+        "submit": "Changer d'identifiant",
+        "submitting": "Changement…"
+      }
+    },
+    "unlink-person-login": {
+      "label": "Délier l'identifiant",
+      "submit": "Délier l'identifiant",
+      "submitting": "Déliaison…"
+    },
     "cancel-work-order": {
       "label": "Annuler l'ordre de travail",
       "submit": "Annuler l'ordre de travail",
@@ -2426,6 +2460,11 @@
         "title": "{description}",
         "detail": "Note de la Direction · {name} · {when}",
         "badge": "Note de la Direction"
+      },
+      "VEHICLE_DOUBLE_BOOKED": {
+        "title": "L'activité {ref} chevauche une autre activité ouverte",
+        "detail": "Ce véhicule est aussi sur {numbers}. Clôturez celle qui est terminée.",
+        "detailUnnamed": "Ce véhicule est aussi sur une autre activité ouverte. Clôturez celle qui est terminée."
       }
     },
     "maintenance": {

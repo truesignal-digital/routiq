@@ -94,7 +94,15 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
 
     // App access. The handlers narrow ADMIN to the field roles in its branches.
     ...wildcard(
-      ["add-member", "update-member-role", "deactivate-member", "reactivate-member", "reset-member-pin"],
+      [
+        "add-member",
+        "update-member-role",
+        "deactivate-member",
+        "reactivate-member",
+        "reset-member-pin",
+        "link-person-login",
+        "unlink-person-login",
+      ],
       DIRECTOR_ADMIN,
     ),
 
@@ -196,7 +204,7 @@ export const corePack: {
     },
     // The papers a Cameroonian truck carries (#661); the French names are the
     // ones people use in English too. Mirrored for existing workspaces by
-    // migration 0047.
+    // migration 0048.
     {
       kind: "DOCUMENT_TYPE",
       code: "VISITE_TECHNIQUE",

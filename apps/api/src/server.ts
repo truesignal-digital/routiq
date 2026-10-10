@@ -29,6 +29,7 @@ import "./commands/appoint-director.js";
 import "./commands/category.js";
 import "./commands/set-template-preset.js";
 import "./commands/members.js";
+import "./commands/person-login.js";
 import "./commands/report-issue.js";
 import "./commands/issue-decisions.js";
 import "./commands/change-issue-severity.js";
