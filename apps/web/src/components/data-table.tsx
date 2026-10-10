@@ -235,6 +235,10 @@ interface DataTableBaseProps<TData> {
   rowActions?: (row: TData) => DataTableRowAction<TData>[];
 
   sorting?: SortingState;
+  /**
+   * The table's own order: where uncontrolled sorting starts, and what any
+   * sorting falls back to when its column is hidden (#548).
+   */
   defaultSorting?: SortingState;
   onSortingChange?: (sorting: SortingState) => void;
 
@@ -435,6 +439,24 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
     onColumnVisibilityChange: handleColumnVisibilityChange,
     onRowSelectionChange: handleRowSelectionChange,
     ...(getRowId ? { getRowId } : {}),
+  });
+
+  // A list is never sorted by a column the viewer cannot see (#548). Hiding
+  // happens in the screen's own view menu too, so this watches the state
+  // rather than the menu. With the default's column hidden as well, the first
+  // visible sortable column takes over: an empty sort would hand a server read
+  // back its own default order, which can be the very column just hidden.
+  const isHidden = (sort: SortingState[number]) => columnVisibilityState[sort.id] === false;
+  const sortsByHiddenColumn = sortingState.some(isHidden);
+  useEffect(() => {
+    if (!sortsByHiddenColumn) return;
+    const visibleDefault = (defaultSorting ?? []).filter((sort) => !isHidden(sort));
+    const firstSortable = table.getVisibleLeafColumns().find(isSortable);
+    handleSortingChange(
+      visibleDefault.length > 0 || firstSortable === undefined
+        ? visibleDefault
+        : [{ id: firstSortable.id, desc: firstSortable.getFirstSortDir() === "desc" }],
+    );
   });
 
   const keysetPageSize = loadMore?.pageSize ?? LIST_LIMIT_DEFAULT;

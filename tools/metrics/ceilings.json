@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 688635,
+    "ceiling": 688223,
     "raises": [
       {
         "date": "2026-10-06",
@@ -221,8 +221,8 @@
       {
         "date": "2026-10-10",
         "from": 688043,
-        "to": 688635,
-        "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
+        "to": 688223,
+        "reason": "Fall back to the first visible sortable column when the sorted and default columns are hidden (#548)"
       }
     ]
   },
@@ -280,7 +280,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 259778,
+    "ceiling": 259547,
     "raises": [
       {
         "date": "2026-10-06",
@@ -479,12 +479,6 @@
         "from": 259326,
         "to": 259547,
         "reason": "#622 empty-Home sentences (fr+en) in the core catalog; #617 module-off crumb"
-      },
-      {
-        "date": "2026-10-10",
-        "from": 259547,
-        "to": 259778,
-        "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
       }
     ]
   }
