@@ -3,11 +3,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ModuleCode, Role } from "@routiq/contracts";
+import type { AssetOverview, ModuleCode, Role } from "@routiq/contracts";
 import { i18n } from "../i18n/index.js";
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
-import { TrucksOverview } from "./TrucksOverview.js";
+import { TrucksOverview, truckSummaryDetails } from "./TrucksOverview.js";
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ to, search, children, ...props }: { to: string; search?: Record<string, string>; children?: ReactNode }) => (
@@ -176,5 +176,17 @@ describe("Trucks › Overview (#665)", () => {
     screen.getByRole("button", { name: "Close the summary" }).click();
     await screen.findByRole("button", { name: "Show summary" });
     expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+  });
+
+  it("names a grounding once: as the big change, not again as the longest off the road (#667)", () => {
+    const notice = { today: "2026-10-09", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] };
+    const t = i18n.getFixedT("en");
+    const grounded = { ...OVERVIEW, notice } as AssetOverview;
+    expect(truckSummaryDetails(grounded, t, "en")).toHaveLength(1);
+    const changed = {
+      ...grounded,
+      notice: { ...notice, changes: [{ kind: "VEHICLE_GROUNDED" as const, key: "G", assetId: "a3", assetCode: "VH003", since: "2026-10-07T08:00:00.000Z" }] },
+    };
+    expect(truckSummaryDetails(changed, t, "en")).toEqual([]);
   });
 });

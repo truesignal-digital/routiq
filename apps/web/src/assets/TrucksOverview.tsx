@@ -157,10 +157,16 @@ export function TrucksOverview() {
   );
 }
 
-/** The vehicle grounded longest, when one is: the Trucks summary's second sentence. */
+/**
+ * The vehicle grounded longest, when one is: the Trucks summary's second
+ * sentence, left out when the notice already names that grounding as a change.
+ */
 export function truckSummaryDetails(overview: AssetOverview, t: Translate, language: string | undefined): string[] {
   const first = overview.grounded?.first;
   if (first == null) return [];
+  // A read from before #667 carries no notice.
+  const changes: AssetOverview["notice"]["changes"] = (overview as Partial<AssetOverview>).notice?.changes ?? [];
+  if (changes.some((change) => change.kind === "VEHICLE_GROUNDED" && change.assetId === first.assetId)) return [];
   return [t("assets.overview.summary.longest", { code: first.assetCode, date: formatDate(first.since, language) })];
 }
 
