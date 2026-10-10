@@ -1,7 +1,7 @@
 import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
- * Money → "Waiting your approval" → approve, from the row's own button (one tap), the oldest pending
+ * Money → "Waiting for your approval" → approve, from the row's own button (one tap), the oldest pending
  * entry the viewer may decide (someone else recorded it, and it is inside the
  * viewer's approval band), then read it back as POSTED. Mutates the slot; reset
  * with `pnpm verify up --reseed`. Finance decides up to 1 000 000 XAF; above
@@ -22,7 +22,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
 
   await (await openSidebar(page)).getByRole("link", { name: t("Argent", "Money") }).click();
   await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
-  await page.getByRole("button", { name: t("En attente de votre approbation", "Waiting your approval"), exact: true }).click();
+  await page.getByRole("button", { name: t("En attente de votre approbation", "Waiting for your approval"), exact: true }).click();
   await quiet();
   await shot("approvals-queue", { caption: `The waiting view: ${entry.entryNumber} waits for this role's decision` });
 

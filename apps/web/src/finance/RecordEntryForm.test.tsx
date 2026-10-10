@@ -304,7 +304,7 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
     inPanel(<RecordEntryForm surface="panel" pinnedAssetId={ASSET_ID} onRecorded={vi.fn()} />);
     expect(
       screen.getByText(
-        "Above FCFA 150,000, this entry waits for Finance. Above FCFA 1,000,000, this entry waits for Direction.",
+        "Above FCFA 150,000, this entry waits for Finance. Above FCFA 1,000,000, this entry waits for the Director.",
       ),
     ).toBeTruthy();
 
@@ -319,7 +319,7 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
     );
     expect(
       screen.getByText(
-        "Above FCFA 100,000, this entry waits for Finance. Above FCFA 1,000,000, this entry waits for Direction.",
+        "Above FCFA 100,000, this entry waits for Finance. Above FCFA 1,000,000, this entry waits for the Director.",
       ),
     ).toBeTruthy();
   });
@@ -332,7 +332,7 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
     const amount = screen.getByLabelText("Amount (FCFA)");
 
     await userEvent.type(amount, "1500000");
-    expect(await screen.findByText("Above FCFA 1,000,000, this entry waits for Direction.")).toBeTruthy();
+    expect(await screen.findByText("Above FCFA 1,000,000, this entry waits for the Director.")).toBeTruthy();
 
     await userEvent.clear(amount);
     await userEvent.type(amount, "250000");
@@ -511,10 +511,10 @@ describe("entry decisions on a record panel", () => {
 
     expect(within(panel).queryByText(/books work-order costs/)).toBeNull();
     await userEvent.click(within(panel).getByRole("radio", { name: "Wrong details, to record again" }));
-    expect(within(panel).getByText(/Only Direction, the Administrator or a technician books work-order costs/)).toBeTruthy();
+    expect(within(panel).getByText(/Only the Director, the Administrator or a technician books work-order costs/)).toBeTruthy();
     await userEvent.click(within(panel).getByRole("button", { name: "Cancel entry" }));
 
-    expect(await screen.findByText(/Ask Direction, the Administrator or the work order's technician/)).toBeTruthy();
+    expect(await screen.findByText(/Ask the Director, the Administrator or the work order's technician/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Record again" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Open the work order" }));
     expect(onOpenWorkOrder).toHaveBeenCalledOnce();
@@ -587,6 +587,7 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     ],
     evidenceFiles: [],
     directionDecides: false,
+    approver: null,
   };
 
   const submitted: SubmitResult = {

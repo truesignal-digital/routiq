@@ -465,6 +465,19 @@ it("opens a receipt through the entry's own route, never the generic artifact ro
   expect(recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/artifacts"))).toBe(false);
 });
 
+it.each([
+  ["FINANCE_APPROVES", "Waiting on Finance to review it."],
+  ["FINANCE_PEER_APPROVES", "Waiting on another Finance member or the Director to review it."],
+  ["DIRECTION_APPROVES", "Waiting on the Director to review it."],
+] as const)("says who reviews a waiting entry on its record (#542, %s)", async (approver, sentence) => {
+  await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+    role: "ADMIN",
+    entryDetails: [entryDetail({ approver, evidence: { state: "PAYMENT_REFERENCE", artifactCount: 0 } })],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Repairs/ });
+  expect(within(panel).getByText(new RegExp(`^${sentence}`))).toBeTruthy();
+});
+
 it("opens an issue's photo through the issue's own route", async () => {
   const open = vi.fn();
   vi.stubGlobal("open", open);
@@ -734,12 +747,12 @@ describe("Cancel entry from the vehicle panel (#426)", () => {
     const form = await screen.findByRole("dialog", { name: "Cancel entry" });
     await user.click(within(form).getByRole("radio", { name: "Wrong details, to record again" }));
     // Said before the cancellation, not discovered after it.
-    expect(within(form).getByText(/Only Direction, the Administrator or a technician books work-order costs/)).toBeTruthy();
+    expect(within(form).getByText(/Only the Director, the Administrator or a technician books work-order costs/)).toBeTruthy();
     await user.click(within(form).getByRole("button", { name: "Cancel entry" }));
 
     await waitFor(() => expect(recorded.commands).toHaveLength(1));
     expect(recorded.commands[0]?.name).toBe("reverse-entry");
-    const done = await screen.findByText(/Ask Direction, the Administrator or the work order's technician/);
+    const done = await screen.findByText(/Ask the Director, the Administrator or the work order's technician/);
     expect(screen.queryByRole("button", { name: "Record again" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Open the work order" }));
@@ -773,7 +786,7 @@ describe("a note from Direction on its record (#98)", () => {
     const recorded = await openVehicle(path, { role: "TECHNICIAN", notes: [noteDetail()] });
     const user = userEvent.setup();
     const panel = await screen.findByRole("dialog", { name: "Note by Émilienne" });
-    expect(within(panel).getByText("Note from Direction")).toBeTruthy();
+    expect(within(panel).getByText("Note from the Director")).toBeTruthy();
     expect(within(panel).getByText(/Nobody has marked it as seen yet/)).toBeTruthy();
     await user.click(within(panel).getByRole("button", { name: "Mark as seen" }));
     const form = await screen.findByRole("dialog", { name: "Mark as seen" });
@@ -805,7 +818,7 @@ describe("a note from Direction on its record (#98)", () => {
   it("offers nothing on a note that is not Direction's", async () => {
     await openVehicle(path, { role: "DRIVER", notes: [noteDetail({ authorRole: "ADMIN" })] });
     const panel = await screen.findByRole("dialog", { name: "Note by Émilienne" });
-    expect(within(panel).queryByText("Note from Direction")).toBeNull();
+    expect(within(panel).queryByText("Note from the Director")).toBeNull();
     expect(within(panel).queryByRole("button", { name: "Mark as seen" })).toBeNull();
   });
 });

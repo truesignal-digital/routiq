@@ -68,7 +68,7 @@
     "screenFailed": "Something went wrong on this page. Try again.",
     "retry": "Try again",
     "counts": {
-      "moneyWaiting": "{count, plural, one {# expense waiting for your approval} other {# expenses waiting for your approval}}",
+      "moneyWaiting": "{count, plural, one {# entry waiting for your approval} other {# entries waiting for your approval}}",
       "maintenanceNew": "{count, plural, one {# new problem to handle} other {# new problems to handle}}",
       "tooltip": "{label}: {waiting}"
     },
@@ -198,7 +198,7 @@
     "NOT_ENTRY_AUTHOR": "Only the person who recorded this entry can edit it. You can reject it.",
     "OWN_RECORDS_ONLY": "You can only do this on records you entered yourself. Ask an administrator.",
     "ISSUE_SEVERITY_ALREADY_SET": "This problem is already marked that way. Refresh the page.",
-    "NOTE_NOT_FROM_DIRECTION": "Only notes from Direction wait to be marked as seen.",
+    "NOTE_NOT_FROM_DIRECTION": "Only notes from the Director wait to be marked as seen.",
     "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE": "You wrote this note: it waits for someone else to mark it as seen.",
     "DRIVER_INELIGIBLE": "This person cannot drive this activity: they are no longer active, or their usual job is not driver.",
     "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "The amount that posts directly must stay below the amount Finance approves up to."
@@ -448,7 +448,7 @@
       },
       "warnings": {
         "generic": "The action completed with a warning ({code}).",
-        "EVIDENCE_MISSING": "Missing evidence: this category requires supporting documentation or a photo.",
+        "EVIDENCE_MISSING": "Attach the receipt when you have it.",
         "LATE_POSTING": "The month of this date is locked, so the entry was posted in the current month. It keeps its own date.",
         "PERIOD_HAS_SUBMITTED_ENTRIES": "This period contains entries awaiting approval."
       },
@@ -473,7 +473,7 @@
       "tiles": {
         "out": "Expenses in {month}",
         "in": "Revenue in {month}",
-        "waiting": "Waiting your approval",
+        "waiting": "Waiting for your approval",
         "waitingHint": "{amount} · oldest {age}",
         "missing": "Missing receipt",
         "missingHint": "Oldest {date}"
@@ -559,6 +559,7 @@
         "asset": "Asset",
         "postingAmount": "Amount",
         "reversalChain": "Cancellation",
+        "directionDecides": "Above your approval band: the Director decides.",
         "reversesEntry": "Cancellation of entry {number}",
         "reversedByEntry": "Cancelled by entry {number}",
         "rejectedReason": "Rejection reason",
@@ -591,8 +592,8 @@
         "recordAgainTitle": "Entry cancelled",
         "recordAgainBody": "Record it again with the right details. The form opens filled in from the cancelled entry.",
         "recordAgain": "Record again",
-        "workOrderHandOffHint": "This cost is on a work order. Only Direction, the Administrator or a technician books work-order costs, so one of them records it again after you cancel.",
-        "workOrderHandOffBody": "This cost is on a work order. Ask Direction, the Administrator or the work order's technician to record it again on the work order.",
+        "workOrderHandOffHint": "This cost is on a work order. Only the Director, the Administrator or a technician books work-order costs, so one of them records it again after you cancel.",
+        "workOrderHandOffBody": "This cost is on a work order. Ask the Director, the Administrator or the work order's technician to record it again on the work order.",
         "openWorkOrder": "Open the work order",
         "done": "Done"
       },
@@ -665,7 +666,7 @@
       "statusLocked": "Locked since {date}",
       "entryCount": "{count, plural, one {# entry} other {# entries}}",
       "lockExplanation": "Entries already posted in this month can no longer change. A late entry dated in this month posts in the current month and keeps its date.",
-      "lockCurrentExplanation": "Entries already posted in this month can no longer change, and nothing can be posted until it is reopened.",
+      "lockCurrentExplanation": "Entries already posted in this month can no longer change, and entries dated this month can't post until it is reopened.",
       "reasonLabel": "Reason for reopening",
       "reasonPlaceholder": "Explain why this period needs to be reopened…",
       "cancel": "Cancel",
@@ -2328,6 +2329,8 @@
       "manager": "A manager",
       "operations": "Operations",
       "recorder": "Whoever recorded it",
+      "director": "The Director",
+      "financePeer": "Another Finance member or the Director",
       "team": "The team"
     },
     "now": {
@@ -2408,8 +2411,8 @@
       },
       "DIRECTION_NOTE": {
         "title": "{description}",
-        "detail": "Note from Direction · {name} · {when}",
-        "badge": "Note from Direction"
+        "detail": "Note from the Director · {name} · {when}",
+        "badge": "Note from the Director"
       }
     },
     "maintenance": {
@@ -2714,16 +2717,16 @@
         "release": "Waiting on a manager to release the vehicle to service.",
         "otherSafetyIssue": "Waiting on {count, plural, one {another safety-critical problem to be closed: “{description}”.} other {# other safety-critical problems to be closed, including “{description}”.}}",
         "planning": "Waiting on the workshop to plan a work order.",
-        "entryReview": "Waiting on finance to review it. Until then it is not counted in posted totals.",
+        "entryReview": "Waiting on {approver, select, DIRECTION_APPROVES {the Director} FINANCE_PEER_APPROVES {another Finance member or the Director} other {Finance}} to review it. Until then it is not counted in posted totals.",
         "entryReceipt": "Waiting on {name} to attach the receipt.",
         "documentRenewal": "Waiting on operations to renew it."
       },
       "photoNumber": "Photo {number}",
       "splitEntryNotEditable": "This entry is split over several lines and cannot be edited here. Ask for it to be rejected, then record it again.",
-      "directionNoteEyebrow": "Note from Direction",
+      "directionNoteEyebrow": "Note from the Director",
       "notSeenYet": "Nobody has marked it as seen yet. It stays in the vehicle's To do list until someone does.",
       "seenBy": "Seen by {name} on {date}",
-      "acknowledgeHint": "Tells Direction you have read this note. It leaves the To do list; your name and the time stay on the note."
+      "acknowledgeHint": "Tells the Director you have read this note. It leaves the To do list; your name and the time stay on the note."
     },
     "rows": {
       "actionsFor": "Actions for {record}"
@@ -2837,12 +2840,12 @@
       "record-expense": "Your expenses",
       "record-revenue": "Your revenue"
     },
-    "step": "{bound, select, upTo {Up to {amount}} above {Above {amount}} other {Any amount}}: {outcome, select, POSTS_DIRECTLY {posts directly} FINANCE_APPROVES {Finance approves} FINANCE_PEER_APPROVES {another Finance member or Direction approves} DIRECTION_APPROVES {Direction approves} other {waits for approval}}",
+    "step": "{bound, select, upTo {Up to {amount}} above {Above {amount}} other {Any amount}}: {outcome, select, POSTS_DIRECTLY {posts directly} FINANCE_APPROVES {Finance approves} FINANCE_PEER_APPROVES {another Finance member or the Director approves} DIRECTION_APPROVES {the Director approves} other {waits for approval}}",
     "hint": {
       "posts": "Your entries post directly at any amount.",
       "postsAt": "At this amount, the entry posts directly.",
-      "above": "Above {amount}, this entry waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or Direction} DIRECTION_APPROVES {Direction} other {approval}}.",
-      "always": "This entry waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or Direction} DIRECTION_APPROVES {Direction} other {approval}}."
+      "above": "Above {amount}, this entry waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or the Director} DIRECTION_APPROVES {the Director} other {approval}}.",
+      "always": "This entry waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or the Director} DIRECTION_APPROVES {the Director} other {approval}}."
     }
   },
   "reasonCodes": {
@@ -2853,7 +2856,7 @@
   },
   "settings": {
     "title": "Company settings",
-    "description": "Rules that apply to everyone in the company. Only Direction can change them.",
+    "description": "Rules that apply to everyone in the company. Only the Director can change them.",
     "retry": "Try again",
     "approvals": {
       "title": "Approvals",
@@ -2863,7 +2866,7 @@
       "chainLabel": "The approval chain",
       "noBands": "This company's approval rules were set by hand, so they can't be changed here. Contact ROUTIQ support.",
       "byRole": "What each role's own entries meet",
-      "byRoleHint": "Nobody approves their own entry, and Direction's own entries always post.",
+      "byRoleHint": "Nobody approves their own entry, and the Director's own entries always post.",
       "kind": {
         "record-expense": "Expenses",
         "record-revenue": "Revenue"
@@ -2877,7 +2880,7 @@
         "recording": "Posts directly up to",
         "recordingHint": "Entries up to this amount post without review.",
         "ceiling": "Finance approves up to",
-        "ceilingHint": "Above the first amount and up to this one, Finance decides. Above it, only Direction decides.",
+        "ceilingHint": "Above the first amount and up to this one, Finance decides. Above it, only the Director decides.",
         "whole": "Enter the amount in whole francs, without decimals.",
         "belowCeiling": "Keep this below the amount Finance approves up to.",
         "unchanged": "Change an amount to save.",

@@ -548,6 +548,22 @@ describe("to-dos from the attention read", () => {
     expect(approver[0]?.record).toEqual({ kind: "entry", id: ENTRY_ID });
   });
 
+  // #542: every waiting entry said "Finance", even above Finance's band and on
+  // a Finance member's own entry. The read names who decides it.
+  it("names who decides a waiting entry", () => {
+    const review = (approver?: "FINANCE_APPROVES" | "FINANCE_PEER_APPROVES" | "DIRECTION_APPROVES" | "WAITS") =>
+      attention("ENTRY_AWAITING_REVIEW", {
+        makerPrincipalIds: [ME_ID],
+        ...(approver === undefined ? {} : { params: { approver } }),
+      });
+    const who = buildTodos(
+      [review("FINANCE_APPROVES"), review("FINANCE_PEER_APPROVES"), review("DIRECTION_APPROVES"), review("WAITS"), review()],
+      vehicle,
+      viewer("FINANCE"),
+    ).map((todo) => todo.who);
+    expect(who).toEqual(["finance", "financePeer", "director", "finance", "finance"]);
+  });
+
   it("locks the review, and leaves it out of the to-do count, above Finance's band (#393)", () => {
     const above = attention("ENTRY_AWAITING_REVIEW", { params: { directionDecides: true } });
     const within = attention("ENTRY_AWAITING_REVIEW");

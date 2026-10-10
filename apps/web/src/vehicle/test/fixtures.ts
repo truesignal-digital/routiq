@@ -353,6 +353,7 @@ export function entryDetail(overrides: Partial<FinancialEntryDetail> = {}): Fina
     ],
     evidenceFiles: [],
     directionDecides: false,
+    approver: null,
     ...overrides,
   };
 }
