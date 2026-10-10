@@ -32,11 +32,11 @@ const DashboardScreen = lazyScreen(() => import("./screens/DashboardScreen.js"),
 const MySettingsScreen = lazyScreen(() => import("./screens/MySettingsScreen.js"), "MySettingsScreen");
 const PersonsScreen = lazyScreen(() => import("./screens/PersonsScreen.js"), "PersonsScreen");
 const UsersScreen = lazyScreen(() => import("./screens/UsersScreen.js"), "UsersScreen");
-const FinanceRecordScreen = lazyScreen(() => import("./screens/FinanceRecordScreen.js"), "FinanceRecordScreen");
-const FinanceEntriesScreen = lazyScreen(() => import("./screens/FinanceEntriesScreen.js"), "FinanceEntriesScreen");
-const FinanceScreen = lazyScreen(() => import("./screens/FinanceScreen.js"), "FinanceScreen");
-const FinanceOverviewScreen = lazyScreen(() => import("./screens/FinanceOverviewScreen.js"), "FinanceOverviewScreen");
-const FinanceApproveScreen = lazyScreen(() => import("./screens/FinanceApproveScreen.js"), "FinanceApproveScreen");
+const FinanceRecordScreen = lazyScreen(() => import("./screens/FinancePage.js"), "FinanceRecordScreen");
+const FinanceEntriesScreen = lazyScreen(() => import("./screens/FinancePage.js"), "FinanceEntriesScreen");
+const FinanceScreen = lazyScreen(() => import("./screens/FinancePage.js"), "FinanceScreen");
+const FinanceOverviewScreen = lazyScreen(() => import("./screens/FinancePage.js"), "FinanceOverviewScreen");
+const FinanceApproveScreen = lazyScreen(() => import("./screens/FinancePage.js"), "FinanceApproveScreen");
 const ActivitiesScreen = lazyScreen(() => import("./screens/ActivitiesScreen.js"), "ActivitiesScreen");
 const MaintenanceScreen = lazyScreen(() => import("./screens/MaintenanceScreen.js"), "MaintenanceScreen");
 const ActivityDetailScreen = lazyScreen(() => import("./screens/ActivityDetailScreen.js"), "ActivityDetailScreen");

@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 694965,
+    "ceiling": 699097,
     "raises": [
       {
         "date": "2026-10-06",
@@ -259,11 +259,17 @@
         "from": 694679,
         "to": 694965,
         "reason": "Loss/Profit helper and money words (#659)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694679,
+        "to": 699097,
+        "reason": "Money module page (#664): the Overview screen, ModulePage, CompareBars and ToDoList; the Money tabs load as one chunk to keep this small. Counted from develop's ceiling, so it also covers #659's 286 B until that PR merges"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22832,
+    "ceiling": 22941,
     "raises": [
       {
         "date": "2026-10-06",
@@ -318,11 +324,17 @@
         "from": 22508,
         "to": 22832,
         "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 22941,
+        "reason": "Money module page (#664): five-tile strip and the Overview's two-column grid add Tailwind classes"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 261561,
+    "ceiling": 262681,
     "raises": [
       {
         "date": "2026-10-06",
@@ -551,6 +563,12 @@
         "from": 261338,
         "to": 261561,
         "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261561,
+        "to": 262681,
+        "reason": "Money module page (#664): Overview, tab and range words in fr and en ship in the first-load i18n catalog, plus three child routes"
       }
     ]
   }
