@@ -274,11 +274,17 @@ export function workOrderSteps(
 }
 
 /** Why the work order is stopped, from the viewer's side: who it is waiting on. */
-export type WorkOrderWaiting = "authorization" | "completion" | "signOff" | "release";
+export type WorkOrderWaiting = "authorization" | "completion" | "signOff" | "release" | "otherSafetyIssue";
 
+/**
+ * `otherSafetyIssueOpen`: another safety-critical problem on the vehicle is
+ * still open, which blocks the release before any manager can act (#588, the
+ * server's SAFETY_ISSUE_OPEN).
+ */
 export function workOrderWaiting(
   status: WorkOrderStatus,
   isGrounding: boolean,
+  otherSafetyIssueOpen = false,
 ): WorkOrderWaiting | null {
   switch (status) {
     case "SUBMITTED":
@@ -288,7 +294,8 @@ export function workOrderWaiting(
     case "COMPLETION_SUBMITTED":
       return "signOff";
     case "COMPLETED":
-      return isGrounding ? "release" : null;
+      if (!isGrounding) return null;
+      return otherSafetyIssueOpen ? "otherSafetyIssue" : "release";
     case "REJECTED":
     case "CANCELLED":
       return null;

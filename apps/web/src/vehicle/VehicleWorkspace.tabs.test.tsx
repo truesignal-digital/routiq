@@ -199,8 +199,9 @@ describe("Money", () => {
     });
 
     it.each([
-      ["en", "Awaiting review", "Costs awaiting review"],
-      ["fr-CM", "En attente d'examen", "Coûts en attente d'examen"],
+      // The pending line is one of the order's costs, marked as awaiting review (#612).
+      ["en", "Awaiting review", "Costs"],
+      ["fr-CM", "En attente d'examen", "Coûts"],
     ] as const)("%s: Money, its entry badges and the work order's pending costs agree", async (locale, name, heading) => {
       await openVehicle(`/assets/${ASSET_ID}/money?period=2026-09&entries=review&panel=work_order:${WORK_ORDER_ID}`, {
         role: "FINANCE",
@@ -209,7 +210,7 @@ describe("Money", () => {
         workOrderDetails: [pending],
       });
       const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
-      expect(await within(panel).findByText(heading)).toBeTruthy();
+      expect(await within(panel).findByRole("heading", { name: heading })).toBeTruthy();
       expect(within(panel).getByText(name)).toBeTruthy();
       expect(within(panel).queryByText(/Pending|En attente$|approval|approbation/)).toBeNull();
       cleanup();
