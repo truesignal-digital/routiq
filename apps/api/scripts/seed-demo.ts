@@ -68,8 +68,6 @@ const ids = {
   repair: demoId("entry:VH003:repair"),
   bafoussamFuel: demoId("entry:douala-bafoussam:fuel"),
   // The vehicle workspace story (#44): VH003 grounded, VH001 repaired.
-  inspectionType: demoId("category:document-type:TECHNICAL_INSPECTION"),
-  registrationType: demoId("category:document-type:REGISTRATION"),
   vh003Brakes: demoId("issue:VH003:brakes"),
   vh003BrakesOrder: demoId("work-order:VH003:brakes"),
   vh003BrakeParts: demoId("entry:VH003:brake-parts"),
@@ -933,29 +931,12 @@ async function seedTransportsNgwa() {
     { clientOccurredAt: at(-1, "09:05") },
   );
 
-  // VH003's papers, one in each state the documents tab distinguishes. The
-  // core pack types only insurance and permits, so the workspace adds the two
-  // other types it files, as an operator would from the categories screen.
-  await Promise.all([
-    runCommand(emilienne, "create-category:TECHNICAL_INSPECTION", {
-      id: ids.inspectionType,
-      kind: "DOCUMENT_TYPE",
-      code: "TECHNICAL_INSPECTION",
-      labelFr: "Visite technique",
-      labelEn: "Technical inspection",
-    }),
-    runCommand(emilienne, "create-category:REGISTRATION", {
-      id: ids.registrationType,
-      kind: "DOCUMENT_TYPE",
-      code: "REGISTRATION",
-      labelFr: "Carte grise",
-      labelEn: "Registration",
-    }),
-  ]);
+  // VH003's papers, one in each state the documents tab distinguishes, on the
+  // core pack's four types (#661).
   await runCommand(boris, "add-or-renew-document:VH003:inspection:previous", {
     documentId: ids.vh003InspectionPrevious,
     assetId: ids.vh003,
-    documentTypeCode: "TECHNICAL_INSPECTION",
+    documentTypeCode: "VISITE_TECHNIQUE",
     documentNumber: "VT-DLA-20417",
     issuedAt: day(-366),
     expiresAt: day(-184),
@@ -965,7 +946,7 @@ async function seedTransportsNgwa() {
     runCommand(boris, "add-or-renew-document:VH003:inspection", {
       documentId: ids.vh003Inspection,
       assetId: ids.vh003,
-      documentTypeCode: "TECHNICAL_INSPECTION",
+      documentTypeCode: "VISITE_TECHNIQUE",
       documentNumber: "VT-DLA-23981",
       issuedAt: day(-185),
       expiresAt: day(-3),
@@ -990,7 +971,7 @@ async function seedTransportsNgwa() {
     runCommand(boris, "add-or-renew-document:VH003:registration", {
       documentId: ids.vh003Registration,
       assetId: ids.vh003,
-      documentTypeCode: "REGISTRATION",
+      documentTypeCode: "CARTE_GRISE",
       documentNumber: "CG-LT-2019-04821",
       issuedAt: "2019-03-12",
     }),

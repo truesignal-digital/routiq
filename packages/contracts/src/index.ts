@@ -67,6 +67,7 @@ export * from "./commands/attach-evidence.js";
 export * from "./commands/update-pending-entry.js";
 export * from "./reads/maintenance.js";
 export * from "./reads/asset-workspace.js";
+export * from "./reads/fleet-attention.js";
 export * from "./reads/notes.js";
 export * from "./commands/acknowledge-approval-rules.js";
 export * from "./reads/approval-chain.js";
