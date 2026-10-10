@@ -30,8 +30,8 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
     if (MAINTENANCE_READ.test(url.pathname)) maintenanceReads.push(`${request.method()} ${url.pathname}`);
   });
   const notIncluded = t(
-    "Ce module n'est pas activé pour votre espace de travail.",
-    "This module is not enabled for your workspace.",
+    "Ce module n'est pas activé pour votre entreprise.",
+    "This module is not enabled for your company.",
   );
   const phone = (page.viewportSize()?.width ?? 1440) < 768;
   const role = account.role;

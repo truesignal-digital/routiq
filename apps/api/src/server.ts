@@ -29,6 +29,7 @@ import "./commands/appoint-director.js";
 import "./commands/category.js";
 import "./commands/set-template-preset.js";
 import "./commands/members.js";
+import "./commands/person-login.js";
 import "./commands/report-issue.js";
 import "./commands/issue-decisions.js";
 import "./commands/change-issue-severity.js";
@@ -65,6 +66,7 @@ import { registerApprovalChainReadRoutes } from "./reads/approval-chain.js";
 import { registerApprovalThresholdsReadRoutes } from "./reads/approval-thresholds.js";
 import { ANY_ROLE, defineRead, requireReadGates } from "./reads/define-read.js";
 import { enabledModuleSet } from "./reads/read-gate.js";
+import { workspaceTimezone } from "./reads/workspace-day.js";
 import { registerTelemetryRoutes } from "./observability/telemetry.js";
 
 export interface ServerDeps {
@@ -154,7 +156,7 @@ export function buildServer({
   if (storage) registerArtifactRoutes(app, db, storage, requireAuth);
   const readDeps = { db, requireAuth };
   defineRead(app, readDeps, { path: "/v1/me", module: "CORE", roles: ANY_ROLE, branchScope: "workspace" }, async ({ auth, read }) => {
-    const { modules, presets, principal, workspace } = await read(async (tx) => ({
+    const { modules, presets, principal, workspace, timezone } = await read(async (tx) => ({
       // The read gate's rule, so the menu and the per-command check agree on
       // modules that are off until the vendor turns them on.
       modules: await enabledModuleSet(tx, auth.workspaceId),
@@ -169,6 +171,7 @@ export function buildServer({
         .select({ name: workspaces.name })
         .from(workspaces)
         .where(eq(workspaces.id, auth.workspaceId)),
+      timezone: await workspaceTimezone(tx, auth.workspaceId),
     }));
     const displayName = principal[0]?.displayName;
     const workspaceName = workspace[0]?.name;
@@ -180,6 +183,7 @@ export function buildServer({
       ...auth,
       displayName,
       workspaceName,
+      timezone,
       enabledModules: MODULE_CODES.filter((code) => modules.has(code)),
       enabledPresets: presets,
     } satisfies MeResponse;

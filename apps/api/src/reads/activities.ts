@@ -40,6 +40,7 @@ import {
   commands,
   financialEntries,
   financialPostings,
+  memberships,
   meterReadings,
   movementLegs,
   persons,
@@ -818,8 +819,17 @@ export function registerActivityReadRoutes(
               defaultRole: persons.defaultRole,
               branchId: persons.branchId,
               active: persons.active,
+              loginPrincipalId: memberships.principalId,
+              rowVersion: persons.rowVersion,
             })
             .from(persons)
+            .leftJoin(
+              memberships,
+              and(
+                eq(memberships.workspaceId, persons.workspaceId),
+                eq(memberships.id, persons.membershipId),
+              ),
+            )
             .where(and(...conditions))
             .orderBy(asc(persons.displayName), asc(persons.id)),
         );

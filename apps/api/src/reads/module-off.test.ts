@@ -35,11 +35,15 @@ describe("reads with one module off", () => {
     declaredCostMinor: number | null;
     costToCome: unknown;
   };
-  type WorkOrderDetail = WorkOrderAmounts & { costLines: unknown; pendingCostLines: unknown };
+  type WorkOrderDetail = WorkOrderAmounts & {
+    costLines: unknown;
+    pendingCostLines: unknown;
+    otherBranchesCostMinor: unknown;
+  };
   type RecordHistory = { items: Array<{ eventId: string; shownFields: string[] }> };
   type EventDiff = { changes: Array<{ field: string }> };
-  const NO_AMOUNTS = {
-    expectedCostMinor: null,
+  const ESTIMATE_ONLY = {
+    expectedCostMinor: 150_000,
     actualCostMinor: null,
     declaredCostMinor: null,
     costToCome: null,
@@ -171,28 +175,36 @@ describe("reads with one module off", () => {
         });
         expect((await read<NavCounts>("/v1/nav-counts")).moneyWaiting).toBeNull();
 
-        // A work order's estimate and its cost are Finance's figures (#328).
+        // The estimate is the workshop's quote (#640): it stays. The actual
+        // cost and the lines it sums are Finance's figures (#328).
         const list = await read<{ items: WorkOrderAmounts[] }>(`/v1/work-orders?assetId=${truck}`);
         expect(list.items).toHaveLength(1);
-        for (const item of list.items) expect(item).toMatchObject(NO_AMOUNTS);
+        for (const item of list.items) expect(item).toMatchObject(ESTIMATE_ONLY);
         expect(await read<WorkOrderDetail>(`/v1/work-orders/${workOrderId}`)).toMatchObject({
-          ...NO_AMOUNTS,
+          ...ESTIMATE_ONLY,
           costLines: null,
           pendingCostLines: null,
+          otherBranchesCostMinor: null,
         });
         const orders = (await read<Attention>(`/v1/assets/${truck}/attention`)).items.filter((item) =>
           item.code.startsWith("WORK_ORDER_"),
         );
         expect(orders).toHaveLength(1);
         for (const item of orders) {
-          expect(Object.keys(item.params).filter((key) => /Cost|currency/.test(key))).toEqual([]);
+          expect(Object.keys(item.params).filter((key) => /Cost|currency/.test(key)).sort()).toEqual([
+            "currency",
+            "expectedCostMinor",
+          ]);
         }
         const timeline = await read<RecordHistory>(`/v1/history/work_order/${workOrderId}`);
         expect(timeline.items.length).toBeGreaterThan(0);
+        const shownCosts = timeline.items.flatMap((item) => item.shownFields.filter((field) => /Cost/.test(field)));
+        expect([...new Set(shownCosts)]).toEqual(["expectedCostMinor"]);
         for (const item of timeline.items) {
-          expect(item.shownFields.filter((field) => /Cost/.test(field))).toEqual([]);
           const diff = await read<EventDiff>(`/v1/history/work_order/${workOrderId}/${item.eventId}`);
-          expect(diff.changes.filter((change) => /Cost/.test(change.field))).toEqual([]);
+          for (const change of diff.changes.filter((change) => /Cost/.test(change.field))) {
+            expect(change.field).toBe("expectedCostMinor");
+          }
         }
       },
     ],

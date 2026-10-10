@@ -97,8 +97,8 @@ vi.mock("../auth/me.js", () => ({
 const summary = {
   currency: "XAF",
   month: "2026-10",
-  openPeriodCode: "2026-10",
-  lastLockedPeriodCode: "2026-09",
+  unlockedPeriodCodes: ["2026-08"],
+  lastLockedPeriodCode: "2026-07",
   outMinor: 412_500,
   inMinor: 450_000,
   missingReceipt: { count: 1, oldestEconomicDate: "2026-10-01" },

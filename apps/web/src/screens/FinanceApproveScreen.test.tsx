@@ -32,6 +32,7 @@ function renderAs(role: Role) {
     branchScope: "ALL",
     enabledModules: ["CORE", "FINANCE"],
     enabledPresets: ["TRUCKING"],
+    timezone: "Africa/Douala",
   };
   return render(
     <MeCtx.Provider value={me}>

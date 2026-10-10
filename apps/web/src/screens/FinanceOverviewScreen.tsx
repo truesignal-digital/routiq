@@ -298,7 +298,7 @@ function OverviewTiles({
                 ? "finance.overview.monthClose.locked"
                 : "finance.overview.monthClose.open",
           ),
-      ...(period === undefined ? {} : { hint: t("finance.periods.entryCount", { count: period.entryCount }) }),
+      ...closeHint(close.month, period, summary?.unlockedPeriodCodes, t, i18n.resolvedLanguage),
       link: { to: "/finance/entries", search: { periodCode: close.month } },
     });
   }
@@ -306,6 +306,33 @@ function OverviewTiles({
   const strip = metricTiles(tiles);
   if (strip === undefined) return null;
   return <MetricStrip tiles={strip} isPending={isPending} isError={isError} />;
+}
+
+/** Past this many, the close tile counts the earlier unlocked months instead of naming each. */
+const NAMED_UNLOCKED_MAX = 3;
+
+/**
+ * Under the close: the earlier months still not locked when there are any
+ * (#526), the month's entry count otherwise.
+ */
+export function closeHint(
+  month: string,
+  period: PeriodRead | undefined,
+  unlocked: readonly string[] | undefined,
+  t: Translate,
+  language: string | undefined,
+): Pick<MetricTile, "hint"> {
+  const earlier = (unlocked ?? []).filter((code) => code < month);
+  if (earlier.length > NAMED_UNLOCKED_MAX) {
+    return { hint: t("finance.overview.monthClose.earlierMany", { count: earlier.length }) };
+  }
+  if (earlier.length > 0) {
+    const months = new Intl.ListFormat(language, { type: "conjunction" }).format(
+      earlier.map((code) => formatMonth(code, language)),
+    );
+    return { hint: t("finance.overview.monthClose.earlier", { count: earlier.length, months }) };
+  }
+  return period === undefined ? {} : { hint: t("finance.periods.entryCount", { count: period.entryCount }) };
 }
 
 /**

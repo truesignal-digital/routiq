@@ -1,7 +1,8 @@
-import type { WorkOrderCostToCome } from "@routiq/contracts";
+import { canReadWorkOrderCosts, type ModuleCode, type WorkOrderCostToCome } from "@routiq/contracts";
 import { sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { financialEntries, financialPostings, workOrders } from "../db/schema.js";
+import type { AuthContext } from "../auth/types.js";
 import { serializeMinor } from "./serialize-minor.js";
 
 /**
@@ -132,4 +133,23 @@ export function costToCome(facts: CostToComeFacts): WorkOrderCostToCome | null {
     };
   }
   return null;
+}
+
+/**
+ * Which of a work order's amounts the caller reads. The estimate is the
+ * workshop's quote, a Maintenance fact that drives approval (#640): every role
+ * that reads work-order costs sees it (#390). The actual cost and the lines it
+ * sums are Finance's (#328), shown to the same roles only while FINANCE is on.
+ */
+export interface WorkOrderMoneyVisibility {
+  estimate: boolean;
+  actual: boolean;
+}
+
+export function workOrderMoneyVisibility(
+  auth: AuthContext,
+  modules: ReadonlySet<ModuleCode>,
+): WorkOrderMoneyVisibility {
+  const estimate = canReadWorkOrderCosts(auth.role);
+  return { estimate, actual: estimate && modules.has("FINANCE") };
 }

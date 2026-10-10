@@ -224,9 +224,13 @@ export async function otherOpenSafetyIssues(
   workspaceId: string,
   assetId: string,
   groundingIssueId: string,
-): Promise<Array<{ id: string; description: string }>> {
+): Promise<Array<{ id: string; number: number; description: string }>> {
   return tx
-    .select({ id: operationalIssues.id, description: operationalIssues.description })
+    .select({
+      id: operationalIssues.id,
+      number: operationalIssues.number,
+      description: operationalIssues.description,
+    })
     .from(operationalIssues)
     .where(
       and(
@@ -237,7 +241,7 @@ export async function otherOpenSafetyIssues(
         ne(operationalIssues.id, groundingIssueId),
       ),
     )
-    .orderBy(asc(operationalIssues.id));
+    .orderBy(asc(operationalIssues.number));
 }
 
 /** The asset's open availability interval, locked, or undefined when it is available. */

@@ -7,6 +7,7 @@ import {
   registerCommand,
   type CommandDefinition,
 } from "./dispatcher.js";
+import { nextIssueNumber } from "./numbering.js";
 import { groundAssetForIssue, requireAsset } from "./work-order-lookup.js";
 
 type ReportIssuePayload = z.infer<typeof reportIssuePayload>;
@@ -45,10 +46,14 @@ export const reportIssue: CommandDefinition<ReportIssuePayload> = {
     const reportedAt = envelope.clientOccurredAt
       ? new Date(envelope.clientOccurredAt)
       : new Date();
+    // Drawn here, at commit, even for a report captured offline: the device
+    // shows "number pending" until the replay lands.
+    const number = await nextIssueNumber(tx, ctx);
 
     await tx.insert(operationalIssues).values({
       id: payload.issueId,
       workspaceId: ctx.workspaceId,
+      number,
       assetId: payload.assetId,
       description: payload.description,
       safetyCritical: payload.safetyCritical,
@@ -63,6 +68,7 @@ export const reportIssue: CommandDefinition<ReportIssuePayload> = {
       entityId: payload.issueId,
       afterState: {
         id: payload.issueId,
+        number,
         assetId: payload.assetId,
         description: payload.description,
         safetyCritical: payload.safetyCritical,
@@ -73,6 +79,7 @@ export const reportIssue: CommandDefinition<ReportIssuePayload> = {
       },
       changedFields: [
         "id",
+        "number",
         "assetId",
         "description",
         "safetyCritical",

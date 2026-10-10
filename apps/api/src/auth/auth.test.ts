@@ -60,6 +60,8 @@ describe("username/PIN login", () => {
       branchScope: [ws.branch.id],
       displayName: member.principal.displayName,
       workspaceName: ws.workspace.name,
+      // The web cuts "today" and "this month" at the workspace's midnight (#639).
+      timezone: "Africa/Douala",
       enabledModules: [
         "CORE",
         "ASSETS",

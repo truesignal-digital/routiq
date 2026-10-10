@@ -11,10 +11,12 @@ import type {
   NoteDetail,
   VehicleHistoryKind,
   VehicleHistoryResponse,
+  WorkOrderDetail,
 } from "@routiq/contracts";
 import { sessionStore, useActiveSession } from "../auth/store.js";
 import { retryUnlessNotFound } from "../lib/query-retry.js";
 import { maintenanceQueryKey } from "../maintenance/useMaintenance.js";
+import type { PanelRef } from "./model.js";
 
 /**
  * Every read about one vehicle hangs off this prefix — the detail, its
@@ -138,6 +140,26 @@ export function useIssue(issueId: string, enabled = true) {
     enabled: session !== undefined && enabled,
     queryFn: ({ signal }) => getJson(`/v1/issues/${issueId}`, signal, "ISSUE"),
   });
+}
+
+/**
+ * The number of the work order or problem a panel shows, for a label naming it
+ * from elsewhere ("Back to work order OT-0007", #608). The panels' own cache
+ * entries, so a record just shown costs no request. Undefined while unknown.
+ */
+export function usePanelRecordNumber(ref: PanelRef | undefined): number | null | undefined {
+  const session = useActiveSession();
+  const id = ref === undefined || ref.kind === "readings" ? undefined : ref.id;
+  const issue = useIssue(id ?? "", ref?.kind === "issue");
+  const workOrder = useQuery<WorkOrderDetail>({
+    queryKey: [...maintenanceQueryKey(session?.workspaceSlug), "work-orders", "detail", id],
+    retry: retryUnlessNotFound,
+    enabled: session !== undefined && ref?.kind === "work_order",
+    queryFn: ({ signal }) => getJson(`/v1/work-orders/${id}`, signal, "WORK_ORDER"),
+  });
+  if (ref?.kind === "issue") return issue.data?.number;
+  if (ref?.kind === "work_order") return workOrder.data?.number;
+  return undefined;
 }
 
 /**

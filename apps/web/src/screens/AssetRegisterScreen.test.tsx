@@ -87,6 +87,7 @@ const clerk: MeContext = {
   branchScope: "ALL",
   enabledModules: ["CORE", "ASSETS"],
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+  timezone: "Africa/Douala",
 };
 
 /** The screen reads the enabled preset set off /v1/me; the plain render above

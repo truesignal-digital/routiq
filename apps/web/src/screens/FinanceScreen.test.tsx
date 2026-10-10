@@ -51,6 +51,7 @@ function me(role: Role): MeContext {
     branchScope: "ALL",
     enabledModules: ["CORE", "ASSETS", "ACTIVITIES", "FINANCE"],
     enabledPresets: ["TRUCKING"],
+    timezone: "Africa/Douala",
   };
 }
 

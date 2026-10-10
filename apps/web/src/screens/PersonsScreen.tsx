@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { VisibilityState } from "@tanstack/react-table";
-import { UserPlus, Users } from "lucide-react";
+import { KeyRound, Unlink, UserPlus, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
 import type { PersonListItem } from "@routiq/contracts";
@@ -18,6 +18,7 @@ import {
   type DataTableFilter,
   type DataTableFilterValues,
   type DataTableColumn,
+  type DataTableRowAction,
 } from "@/components/data-table";
 import { ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -34,19 +35,34 @@ import { RegisterPersonDialog } from "@/activities/RegisterPersonDialog.js";
 import { canRegisterPersons } from "@/activities/permissions.js";
 import { usePersons } from "@/activities/usePersons.js";
 import { NotRecorded } from "@/components/not-recorded.js";
+import { canAdministerMembers, type MemberActor } from "@/members/permissions.js";
+import {
+  PersonLoginActionHost,
+  PersonLoginCell,
+  personLoginActions,
+  type PersonLoginAction,
+} from "@/members/PersonLogin.js";
 
 const PRIMARY_COLUMN = { columnId: "displayName" } as const;
 const SEARCH_FILTER_ID = "search";
+
+const LOGIN_ACTION_ICONS = { link: KeyRound, relink: KeyRound, unlink: Unlink } as const;
 
 export function PersonsScreen() {
   const { t } = useTranslation();
   const label = useCommandLabel();
   const me = useMeContext();
   const canRegister = canRegisterPersons(me?.role, me?.enabledModules);
+  // role-config: the member administrators link people to logins (#569); the
+  // server narrows the Administrateur to the logins and branches it manages.
+  const canLink = canAdministerMembers(me?.role);
+  const actor: MemberActor | undefined =
+    me === undefined ? undefined : { principalId: me.principalId, role: me.role, branchScope: me.branchScope };
 
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [registering, setRegistering] = useState(false);
+  const [acting, setActing] = useState<{ person: PersonListItem; action: PersonLoginAction }>();
 
   const search = filterValues[SEARCH_FILTER_ID] ?? "";
   // `/v1/persons` does the matching; narrowing the loaded rows here would
@@ -116,8 +132,18 @@ export function PersonsScreen() {
           </StatusBadge>
         ),
       },
+      ...(canLink
+        ? [
+            {
+              id: "login",
+              header: t("persons.columns.login"),
+              meta: { phone: "meta", label: t("persons.columns.login") },
+              cell: ({ row }) => <PersonLoginCell principalId={row.original.loginPrincipalId} />,
+            } satisfies DataTableColumn<PersonListItem>,
+          ]
+        : []),
     ],
-    [t],
+    [t, canLink],
   );
 
 
@@ -202,6 +228,25 @@ export function PersonsScreen() {
             primaryColumn={PRIMARY_COLUMN}
             pagination={{ defaultPageSize: 20 }}
             getRowId={(person) => person.id}
+            {...(canLink
+              ? {
+                  rowActions: (person: PersonListItem) =>
+                    personLoginActions(person).map(
+                      (action): DataTableRowAction<PersonListItem> => ({
+                        key: action,
+                        label:
+                          action === "unlink"
+                            ? label("unlink-person-login")
+                            : action === "relink"
+                              ? label({ command: "link-person-login", intent: "relink" })
+                              : label("link-person-login"),
+                        icon: LOGIN_ACTION_ICONS[action],
+                        ...(action === "unlink" ? { destructive: true } : {}),
+                        onSelect: (row) => setActing({ person: row, action }),
+                      }),
+                    ),
+                }
+              : {})}
             emptyState={
               personsQuery.isPending ? (
                 <LoadingState label={t("persons.loading")} />
@@ -215,6 +260,17 @@ export function PersonsScreen() {
             }
           />
         </div>
+      )}
+
+      {canLink && acting !== undefined && (
+        <PersonLoginActionHost
+          person={acting.person}
+          action={acting.action}
+          persons={persons}
+          actor={actor}
+          onDone={() => void personsQuery.refetch()}
+          onDismiss={() => setActing(undefined)}
+        />
       )}
 
       {canRegister && branchCode !== "" && (

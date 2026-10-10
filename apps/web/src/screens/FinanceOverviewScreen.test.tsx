@@ -114,7 +114,7 @@ vi.mock("../finance/useMoneyOverview.js", () => ({
 const summary: FinanceSummaryResponse = {
   currency: "XAF",
   month: "2026-10",
-  openPeriodCode: "2026-10",
+  unlockedPeriodCodes: ["2026-09"],
   lastLockedPeriodCode: "2026-08",
   outMinor: 7_690_000,
   inMinor: 9_560_000,
@@ -140,7 +140,7 @@ vi.mock("../finance/usePeriods.js", () => ({
   }),
 }));
 
-const { FinanceOverviewScreen } = await import("./FinanceOverviewScreen.js");
+const { closeHint, FinanceOverviewScreen } = await import("./FinanceOverviewScreen.js");
 
 function me(role: Role): MeContext {
   return {
@@ -154,6 +154,7 @@ function me(role: Role): MeContext {
     branchScope: "ALL",
     enabledModules: ["CORE", "ASSETS", "ACTIVITIES", "FINANCE"],
     enabledPresets: ["TRUCKING"],
+    timezone: "Africa/Douala",
   };
 }
 
@@ -221,6 +222,16 @@ describe("Money Overview (#664)", () => {
       "October 1 – 9 compared with September 1 – 9",
     );
     expect(tile("close").textContent).toContain("Open");
+    expect(tile("close").textContent).toContain("154 entries");
+  });
+
+  it("names the earlier months still not locked under the close (#526)", () => {
+    expect(closeHint("2026-09", undefined, ["2026-07", "2026-08", "2026-09"], i18n.t.bind(i18n), "en")).toEqual({
+      hint: "Earlier, not locked: July 2026 and August 2026",
+    });
+    expect(
+      closeHint("2026-09", undefined, ["2026-03", "2026-04", "2026-05", "2026-06"], i18n.t.bind(i18n), "en"),
+    ).toEqual({ hint: "4 earlier months not locked" });
   });
 
   it("ranks the categories by this period's spending, each with the comparison beside it", () => {
