@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 713353,
+    "ceiling": 713902,
     "raises": [
       {
         "date": "2026-10-06",
@@ -277,6 +277,12 @@
         "from": 710828,
         "to": 713353,
         "reason": "Intent preloading and the sidebar preloader (#497)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 713353,
+        "to": 713902,
+        "reason": "Page-type skeletons for each screen route (#498)"
       }
     ]
   },
@@ -340,7 +346,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 265616,
+    "ceiling": 266200,
     "raises": [
       {
         "date": "2026-10-06",
@@ -587,6 +593,12 @@
         "from": 264506,
         "to": 265616,
         "reason": "Intent preloading (#497): the router's hover, focus and touch preload paths and the quiet-window sidebar preloader"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 265616,
+        "to": 266200,
+        "reason": "Page-type skeletons (#498): drawn the moment a screen is pending, so they ship with the router rather than on demand"
       }
     ]
   }

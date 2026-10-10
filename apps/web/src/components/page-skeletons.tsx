@@ -1,0 +1,165 @@
+import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+import { PageContainer, type PageContainerProps } from "@/components/page-container";
+import { Skeleton } from "@/components/ui/skeleton";
+
+/**
+ * One loading skeleton per page type (docs/design/consistency/pages.html),
+ * shown by the router while a screen's loader is still running (#498). Each
+ * keeps its page's width, title line, overview strip and rows, so the screen
+ * that replaces it lands where the skeleton was. Below 640 px rows are list
+ * rows, as DataTable draws them on a phone.
+ */
+
+function Frame({ width = "wide", children }: { width?: PageContainerProps["width"]; children: ReactNode }) {
+  return (
+    <PageContainer width={width}>
+      <Busy>{children}</Busy>
+    </PageContainer>
+  );
+}
+
+function Busy({ children, className }: { children: ReactNode; className?: string }) {
+  const { t } = useTranslation();
+  return (
+    <div role="status" aria-busy="true" className={className}>
+      <span className="sr-only">{t("shell.pageLoading")}</span>
+      {children}
+    </div>
+  );
+}
+
+/** PageHeader's h1: text-2xl, a 2rem line. */
+function Title() {
+  return <Skeleton className="h-8 w-48 max-w-full" />;
+}
+
+/** MetricStrip's tiles: two columns on a phone, all beside each other above. */
+function StripTiles({ count }: { count: 3 | 4 }) {
+  return (
+    <div className={count === 3 ? "mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4" : "mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4"}>
+      {Array.from({ length: count }, (_, index) => (
+        <Skeleton key={index} className="h-20 rounded-xl" />
+      ))}
+    </div>
+  );
+}
+
+function Rows({ count }: { count: number }) {
+  return (
+    <>
+      <div className="mt-4 flex flex-col gap-3 sm:hidden">
+        {Array.from({ length: count }, (_, index) => (
+          <Skeleton key={index} className="h-16 rounded-xl" />
+        ))}
+      </div>
+      <div className="mt-4 hidden overflow-hidden rounded-xl border border-border sm:block">
+        <Skeleton className="h-10 rounded-none" />
+        {Array.from({ length: count }, (_, index) => (
+          <div key={index} className="flex h-12 items-center gap-4 border-t border-border px-3">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 flex-1" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function Toolbar() {
+  return <Skeleton className="mt-6 h-11 w-full rounded-lg sm:w-56" />;
+}
+
+/** Trucks, Trips, Maintenance, Money: title, overview strip, toolbar, rows. */
+export function ModuleListSkeleton() {
+  return (
+    <Frame>
+      <Title />
+      <StripTiles count={3} />
+      <Toolbar />
+      <Rows count={6} />
+    </Frame>
+  );
+}
+
+/** A vehicle: its name and status line, the tab strip, then the tab. */
+export function RecordWorkspaceSkeleton() {
+  return (
+    <Frame>
+      <Title />
+      <Skeleton className="mt-3 h-5 w-72 max-w-full" />
+      <Skeleton className="mt-6 h-11 w-full rounded-lg" />
+      <div className="mt-6">
+        <TabBody />
+      </div>
+    </Frame>
+  );
+}
+
+function RecordBody() {
+  return (
+    <>
+      <Title />
+      <Skeleton className="mt-3 h-5 w-72 max-w-full" />
+      <Skeleton className="mt-6 h-64 rounded-xl" />
+    </>
+  );
+}
+
+/** An entry on its own page: title, status line, then its fields, at the default width. */
+export function RecordSkeleton() {
+  return (
+    <Frame width="default">
+      <RecordBody />
+    </Frame>
+  );
+}
+
+/** A trip on its own page: the same record, at the wide width its timeline uses. */
+export function WideRecordSkeleton() {
+  return (
+    <Frame>
+      <RecordBody />
+    </Frame>
+  );
+}
+
+/** A tab inside a record, below the record's own header and tab strip. */
+export function TabSkeleton() {
+  return (
+    <Busy>
+      <TabBody />
+    </Busy>
+  );
+}
+
+function TabBody() {
+  return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+      <Skeleton className="h-48 rounded-xl" />
+      <Skeleton className="h-48 rounded-xl" />
+    </div>
+  );
+}
+
+/** Home: title, the overview strip, then the chart or recent entries. */
+export function HomeSkeleton() {
+  return (
+    <Frame>
+      <Title />
+      <StripTiles count={4} />
+      <Skeleton className="mt-6 h-64 rounded-xl" />
+    </Frame>
+  );
+}
+
+/** People, Users, Branches, accounting months: title and rows. */
+export function SettingsListSkeleton() {
+  return (
+    <Frame>
+      <Title />
+      <Rows count={5} />
+    </Frame>
+  );
+}
