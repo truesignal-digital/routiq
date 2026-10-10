@@ -3,7 +3,7 @@ import type {
   WorkOrderCostOutcome,
   WorkOrderDetail,
 } from "@routiq/contracts";
-import { parseMoneyXaf } from "../finance/model.js";
+import { parseMoneyXaf } from "../lib/format.js";
 
 /**
  * The money half of closing a work order (#81), as pure functions over the

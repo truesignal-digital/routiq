@@ -522,6 +522,23 @@ describe("Maintenance and Trips", () => {
     expect(item.queryByText(/planned/)).toBeNull();
   });
 
+  it("shows no work-order amount, nor a missing estimate, while FINANCE is off (#328)", async () => {
+    // What the API sends with FINANCE off: every amount null, no cost lines.
+    const hidden = { expectedCostMinor: null, actualCostMinor: null, declaredCostMinor: null, costToCome: null };
+    await openVehicle(`/assets/${ASSET_ID}/maintenance?panel=work_order:${WORK_ORDER_ID}`, {
+      role: "DIRECTOR",
+      modules: ALL_MODULES.filter((code) => code !== "FINANCE"),
+      workOrders: [workOrderRow("APPROVED", hidden)],
+      workOrderDetails: [workOrderDetail("APPROVED", { ...hidden, costLines: null, pendingCostLines: null })],
+    });
+    const dialog = await screen.findByRole("dialog", { name: "Brake repair: replace pads and air valve" });
+    expect(within(dialog).queryByText("Expected cost")).toBeNull();
+    expect(within(dialog).queryByText("Actual cost")).toBeNull();
+    const item = within(screen.getAllByText("Brake repair: replace pads and air valve").find((el) => el.closest("li"))!.closest("li")!);
+    expect(item.queryByText("No estimate")).toBeNull();
+    expect(item.queryByText(/planned|XAF|FCFA/)).toBeNull();
+  });
+
   it("says what a closed order's cost is instead of inventing a zero (#131)", async () => {
     const done = (id: string, description: string, overrides: Parameters<typeof workOrderRow>[1]) =>
       workOrderRow("COMPLETED", {

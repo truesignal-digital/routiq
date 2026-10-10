@@ -238,7 +238,8 @@ async function maintenanceItems(
     });
   }
 
-  const costsVisible = canReadWorkOrderCosts(auth.role);
+  // Work-order money is Finance's (#328), and hidden from a driver (#390).
+  const costsVisible = books && canReadWorkOrderCosts(auth.role);
   for (const order of orders) {
     const subject = {
       entityType: "work_order" as const,
@@ -298,7 +299,7 @@ async function maintenanceItems(
         makerPrincipalIds: maker ? [maker] : [],
         params: { description: clip(order.description), ...costs },
       });
-    } else if (order.status === "COMPLETED" && costsVisible && books) {
+    } else if (order.status === "COMPLETED" && costsVisible) {
       const toCome = costToCome(order);
       // A line awaiting review is already on the list as ENTRY_AWAITING_REVIEW.
       if (toCome !== null && !toCome.awaitingApproval) {

@@ -1,5 +1,5 @@
 import type { IssueStatus, WorkOrderStatus } from "@routiq/contracts";
-import { categoriesQueryOptions } from "../documents/useCategories.js";
+import { categoriesQueryOptions } from "../categories/useCategories.js";
 import {
   issueListParams,
   issuesQueryOptions,

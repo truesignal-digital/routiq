@@ -1,5 +1,5 @@
 import { assetDetailQueryOptions } from "../assets/useAssetDetail.js";
-import { categoriesQueryOptions } from "../documents/useCategories.js";
+import { categoriesQueryOptions } from "../categories/useCategories.js";
 import { canReadFinance } from "../finance/permissions.js";
 import { actionDef, actionPermitted } from "../vehicle/actions.js";
 import { viewerOf } from "../vehicle/model.js";

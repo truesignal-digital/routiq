@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { redirect } from "@tanstack/react-router";
 import { approvalChainQueryOptions } from "../approval-rules/useApprovalChain.js";
-import { assetRegistrationReferenceQueryOptions } from "../assets/reference.js";
+import { assetRegistrationReferenceQueryOptions } from "../reference/asset-registration.js";
 import { meQueryOptions, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";

@@ -42,7 +42,8 @@ const ActivityDetailScreen = lazyScreen(() => import("./screens/ActivityDetailSc
 const ActivitySheetScreen = lazyScreen(() => import("./screens/ActivitySheetScreen.js"), "ActivitySheetScreen");
 const FinanceEntryDetailScreen = lazyScreen(() => import("./screens/FinanceEntryDetailScreen.js"), "FinanceEntryDetailScreen");
 const FinancePeriodsScreen = lazyScreen(() => import("./screens/FinancePeriodsScreen.js"), "FinancePeriodsScreen");
-const AppShell = lazyScreen(() => import("./shell/AppShell.js"), "AppShell");
+// The shell arrives with the installed module manifests (`modules/app-shell.ts`): sign-in needs neither.
+const AppShell = lazyScreen(() => import("./modules/app-shell.js"), "AppShell");
 // On demand like the shell: the sign-in page carries neither (#495).
 const ShellPending = lazyScreen(() => import("./shell/ShellPending.js"), "ShellPending");
 const VehicleWorkspaceScreen = lazyScreen(() => import("./vehicle/VehicleWorkspaceScreen.js"), "VehicleWorkspaceScreen");

@@ -41,10 +41,10 @@ vi.mock("../finance/useApprovals.js", async () => ({
 vi.mock("../finance/usePeriods.js", () => ({ usePeriods: () => pendingQuery }));
 vi.mock("../finance/useEntries.js", () => ({ useEntries: () => pendingInfiniteQuery }));
 vi.mock("../assets/useAssets.js", () => ({ useAssets: () => pendingInfiniteQuery }));
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => pendingQuery,
 }));
-vi.mock("../documents/useCategories.js", () => ({ useCategories: () => pendingQuery }));
+vi.mock("../categories/useCategories.js", () => ({ useCategories: () => pendingQuery }));
 vi.mock("../documents/useDocuments.js", () => ({
   useAssetDocuments: () => pendingQuery,
 }));
@@ -59,8 +59,10 @@ const SCREENS = [
   ["periods", FinancePeriodsScreen],
 ] as const;
 
-/** Every screen a role can be shut out of, minus the two role-gated finance ones. */
-const MODULE_GATED = SCREENS;
+/**
+ * With the module off the shell never opens these screens (`ModulePageGate`,
+ * modules/manifests.test.tsx); what they deny themselves is the role.
+ */
 const ROLE_GATED = SCREENS.filter(([name]) =>
   name === "periods",
 );
@@ -109,9 +111,9 @@ afterAll(async () => {
 afterEach(cleanup);
 
 describe("permission denied surface", () => {
-  it("renders one shape and one message across every module-gated screen", () => {
-    const surfaces = MODULE_GATED.map(([name, Screen]) => {
-      renderScreen(Screen, me({}));
+  it("renders one shape and one message across every screen a role is shut out of", () => {
+    const surfaces = SCREENS.map(([name, Screen]) => {
+      renderScreen(Screen, me({ role: "TECHNICIAN", enabledModules: ["CORE", "FINANCE"] }));
       const surface = deniedSurface();
       expect(surface, name).toBeDefined();
       cleanup();
@@ -121,9 +123,7 @@ describe("permission denied surface", () => {
     const [first] = surfaces;
     for (const surface of surfaces) {
       expect(surface.markup).toBe(first!.markup);
-      expect(surface.message).toBe(
-        "This module is not enabled for your workspace.",
-      );
+      expect(surface.message).toBe("Your role does not allow this action.");
     }
   });
 
@@ -143,19 +143,15 @@ describe("permission denied surface", () => {
   it("shows no denial while the session is still loading", () => {
     for (const [name, Screen] of SCREENS) {
       renderScreen(Screen, undefined);
-      expect(deniedSurface()?.message, name).not.toBe(
-        "This module is not enabled for your workspace.",
-      );
+      expect(deniedSurface()?.message, name).not.toBe("Your role does not allow this action.");
       cleanup();
     }
   });
 
   it("keeps the wording out of the screens, in the shared error catalog", () => {
-    renderScreen(FinancePeriodsScreen, me({}));
+    renderScreen(FinancePeriodsScreen, me({ role: "TECHNICIAN", enabledModules: ["CORE", "FINANCE"] }));
 
     expect(screen.queryByText(/accessDenied/)).toBeNull();
-    expect(
-      screen.getByText("This module is not enabled for your workspace."),
-    ).toBeDefined();
+    expect(screen.getByText("Your role does not allow this action.")).toBeDefined();
   });
 });

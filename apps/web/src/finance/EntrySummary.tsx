@@ -2,7 +2,8 @@ import { useTranslation } from "react-i18next";
 import type { EntryEvidenceFile, FinancialEntryDetail } from "@routiq/contracts";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { RecordHistorySheet } from "@/components/record-history-sheet.js";
-import { EntryLinks } from "@/finance/EntryLinks.js";
+import { useMeContext } from "@/auth/me.js";
+import { EntryLinks, visibleEntryLinks } from "@/finance/EntryLinks.js";
 import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { useEntry } from "@/finance/useEntry.js";
 import { RecordFileRow } from "@/vehicle/panel/shared.js";
@@ -26,6 +27,7 @@ import { amountKind } from "@/finance/model.js";
 export function EntrySummary({ entryId }: { entryId: string }) {
   const { t } = useTranslation();
   const entryQuery = useEntry(entryId);
+  const me = useMeContext();
 
   if (entryQuery.isPending) {
     return <LoadingState label={t("finance.entries.loading")} />;
@@ -110,7 +112,7 @@ export function EntrySummary({ entryId }: { entryId: string }) {
             <dd className="mt-1">{entry.counterpartyName}</dd>
           </div>
         )}
-        {(entry.links.workOrderId !== null || entry.links.activityId !== null) && (
+        {Object.values(visibleEntryLinks(entry.links, me?.enabledModules)).some(Boolean) && (
           <div>
             <dt className="text-xs font-semibold text-muted-foreground">
               {t("finance.entries.detail.linkedTo")}

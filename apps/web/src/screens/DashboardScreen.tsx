@@ -20,9 +20,9 @@ import { HOME_RANGE_DAYS, useDashboard } from "@/dashboard/useDashboard.js";
 import {
   canOpenEntriesList,
   visibleDashboardCards,
+  visibleHomePanels,
   type DashboardCardKey,
 } from "@/dashboard/cards.js";
-import { canReadFinance } from "@/finance/permissions.js";
 import {
   useFinanceEntryColumns,
   type FinanceEntryColumnId,
@@ -47,10 +47,9 @@ export function DashboardScreen() {
   const [range, setRange] = useState<ChartRange>(DEFAULT_RANGE);
 
   const dashboard = useDashboard(range);
-  // role-config: the chart sums the books (ledger readers); recent entries
-  // are whatever slice the read returns this role (#264).
-  const showChart = canReadFinance(me?.role, me?.enabledModules);
-  const showEntries = canOpenEntriesList(me?.role, me?.enabledModules);
+  const panels = visibleHomePanels(me?.role, me?.enabledModules);
+  const showChart = panels.includes("moneyChart");
+  const showEntries = panels.includes("recentEntries");
 
   return (
     <PageContainer width="wide">
