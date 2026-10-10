@@ -2229,11 +2229,7 @@
       "lastReading": "{readingType, select, HOURS {Last reading: {value, number} h} other {Last reading: {value, number} km}}",
       "fuel": {
         "description": "Records the fuel expense, then the odometer if you enter it.",
-        "amount": "Amount paid (FCFA)",
         "when": "Date and time",
-        "station": "Station (optional)",
-        "odometer": "Odometer in km (optional)",
-        "receipt": "Receipt photo (optional)",
         "expenseStands": "The fuel expense is recorded. The odometer reading was not saved.",
         "readingSaved": "Odometer reading saved"
       },

@@ -2229,11 +2229,7 @@
       "lastReading": "{readingType, select, HOURS {Dernier relevé : {value, number} h} other {Dernier relevé : {value, number} km}}",
       "fuel": {
         "description": "Enregistre la dépense de carburant, puis le compteur si vous le saisissez.",
-        "amount": "Montant payé (FCFA)",
         "when": "Date et heure",
-        "station": "Station (facultatif)",
-        "odometer": "Compteur en km (facultatif)",
-        "receipt": "Photo du reçu (facultatif)",
         "expenseStands": "La dépense de carburant est enregistrée. Le relevé du compteur n'a pas été enregistré.",
         "readingSaved": "Relevé du compteur enregistré"
       },
