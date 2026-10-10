@@ -41,7 +41,8 @@ export function windowStartSql(trip: TripTable = activities): SQL<Date> {
 
 /**
  * PLANNED and CANCELLED: the planned end, else the end of the planned start's
- * business day. OPEN: the later of the planned end and now. CLOSED: the end.
+ * business day. OPEN and not yet ended: the later of the planned end and now.
+ * Ended (CLOSED, or an OPEN sheet saved with its end): the end.
  * Never before the start, so the range is always valid.
  */
 export function windowEndSql(timezone: string, trip: TripTable = activities): SQL<Date> {
@@ -49,7 +50,8 @@ export function windowEndSql(timezone: string, trip: TripTable = activities): SQ
     WHEN ${trip.status} IN ('PLANNED', 'CANCELLED') THEN COALESCE(
       ${trip.plannedEndAt},
       ${endOfBusinessDaySql(sql`${trip.plannedStartAt}`, timezone)})
-    WHEN ${trip.status} = 'OPEN' THEN GREATEST(${trip.plannedEndAt}, now(), ${trip.startedAt})
+    WHEN ${trip.status} = 'OPEN' AND ${trip.endedAt} IS NULL
+      THEN GREATEST(${trip.plannedEndAt}, now(), ${trip.startedAt})
     ELSE GREATEST(COALESCE(${trip.endedAt}, ${trip.startedAt}), ${trip.startedAt})
   END)`;
 }
@@ -180,7 +182,8 @@ export async function tripConflicts(
 /**
  * The warnings a live or replayed start returns (ADR-0012 §4, #577, #653):
  * planning's rules for the started trip, plus any other OPEN trip still
- * holding its vehicle on an open segment or its driver in the DRIVER crew,
+ * holding its vehicle on an open segment or, not yet ended, its driver in the
+ * DRIVER crew,
  * whatever the windows say (a phone clock running fast stamps a start ahead
  * of now(), which the window rule would miss). VEHICLE_DOUBLE_BOOKED and
  * DRIVER_DOUBLE_BOOKED name the other trips; VEHICLE_GROUNDED only with
@@ -239,6 +242,7 @@ export async function startedTripWarnings(
         eq(theirCrew.role, "DRIVER"),
         ne(theirCrew.activityId, tripId),
         eq(activities.status, "OPEN"),
+        isNull(activities.endedAt),
       ),
     );
 

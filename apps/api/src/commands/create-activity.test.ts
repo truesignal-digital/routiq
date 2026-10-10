@@ -475,6 +475,47 @@ describe("create-activity.v1", () => {
       expect(next.json()).not.toHaveProperty("warningMetadata");
     });
 
+    // A sheet saves open with its end already set; closing is a later click.
+    // A trip that ended yesterday does not hold its driver today.
+    it("does not warn for a driver whose sheet ended but is still open", async () => {
+      const person = await registerDriver();
+      const sheet = await api().send(managerToken, "record-haulage-job-sheet", {
+        activityId: randomUUID(),
+        branchCode: "DLA",
+        activityTypeCode: "HAULAGE_JOB",
+        primarySegmentId: randomUUID(),
+        primaryAssetId: await seedAsset(ctx.app, managerToken),
+        startedAt: minutesAgo(26 * 60),
+        endedAt: minutesAgo(22 * 60),
+        crew: crewOf(person),
+        extraSegments: [],
+        legs: [
+          {
+            legId: randomUUID(),
+            legNo: 1,
+            origin: { kind: "text", text: "Douala" },
+            destination: { kind: "text", text: "Yaoundé" },
+            loadState: "LADEN",
+          },
+        ],
+        entries: [],
+        close: false,
+      });
+      expect(sheet.status, JSON.stringify(sheet.body)).toBe(200);
+      expect(sheet.body).toMatchObject({ recordStatus: "OPEN" });
+
+      const next = await post(
+        build({
+          primaryAssetId: await seedAsset(ctx.app, managerToken),
+          startedAt: minutesAgo(30),
+          crew: crewOf(person),
+        }),
+      );
+      expect(next.statusCode, next.body).toBe(200);
+      expect(next.json().warnings).toEqual([]);
+      expect(next.json()).not.toHaveProperty("warningMetadata");
+    });
+
     it("an exact retry returns every warning of the first start", async () => {
       const person = await registerDriver();
       const truck = await groundedTruck();

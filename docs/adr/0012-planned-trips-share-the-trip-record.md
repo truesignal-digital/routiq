@@ -166,7 +166,9 @@ A trip's **booked window** is `[planned_start_at, planned_end_at)` while
 PLANNED. If there is no planned end, the window closes at the end of the
 planned start's business day (workspace time zone,
 `apps/api/src/reads/business-date.ts`). While OPEN, the window starts at
-`started_at` and ends at the later of `planned_end_at` and now.
+`started_at` and ends at the later of `planned_end_at` and now, unless
+`ended_at` is already set (a sheet saved open): then it ends at `ended_at`, as
+for a CLOSED trip (#653).
 
 | Situation | Outcome | Code |
 |---|---|---|
