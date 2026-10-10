@@ -287,14 +287,8 @@
       {
         "date": "2026-10-10",
         "from": 713902,
-        "to": 714145,
-        "reason": "Loss/Profit helper and money words (#659)"
-      },
-      {
-        "date": "2026-10-10",
-        "from": 714145,
         "to": 718602,
-        "reason": "Money module page (#664): the Overview screen, ModulePage, CompareBars and ToDoList; the Money tabs load as one chunk to keep this small"
+        "reason": "Money module page (#664): the Overview screen, ModulePage, CompareBars and ToDoList; the Money tabs load as one chunk to keep this small. Counted from develop's ceiling, so it also covers #659's Loss/Profit helper and money words until that PR merges"
       }
     ]
   },
@@ -621,14 +615,8 @@
       {
         "date": "2026-10-10",
         "from": 266200,
-        "to": 266274,
-        "reason": "Loss/Profit helper and money words (#659)"
-      },
-      {
-        "date": "2026-10-10",
-        "from": 266274,
         "to": 267436,
-        "reason": "Money module page (#664): Overview, tab and range words in fr and en ship in the first-load i18n catalog, plus three child routes"
+        "reason": "Money module page (#664): Overview, tab and range words in fr and en ship in the first-load i18n catalog, plus three child routes. Counted from develop's ceiling, so it also covers #659's money words until that PR merges"
       }
     ]
   }
