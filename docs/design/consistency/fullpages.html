@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROUTIQ consistency view: full pages</title>
+<link rel="stylesheet" href="kit.css">
+<script src="kit.js"></script>
+<style>
+  /* One frame for every full page: main column + context column. */
+  .rp { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+  .rail { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 12px; }
+  .crumbs { font-size: 13px; color: var(--muted-foreground); display: flex; gap: 6px; align-items: center; }
+  .crumbs b { color: var(--foreground); font-weight: 600; }
+  .rh { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
+  .rh h1 { font: 650 24px/1.2 var(--font-heading); margin: 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; letter-spacing: -0.01em; }
+  .rh .sub { font-size: 13.5px; color: var(--muted-foreground); margin-top: 6px; }
+  .rh .acts { display: flex; gap: 8px; flex: none; }
+  .status { border-radius: 12px; padding: 14px 16px; display: flex; gap: 12px; align-items: center; }
+  .status.warn { background: color-mix(in oklch, var(--warning) 16%, white); border: 1px solid color-mix(in oklch, var(--warning) 45%, white); }
+  .status.bad { background: color-mix(in oklch, var(--destructive) 7%, white); border: 1px solid color-mix(in oklch, var(--destructive) 25%, white); }
+  .status > div { flex: 1; min-width: 0; }
+  .status .t { font-weight: 650; }
+  .status .s { font-size: 12.5px; color: oklch(0.38 0.01 256); margin-top: 2px; }
+  .status .acts { display: flex; gap: 8px; flex: none; }
+  .sec { border: 1px solid var(--border); border-radius: 14px; background: white; }
+  .sec-h { padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+  .sec-h h2 { font: 650 14.5px/1.3 var(--font-heading); margin: 0; }
+  .sec-h .r { font-size: 12.5px; color: var(--muted-foreground); display: flex; gap: 8px; align-items: center; }
+  .sec-b { padding: 14px 16px; }
+  .kv { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; }
+  .kv .k { font-size: 12px; color: var(--muted-foreground); }
+  .kv .v { font-weight: 600; margin-top: 2px; font-size: 13.5px; }
+  .kv .v.none { color: var(--muted-foreground); font-weight: 500; }
+  .kv .v.none a { color: var(--foreground); font-weight: 600; margin-left: 6px; text-decoration: underline; text-underline-offset: 3px; }
+  .kv .full { grid-column: 1 / -1; }
+  .box { border: 1px solid var(--border); border-radius: 14px; background: white; padding: 14px 16px; }
+  .box h3 { font: 650 13.5px var(--font-heading); margin: 0 0 8px; display: flex; justify-content: space-between; }
+  .box h3 a { font: 600 12px var(--font-sans); color: var(--muted-foreground); }
+  .big { font: 650 22px/1.2 var(--font-heading); font-variant-numeric: tabular-nums; }
+  .big small { font-size: 12px; color: var(--muted-foreground); font-weight: 600; margin-left: 4px; }
+  .line { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .line:last-child { border-bottom: 0; }
+  .line .num { font-weight: 600; }
+  .line .m { color: var(--muted-foreground); }
+  .link-row { display: flex; gap: 10px; align-items: center; font-size: 13px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .link-row:last-child { border-bottom: 0; }
+  .link-row > div { flex: 1; }
+  .link-row .s { font-size: 12px; color: var(--muted-foreground); }
+  .prov { font-size: 12px; color: var(--muted-foreground); }
+  .mini { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: 14px; background: white; }
+  .mini > div { padding: 12px 16px; border-right: 1px solid var(--border); }
+  .mini > div:last-child { border-right: 0; }
+  .mini .k { font-size: 12px; color: var(--muted-foreground); }
+  .mini .v { font: 650 18px/1.25 var(--font-heading); font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .chipst { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; }
+  .chipst.done { background: color-mix(in oklch, var(--success) 18%, white); color: var(--success-foreground); }
+  .chipst.miss { background: color-mix(in oklch, var(--warning) 25%, white); color: var(--warning-foreground); }
+  .chipst.todo { background: var(--muted); color: var(--muted-foreground); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .sticky-foot { position: absolute; left: 210px; right: 0; bottom: 0; background: white; border-top: 1px solid var(--border); padding: 12px 24px; display: flex; gap: 8px; align-items: center; }
+  .sticky-foot .hint { margin-right: auto; font-size: 12.5px; color: var(--muted-foreground); }
+
+  /* Width diagram */
+  .wd { display: flex; flex-direction: column; gap: 14px; }
+  .wd-row { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; align-items: center; font-size: 12.5px; }
+  .wd-screen { position: relative; height: 54px; background: oklch(0.97 0 0); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; }
+  .wd-sb { background: oklch(0.9 0 0); flex: none; display: grid; place-items: center; color: var(--muted-foreground); font-size: 11px; }
+  .wd-area { flex: 1; display: flex; justify-content: center; padding: 6px 0; }
+  .wd-frame { display: flex; gap: 6px; height: 100%; }
+  .wd-main { background: color-mix(in oklch, var(--info) 30%, white); border-radius: 5px; display: grid; place-items: center; font-weight: 600; color: var(--info-foreground); }
+  .wd-rail { background: color-mix(in oklch, var(--success) 30%, white); border-radius: 5px; display: grid; place-items: center; font-weight: 600; color: var(--success-foreground); }
+  .wd-gap { display: grid; place-items: center; color: var(--muted-foreground); font-size: 11px; }
+  .before { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .before figure { margin: 0; }
+  .before img { width: 100%; border: 1px solid var(--border); border-radius: 10px; display: block; }
+  .before figcaption { font-size: 12.5px; margin-top: 6px; }
+  .before figcaption b { display: block; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <nav class="doc-nav">
+    <h1>ROUTIQ consistency view</h1>
+    <div class="sub">Proposal · 2026-10-10 · develop</div>
+    <a href="index.html">The rule and the map</a>
+    <a href="choices.html">Choices to make</a>
+    <a href="platform.html">One platform, two operators</a>
+    <a href="modules.html">Core and modules</a>
+    <a href="scheduling.html">Scheduling</a>
+    <a href="vendor.html">Super admin and tenants</a>
+    <a href="settings.html">Company settings</a>
+    <a href="featuremap.html">Feature map (truth)</a>
+    <a href="pages.html">Page archetypes</a>
+    <a href="insights.html">Overviews and charts</a>
+    <a href="dashboards.html">Dashboards</a>
+    <a href="fullpages.html">Full pages</a>
+    <a href="forms.html">Form system</a>
+    <a href="form-layouts.html">Form layouts</a>
+    <a href="sidebar.html">Navigation</a>
+    <a href="stock.html">Stock and purchasing</a>
+    <a href="audit.html">Audit findings</a>
+    <div class="group">On this page</div>
+    <a href="#today">Today</a>
+    <a href="#frame">One frame, one width</a>
+    <a href="#entry">A money entry</a>
+    <a href="#trip">A trip</a>
+    <a href="#form">A long form: Record a sheet</a>
+    <a href="#phone">On phone</a>
+    <a href="#map">Every full page</a>
+    <a href="#parts">Parts and code</a>
+    <a href="#decide">Decisions</a>
+  </nav>
+
+  <main class="doc-main">
+    <header>
+      <h2>Full pages</h2>
+      <p class="lede">A full page shows one thing (a money entry, a trip, a truck) or one long form (record a trip sheet, register a truck). Today each one picks its own width, header and button placement. This proposes one frame for all of them, with a fixed use for the empty space on wide screens: a right-hand column with context.</p>
+    </header>
+
+    <section class="section" id="today">
+      <div class="kicker">Today</div>
+      <h3>Three widths, three headers, three places for buttons</h3>
+      <p class="rule">Real screens from develop @ <code>51d4a7d</code> at 1920 px (seeded demo, run with <code>pnpm verify</code> on 2026-10-10). The sidebar leaves 1 664 px for content.</p>
+      <div class="before">
+        <figure><a href="audits/shots/fullpage-entry-detail-pending-finance.png"><img src="audits/shots/fullpage-entry-detail-pending-finance.png" alt="Money entry detail today"></a><figcaption><b>Money entry: 736 px wide, 464 px empty on each side</b>Title "Entry detail" instead of the number. Status is one field among others. Approve and Reject sit under the card, below the fold on a laptop. History is a button inside the card.</figcaption></figure>
+        <figure><a href="audits/shots/fullpage-trip-detail.png"><img src="audits/shots/fullpage-trip-detail.png" alt="Trip detail today"></a><figcaption><b>Trip: 1 120 px wide, 272 px empty on each side</b>Title is the trip number, status a small badge under it, actions top right, History a header button. "Net −FCFA 86,000" instead of profit or loss.</figcaption></figure>
+        <figure><a href="audits/shots/fullpage-asset-register.png"><img src="audits/shots/fullpage-asset-register.png" alt="Register a truck today"></a><figcaption><b>Register a truck: 544 px wide, 560 px empty on each side</b>The trip form next to it is 1 120 px. This one has no section cards, Cancel first and a stretched main button; the trip form has cards and a sticky bar with the main button last.</figcaption></figure>
+      </div>
+      <table class="spec-table" style="margin-top:16px">
+        <thead><tr><th>What</th><th>Money entry</th><th>Trip</th><th>Truck</th><th>Forms</th></tr></thead>
+        <tbody>
+          <tr><td>Width at 1920</td><td>736</td><td>1 120</td><td>1 120</td><td>544 (truck) · 1 120 (trip)</td></tr>
+          <tr><td>Title</td><td>"Entry detail"</td><td>Trip number</td><td>Truck code (smaller, own header)</td><td>Form name</td></tr>
+          <tr><td>Status</td><td>A field in the grid</td><td>Badge under the title</td><td>Full-width coloured banner</td><td>—</td></tr>
+          <tr><td>Actions</td><td>Full-width buttons under the card</td><td>Header, top right</td><td>Header + "Release to service" in the banner</td><td>Inline footer · sticky bar</td></tr>
+          <tr><td>History</td><td>Button in the card</td><td>Header button</td><td>Tab</td><td>—</td></tr>
+          <tr><td>Fields</td><td>Labels above, 2 columns, one card</td><td>Cards with titles</td><td>Labels left, 3 columns</td><td>Cards · no cards</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="frame">
+      <div class="kicker">The frame</div>
+      <h3>One frame, one width</h3>
+      <p class="rule">Every page (lists, dashboards and full pages) sits in the same frame: at most <b>1 200 px</b>, centred. On a full page the frame splits into a <b>main column</b> and a <b>300 px context column</b>. The empty space that is left at the sides is the same on every page, so moving between pages never makes the content jump.</p>
+      <div class="wd">
+        <div class="wd-row"><b>1920 screen</b><div class="wd-screen"><div class="wd-sb" style="width:13.3%">sidebar</div><div class="wd-area"><div class="wd-frame" style="width:62.5%"><div class="wd-gap" style="width:0"></div><div class="wd-main" style="flex:1">main</div><div class="wd-rail" style="width:26%">context 300</div></div></div></div></div>
+        <div class="wd-row"><b>1440 laptop</b><div class="wd-screen"><div class="wd-sb" style="width:17.8%">sidebar</div><div class="wd-area"><div class="wd-frame" style="width:80%"><div class="wd-main" style="flex:1">main</div><div class="wd-rail" style="width:26%">context 300</div></div></div></div></div>
+        <div class="wd-row"><b>1024 tablet</b><div class="wd-screen"><div class="wd-sb" style="width:6%">≡</div><div class="wd-area"><div class="wd-frame" style="width:94%"><div class="wd-main" style="flex:1">main, then context below it</div></div></div></div></div>
+        <div class="wd-row"><b>390 phone</b><div class="wd-screen" style="width:30%"><div class="wd-area"><div class="wd-frame" style="width:92%"><div class="wd-main" style="flex:1">one column</div></div></div></div></div>
+      </div>
+      <div class="cols three" style="margin-top:18px">
+        <div class="spec-card"><h4>What goes in the context column</h4><ul>
+          <li><b>A record</b> (entry, trip, truck): the money box, linked records (truck, trip, work order), the 3 latest history lines.</li>
+          <li><b>A long form</b>: "so far", a live summary of what was entered, what's still missing, and when the draft was saved.</li>
+          <li><b>A settings page</b>: the list of its sections, to jump to.</li>
+          <li>Never actions that exist nowhere else, and never the only copy of a number.</li>
+        </ul></div>
+        <div class="spec-card"><h4>The empty space, explained</h4><ul>
+          <li>At 1920: about 230 px each side, on every page. That's the frame's margin, by design.</li>
+          <li>At 1440 and below: no side margin beyond the 24 px gutter.</li>
+          <li>Text lines stay readable because the main column is about 840 px, not because a page shrinks itself.</li>
+          <li>Tables use the main column (record) or the whole frame (list) and scroll sideways inside it if they must.</li>
+        </ul></div>
+        <div class="spec-card"><h4>Top to bottom, every full page</h4><ol>
+          <li>Breadcrumb ending with the record's own name, never "Detail".</li>
+          <li>Header: the record's number or name as title, its status badge beside it, one line of facts, buttons top right (one filled).</li>
+          <li>Status block, only when something blocks or waits: what, who acts, the button.</li>
+          <li>Tabs: Overview first, History last (the truck moves Details before History).</li>
+          <li>Sections with titles, the same groups as the form that created the record.</li>
+        </ol></div>
+      </div>
+    </section>
+
+    <section class="section" id="entry">
+      <div class="kicker">Record page</div>
+      <h3>A money entry, waiting for approval (finance)</h3>
+      <p class="rule">Same data as the screen above. The approval moves into the status block at the top, where it can't fall below the fold. The context column carries the amount, what it's linked to and the latest history.</p>
+      <div class="frame desktop" style="min-height:820px">
+        <div data-sidebar="money" data-role="finance"></div>
+        <div class="main">
+          <div class="topbar"><span class="crumbs">Money <span class="sep">›</span> Entries <span class="sep">›</span> <b>DLA-2026-00005</b></span><div class="right"><span class="chip set">All branches</span></div></div>
+          <div class="page">
+            <div class="rh"><div><h1>DLA-2026-00005 <span class="badge b-warn">Waiting for approval</span></h1><div class="sub">Expense · Repairs · VH003 · recorded by Hervé Nkou, 3 days ago</div></div>
+              <div class="acts"><span class="btn"><i data-i="camera"></i>Attach receipt</span><span class="btn">⋯</span></div></div>
+            <div class="status warn"><i data-i="alert"></i><div><div class="t">Waiting for your approval</div><div class="s">450 000 XAF is above 150 000, so Finance approves. The approval rules changed on October 6 (Émilienne). <a style="font-weight:600;color:inherit">See the rules</a></div></div>
+              <div class="acts"><span class="btn">Reject</span><span class="btn primary">Approve</span></div></div>
+            <div class="tabs"><div class="on">Overview</div><div>Receipt <span class="count">0</span></div><div>History</div></div>
+            <div class="rp">
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <div class="sec"><div class="sec-h"><h2>What</h2></div><div class="sec-b kv">
+                  <div><div class="k">Category</div><div class="v">Repairs</div></div>
+                  <div><div class="k">Date of the expense</div><div class="v">29 July 2026</div></div>
+                  <div class="full"><div class="k">Description</div><div class="v">Repair waiting for approval – VH003</div></div>
+                  <div><div class="k">Truck</div><div class="v">VH003 · Douala</div></div>
+                  <div><div class="k">Work order</div><div class="v none">Not recorded<a>Add</a></div></div>
+                </div></div>
+                <div class="sec"><div class="sec-h"><h2>Who and how much</h2></div><div class="sec-b kv">
+                  <div><div class="k">Amount</div><div class="v">450 000 XAF</div></div>
+                  <div><div class="k">Paid with</div><div class="v">Cash</div></div>
+                  <div><div class="k">Recorded by</div><div class="v">Hervé Nkou</div></div>
+                  <div><div class="k">Supplier reference</div><div class="v">REP-VH003-001</div></div>
+                </div></div>
+                <div class="sec"><div class="sec-h"><h2>Proof</h2><span class="r"><span class="badge b-warn">No receipt</span></span></div><div class="sec-b kv">
+                  <div class="full"><div class="k">Receipt</div><div class="v none">No file yet<a>Attach receipt</a></div></div>
+                </div></div>
+                <div class="prov">Entry DLA-2026-00005 · trucking · recorded October 6, 12:29</div>
+              </div>
+              <div class="rail">
+                <div class="box"><h3>Amount</h3><div class="big">450 000<small>XAF</small></div><div class="line"><span class="m">Kind</span><span>Expense</span></div><div class="line"><span class="m">Counted in profit</span><span>After approval</span></div><div class="line"><span class="m">Month</span><span>July · open</span></div></div>
+                <div class="box"><h3>Linked</h3>
+                  <div class="link-row"><i data-i="truck"></i><div><b>VH003</b><div class="s">Grounded · Douala</div></div><i data-i="chev"></i></div>
+                  <div class="link-row"><i data-i="wrench"></i><div><b>Problem 99D91608</b><div class="s">Brake pressure warning</div></div><i data-i="chev"></i></div>
+                </div>
+                <div class="box"><h3>Latest <a>All history</a></h3>
+                  <div class="line"><span>Recorded</span><span class="m">Hervé · Oct 6</span></div>
+                  <div class="line"><span>Sent for approval</span><span class="m">Oct 6</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="trip">
+      <div class="kicker">Record page</div>
+      <h3>A trip, closed with things missing</h3>
+      <p class="rule">Same frame. The status block says what's missing and offers the fix. "Net" becomes profit or loss, in the money words from <a href="dashboards.html#words">Dashboards</a>.</p>
+      <div class="frame desktop" style="min-height:820px">
+        <div data-sidebar="trips" data-role="admin"></div>
+        <div class="main">
+          <div class="topbar"><span class="crumbs">Trips <span class="sep">›</span> <b>DLA-2026-00002</b></span><div class="right"><span class="chip set">All branches</span></div></div>
+          <div class="page">
+            <div class="rh"><div><h1>DLA-2026-00002 <span class="badge b-warn">Closed, 5 things missing</span></h1><div class="sub">Haulage job · Marché de Bafoussam · Douala → Bafoussam · July 21, 2026</div></div>
+              <div class="acts"><span class="btn">Reopen the trip</span><span class="btn">⋯</span></div></div>
+            <div class="status warn"><i data-i="alert"></i><div><div class="t">The trip is closed, but 5 things are missing</div><div class="s">No crew · no revenue · no start km · no end km · an open leg was closed automatically. Its profit can't be trusted until they're added.</div></div>
+              <div class="acts"><span class="btn primary">Complete the trip</span></div></div>
+            <div class="tabs"><div class="on">Overview</div><div>Legs <span class="count">1</span></div><div>Money</div><div>History</div></div>
+            <div class="rp">
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <div class="mini"><div><div class="k">Started</div><div class="v">21 Jul, 07:00</div></div><div><div class="k">Ended</div><div class="v">21 Jul, 13:15</div></div><div><div class="k">Distance</div><div class="v">295 km</div></div><div><div class="k">Legs</div><div class="v">1 · laden</div></div></div>
+                <div class="sec"><div class="sec-h"><h2>Truck and crew</h2></div><div class="sec-b kv">
+                  <div><div class="k">Truck</div><div class="v">VH001 · carrier</div></div>
+                  <div><div class="k">Crew</div><div class="v none">Not recorded<a>Add</a></div></div>
+                  <div><div class="k">Start km</div><div class="v none">Not recorded<a>Add</a></div></div>
+                  <div><div class="k">End km</div><div class="v none">Not recorded<a>Add</a></div></div>
+                </div></div>
+                <div class="sec"><div class="sec-h"><h2>Job</h2></div><div class="sec-b kv">
+                  <div><div class="k">Trip type</div><div class="v">Haulage job</div></div>
+                  <div><div class="k">Customer</div><div class="v">Marché de Bafoussam</div></div>
+                  <div class="full"><div class="k">Notes</div><div class="v">Livraison Douala à Bafoussam</div></div>
+                </div></div>
+                <div class="prov">Trip DLA-2026-00002 · trucking · created October 6</div>
+              </div>
+              <div class="rail">
+                <div class="box"><h3>Money <a>Open the tab</a></h3><div class="big" style="color:var(--destructive)">Loss 86 000<small>XAF</small></div>
+                  <div class="line"><span class="m">Revenue</span><span class="none" style="color:var(--muted-foreground)">Not recorded</span></div>
+                  <div class="line"><span class="m">Expenses</span><span class="num">86 000</span></div>
+                  <div class="line"><span class="m">Fuel · DLA-2026-00008</span><span>Approved</span></div></div>
+                <div class="box"><h3>Linked</h3>
+                  <div class="link-row"><i data-i="truck"></i><div><b>VH001</b><div class="s">Available · Douala</div></div><i data-i="chev"></i></div>
+                </div>
+                <div class="box"><h3>Latest <a>All history</a></h3>
+                  <div class="line"><span>Closed (automatic)</span><span class="m">Oct 6</span></div>
+                  <div class="line"><span>Fuel added</span><span class="m">Oct 6</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="form">
+      <div class="kicker">Form page</div>
+      <h3>A long form: Record a sheet</h3>
+      <p class="rule">Same frame. The form keeps the 760 px column decided in <a href="form-layouts.html">Form layouts</a> (Long capture); the context column becomes "So far": a live summary that doubles as the check before saving. Buttons sit in one sticky bar, main button last. Register a truck uses the same frame.</p>
+      <div class="frame desktop" style="min-height:1040px;position:relative">
+        <div data-sidebar="trips" data-role="admin"></div>
+        <div class="main">
+          <div class="topbar"><span class="crumbs">Trips <span class="sep">›</span> <b>Record a sheet</b></span></div>
+          <div class="page" style="padding-bottom:80px">
+            <div class="rh"><div><h1>Record a sheet</h1><div class="sub">Work down the paper sheet from top to bottom. Anything it doesn't say can stay empty.</div></div></div>
+            <div class="rp">
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <div class="sec"><div class="sec-h"><h2>References</h2><span class="chipst done">Done</span></div><div class="sec-b fs">
+                  <div class="two"><div class="field"><label>Branch</label><div class="input filled">Douala</div></div><div class="field"><label>Trip type</label><div class="input filled">Haulage job</div></div></div>
+                  <div class="two"><div class="field"><label>Customer <span class="optl">optional</span></label><div class="input filled">Marché de Bafoussam</div></div><div class="field"><label>Customer reference <span class="optl">optional</span></label><div class="input">Order or docket number</div></div></div>
+                </div></div>
+                <div class="sec"><div class="sec-h"><h2>Truck and meters</h2><span class="chipst miss">1 missing</span></div><div class="sec-b fs">
+                  <div class="three"><div class="field"><label>Truck</label><div class="input filled">VH001</div></div><div class="field"><label>Departure</label><div class="input filled">21/07/2026 07:00</div></div><div class="field"><label>Arrival</label><div class="input focus">dd/mm/yyyy hh:mm</div></div></div>
+                  <div class="two"><div class="field"><label>Start km <span class="optl">optional</span></label><div class="input filled">412 300<span class="suffix">km</span></div></div><div class="field"><label>End km <span class="optl">optional</span></label><div class="input">km at arrival<span class="suffix">km</span></div></div></div>
+                </div></div>
+                <div class="sec"><div class="sec-h"><h2>Crew</h2><span class="chipst todo">Not started</span></div><div class="sec-b"><span class="btn sm"><i data-i="plus"></i>Add a person</span></div></div>
+                <div class="sec"><div class="sec-h"><h2>Legs</h2><span class="chipst done">1 leg</span></div><div class="sec-b"><div class="line"><span>Douala → Bafoussam · laden</span><span class="num">295 km</span></div></div></div>
+                <div class="sec"><div class="sec-h"><h2>Revenue and expenses</h2><span class="chipst done">2 lines</span></div><div class="sec-b"><div class="line"><span>Freight</span><span class="num">+450 000</span></div><div class="line"><span>Fuel</span><span class="num">−86 000</span></div></div></div>
+              </div>
+              <div class="rail">
+                <div class="box"><h3>So far</h3>
+                  <div class="line"><span class="m">Truck</span><span>VH001</span></div>
+                  <div class="line"><span class="m">Route</span><span>Douala → Bafoussam</span></div>
+                  <div class="line"><span class="m">Distance</span><span class="num">295 km</span></div>
+                  <div class="line"><span class="m">Revenue</span><span class="num">450 000</span></div>
+                  <div class="line"><span class="m">Expenses</span><span class="num">86 000</span></div>
+                  <div class="line"><span><b>Profit</b></span><span class="num">364 000 XAF</span></div>
+                </div>
+                <div class="box"><h3>Still missing</h3>
+                  <div class="link-row"><i data-i="alert" data-c=""></i><div>Arrival time<div class="s">Truck and meters</div></div><a style="font-weight:600;font-size:12.5px">Go</a></div>
+                  <div class="link-row"><i data-i="user"></i><div>Crew (optional)<div class="s">Can be added later</div></div><a style="font-weight:600;font-size:12.5px">Go</a></div>
+                </div>
+                <div class="prov">Draft saved on this phone at 12:31. It's sent when you record it.</div>
+              </div>
+            </div>
+          </div>
+          <div class="sticky-foot"><span class="hint">1 missing · draft saved 12:31</span><span class="btn">Save draft</span><span class="btn">Record and close the trip</span><span class="btn primary">Record sheet</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="phone">
+      <div class="kicker">Phone</div>
+      <h3>The same record on a phone</h3>
+      <div class="cols">
+        <div class="frame phone" style="position:relative;min-height:860px">
+          <div class="ptop"><span class="crumb">Money ›</span><b>DLA-2026-00005</b></div>
+          <div class="page" style="padding-bottom:150px">
+            <div class="rh"><div><h1 style="font-size:20px">DLA-2026-00005</h1><div class="sub"><span class="badge b-warn">Waiting for approval</span> · Repairs · VH003</div></div></div>
+            <div class="status warn"><div><div class="t">Waiting for your approval</div><div class="s">Above 150 000, so Finance approves.</div></div></div>
+            <div class="tabs" style="margin:0 -14px;padding:0 14px"><div class="on">Overview</div><div>Receipt</div><div>History</div></div>
+            <div class="box"><div class="big">450 000<small>XAF</small></div><div class="line"><span class="m">Counted in profit</span><span>After approval</span></div></div>
+            <div class="sec"><div class="sec-h"><h2>What</h2></div><div class="sec-b kv" style="grid-template-columns:1fr">
+              <div><div class="k">Category</div><div class="v">Repairs</div></div>
+              <div><div class="k">Date of the expense</div><div class="v">29 July 2026</div></div>
+              <div><div class="k">Truck</div><div class="v">VH003 · Douala</div></div>
+            </div></div>
+            <div class="sec"><div class="sec-h"><h2>Proof</h2><span class="badge b-warn">No receipt</span></div><div class="sec-b"><span class="btn sm"><i data-i="camera"></i>Attach receipt</span></div></div>
+          </div>
+          <div class="actionbar" style="grid-template-columns:1fr 1fr"><span class="btn">Reject</span><span class="btn primary">Approve</span></div>
+          <div data-tabbar="money" data-role="finance"></div>
+        </div>
+        <div class="spec-card"><h4>Phone rules</h4><ul>
+          <li>One column. The context column's money box comes right after the tabs; linked records and history go to the end of the Overview.</li>
+          <li>The status block keeps its sentence; its buttons move to the bottom action bar, the main one on the right.</li>
+          <li>Tabs scroll sideways; Overview first, History last.</li>
+          <li>Long forms become one step per section, then a review step that shows "So far" (decided in Form layouts).</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="map">
+      <div class="kicker">Map</div>
+      <h3>Every full page in the app</h3>
+      <p class="rule">From the inventory of develop. Work orders, problems, people and branches open in panels or dialogs today; when one gets its own page, it uses this frame.</p>
+      <table class="spec-table">
+        <thead><tr><th>Page</th><th>Kind</th><th>Tabs</th><th>Status block when</th><th>Buttons (filled last)</th><th>Context column</th></tr></thead>
+        <tbody>
+          <tr><td>Money entry <code>/finance/entries/$id</code></td><td>Record</td><td>Overview · Receipt · History</td><td>Waiting approval, rejected, missing receipt, cancelled</td><td>Attach receipt · ⋯ (Edit, Cancel); Approve in the status block</td><td>Amount, linked truck / trip / work order, latest</td></tr>
+          <tr><td>Trip <code>/activities/$id</code></td><td>Record</td><td>Overview · Legs · Money · History</td><td>Open, closed with things missing</td><td>Reopen · ⋯; Complete in the status block</td><td>Money (profit or loss), truck, latest</td></tr>
+          <tr><td>Truck <code>/assets/$id</code></td><td>Record (the model)</td><td>Overview · Trips · Money · Maintenance · Documents · Details · History (History moves last)</td><td>Grounded, papers expired</td><td>Record expense · More actions</td><td>This month's money, latest (already there)</td></tr>
+          <tr><td>Record a sheet <code>/activities/record</code></td><td>Form</td><td>—</td><td>—</td><td>Save draft · Record and close · Record sheet</td><td>So far, still missing, draft saved</td></tr>
+          <tr><td>Register a truck <code>/assets/new</code></td><td>Form</td><td>—</td><td>—</td><td>Cancel · Register</td><td>So far, still missing</td></tr>
+          <tr><td>Company settings <code>/more/company</code></td><td>Settings</td><td>—</td><td>—</td><td>Per section</td><td>The list of sections</td></tr>
+          <tr><td>My settings <code>/my-settings</code></td><td>Settings</td><td>—</td><td>—</td><td>Per section</td><td>The list of sections</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="parts">
+      <div class="kicker">Parts</div>
+      <h3>Parts and code</h3>
+      <div class="cols even">
+        <div class="spec-card"><h4>Components</h4><ul>
+          <li><b>PageFrame</b>: the only width (max 1 200, centred, 24 px gutters). <code>PageContainer</code>'s narrow / default / wide go; lists, dashboards and full pages all use it.</li>
+          <li><b>RecordHeader</b>: breadcrumb name, title + status badge, facts line, actions. Replaces <code>PageHeader</code> on records and the truck's <code>IdentityStrip</code>, so all three look the same.</li>
+          <li><b>StatusBlock</b>: the truck's banner, used by every record. Tone, sentence, who acts, the button.</li>
+          <li><b>RecordTabs</b>: Overview first, History last, tab in the address.</li>
+          <li><b>FactsSection</b>: titled card, labels above, two columns, same groups as the form. "Not recorded" with "Add" when allowed.</li>
+          <li><b>ContextColumn</b>: 300 px, sticky, drops below main under 1 280 px.</li>
+          <li><b>FormPage</b>: frame + 760 px form column + "So far" column + one sticky footer.</li>
+        </ul></div>
+        <div class="spec-card"><h4>Guards so it stays this way</h4><ul>
+          <li>A route test: every full-page route renders <code>PageFrame</code> and either <code>RecordHeader</code> or <code>FormPage</code>.</li>
+          <li>A lint rule: no <code>max-w-*</code> class in <code>screens/</code>; width comes only from <code>PageFrame</code>.</li>
+          <li>A lint rule: no full-width buttons below a record's content (<code>w-full</code> on a button inside a record screen).</li>
+          <li>The breadcrumb test already planned: the last item is the record's name.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="decide">
+      <div class="kicker">Decisions</div>
+      <h3>Decisions</h3>
+      <table class="spec-table">
+        <thead><tr><th>#</th><th>Question</th><th>Recommendation</th><th>Other options</th><th>Pick</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>One width for every page?</td><td><b>Yes, 1 200 px</b>, centred, for lists, dashboards and full pages</td><td>Keep three widths (narrow forms, default, wide)</td><td>☐</td></tr>
+          <tr><td>2</td><td>Context column on full pages?</td><td><b>Yes</b>: records, long forms and settings pages, never on panels</td><td>One wide column and nothing beside it</td><td>☐</td></tr>
+          <tr><td>3</td><td>Where does History live?</td><td><b>Always the last tab</b>, plus the 3 latest lines in the context column</td><td>A header button</td><td>☐</td></tr>
+          <tr><td>4</td><td>Where do approve, complete and release go?</td><td><b>In the status block</b> at the top, because they answer it; other actions in the header. This <b>replaces the fixed bottom action bar</b> decided for the Record workspace on 2026-10-04 (README). The truck already does this with "Release to service"</td><td>Keep the fixed bottom action bar on desktop</td><td>☐</td></tr>
+          <tr><td>5</td><td>How is money written?</td><td colspan="3">Decided once for every page: <a href="dashboards.html#decide">Dashboards, decision 9</a> (recommendation "450 000 FCFA"). These mockups use XAF until then.</td></tr>
+          <tr><td>6</td><td>How are dates written?</td><td><b>"29 July 2026"</b> / <b>"29 juillet 2026"</b>, short form 29/07/2026</td><td>"7/29/26" (today in English: the US order)</td><td>☐</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</div>
+<div class="toggle-notes"><button type="button">Show / hide layer outlines</button></div>
+<script>
+NAV[0].items[0][2] = "Dashboard";
+Object.values(PHONE).forEach((items) => { if (items[0][0] === "home") items[0][2] = "Dashboard"; });
+</script>
+</body>
+</html>
