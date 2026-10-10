@@ -62,7 +62,7 @@ const substituteAsset: CommandDefinition<SubstituteAssetPayload> = {
         referenceCode: payload.activityId,
       });
     }
-    await assertOwnTrip(tx, ctx, ["DRIVER"], activity);
+    await assertOwnTrip(tx, ctx, ["DRIVER"], activity, envelope.origin);
     // A planned or cancelled trip has no carrier to swap (ADR-0012 §3).
     if (activity.status !== "OPEN") {
       throw new CommandError(409, "INVALID_STATE_TRANSITION", {

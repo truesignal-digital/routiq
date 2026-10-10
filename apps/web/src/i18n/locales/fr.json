@@ -810,6 +810,7 @@
       "assets": "Engins et équipage",
       "legs": "Étapes",
       "money": "Recettes et dépenses",
+      "moneyCosts": "Dépenses",
       "km": "{count} km",
       "closedAt": "Clôturée le {date}",
       "overview": {
@@ -962,7 +963,8 @@
         "legs": "Étapes",
         "flavourJourney": "Places",
         "flavourHaulage": "Marchandise",
-        "money": "Recettes et dépenses"
+        "money": "Recettes et dépenses",
+        "moneyCosts": "Dépenses"
       },
       "branchLabel": "Agence",
       "chooseBranch": "Choisir une agence",

@@ -165,6 +165,20 @@ describe("activity money card", () => {
     expect(screen.getByText("Only the entries you recorded on this activity.")).toBeDefined();
   });
 
+  it("titles a driver's card Costs, everyone else's Revenue and costs (#594)", () => {
+    render(<ActivityMoney totals={false} scope="OWN_ENTRIES" entries={[entry({ direction: "EXPENSE" })]} />);
+    expect(screen.getByText("Costs")).toBeDefined();
+    expect(screen.queryByText("Revenue and costs")).toBeNull();
+    expect(i18n.t("activities.detail.moneyCosts", { lng: "fr-CM" })).toBe("Dépenses");
+    cleanup();
+
+    for (const scope of ["LEDGER", "BRANCH_ENTRIES"] as const) {
+      render(<ActivityMoney totals={scope === "LEDGER"} scope={scope} entries={[entry()]} />);
+      expect(screen.getByText("Revenue and costs")).toBeDefined();
+      cleanup();
+    }
+  });
+
   it("links each line to its finance entry", () => {
     render(<ActivityMoney totals scope="LEDGER" entries={[entry()]} />);
 
