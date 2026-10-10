@@ -72,7 +72,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
 
   const sheet = await choose("Jamais : les indicateurs seulement", "Never: tiles only");
   await shot("settings-form", {
-    caption: "Direction picks one of four schedules for the whole company; the one in force is pinned above",
+    caption: "The Director or an Administrator picks one of four schedules for the whole company; the one in force is pinned above",
     highlight: sheet,
   });
   await sheet.getByRole("button", { name: t("Enregistrer", "Save"), exact: true }).click();

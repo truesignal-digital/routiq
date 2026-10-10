@@ -48,8 +48,10 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
   });
 
   const setRecording = async (amount: string) => {
-    await approvals.getByRole("button", { name: t("Modifier les seuils d'approbation", "Change approval thresholds"), exact: true }).click();
-    const sheet = page.getByRole("dialog");
+    const title = t("Modifier les seuils d'approbation", "Change approval thresholds");
+    await approvals.getByRole("button", { name: title, exact: true }).click();
+    // By name: the saved toast is a dialog too.
+    const sheet = page.getByRole("dialog", { name: title });
     await sheet.waitFor();
     const field = sheet.getByLabel(t("Enregistré directement jusqu'à", "Posts directly up to"));
     await field.fill(amount);
@@ -69,7 +71,7 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
   await quiet();
   await shot("thresholds-saved", {
     caption: `Saved through update-approval-threshold: the company's chain moved, and the last change names ${account.displayName}`,
-    highlight: approvals,
+    highlight: changedBy,
   });
 
   const after = await thresholds();
@@ -88,7 +90,7 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
   }
   await shot("thresholds-restored", {
     caption: "Put back to the company's earlier threshold",
-    highlight: approvals,
+    highlight: approvals.getByRole("heading", { name: t("Approbations", "Approvals"), exact: true }),
   });
   log(`api: restored → recording ${restored.recordingThresholdMinor}`);
 };
