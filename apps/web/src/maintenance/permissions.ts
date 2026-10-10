@@ -9,11 +9,14 @@ export function canViewMaintenance(
 
 /**
  * A work order's estimate, actual cost and cost lines: every role but the
- * driver (#390). The server sends null to the others; this only decides how
- * the screen words a figure it never received.
+ * driver (#390), and only while FINANCE is on (#328). The server sends null
+ * otherwise; this only decides how the screen words a figure it never received.
  */
-export function canSeeWorkOrderCosts(role: Role | undefined): boolean {
-  return role !== undefined && canReadWorkOrderCosts(role);
+export function canSeeWorkOrderCosts(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  return role !== undefined && canReadWorkOrderCosts(role) && (enabledModules?.includes("FINANCE") ?? false);
 }
 
 /**

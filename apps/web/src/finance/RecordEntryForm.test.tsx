@@ -26,10 +26,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/components/ui/toast.js", () => ({ toast: { add: mocks.toastAdd } }));
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: mocks.useAssetRegistrationReference,
 }));
-vi.mock("../documents/useCategories.js", () => ({ useCategories: mocks.useCategories }));
+vi.mock("../categories/useCategories.js", () => ({ useCategories: mocks.useCategories }));
 vi.mock("../assets/useAssets.js", () => ({ useAssets: mocks.useAssets }));
 vi.mock("../approval-rules/useApprovalChain.js", () => ({
   useApprovalChain: mocks.useApprovalChain,

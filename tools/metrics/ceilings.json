@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 684970,
+    "ceiling": 686158,
     "raises": [
       {
         "date": "2026-10-06",
@@ -197,8 +197,8 @@
       {
         "date": "2026-10-10",
         "from": 684895,
-        "to": 684970,
-        "reason": "Named shift regions on the shell's header, page and rules notice for flow:no-shift and pnpm perf (#494)"
+        "to": 686158,
+        "reason": "Module manifests (#326): the manifest contract and slot lookups, the Maintenance manifest, the page gate, and the two module-dependency error messages in fr and en"
       }
     ]
   },
