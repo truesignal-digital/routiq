@@ -154,7 +154,9 @@ it.each(viewers)("shows loading without a false denial or money decisions ($loca
   const pending = new Promise<void>((resolve) => { release = resolve; });
   const { requests } = await openFinance("/finance/entries", { ...viewer, waitForLedger: pending });
   await waitFor(() => expect(requests.some(({ url }) => url.pathname === "/v1/finance/entries")).toBe(true));
-  expect(await screen.findByText(viewer.locale === "en" ? "Loading…" : "Chargement…")).toBeTruthy();
+  // The route's loader holds the screen until its reads answer, so the loading
+  // state is the route's own skeleton (#496).
+  expect(await screen.findByText(viewer.locale === "en" ? "Opening the page…" : "Ouverture de la page…", {}, { timeout: 3_000 })).toBeTruthy();
   expect(screen.queryByRole("link", { name: viewer.months })).toBeNull();
   await act(async () => { release(); });
   await screen.findByRole("button", { name: "FIN-EXEC" });

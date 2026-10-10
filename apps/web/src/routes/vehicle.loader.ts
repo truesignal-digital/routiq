@@ -6,13 +6,18 @@ import { viewerOf } from "../vehicle/model.js";
 import { assetAttentionQueryOptions, assetFinanceQueryOptions, assetHistoryQueryOptions } from "../vehicle/useVehicle.js";
 import { ensure, ensureList, scope, settle, type LoaderArgs } from "./scope.js";
 
-/** The workspace around every vehicle tab: the vehicle, what needs doing on it, and revenue categories when the member may record revenue. */
+/**
+ * The workspace around every vehicle tab: the vehicle, what needs doing on it,
+ * and revenue categories when the member may record revenue. What needs doing
+ * starts here but is not waited for: the To do card has its own loading state
+ * (#148), and the vehicle should not wait on it.
+ */
 export async function vehicle(args: LoaderArgs & { params: { assetId: string } }): Promise<void> {
   const { client, slug, me } = await scope(args);
   const { assetId } = args.params;
+  void ensure(client, assetAttentionQueryOptions(slug, assetId)).catch(() => undefined);
   await settle(
     ensure(client, assetDetailQueryOptions(slug, assetId)),
-    ensure(client, assetAttentionQueryOptions(slug, assetId)),
     me !== undefined &&
       actionPermitted(actionDef("record-revenue"), viewerOf(me)) &&
       ensure(client, categoriesQueryOptions(slug, "REVENUE_CATEGORY")),
