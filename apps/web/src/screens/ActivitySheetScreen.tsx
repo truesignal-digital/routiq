@@ -903,7 +903,7 @@ function SheetForm({
           </CardContent>
         </Card>
 
-        <div className="sticky bottom-0 -mx-4 mt-2 flex flex-col items-stretch gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:flex-row sm:items-center sm:justify-end">
+        <div className="sticky bottom-0 -mx-4 mt-2 flex flex-col items-stretch gap-3 border-t border-border bg-background/95 px-4 py-3 sm:-mx-6 sm:px-6 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:flex-row sm:items-center sm:justify-end">
           <Button
             type="button"
             variant="outline"
