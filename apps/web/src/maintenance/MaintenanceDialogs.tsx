@@ -58,7 +58,7 @@ import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { parseMoneyXaf } from "../lib/format.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
 import { ALL_BRANCHES } from "../shell/branch-context.js";
-import { workOrderReference } from "./columns.js";
+import { recordNumberText } from "@/lib/record-number.js";
 import {
   defaultCostChoice,
   newCostLine,
@@ -85,6 +85,8 @@ type DecisionPayload = Readonly<Record<string, string>>;
  */
 export interface WorkOrderRef {
   id: string;
+  /** The server's number (#608); null until it has one. */
+  number: number | null;
   assetId: string;
   status: WorkOrderStatus;
   /** The signalement the order answers; null on preventive work. */
@@ -1276,7 +1278,7 @@ export function ReleaseForm({
       <p className="text-sm text-muted-foreground">
         {subject.kind === "work-order"
           ? t("maintenance.actions.releaseSubject", {
-              reference: workOrderReference(subject.workOrder.id),
+              reference: recordNumberText(t, "work_order", subject.workOrder.number),
             })
           : subject.issue.description}
       </p>

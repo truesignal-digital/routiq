@@ -120,6 +120,7 @@ async function maintenanceItems(
   const issues = await tx
     .select({
       id: operationalIssues.id,
+      number: operationalIssues.number,
       description: operationalIssues.description,
       safetyCritical: operationalIssues.safetyCritical,
       status: operationalIssues.status,
@@ -154,6 +155,7 @@ async function maintenanceItems(
   const orders = await tx
     .select({
       id: workOrders.id,
+      number: workOrders.number,
       issueId: workOrders.issueId,
       status: workOrders.status,
       description: workOrders.description,
@@ -232,6 +234,7 @@ async function maintenanceItems(
       partOfGrounding: grounding?.issueId === issue.id,
       makerPrincipalIds: [],
       params: {
+        recordNumber: issue.number,
         description: clip(issue.description),
         safetyCritical: issue.safetyCritical,
         hasCompletedWorkOrder,
@@ -272,7 +275,7 @@ async function maintenanceItems(
         since: order.createdAt.toISOString(),
         partOfGrounding: inGrounding(order),
         makerPrincipalIds: maker ? [maker] : [],
-        params: { description: clip(order.description), ...costs },
+        params: { recordNumber: order.number, description: clip(order.description), ...costs },
       });
     } else if (order.status === "APPROVED") {
       items.push({
@@ -283,6 +286,7 @@ async function maintenanceItems(
         partOfGrounding: inGrounding(order),
         makerPrincipalIds: [],
         params: {
+          recordNumber: order.number,
           description: clip(order.description),
           ...costs,
           ...(order.completionRejectReason === null
@@ -300,7 +304,7 @@ async function maintenanceItems(
         since: (completion?.occurredAt ?? order.createdAt).toISOString(),
         partOfGrounding: inGrounding(order),
         makerPrincipalIds: maker ? [maker] : [],
-        params: { description: clip(order.description), ...costs },
+        params: { recordNumber: order.number, description: clip(order.description), ...costs },
       });
     } else if (order.status === "COMPLETED" && costsVisible) {
       const toCome = costToCome(order);
@@ -315,6 +319,7 @@ async function maintenanceItems(
           partOfGrounding: false,
           makerPrincipalIds: [],
           params: {
+            recordNumber: order.number,
             description: clip(order.description),
             currency: order.currency,
             ...(toCome.reason === "DECLARED_NOT_RECORDED"

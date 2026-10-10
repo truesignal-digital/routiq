@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { contributes } from "@/modules/manifest.js";
 import { useVehicle } from "../context.js";
 import { entrySteps } from "../flow.js";
-import { recordReference } from "../model.js";
+import { recordNumberText } from "@/lib/record-number.js";
 import { CardHead, LinkButton, RecordRow, RowIcon, RowMenu, Sep, SubHead, TabAction, TabHeader } from "../parts.js";
 import { EntryEventStatus, foldedAmountClass } from "@/finance/EntryCancellation.js";
 import { EvidenceMark } from "../panel/shared.js";
@@ -449,6 +449,7 @@ function EntryRow({ entry }: { entry: FinancialEntryListItem }) {
   const split = share !== entry.amountMinor;
   const steps = entrySteps(entry, viewer);
   const links = entry.assetLinks;
+  const workOrderRef = recordNumberText(t, "work_order", links?.workOrderNumber ?? null);
   const money = (minor: number, sign?: MoneySign) =>
     formatMoney(minor, { currency: entry.currency, locale, ...(sign === undefined ? {} : { sign }) });
 
@@ -495,7 +496,10 @@ function EntryRow({ entry }: { entry: FinancialEntryListItem }) {
                 className="font-normal text-muted-foreground"
                 onClick={() => panel.openRecord({ kind: "work_order", id: links.workOrderId ?? "" })}
               >
-                {t("vehicle.money.forWorkOrder", { ref: recordReference(links.workOrderId) })}
+                <RecordText
+                  text={t("vehicle.money.forWorkOrder", { ref: workOrderRef })}
+                  numbers={[workOrderRef]}
+                />
               </LinkButton>
             </>
           )}

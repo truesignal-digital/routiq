@@ -23,7 +23,8 @@ const WORK_ORDER_ID = "1a2b3c4d-0000-4000-8000-000000000001";
 const ISSUE_ID = "5e6f7a8b-0000-4000-8000-000000000002";
 const ASSET_ID = "9c0d1e2f-0000-4000-8000-000000000003";
 const NEW_RECORD_ID = "0000aaaa-0000-4000-8000-00000000000f";
-const WORK_ORDER_REFERENCE = "1A2B3C4D";
+/** This suite's `t` returns keys: the work order's number renders as its catalog key (#608). */
+const WORK_ORDER_REFERENCE = "common.recordNumber.workOrder";
 
 const mocks = vi.hoisted(() => ({
   submit: vi.fn(),
@@ -150,6 +151,7 @@ const { MaintenanceScreen } = await import("./MaintenanceScreen.js");
 function makeWorkOrder(status: WorkOrderStatus): WorkOrderListItem {
   return {
     id: WORK_ORDER_ID,
+    number: 7,
     status,
     description: "Remplacement des plaquettes de frein",
     asset: {
@@ -169,7 +171,7 @@ function makeWorkOrder(status: WorkOrderStatus): WorkOrderListItem {
     costOutcome: status === "COMPLETED" || status === "COMPLETION_SUBMITTED" ? "LINES" : null,
     costToCome: null,
     currency: "XAF",
-    issue: { id: ISSUE_ID, safetyCritical: true },
+    issue: { id: ISSUE_ID, number: 3, safetyCritical: true },
     createdAt: "2026-08-01T08:00:00.000Z",
     completedAt: null,
     cancelledAt: null,
@@ -221,6 +223,7 @@ function makeDetail(row: WorkOrderListItem): WorkOrderDetail {
 
 const issue: IssueListItem = {
   id: ISSUE_ID,
+  number: 3,
   asset: { id: ASSET_ID, assetCode: "CMR-TR-014", registrationNumber: "LT-8842-AB" },
   branch: {
     id: "22222222-2222-4222-8222-222222222222",
@@ -236,7 +239,7 @@ const issue: IssueListItem = {
   resolutionNote: null,
   dismissedAt: null,
   dismissReason: null,
-  workOrders: [{ id: WORK_ORDER_ID, status: "APPROVED" }],
+  workOrders: [{ id: WORK_ORDER_ID, number: 7, status: "APPROVED" }],
   assetUnavailable: true,
   rowVersion: 2,
 };
