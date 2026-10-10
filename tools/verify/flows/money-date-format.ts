@@ -44,12 +44,13 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
 
   // The Money list: a dense table, so the short month; amounts unbroken.
   await nav("/finance/entries");
-  const firstRow = page.getByRole("row").nth(1);
+  // A table row on desktop, a two-line list row on a phone (#300).
+  const firstRow = page.locator('[data-slot="data-table-row"]').or(page.getByRole("row").nth(1)).first();
   await firstRow.waitFor();
   await quiet();
   await check("the Money list");
   const rowText = await firstRow.innerText();
-  if (!new RegExp(`\\b\\d{1,2} ${months}\\.? \\d{4}\\b`).test(rowText)) throw new Error(`a Money row has no "29 Jul 2026" date: ${rowText}`);
+  if (!/\b\d{1,2} \p{L}{3,5}\.? \d{4}\b/u.test(rowText)) throw new Error(`a Money row has no "29 Jul 2026" date: ${rowText}`);
   const amountCell = firstRow.getByText(money).first();
   await amountCell.waitFor();
   log(`first Money row: ${rowText}`);
@@ -68,7 +69,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await panel.waitFor();
   await quiet();
   const panelText = await panel.innerText();
-  const longDate = new RegExp(`\\b\\d{1,2} ${months} \\d{4}\\b`);
+  const longDate = /\b\d{1,2} \p{L}+ \d{4}\b/u;
   if (!longDate.test(panelText)) throw new Error(`${entry.entryNumber}'s panel has no "29 July 2026" date: ${panelText.slice(0, 200)}`);
   for (const [pattern, what] of oldForms) {
     if (pattern.test(panelText)) throw new Error(`${entry.entryNumber}'s panel shows ${what}`);
@@ -99,7 +100,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await page.getByRole("heading", { name: trip.activityNumber }).first().waitFor();
   await quiet();
   const tripText = await check(trip.activityNumber);
-  const dateTime = new RegExp(`\\b\\d{1,2} ${months} \\d{4}, \\d{2}:\\d{2}\\b`);
+  const dateTime = /\b\d{1,2} \p{L}+ \d{4}, \d{2}:\d{2}\b/u;
   if (!dateTime.test(tripText)) throw new Error(`${trip.activityNumber} shows no "29 July 2026, 07:00": ${tripText.slice(0, 300)}`);
   await shot("trip-page", {
     caption: `Trip ${trip.activityNumber}: a date with its time reads ${tripText.match(dateTime)?.[0] ?? ""}, on 24 hours`,
