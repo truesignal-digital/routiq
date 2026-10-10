@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 687197,
+    "ceiling": 692251,
     "raises": [
       {
         "date": "2026-10-06",
@@ -205,6 +205,12 @@
         "from": 686158,
         "to": 687197,
         "reason": "#589 #542 trip-noun overlays and approver strings in the catalogs"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 687197,
+        "to": 692251,
+        "reason": "#608 work order and problem numbers on the vehicle, maintenance and finance screens, on top of #649's People login forms this branch carries until #649 merges"
       }
     ]
   },
@@ -262,7 +268,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 259326,
+    "ceiling": 260337,
     "raises": [
       {
         "date": "2026-10-06",
@@ -455,6 +461,12 @@
         "from": 259125,
         "to": 259326,
         "reason": "#589 #542 trip-noun overlays and approver strings in the catalogs"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 259326,
+        "to": 260337,
+        "reason": "#608 work order and problem numbers (formatter and catalog strings), on top of #649's login strings this branch carries until #649 merges"
       }
     ]
   }
