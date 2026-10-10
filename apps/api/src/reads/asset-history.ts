@@ -498,22 +498,27 @@ async function pageParams(
     for (const row of await tx
       .select({
         id: operationalIssues.id,
+        number: operationalIssues.number,
         description: operationalIssues.description,
         safetyCritical: operationalIssues.safetyCritical,
       })
       .from(operationalIssues)
       .where(and(eq(operationalIssues.workspaceId, workspaceId), inArray(operationalIssues.id, issueIds)))) {
-      bySubject.set(row.id, { description: clip(row.description), safetyCritical: row.safetyCritical });
+      bySubject.set(row.id, {
+        recordNumber: row.number,
+        description: clip(row.description),
+        safetyCritical: row.safetyCritical,
+      });
     }
   }
 
   const orderIds = idsOf("work_order");
   if (orderIds.length > 0) {
     for (const row of await tx
-      .select({ id: workOrders.id, description: workOrders.description })
+      .select({ id: workOrders.id, number: workOrders.number, description: workOrders.description })
       .from(workOrders)
       .where(and(eq(workOrders.workspaceId, workspaceId), inArray(workOrders.id, orderIds)))) {
-      bySubject.set(row.id, { description: clip(row.description) });
+      bySubject.set(row.id, { recordNumber: row.number, description: clip(row.description) });
     }
   }
 

@@ -564,7 +564,7 @@
         "postingDate": "Date de comptabilisation",
         "counterparty": "Tiers",
         "linkedTo": "Rattachée à",
-        "workOrderLink": "Ordre de travail : {title}",
+        "workOrderLink": "Ordre de travail {ref} : {title}",
         "tripLink": "Activité {number}",
         "paymentMethod": "Moyen de paiement",
         "description": "Description",
@@ -704,7 +704,12 @@
     "notRecorded": "Non renseigné",
     "add": "Ajouter",
     "readFailed": "Chargement impossible",
-    "howCalculated": "Mode de calcul"
+    "howCalculated": "Mode de calcul",
+    "recordNumber": {
+      "workOrder": "OT-{number}",
+      "issue": "PB-{number}",
+      "pending": "numéro en attente"
+    }
   },
   "dataTable": {
     "rowCount": "{count, plural, one {# ligne chargée} other {# lignes chargées}}",
@@ -1190,6 +1195,7 @@
         "DISMISSED": "Classé sans suite"
       },
       "columns": {
+        "reference": "N°",
         "asset": "Actif",
         "description": "Description",
         "safety": "État",

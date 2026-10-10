@@ -7,17 +7,9 @@ import { StatusBadge } from "@/components/status-badge.js";
 import { IssueStatusBadge } from "./IssueStatusBadge.js";
 import { WorkOrderStatusBadge, workOrderStatusTone } from "./WorkOrderStatusBadge.js";
 import { formatDate, formatMoney } from "@/lib/format.js";
+import { recordNumberText } from "@/lib/record-number.js";
 import { useIssueCategoryLabel } from "./issue-category.js";
 import { NotRecorded } from "@/components/not-recorded.js";
-
-/**
- * A work order has no number of its own — the read publishes only its id — so
- * the queue shows the head of that id. Enough to read a row out over the phone,
- * and never a fabricated sequence the server would disagree with.
- */
-export function workOrderReference(id: string): string {
-  return id.slice(0, 8).toUpperCase();
-}
 
 function AssetCell({
   asset,
@@ -49,7 +41,7 @@ export function useWorkOrderColumns(): DataTableColumn<WorkOrderListItem>[] {
         },
         cell: ({ row }) => (
           <span className="tabular-nums whitespace-nowrap">
-            {workOrderReference(row.original.id)}
+            {recordNumberText(t, "work_order", row.original.number)}
           </span>
         ),
       },
@@ -151,6 +143,16 @@ export function useIssueColumns(): DataTableColumn<IssueListItem>[] {
   return useMemo(
     () => [
       {
+        id: "reference",
+        header: t("maintenance.issues.columns.reference"),
+        meta: { phone: "meta", label: t("maintenance.issues.columns.reference") },
+        cell: ({ row }) => (
+          <span className="tabular-nums whitespace-nowrap">
+            {recordNumberText(t, "issue", row.original.number)}
+          </span>
+        ),
+      },
+      {
         id: "asset",
         header: t("maintenance.issues.columns.asset"),
         meta: {
@@ -242,7 +244,7 @@ export function useIssueColumns(): DataTableColumn<IssueListItem>[] {
             <span className="flex flex-wrap gap-1">
               {row.original.workOrders.map((workOrder) => (
                 <StatusBadge key={workOrder.id} tone={workOrderStatusTone(workOrder.status)}>
-                  {workOrderReference(workOrder.id)}
+                  {recordNumberText(t, "work_order", workOrder.number)}
                 </StatusBadge>
               ))}
             </span>

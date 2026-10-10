@@ -663,7 +663,7 @@ export const financialPostings = pgTable(
   ],
 );
 
-/** Per-scope sequences for human-readable numbering (e.g. 'ENTRY:{branchId}:{year}'). */
+/** Per-scope sequences for human-readable numbering (e.g. 'ENTRY:{branchId}:{year}', 'WORK_ORDER', 'ISSUE'). */
 export const numberCounters = pgTable(
   "number_counters",
   {
@@ -1064,6 +1064,12 @@ export const operationalIssues = pgTable(
     assetId: uuid("asset_id")
       .notNull()
       .references(() => assets.id),
+    /**
+     * Per-workspace sequence (#608), drawn from number_counters when the
+     * creating command commits; the uuid stays the key. The prefix ("OT-",
+     * "WO-") is the client's words, never stored. Set once, never edited.
+     */
+    number: integer("number").notNull(),
     description: text("description").notNull(),
     safetyCritical: boolean("safety_critical").notNull(),
     category: text("category"),
@@ -1089,6 +1095,7 @@ export const operationalIssues = pgTable(
   },
   (t) => [
     index("operational_issues_ws_asset_idx").on(t.workspaceId, t.assetId),
+    uniqueIndex("operational_issues_ws_number_uq").on(t.workspaceId, t.number),
   ],
 );
 
@@ -1116,6 +1123,12 @@ export const workOrders = pgTable(
       .notNull()
       .references(() => assets.id),
     issueId: uuid("issue_id").references((): AnyPgColumn => operationalIssues.id),
+    /**
+     * Per-workspace sequence (#608), drawn from number_counters when the
+     * creating command commits; the uuid stays the key. The prefix ("OT-",
+     * "WO-") is the client's words, never stored. Set once, never edited.
+     */
+    number: integer("number").notNull(),
     description: text("description").notNull(),
     /**
      * Plain `text` with no CHECK, as Drizzle emits it; the value set is held by
@@ -1169,6 +1182,7 @@ export const workOrders = pgTable(
   (t) => [
     index("work_orders_ws_asset_idx").on(t.workspaceId, t.assetId),
     index("work_orders_ws_status_idx").on(t.workspaceId, t.status),
+    uniqueIndex("work_orders_ws_number_uq").on(t.workspaceId, t.number),
   ],
 );
 

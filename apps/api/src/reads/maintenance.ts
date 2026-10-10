@@ -296,6 +296,7 @@ export function registerMaintenanceReadRoutes(
           const rows = await tx
             .select({
               id: workOrders.id,
+              number: workOrders.number,
               status: workOrders.status,
               description: workOrders.description,
               assetId: workOrders.assetId,
@@ -311,6 +312,7 @@ export function registerMaintenanceReadRoutes(
               ...workOrderCostToComeColumns(),
               currency: workOrders.currency,
               issueId: workOrders.issueId,
+              issueNumber: operationalIssues.number,
               safetyCritical: operationalIssues.safetyCritical,
               createdAt: commands.executedAt,
               createdAtKey: microsecondKey(commands.executedAt),
@@ -374,6 +376,7 @@ export function registerMaintenanceReadRoutes(
         const pageRows = result.rows.slice(0, limit);
         const items = pageRows.map((row) => ({
           id: row.id,
+          number: row.number,
           status: row.status,
           description: row.description,
           asset: {
@@ -392,7 +395,7 @@ export function registerMaintenanceReadRoutes(
           issue:
             row.issueId === null
               ? null
-              : { id: row.issueId, safetyCritical: row.safetyCritical ?? false },
+              : { id: row.issueId, number: row.issueNumber, safetyCritical: row.safetyCritical ?? false },
           createdAt: row.createdAt.toISOString(),
           completedAt: row.completedAt?.toISOString() ?? null,
           cancelledAt: row.cancelledAt?.toISOString() ?? null,
@@ -452,6 +455,7 @@ export function registerMaintenanceReadRoutes(
           const [header] = await tx
             .select({
               id: workOrders.id,
+              number: workOrders.number,
               status: workOrders.status,
               description: workOrders.description,
               assetId: workOrders.assetId,
@@ -467,6 +471,7 @@ export function registerMaintenanceReadRoutes(
               ...workOrderCostToComeColumns(),
               currency: workOrders.currency,
               issueId: workOrders.issueId,
+              issueNumber: operationalIssues.number,
               safetyCritical: operationalIssues.safetyCritical,
               summary: workOrders.summary,
               cancelReason: workOrders.cancelReason,
@@ -608,6 +613,7 @@ export function registerMaintenanceReadRoutes(
         });
         return workOrderDetail.parse({
           id: header.id,
+          number: header.number,
           status: header.status,
           description: header.description,
           asset: {
@@ -628,6 +634,7 @@ export function registerMaintenanceReadRoutes(
               ? null
               : {
                   id: header.issueId,
+                  number: header.issueNumber,
                   safetyCritical: header.safetyCritical ?? false,
                 },
           summary: header.summary,
@@ -726,6 +733,7 @@ export function registerMaintenanceReadRoutes(
           const rows = await tx
             .select({
               id: operationalIssues.id,
+              number: operationalIssues.number,
               assetId: operationalIssues.assetId,
               assetCode: assets.assetCode,
               registrationNumber: assets.registrationNumber,
@@ -780,6 +788,7 @@ export function registerMaintenanceReadRoutes(
               : await tx
                   .select({
                     id: workOrders.id,
+                    number: workOrders.number,
                     issueId: workOrders.issueId,
                     status: workOrders.status,
                   })
@@ -790,7 +799,7 @@ export function registerMaintenanceReadRoutes(
                       inArray(workOrders.issueId, issueIds),
                     ),
                   )
-                  .orderBy(asc(workOrders.id));
+                  .orderBy(asc(workOrders.number));
 
           const groundedAssets =
             pageAssetIds.length === 0
@@ -825,18 +834,19 @@ export function registerMaintenanceReadRoutes(
 
         const workOrdersByIssue = new Map<
           string,
-          Array<{ id: string; status: string }>
+          Array<{ id: string; number: number; status: string }>
         >();
         for (const workOrder of result.linkedWorkOrders) {
           if (workOrder.issueId === null) continue;
           const bucket = workOrdersByIssue.get(workOrder.issueId) ?? [];
-          bucket.push({ id: workOrder.id, status: workOrder.status });
+          bucket.push({ id: workOrder.id, number: workOrder.number, status: workOrder.status });
           workOrdersByIssue.set(workOrder.issueId, bucket);
         }
         const groundedAssetIds = new Set(result.groundedAssetIds);
 
         const items = pageRows.map((row) => ({
           id: row.id,
+          number: row.number,
           asset: {
             id: row.assetId,
             assetCode: row.assetCode,
@@ -902,6 +912,7 @@ export function registerMaintenanceReadRoutes(
           const [row] = await tx
             .select({
               id: operationalIssues.id,
+              number: operationalIssues.number,
               assetId: operationalIssues.assetId,
               assetCode: assets.assetCode,
               registrationNumber: assets.registrationNumber,
@@ -934,10 +945,10 @@ export function registerMaintenanceReadRoutes(
           if (!row) throw notFound();
 
           const linkedWorkOrders = await tx
-            .select({ id: workOrders.id, status: workOrders.status })
+            .select({ id: workOrders.id, number: workOrders.number, status: workOrders.status })
             .from(workOrders)
             .where(and(eq(workOrders.workspaceId, auth.workspaceId), eq(workOrders.issueId, row.id)))
-            .orderBy(asc(workOrders.id));
+            .orderBy(asc(workOrders.number));
 
           const [grounded] = await tx
             .select({ id: assetAvailabilityIntervals.id })
@@ -985,6 +996,7 @@ export function registerMaintenanceReadRoutes(
 
           return {
             id: row.id,
+            number: row.number,
             asset: { id: row.assetId, assetCode: row.assetCode, registrationNumber: row.registrationNumber },
             branch: { id: row.branchId, code: row.branchCode, name: row.branchName },
             description: row.description,
