@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 687197,
+    "ceiling": 687376,
     "raises": [
       {
         "date": "2026-10-06",
@@ -205,6 +205,12 @@
         "from": 686158,
         "to": 687197,
         "reason": "#589 #542 trip-noun overlays and approver strings in the catalogs"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 687197,
+        "to": 687376,
+        "reason": "Driver views (#584, #619): a driver's entry crumb under their truck and the driver lead on the Money page, in fr and en"
       }
     ]
   },

@@ -468,7 +468,12 @@
       "lead": {
         "both": "Toutes les dépenses et recettes. {open} est ouvert ; {locked} est clôturé.",
         "open": "Toutes les dépenses et recettes. {open} est ouvert.",
-        "none": "Toutes les dépenses et recettes."
+        "none": "Toutes les dépenses et recettes.",
+        "own": {
+          "both": "Vos dépenses. {open} est ouvert ; {locked} est clôturé.",
+          "open": "Vos dépenses. {open} est ouvert.",
+          "none": "Vos dépenses."
+        }
       },
       "tiles": {
         "out": "Sorties en {month}",

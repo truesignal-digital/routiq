@@ -128,6 +128,34 @@ describe("breadcrumbTrail", () => {
     ]);
   });
 
+  it("files a driver's entry under their truck, the place they have instead of Money (#584)", () => {
+    const driver = visibleSections("DRIVER", ["CORE", "ASSETS", "ACTIVITIES", "FINANCE"]);
+
+    expect(
+      breadcrumbTrail(driver, "/finance/entries/00000000-0000-4000-8000-000000000010").map(({ labelKey, to }) => [
+        labelKey,
+        to,
+      ]),
+    ).toEqual([
+      ["home.title", "/"],
+      ["assets.title", "/assets"],
+      ["finance.entries.detail.breadcrumb", undefined],
+    ]);
+  });
+
+  it("never links a crumb to a place the viewer does not have (#584)", () => {
+    const driverWithoutAssets = visibleSections("DRIVER", ["CORE", "ACTIVITIES", "FINANCE"]);
+
+    expect(
+      breadcrumbTrail(driverWithoutAssets, "/finance/entries/00000000-0000-4000-8000-000000000010").map(
+        ({ labelKey, to }) => [labelKey, to],
+      ),
+    ).toEqual([
+      ["home.title", "/"],
+      ["finance.entries.detail.breadcrumb", undefined],
+    ]);
+  });
+
   it("still names the record page, which no longer has a tab", () => {
     expect(trailAt("/finance/record")).toEqual([
       ["home.title", "/"],
