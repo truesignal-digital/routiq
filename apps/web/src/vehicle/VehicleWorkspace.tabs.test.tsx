@@ -589,7 +589,7 @@ describe("Maintenance and Trips", () => {
       role: "DIRECTOR",
       modules: ALL_MODULES.filter((code) => code !== "FINANCE"),
     });
-    expect(await screen.findByText("This module is not enabled for your workspace.")).toBeTruthy();
+    expect(await screen.findByText("This module is not enabled for your company.")).toBeTruthy();
     expect(
       recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/finance") || url.pathname.endsWith("/finance")),
     ).toBe(false);
