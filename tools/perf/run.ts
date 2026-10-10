@@ -204,7 +204,13 @@ async function open(state: SlotState): Promise<Target> {
   if (state.web !== "built") throw new Error(`slot ${state.slot} serves the dev server; perf needs a built app: pnpm verify down --slot ${state.slot} && pnpm verify up --slot ${state.slot} --built`);
   const db = new pg.Client({ connectionString: `postgres://routiq:routiq@127.0.0.1:${slotPorts(state.slot).postgres}/routiq_dev` });
   await db.connect();
-  const row = (await db.query<{ id: string; code: string }>(`select id, asset_code as code from assets order by asset_code limit 1`)).rows[0];
+  // The signed-in account's own workspace: the list is tapped, so a vehicle of another seeded company is not on it.
+  const row = (
+    await db.query<{ id: string; code: string }>(
+      `select a.id, a.asset_code as code from assets a join workspaces w on w.id = a.workspace_id where w.slug = $1 order by a.asset_code limit 1`,
+      [DEMO_WORKSPACE],
+    )
+  ).rows[0];
   if (row === undefined) {
     await db.end();
     throw new Error(`slot ${state.slot} has no vehicles; reseed it`);
