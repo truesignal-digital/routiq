@@ -119,6 +119,7 @@ Role codes and usernames work too (`--role FINANCE`, `--role boris`); a bare rol
 | `overview-tab` | VH003 opens on Overview; To do first and open, collapses to its count, stays collapsed after a reload (#90) | no (device preference only) |
 | `attach-receipt` | upload a PNG receipt through storage → evidence SUPPLIED | yes |
 | `settings` | Branches, Users, People (sidebar row or name menu) against their reads | no |
+| `admin-company-settings` | Company settings as an Administrator (#711): the page says the Director and Administrators change it, moves "Posts directly up to" to 150 000, checks the company band moved with no branch exception and the last change names the caller, then puts it back. Run as `admin-yde` (one branch) | yes (two update-approval-threshold, restored) |
 | `phone-overflow` | every demo account, every list route plus an open and a closed trip at 390 × 844 in fr and en: no sideways scroll, no control past the right edge, trip number on one line (#183, #395) | no |
 | `phone-list-rows` | every module list at 390 px: rows at least 60 px, no card border, no stray " · –"; entries → Filters → pick a status → "Filters (1)" and the rows match `GET /v1/finance/entries?status=POSTED` (#300). Run with `--viewport 390x844` | no |
 | `form-fits-viewport` | entry detail → Edit (Sali's pending entry), Reject (pending, as Finance), Reverse (posted, as Finance) at 1440 × 900, 1366 × 768 and 390 × 844 in fr and en: the form's surface, title and submit stay inside the window and the submit is not covered (#470) | no |

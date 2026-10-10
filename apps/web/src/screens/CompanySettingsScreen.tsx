@@ -8,7 +8,7 @@ import { ApprovalSettings } from "@/settings/ApprovalSettings.js";
 import { canManageCompanySettings } from "@/settings/permissions.js";
 import { SummaryScheduleSettings } from "@/settings/SummaryScheduleSettings.js";
 
-/** Company → Company settings: rules for everyone in the company, Direction's to set (#354, #669). */
+/** Company → Company settings: rules for everyone in the company, set by the Director and Administrators (#354, #669, #711). */
 export function CompanySettingsScreen() {
   const { t } = useTranslation();
   const me = useMeContext();

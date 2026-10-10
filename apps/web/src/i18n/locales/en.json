@@ -3217,7 +3217,7 @@
   },
   "settings": {
     "title": "Company settings",
-    "description": "Rules that apply to everyone in the company. Only the Director can change them.",
+    "description": "Rules that apply to everyone in the company. Only the Director and Administrators can change them.",
     "retry": "Try again",
     "summary": {
       "title": "Dashboard summary",

@@ -3217,7 +3217,7 @@
   },
   "settings": {
     "title": "Paramètres de l'entreprise",
-    "description": "Des règles qui s'appliquent à toute l'entreprise. Seule la Direction peut les modifier.",
+    "description": "Des règles qui s'appliquent à toute l'entreprise. Seuls la Direction et les Administrateurs peuvent les modifier.",
     "retry": "Réessayer",
     "summary": {
       "title": "Résumé du tableau de bord",

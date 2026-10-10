@@ -33,7 +33,7 @@ export function companySettingsKey(workspaceSlug: string | undefined) {
   return ["ws", workspaceSlug, "company-settings"] as const;
 }
 
-/** The company-wide settings no module owns (#669), for Direction. */
+/** The company-wide settings no module owns (#669), for the Director and Administrators (#711). */
 export function useCompanySettings() {
   const session = useActiveSession();
   return useQuery({
