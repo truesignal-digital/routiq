@@ -238,8 +238,10 @@ async function maintenanceItems(
     });
   }
 
-  // Work-order money is Finance's (#328), and hidden from a driver (#390).
-  const costsVisible = books && canReadWorkOrderCosts(auth.role);
+  // The estimate is the workshop's quote (#640); the actual cost is Finance's
+  // (#328). Both are hidden from a driver (#390).
+  const estimateVisible = canReadWorkOrderCosts(auth.role);
+  const costsVisible = books && estimateVisible;
   for (const order of orders) {
     const subject = {
       entityType: "work_order" as const,
@@ -249,13 +251,13 @@ async function maintenanceItems(
     };
     // Absent for a caller who may not read work-order costs (#390): the
     // sentence without an amount, never a zero.
-    const costs = !costsVisible
+    const costs = !estimateVisible
       ? {}
       : {
           ...(order.expectedCostMinor === null
             ? {}
             : { expectedCostMinor: serializeMinor(order.expectedCostMinor) }),
-          ...(order.actualCostMinor === null
+          ...(order.actualCostMinor === null || !costsVisible
             ? {}
             : { actualCostMinor: serializeMinor(BigInt(order.actualCostMinor)) }),
           currency: order.currency,
