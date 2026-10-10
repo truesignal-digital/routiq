@@ -1,39 +1,20 @@
 import { navCountsResponse, waitsOn } from "@routiq/contracts";
-import { and, eq, inArray, ne, notExists, sql, type SQL } from "drizzle-orm";
+import { and, eq, inArray, notExists, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
-import { assets, commands, financialEntries, operationalIssues, workOrders } from "../db/schema.js";
+import { assets, operationalIssues, workOrders } from "../db/schema.js";
 import type { TenantTx } from "../db/tenant.js";
-import { pendingApprovalConditions } from "./approvals-queue.js";
+import { decidablePendingEntries } from "./approvals-queue.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 
 /** A work order still moving: the problem behind it is already in hand. */
 const ACTIVE_WORK_ORDER_STATUSES = ["SUBMITTED", "APPROVED", "COMPLETION_SUBMITTED"] as const;
 
-/**
- * The approvals queue's own predicate, minus the caller's submissions: an
- * entry you recorded waits on someone else (#262 makes that the rule).
- */
+/** The Money page's waiting tile, counted the same way (#542). */
 async function countMoneyWaiting(tx: TenantTx, auth: AuthContext): Promise<number> {
-  const [row] = await tx
-    .select({ count: sql<number>`count(*)::integer` })
-    .from(financialEntries)
-    .innerJoin(
-      commands,
-      and(
-        eq(commands.workspaceId, financialEntries.workspaceId),
-        eq(commands.id, financialEntries.createdByCommandId),
-      ),
-    )
-    .where(
-      and(
-        ...pendingApprovalConditions(auth),
-        ne(commands.initiatedByPrincipalId, auth.principalId),
-      ),
-    );
-  return row?.count ?? 0;
+  return (await decidablePendingEntries(tx, auth)).length;
 }
 
 /** OPEN problems on trucks in the caller's branches that no live work order covers. */

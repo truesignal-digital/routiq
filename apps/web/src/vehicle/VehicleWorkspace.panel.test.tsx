@@ -9,6 +9,7 @@ import {
   ME_ID,
   OTHER_ID,
   WORK_ORDER_ID,
+  WORK_ORDER_NUMBER,
   actor,
   asset,
   attention,
@@ -47,15 +48,15 @@ afterEach(async () => {
   await closeVehicle();
 });
 
-const WO_REF = WORK_ORDER_ID.slice(0, 8).toUpperCase();
-const ISSUE_REF = ISSUE_ID.slice(0, 8).toUpperCase();
+const WO_REF = "WO-0007";
+const ISSUE_REF = "PRB-0003";
 
 const scenario = {
   role: "TECHNICIAN" as const,
   asset: asset({ availability: grounded([groundingWorkOrder("APPROVED")]) }),
   workOrders: [workOrderRow("APPROVED")],
   workOrderDetails: [workOrderDetail("APPROVED")],
-  issueDetails: [issueDetail({ workOrders: [{ id: WORK_ORDER_ID, status: "APPROVED" }] })],
+  issueDetails: [issueDetail({ workOrders: [{ id: WORK_ORDER_ID, number: WORK_ORDER_NUMBER, status: "APPROVED" }] })],
 };
 
 it("opens a record from the URL and keeps it across a reload", async () => {
@@ -74,6 +75,32 @@ it.each([
   await openVehicle(`/assets/${ASSET_ID}/maintenance?${panelParam}`, scenario);
   const panel = await screen.findByRole("dialog", { name });
   expect(within(panel).getByRole("button", { name: "History" })).toBeTruthy();
+});
+
+it("names the work order and its problem by their numbers (#608)", async () => {
+  await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, scenario);
+  const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+  expect(within(panel).getByText(`Work order ${WO_REF}`)).toBeTruthy();
+  expect(within(panel).getByRole("button", { name: `From problem ${ISSUE_REF}` })).toBeTruthy();
+});
+
+it("names the problem and the work orders it spawned by their numbers, in French too (#608)", async () => {
+  await openVehicle(`/assets/${ASSET_ID}?panel=issue:${ISSUE_ID}`, { ...scenario, locale: "fr-CM" });
+  const panel = await screen.findByRole("dialog", { name: /Kekem/ });
+  expect(within(panel).getByText("Problème PB-0003")).toBeTruthy();
+  expect(within(panel).getByRole("button", { name: "OT-0007" })).toBeTruthy();
+});
+
+it("says the number is pending for a record the server has not numbered yet (#608)", async () => {
+  await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+    ...scenario,
+    workOrderDetails: [
+      workOrderDetail("APPROVED", { number: null, issue: { id: ISSUE_ID, number: null, safetyCritical: true } }),
+    ],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+  expect(within(panel).getByText("Work order number pending")).toBeTruthy();
+  expect(within(panel).getByRole("button", { name: "From problem number pending" })).toBeTruthy();
 });
 
 it("follows a reference by pushing history, so Back returns to the record", async () => {
@@ -272,6 +299,89 @@ it("says a completed grounding order waits for a manager's release, not its own 
   expect(within(panel).queryByText(/Once it is completed/)).toBeNull();
 });
 
+it("names the other safety problem that blocks the release, not a manager (#588)", async () => {
+  await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+    ...scenario,
+    // A role with no step here, so the footer says who the order waits on.
+    role: "FINANCE",
+    asset: asset({
+      availability: grounded([groundingWorkOrder("COMPLETED")], {}, [
+        { id: "00000000-0000-4000-8000-0000000000f1", number: 5, description: "Steering play on the left" },
+      ]),
+    }),
+    workOrders: [workOrderRow("COMPLETED")],
+    workOrderDetails: [workOrderDetail("COMPLETED", { completedAt: "2026-09-30T10:00:00.000Z" })],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+  expect(
+    within(panel).getByText(
+      "The work is done, but the vehicle stays grounded: another safety-critical problem is still open: “Steering play on the left”.",
+    ),
+  ).toBeTruthy();
+  expect(
+    within(panel).getByText("Waiting on another safety-critical problem to be closed: “Steering play on the left”."),
+  ).toBeTruthy();
+  expect(within(panel).queryByText(/until a manager releases it/)).toBeNull();
+  expect(within(panel).queryByText("Waiting on a manager to release the vehicle to service.")).toBeNull();
+});
+
+it("lists the lines awaiting review among the costs the actual cost counts (#612)", async () => {
+  const pending = {
+    postingId: "00000000-0000-4000-8000-0000000000e1",
+    entryId: "00000000-0000-4000-8000-0000000000e2",
+    entryNumber: "DLA-2026-00031",
+    description: "Garage labour",
+    amountMinor: 310_000,
+    currency: "XAF",
+    economicDate: "2026-09-30",
+    entryStatus: "SUBMITTED" as const,
+  };
+  await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+    ...scenario,
+    role: "ADMIN",
+    asset: asset({ availability: { state: "AVAILABLE", since: null } }),
+    workOrders: [workOrderRow("COMPLETED")],
+    workOrderDetails: [
+      workOrderDetail("COMPLETED", {
+        completedAt: "2026-09-30T10:00:00.000Z",
+        actualCostMinor: 310_000,
+        costLines: [],
+        pendingCostLines: [pending],
+      }),
+    ],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+  const costs = within(panel).getByRole("heading", { name: "Costs" }).closest("section");
+  expect(costs).not.toBeNull();
+  const line = within(costs as HTMLElement).getByText("DLA-2026-00031").closest("li");
+  expect(within(line as HTMLElement).getByText("Awaiting review")).toBeTruthy();
+  expect(within(panel).queryByText("No costs posted against this work order.")).toBeNull();
+  expect(within(panel).queryByText(/not counted in the posted costs/)).toBeNull();
+});
+
+it("adds one line for the cost recorded in other branches, so the list adds up (#643)", async () => {
+  await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+    ...scenario,
+    role: "ADMIN",
+    asset: asset({ availability: { state: "AVAILABLE", since: null } }),
+    workOrders: [workOrderRow("COMPLETED")],
+    workOrderDetails: [
+      workOrderDetail("COMPLETED", {
+        completedAt: "2026-09-30T10:00:00.000Z",
+        actualCostMinor: 12_000,
+        costLines: [],
+        pendingCostLines: [],
+        otherBranchesCostMinor: 12_000,
+      }),
+    ],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+  const costs = within(panel).getByRole("heading", { name: "Costs" }).closest("section");
+  const line = within(costs as HTMLElement).getByText("Recorded in other branches").closest("li");
+  expect((line?.textContent ?? "").replace(/[\s\u00a0\u202f,]/g, "")).toContain("12000");
+  expect(within(panel).queryByText("No costs posted against this work order.")).toBeNull();
+});
+
 describe("the grounding note's tone agrees with the vehicle header (#500)", () => {
   const completed = {
     ...scenario,
@@ -403,6 +513,21 @@ it("opens a receipt through the entry's own route, never the generic artifact ro
   const path = `/v1/finance/entries/${ENTRY_ID}/evidence/${artifactId}/download-url`;
   await waitFor(() => expect(open).toHaveBeenCalledWith(`https://files.test${path}`, "_blank", "noopener"));
   expect(recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/artifacts"))).toBe(false);
+});
+
+it.each([
+  ["FINANCE_APPROVES", "Waiting on Finance to review it."],
+  ["FINANCE_PEER_APPROVES", "Waiting on another Finance member or the Director to review it."],
+  ["DIRECTION_APPROVES", "Waiting on the Director to review it."],
+  // #645: no role on the chain decides it, so no role is named.
+  ["WAITS", "Waiting on an approver to review it."],
+] as const)("says who reviews a waiting entry on its record (#542, %s)", async (approver, sentence) => {
+  await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+    role: "ADMIN",
+    entryDetails: [entryDetail({ approver, evidence: { state: "PAYMENT_REFERENCE", artifactCount: 0 } })],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Repairs/ });
+  expect(within(panel).getByText(new RegExp(`^${sentence}`))).toBeTruthy();
 });
 
 it("opens an issue's photo through the issue's own route", async () => {
@@ -674,12 +799,12 @@ describe("Cancel entry from the vehicle panel (#426)", () => {
     const form = await screen.findByRole("dialog", { name: "Cancel entry" });
     await user.click(within(form).getByRole("radio", { name: "Wrong details, to record again" }));
     // Said before the cancellation, not discovered after it.
-    expect(within(form).getByText(/Only Direction, the Administrator or a technician books work-order costs/)).toBeTruthy();
+    expect(within(form).getByText(/Only the Director, the Administrator or a technician books work-order costs/)).toBeTruthy();
     await user.click(within(form).getByRole("button", { name: "Cancel entry" }));
 
     await waitFor(() => expect(recorded.commands).toHaveLength(1));
     expect(recorded.commands[0]?.name).toBe("reverse-entry");
-    const done = await screen.findByText(/Ask Direction, the Administrator or the work order's technician/);
+    const done = await screen.findByText(/Ask the Director, the Administrator or the work order's technician/);
     expect(screen.queryByRole("button", { name: "Record again" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Open the work order" }));
@@ -713,7 +838,7 @@ describe("a note from Direction on its record (#98)", () => {
     const recorded = await openVehicle(path, { role: "TECHNICIAN", notes: [noteDetail()] });
     const user = userEvent.setup();
     const panel = await screen.findByRole("dialog", { name: "Note by Émilienne" });
-    expect(within(panel).getByText("Note from Direction")).toBeTruthy();
+    expect(within(panel).getByText("Note from the Director")).toBeTruthy();
     expect(within(panel).getByText(/Nobody has marked it as seen yet/)).toBeTruthy();
     await user.click(within(panel).getByRole("button", { name: "Mark as seen" }));
     const form = await screen.findByRole("dialog", { name: "Mark as seen" });
@@ -745,7 +870,7 @@ describe("a note from Direction on its record (#98)", () => {
   it("offers nothing on a note that is not Direction's", async () => {
     await openVehicle(path, { role: "DRIVER", notes: [noteDetail({ authorRole: "ADMIN" })] });
     const panel = await screen.findByRole("dialog", { name: "Note by Émilienne" });
-    expect(within(panel).queryByText("Note from Direction")).toBeNull();
+    expect(within(panel).queryByText("Note from the Director")).toBeNull();
     expect(within(panel).queryByRole("button", { name: "Mark as seen" })).toBeNull();
   });
 });

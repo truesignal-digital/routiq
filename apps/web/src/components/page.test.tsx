@@ -1,10 +1,23 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { I18nextProvider } from "react-i18next";
+import { i18n } from "../i18n/index.js";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "./page.js";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
+
+/** Drops or restores the connection the way the browser reports it. */
+function setOnline(online: boolean) {
+  vi.spyOn(navigator, "onLine", "get").mockReturnValue(online);
+  act(() => {
+    window.dispatchEvent(new Event(online ? "online" : "offline"));
+  });
+}
 
 describe("page scaffolds", () => {
   it("PageHeader renders its title and right-slot actions", () => {
@@ -86,5 +99,40 @@ describe("page scaffolds", () => {
 
     expect(screen.getByRole("status").textContent).toContain("Loading…");
     expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(4);
+  });
+
+  it("LoadingState says it waits for the connection instead of an endless skeleton (#576)", async () => {
+    await i18n.changeLanguage("en");
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    const { container } = render(
+      <I18nextProvider i18n={i18n}>
+        <LoadingState label="Loading…" rows={4} />
+      </I18nextProvider>,
+    );
+
+    expect(screen.getByRole("status").textContent).toContain(
+      "You're offline. This will load as soon as the connection is back.",
+    );
+    expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(0);
+
+    setOnline(true);
+    expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(4);
+    expect(screen.getByRole("status").textContent).not.toContain("offline");
+
+    setOnline(false);
+    expect(container.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(0);
+  });
+
+  it("LoadingState's offline words exist in French too", async () => {
+    await i18n.changeLanguage("fr");
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    render(
+      <I18nextProvider i18n={i18n}>
+        <LoadingState label="Chargement…" />
+      </I18nextProvider>,
+    );
+
+    expect(screen.getByRole("status").textContent).toContain("Vous êtes hors ligne.");
+    await i18n.changeLanguage("en");
   });
 });

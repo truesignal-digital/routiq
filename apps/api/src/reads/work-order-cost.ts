@@ -1,6 +1,8 @@
-import type { WorkOrderCostToCome } from "@routiq/contracts";
+import { canReadWorkOrderCosts, type ModuleCode, type WorkOrderCostToCome } from "@routiq/contracts";
 import { sql, type SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { financialEntries, financialPostings, workOrders } from "../db/schema.js";
+import type { AuthContext } from "../auth/types.js";
 import { serializeMinor } from "./serialize-minor.js";
 
 /**
@@ -34,11 +36,15 @@ export function parseActualCost(value: string | null): bigint | null {
   return value === null ? null : BigInt(value);
 }
 
+const cancelledLine = alias(financialEntries, "cancelled_line");
+
 /**
  * The signed sum of the order's approved cost lines: expense postings whose
  * entry is POSTED or REVERSED, so a reversal pair nets to zero. With
- * `sinceClose`, only entries recorded at or after the order's completion: the
- * invoice that arrived late (#82). Text, like the actual cost.
+ * `sinceClose`, only lines recorded at or after the order's completion: the
+ * invoice that arrived late (#82). A cancellation belongs to the line it
+ * cancels, so a line cancelled after the close nets out only if it was itself
+ * recorded after it (#613). Text, like the actual cost.
  */
 function approvedCostSql(sinceClose: boolean): SQL<string> {
   return sql<string>`(
@@ -51,7 +57,11 @@ function approvedCostSql(sinceClose: boolean): SQL<string> {
       and ${financialPostings.workOrderId} = ${workOrders.id}
       and ${financialPostings.direction} = 'EXPENSE'
       and ${financialEntries.status} in ('POSTED', 'REVERSED')
-      ${sinceClose ? sql`and ${financialEntries.createdAt} >= ${workOrders.completedAt}` : sql``}
+      ${sinceClose ? sql`and coalesce((
+        select ${cancelledLine.createdAt} from ${financialEntries} as ${sql.identifier("cancelled_line")}
+        where ${cancelledLine.workspaceId} = ${financialEntries.workspaceId}
+          and ${cancelledLine.id} = ${financialEntries.reversesEntryId}
+      ), ${financialEntries.createdAt}) >= ${workOrders.completedAt}` : sql``}
   )`;
 }
 
@@ -101,7 +111,9 @@ export interface CostToComeFacts {
 /**
  * Whether a completed order still has cost to come (#82), from the facts
  * `workOrderCostToComeColumns` selects. Only approved lines settle it: the
- * invoice is in once Finance has approved it.
+ * invoice is in once Finance has approved it. An invoice-pending close is
+ * settled while the net of the lines approved since the close is above zero,
+ * so a late invoice approved then cancelled brings the cost to come back.
  */
 export function costToCome(facts: CostToComeFacts): WorkOrderCostToCome | null {
   if (facts.status !== "COMPLETED") return null;
@@ -121,4 +133,23 @@ export function costToCome(facts: CostToComeFacts): WorkOrderCostToCome | null {
     };
   }
   return null;
+}
+
+/**
+ * Which of a work order's amounts the caller reads. The estimate is the
+ * workshop's quote, a Maintenance fact that drives approval (#640): every role
+ * that reads work-order costs sees it (#390). The actual cost and the lines it
+ * sums are Finance's (#328), shown to the same roles only while FINANCE is on.
+ */
+export interface WorkOrderMoneyVisibility {
+  estimate: boolean;
+  actual: boolean;
+}
+
+export function workOrderMoneyVisibility(
+  auth: AuthContext,
+  modules: ReadonlySet<ModuleCode>,
+): WorkOrderMoneyVisibility {
+  const estimate = canReadWorkOrderCosts(auth.role);
+  return { estimate, actual: estimate && modules.has("FINANCE") };
 }

@@ -23,6 +23,7 @@ import {
 import { SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useCommandLabel } from "../commands/labels.js";
+import { recordNumberText } from "../lib/record-number.js";
 import { DESTRUCTIVE_STEPS, STEP_COMMANDS, STEP_ICONS } from "./steps.js";
 import { actionDef } from "./actions.js";
 import { useVehicle } from "./context.js";
@@ -303,7 +304,11 @@ export function RecordRow({
 /** A locked step's reason, in words. */
 export function useLockText() {
   const { t } = useTranslation();
-  return (lock: LockReason) => t(`vehicle.locked.${lock.key}`, lock.params ?? {});
+  return (lock: LockReason) =>
+    t(`vehicle.locked.${lock.key}`, {
+      ...lock.params,
+      ...(lock.ref === undefined ? {} : { ref: recordNumberText(t, lock.ref.kind, lock.ref.number) }),
+    });
 }
 
 /** A step's name, from its command's words; `short` is the quick bar's. */

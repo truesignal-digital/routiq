@@ -5,8 +5,9 @@ import { openSidebar, type DriveScript } from "../browser.js";
  * Once Home has settled the app fetches every other screen's code in the
  * background (#488), so losing the connection afterwards does not stop someone
  * moving between screens: each opens with its title, never a blank page or a
- * failed code request. Its data waits in the loading skeleton (TanStack Query
- * pauses while the browser is offline). The app has no service worker yet, so a
+ * failed code request. Its data waits (TanStack Query pauses while the browser
+ * is offline), and the page says so under an offline notice instead of an
+ * endless skeleton (#576). The app has no service worker yet, so a
  * full reload while offline is out of scope. It starts from a cold load of
  * My settings (every role may open it), so Home proves that a signed-in
  * deep-link start fetches Home too.
@@ -58,8 +59,13 @@ const flow: DriveScript = async ({ page, shot, quiet, log }) => {
   page.on("requestfailed", (request) => {
     if (/\/static\/.+\.js$/.test(request.url())) failedCode.push(request.url());
   });
+  const notice = page.getByText("You're offline. Pages will load when the connection is back.");
   await page.context().setOffline(true);
   log("connection dropped");
+  check(
+    await notice.waitFor({ timeout: 5_000 }).then(() => true, () => false),
+    "offline: the shell says the app is offline",
+  );
   for (const label of labels) {
     const sidebar = await openSidebar(page);
     await sidebar.getByRole("link", { name: label, exact: true }).click();
@@ -68,10 +74,18 @@ const flow: DriveScript = async ({ page, shot, quiet, log }) => {
       .waitFor({ timeout: 15_000 })
       .then(() => true, () => false);
     check(titled, `offline: ${label} opens with its title`);
+    // A list still loading shows the offline words, never its skeleton rows (#576).
+    await page.waitForTimeout(1_500);
+    const shimmering = await page.locator("main [role='status'] [data-slot='skeleton']").count();
+    check(shimmering === 0, `offline: ${label} shows no endless loading skeleton (${shimmering} skeleton rows)`);
     if (phone) await closeSheet(page);
   }
   await shot("offline-last-place", { caption: "Offline after Home settled: every place still opens with its title; its data waits for the connection" });
   await page.context().setOffline(false);
+  check(
+    await notice.waitFor({ state: "hidden", timeout: 5_000 }).then(() => true, () => false),
+    "online again: the offline notice goes away",
+  );
   check(failedCode.length === 0, `no code request needed while offline (${failedCode.join("; ") || "none"})`);
 
   if (failures.length > 0) throw new Error(`offline navigation checks failed:\n  ${failures.join("\n  ")}`);

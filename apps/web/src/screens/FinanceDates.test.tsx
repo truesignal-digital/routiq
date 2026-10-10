@@ -38,6 +38,7 @@ const entry: FinancialEntryDetail = {
   ...entryVehicleFields,
   evidenceFiles: [],
   directionDecides: false,
+  approver: null,
   postings: [],
 };
 
@@ -86,7 +87,7 @@ function serveFinanceReadFixtures() {
         break;
       case "/v1/finance/summary":
         body = {
-          currency: "XAF", month: "2026-09", openPeriodCode: "2026-09", lastLockedPeriodCode: null,
+          currency: "XAF", month: "2026-09", unlockedPeriodCodes: [], lastLockedPeriodCode: null,
           outMinor: 0, inMinor: 0, missingReceipt: { count: 0, oldestEconomicDate: null }, waiting: null,
         };
         break;

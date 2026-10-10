@@ -36,6 +36,7 @@ import {
   recordAgainStep,
 } from "@/finance/permissions.js";
 import { useFinanceSummary } from "@/finance/useFinanceSummary.js";
+import { moneyLead, moneyMonthName } from "@/finance/money-lead.js";
 import { WaitingApprovals } from "@/finance/WaitingApprovals.js";
 import { toSortParam } from "@/lib/sort-param.js";
 import {
@@ -273,7 +274,7 @@ function FinanceEntriesContent() {
           </>
         }
       />
-      <MoneyLead summary={summary} />
+      <MoneyLead summary={summary} ownOnly={ownOnly} />
 
       <MoneyTiles
         summary={summary}
@@ -315,11 +316,6 @@ function FinanceEntriesContent() {
           {t("finance.entries.events.booksView")}
         </label>
       )}
-      {ownOnly && (
-        <p data-slot="money-scope-line" className="mt-3 text-sm text-muted-foreground">
-          {t("finance.entries.ownScope")}
-        </p>
-      )}
       <BranchScopeLine
         className="mt-3"
         count={entriesQuery.isPending ? undefined : allEntries.length}
@@ -348,6 +344,7 @@ function FinanceEntriesContent() {
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}
             sorting={sorting}
+            defaultSorting={DEFAULT_SORTING}
             onSortingChange={setSorting}
             primaryColumn={{ columnId: "entryNumber" }}
             rowActions={(entry) => [
@@ -505,41 +502,23 @@ function activeLens(search: MoneySearch & Record<string, unknown>): Lens | undef
   return undefined;
 }
 
-/** "octobre" / "October", with the year only when it is not this one. */
-function useMonthName() {
-  const { i18n } = useTranslation();
-  return (code: string, { capitalize = false } = {}) => {
-    const [year] = code.split("-");
-    const date = new Date(`${code}-01T00:00:00Z`);
-    const thisYear = String(new Date().getFullYear());
-    const name = new Intl.DateTimeFormat(i18n.resolvedLanguage, {
-      month: "long",
-      ...(year === thisYear ? {} : { year: "numeric" }),
-      timeZone: "UTC",
-    }).format(date);
-    return capitalize ? name.charAt(0).toLocaleUpperCase(i18n.resolvedLanguage) + name.slice(1) : name;
-  };
-}
-
-/** Which month takes entries and which was closed last (#314). */
-function MoneyLead({ summary }: { summary: FinanceSummaryResponse | undefined }) {
-  const { t } = useTranslation();
-  const monthName = useMonthName();
+/**
+ * What the page holds, which earlier months are not locked yet, and the month
+ * the tiles count (#314, #526). A driver's page holds only their own expenses
+ * (#619), which the lead says once (#645).
+ */
+function MoneyLead({
+  summary,
+  ownOnly,
+}: {
+  summary: FinanceSummaryResponse | undefined;
+  ownOnly: boolean;
+}) {
+  const { t, i18n } = useTranslation();
   if (summary === undefined) return null;
-  const open = summary.openPeriodCode;
-  const locked = summary.lastLockedPeriodCode;
-  const text =
-    open !== null && locked !== null
-      ? t("finance.money.lead.both", {
-          open: monthName(open, { capitalize: true }),
-          locked: monthName(locked),
-        })
-      : open !== null
-        ? t("finance.money.lead.open", { open: monthName(open, { capitalize: true }) })
-        : t("finance.money.lead.none");
   return (
     <p data-slot="money-lead" className="mt-1 text-sm text-muted-foreground">
-      {text}
+      {moneyLead(t, summary, { ownOnly, locale: i18n.resolvedLanguage })}
     </p>
   );
 }
@@ -561,15 +540,15 @@ function MoneyTiles({
   search: MoneySearch & Record<string, unknown>;
   onLens: (search: MoneySearch) => void;
 }) {
-  const { t } = useTranslation();
-  const monthName = useMonthName();
+  const { t, i18n } = useTranslation();
   const month = summary?.month;
   const current = activeLens(search);
   const select = (lens: Lens) => () =>
     onLens(current === lens || month === undefined ? {} : lensSearch(lens, month));
   const money = (minor: number | undefined) =>
     minor === undefined ? null : formatMoney(minor, { currency: summary?.currency ?? "XAF" });
-  const monthLabel = month === undefined ? "" : monthName(month);
+  const monthLabel =
+    month === undefined ? "" : moneyMonthName(month, { locale: i18n.resolvedLanguage, currentMonth: month });
 
   const out: MetricTile = {
     label: t("finance.money.tiles.out", { month: monthLabel }),

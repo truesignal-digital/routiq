@@ -785,6 +785,8 @@ describe("work order and signalement reads", () => {
       expect(
         [...body.costLines!, ...body.pendingCostLines!].map((line) => line.description),
       ).not.toContain("Facture refusée");
+      // An all-branch reader sees every line: nothing sits elsewhere.
+      expect(body.otherBranchesCostMinor).toBe(0);
     });
 
     it("drops the lines booked in a branch the reader cannot see", async () => {
@@ -794,6 +796,16 @@ describe("work order and signalement reads", () => {
       );
       expect(scoped.costLines).toHaveLength(3);
       expect(scoped.pendingCostLines).toHaveLength(1);
+    });
+
+    it("sums the lines in other branches into one figure, so the list still adds up (#643)", async () => {
+      const full = workOrderDetail.parse((await detail(costOrderId)).json());
+      const scoped = workOrderDetail.parse((await detail(costOrderId, doualaToken)).json());
+      const total = (body: typeof full) =>
+        [...body.costLines!, ...body.pendingCostLines!].reduce((sum, line) => sum + line.amountMinor, 0);
+      // The Yaoundé kit, as an amount only: no description, number or date.
+      expect(scoped.otherBranchesCostMinor).toBe(12_000);
+      expect(total(scoped) + scoped.otherBranchesCostMinor!).toBe(total(full));
     });
   });
 
