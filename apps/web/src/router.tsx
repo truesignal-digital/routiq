@@ -82,10 +82,22 @@ const LOADERS = {
  * missing (and a failed fetch stays failed for the page's life) and its reads
  * would wait for the connection, so the screen opens at once and shows its
  * own loading state; a read that fails is left to the screen.
+ *
+ * A page whose module is off starts no reads: ModulePageGate shows "not
+ * included" instead, and every read would be refused (#326). Each loader
+ * still checks the member's role for its own reads.
  */
-function startReads(run: () => Promise<void>): Promise<void> | undefined {
+function startReads(args: ReadArgs, run: () => Promise<void>): Promise<void> | undefined {
   if (!navigator.onLine) return undefined;
-  return run().catch(() => undefined);
+  return import("./modules/app-shell.js")
+    .then(({ pageModuleOn }) => pageModuleOn(args.context.queryClient, args.location.pathname))
+    .then((on) => (on ? run() : undefined))
+    .catch(() => undefined);
+}
+
+interface ReadArgs {
+  context: RouterContext;
+  location: { pathname: string };
 }
 
 const loginRoute = createRoute({
@@ -119,7 +131,7 @@ const appRoute = createRoute({
 const indexRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/",
-  loader: (args) => startReads(() => LOADERS.home().then((load) => load.home(args))),
+  loader: (args) => startReads(args, () => LOADERS.home().then((load) => load.home(args))),
   component: DashboardScreen,
 });
 
@@ -132,7 +144,7 @@ const assetsRoute = createRoute({
     status: z.enum(["IN_SERVICE", "ATTENTION"]).optional().catch(undefined),
   }),
   loaderDeps: ({ search }) => search,
-  loader: (args) => startReads(() => LOADERS.assets().then((load) => load.assets(args))),
+  loader: (args) => startReads(args, () => LOADERS.assets().then((load) => load.assets(args))),
   component: AssetsStub,
 });
 
@@ -159,14 +171,14 @@ const assetDetailRoute = createRoute({
       .optional()
       .catch(undefined),
   }),
-  loader: (args) => startReads(() => LOADERS.vehicle().then((load) => load.vehicle(args))),
+  loader: (args) => startReads(args, () => LOADERS.vehicle().then((load) => load.vehicle(args))),
   component: VehicleWorkspaceScreen,
 });
 
 const vehicleNowRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "/",
-  loader: (args) => startReads(() => LOADERS.vehicle().then((load) => load.vehicleNow(args))),
+  loader: (args) => startReads(args, () => LOADERS.vehicle().then((load) => load.vehicleNow(args))),
   component: NowTab,
   pendingComponent: SectionPending,
   errorComponent: SectionError,
@@ -248,7 +260,7 @@ const financeEntriesRoute = createRoute({
     branch: z.literal("all").optional().catch(undefined),
   }),
   loaderDeps: ({ search }) => search,
-  loader: (args) => startReads(() => LOADERS.finance().then((load) => load.financeEntries(args))),
+  loader: (args) => startReads(args, () => LOADERS.finance().then((load) => load.financeEntries(args))),
   component: FinanceEntriesScreen,
 });
 
@@ -262,7 +274,7 @@ const activitiesRoute = createRoute({
     to: z.iso.date().optional().catch(undefined),
   }),
   loaderDeps: ({ search }) => search,
-  loader: (args) => startReads(() => LOADERS.activities().then((load) => load.activities(args))),
+  loader: (args) => startReads(args, () => LOADERS.activities().then((load) => load.activities(args))),
   component: ActivitiesScreen,
 });
 
@@ -295,7 +307,7 @@ const maintenanceRoute = createRoute({
     issueStatus: issueStatus.optional().catch(undefined),
   }),
   loaderDeps: ({ search }) => search,
-  loader: (args) => startReads(() => LOADERS.maintenance().then((load) => load.maintenance(args))),
+  loader: (args) => startReads(args, () => LOADERS.maintenance().then((load) => load.maintenance(args))),
   component: MaintenanceScreen,
 });
 
