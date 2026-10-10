@@ -11,13 +11,14 @@ interface EntryScopeColumns {
   workspaceId: AnyPgColumn;
   branchId: AnyPgColumn;
   createdByCommandId: AnyPgColumn;
+  direction: AnyPgColumn;
 }
 
 /**
  * The entries this caller may read, as a condition on the outer
  * `financial_entries` row: its branch scope, then its money scope
  * (`MONEY_READ_SCOPE`). The ledger and the counter read every entry of their
- * branches; a driver only the entries they recorded; the workshop only entries
+ * branches; a driver only the expenses they recorded; the workshop only entries
  * whose every line is a work-order cost: an expense naming an order. Revenue
  * that named one before #432 refused it is no cost. Which reads serve entries at all is
  * the read's own role gate; this decides which rows. `entries` names an alias
@@ -41,6 +42,10 @@ export function readableEntrySql(
         and ${commands.id} = ${entries.createdByCommandId}
         and ${commands.tenantActorPrincipalId} = ${auth.principalId}
     )`);
+    // Expenses only (owner rule 2026-10-08, #593): revenue is a trip's price,
+    // which a driver does not see, even on an entry they recorded before #570
+    // stopped drivers recording revenue.
+    conditions.push(sql`${entries.direction} = 'EXPENSE'`);
   } else if (scope === "WORK_ORDER_COSTS") {
     conditions.push(sql`not exists (
       select 1 from ${financialPostings}
