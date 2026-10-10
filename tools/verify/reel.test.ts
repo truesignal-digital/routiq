@@ -16,6 +16,7 @@ import {
   latestDriveRun,
   failureReason,
   metricRows,
+  paneLabel,
   planReel,
   readRun,
   realToReel,
@@ -231,6 +232,31 @@ describe("stateAt", () => {
     const step = timeline.steps[0];
     if (step === undefined) throw new Error("no step");
     expect(at(step.start + step.play + 0.1).panes[0]?.timer).toBe("1.0 s");
+  });
+});
+
+describe("pane label (#565)", () => {
+  const signedIn = (label: string, t: number, account?: string): Frame => ({ ...frame(label, t), ...(account === undefined ? {} : { account }) });
+  const after = run([signedIn("as-admin", 1.0, "boris"), signedIn("login", 1.4, ""), signedIn("as-finance", 2.2, "nadege")], { account: "boris" });
+  const track = compressCast(cast([0.2, 0.6, 1.0, 1.4, 1.8, 2.2]));
+  const timeline = compileTimeline(planReel(after), [track]);
+  const at = (time: number) => stateAt(time, timeline, [track], viewport, computeLayout(1, viewport), (_, file) => file, (_, beat) => paneLabel(after, beat));
+
+  it("names who was signed in at the shot, falling back to the drive's account for older runs", () => {
+    expect(paneLabel(after, undefined)).toBe("boris");
+    expect(paneLabel(after, frame("old", 1))).toBe("boris");
+    expect(paneLabel(after, signedIn("x", 1, "nadege"))).toBe("nadege");
+    expect(paneLabel(after, signedIn("x", 1, ""))).toBe("Signed out");
+  });
+
+  it("follows the flow when it signs in as someone else", () => {
+    const steps = timeline.steps;
+    const dwell = (n: number) => (steps[n]?.start ?? 0) + (steps[n]?.play ?? 0) + 0.1;
+    expect(at(0).panes[0]?.label).toBe("boris");
+    expect(at(dwell(0)).panes[0]?.label).toBe("boris");
+    expect(at(dwell(1)).panes[0]?.label).toBe("Signed out");
+    expect(at(dwell(2)).panes[0]?.label).toBe("nadege");
+    expect(at(timeline.total - 0.01).panes[0]?.label).toBe("nadege");
   });
 });
 
