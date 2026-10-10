@@ -17,11 +17,10 @@ import { contributes } from "@/modules/manifest.js";
 import { useVehicle } from "../context.js";
 import { entrySteps } from "../flow.js";
 import { recordReference } from "../model.js";
-import { CardHead, LinkButton, RecordRow, RowIcon, RowMenu, Sep, SubHead, TabHeader } from "../parts.js";
+import { CardHead, LinkButton, RecordRow, RowIcon, RowMenu, Sep, SubHead, TabAction, TabHeader } from "../parts.js";
 import { EntryEventStatus, foldedAmountClass } from "@/finance/EntryCancellation.js";
 import { EvidenceMark } from "../panel/shared.js";
 import { useAssetFinance, useVehicleEntries, type VehicleEntriesFilter } from "../useVehicle.js";
-import { TabAction } from "./TabAction.js";
 import { periodLabel } from "./NowTab.js";
 
 type Chip = "posted" | "expenses" | "revenue" | "review" | "rejected" | "missing";
