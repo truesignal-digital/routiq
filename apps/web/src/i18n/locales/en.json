@@ -617,15 +617,14 @@
         "recordedBy": "Recorded by {name}",
         "files": "Files",
         "fileCount": "{count, plural, =0 {No file} one {# file} other {# files}}",
-        "cancellationNoReceipt": "A cancellation has no receipt of its own; the entry it cancels has.",
+        "cancellationNoReceipt": "The cancelled entry holds the receipt.",
         "kind": "Kind",
         "counted": "Counted in posted totals",
         "countedWhen": "{status, select, SUBMITTED {After approval} POSTED {Yes} REVERSED {Yes, with its cancellation} other {Never}}",
         "month": "Posting month",
         "notPosted": "Not posted",
-        "notLinked": "Not linked to a vehicle, an activity or a work order.",
+        "notLinked": "Not linked to another record.",
         "tabs": {
-          "label": "Entry sections",
           "receipt": "Receipt"
         }
       },
@@ -914,10 +913,10 @@
         "result": "{sign, select, loss {Loss} other {Profit}}"
       },
       "status": {
-        "openFollow": "Close it when it is back. Anything missing is flagged on the record, never invented.",
+        "openFollow": "Close it when it is back; gaps are flagged, never invented.",
         "gaps": "{count, plural, one {Closed, but # thing is missing} other {Closed, but # things are missing}}",
-        "gapsFollow": "Its profit can't be trusted until they are added: reopen it, add them, then close it again.",
-        "gapsManager": "Its profit can't be trusted until they are added. A manager reopens it to add them.",
+        "gapsFollow": "Its profit can't be trusted until they are added: reopen it, add them, close it again.",
+        "gapsManager": "Its profit can't be trusted until they are added; a manager reopens it.",
         "complete": "Complete the activity"
       },
       "sections": {
@@ -936,18 +935,15 @@
       "notes": "Notes",
       "readingValue": "{value, number} {unit}",
       "moneyBox": {
-        "title": "Money",
-        "result": "{sign, select, loss {Loss} other {Profit}}",
         "revenue": "Revenue",
         "expenses": "Expenses"
       },
-      "notLinked": "No vehicle on this activity.",
+      "notLinked": "No vehicle recorded.",
       "tabs": {
-        "label": "Activity sections",
         "money": "Money"
       },
       "noLegs": "No legs recorded.",
-      "noMoney": "No revenue or expense on this activity yet."
+      "noMoney": "No revenue or expense recorded yet."
     },
     "actions": {
       "choose": "Choose",
@@ -2954,7 +2950,7 @@
     },
     "badge": {
       "grounded": "Grounded",
-      "repaired": "Repaired, waiting for release",
+      "repaired": "Waiting for release",
       "available": "Available",
       "notAssessed": "Not assessed"
     }
@@ -3033,7 +3029,8 @@
     "openTab": "Open the tab",
     "tabs": {
       "overview": "Overview",
-      "history": "History"
+      "history": "History",
+      "label": "Record sections"
     }
   }
 }

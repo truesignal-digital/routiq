@@ -332,7 +332,7 @@ function EntryPage({
         overview={tab === "overview"}
         tabs={
           <RecordTabs
-            label={t("finance.entries.detail.tabs.label")}
+            label={t("record.tabs.label")}
             overview={{ key: "overview", label: t("record.tabs.overview") }}
             work={[
               {

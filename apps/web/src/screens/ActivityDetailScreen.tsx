@@ -127,7 +127,7 @@ function TripPage({ activity }: { activity: ActivityDetail }) {
         overview={tab === "overview"}
         tabs={
           <RecordTabs
-            label={t("activities.detail.tabs.label")}
+            label={t("record.tabs.label")}
             overview={{ key: "overview", label: t("record.tabs.overview") }}
             work={[
               { key: "legs", label: t("activities.detail.legs"), marker: <TabCount n={activity.legCount} /> },

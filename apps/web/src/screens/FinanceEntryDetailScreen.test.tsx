@@ -358,7 +358,7 @@ describe("the money entry as a record page (#662)", () => {
     const aside = screen.getByRole("complementary", { name: "About this record" });
     expect(within(aside).getByText(/145[,\s\u202f]?000/)).toBeTruthy();
     expect(within(aside).getByText("After approval")).toBeTruthy();
-    expect(within(aside).getByText("Not linked to a vehicle, an activity or a work order.")).toBeTruthy();
+    expect(within(aside).getByText("Not linked to another record.")).toBeTruthy();
     expect(within(aside).getByTestId("latest-history")).toBeTruthy();
   });
 

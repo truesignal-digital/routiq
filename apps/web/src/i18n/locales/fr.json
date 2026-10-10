@@ -617,15 +617,14 @@
         "recordedBy": "Saisie par {name}",
         "files": "Fichiers",
         "fileCount": "{count, plural, =0 {Aucun fichier} one {# fichier} other {# fichiers}}",
-        "cancellationNoReceipt": "Une annulation n'a pas de reçu propre ; l'écriture annulée porte le sien.",
+        "cancellationNoReceipt": "Le reçu est sur l'écriture annulée.",
         "kind": "Nature",
         "counted": "Dans les totaux comptabilisés",
         "countedWhen": "{status, select, SUBMITTED {Après approbation} POSTED {Oui} REVERSED {Oui, avec son annulation} other {Jamais}}",
         "month": "Mois comptable",
         "notPosted": "Non comptabilisée",
-        "notLinked": "Liée à aucun véhicule, aucune activité ni aucun ordre de travail.",
+        "notLinked": "Liée à aucune autre fiche.",
         "tabs": {
-          "label": "Sections de l'écriture",
           "receipt": "Reçu"
         }
       },
@@ -914,10 +913,10 @@
         "result": "{sign, select, loss {Perte} other {Bénéfice}}"
       },
       "status": {
-        "openFollow": "Clôturez-la au retour. Ce qui manque est signalé sur la fiche, jamais inventé.",
+        "openFollow": "Clôturez-la au retour ; les manques sont signalés, jamais inventés.",
         "gaps": "{count, plural, one {Clôturée, mais # élément manque} other {Clôturée, mais # éléments manquent}}",
-        "gapsFollow": "Son bénéfice n'est pas fiable tant qu'ils manquent : rouvrez-la, ajoutez-les, puis clôturez-la de nouveau.",
-        "gapsManager": "Son bénéfice n'est pas fiable tant qu'ils manquent. Un responsable la rouvre pour les ajouter.",
+        "gapsFollow": "Son bénéfice n'est pas fiable sans eux : rouvrez-la, ajoutez-les, clôturez-la de nouveau.",
+        "gapsManager": "Son bénéfice n'est pas fiable sans eux ; un responsable la rouvre.",
         "complete": "Compléter l'activité"
       },
       "sections": {
@@ -936,18 +935,15 @@
       "notes": "Notes",
       "readingValue": "{value, number} {unit}",
       "moneyBox": {
-        "title": "Argent",
-        "result": "{sign, select, loss {Perte} other {Bénéfice}}",
         "revenue": "Recettes",
         "expenses": "Dépenses"
       },
-      "notLinked": "Aucun véhicule sur cette activité.",
+      "notLinked": "Aucun véhicule saisi.",
       "tabs": {
-        "label": "Sections de l'activité",
         "money": "Argent"
       },
       "noLegs": "Aucune étape saisie.",
-      "noMoney": "Aucune recette ni dépense sur cette activité pour l'instant."
+      "noMoney": "Aucune recette ni dépense saisie pour l'instant."
     },
     "actions": {
       "choose": "Choisir",
@@ -2954,7 +2950,7 @@
     },
     "badge": {
       "grounded": "Immobilisé",
-      "repaired": "Réparé, en attente de remise en service",
+      "repaired": "En attente de remise en service",
       "available": "Disponible",
       "notAssessed": "Non évalué"
     }
@@ -3033,7 +3029,8 @@
     "openTab": "Ouvrir l'onglet",
     "tabs": {
       "overview": "Vue d'ensemble",
-      "history": "Historique"
+      "history": "Historique",
+      "label": "Sections de la fiche"
     }
   }
 }

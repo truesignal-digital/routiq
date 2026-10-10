@@ -61,8 +61,7 @@
       "detail": {
         "asset": "Camion",
         "tripLink": "Trajet {number}",
-        "truck": "Camion",
-        "notLinked": "Liée à aucun camion, aucun trajet ni aucun ordre de travail."
+        "truck": "Camion"
       },
       "filters": {
         "asset": "Camion"
@@ -105,11 +104,6 @@
       "status": {
         "complete": "Compléter le trajet"
       },
-      "notLinked": "Aucun camion sur ce trajet.",
-      "tabs": {
-        "label": "Sections du trajet"
-      },
-      "noMoney": "Aucune recette ni dépense sur ce trajet pour l'instant.",
       "sections": {
         "truckAndCrew": "Camion et équipage"
       },

@@ -58,8 +58,7 @@
     "entries": {
       "detail": {
         "asset": "Véhicule",
-        "tripLink": "Voyage {number}",
-        "notLinked": "Liée à aucun véhicule, aucun voyage ni aucun ordre de travail."
+        "tripLink": "Voyage {number}"
       },
       "filters": {
         "asset": "Véhicule"
@@ -101,12 +100,7 @@
       "loadFailed": "Impossible de charger ce voyage.",
       "status": {
         "complete": "Compléter le voyage"
-      },
-      "notLinked": "Aucun véhicule sur ce voyage.",
-      "tabs": {
-        "label": "Sections du voyage"
-      },
-      "noMoney": "Aucune recette ni dépense sur ce voyage pour l'instant."
+      }
     },
     "actions": {
       "reasonPlaceholder": "Pourquoi rouvrir ce voyage ?",

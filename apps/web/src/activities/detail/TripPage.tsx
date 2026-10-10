@@ -227,7 +227,7 @@ export function TripMoneyBox({ entries, onOpen }: { entries: readonly Entry[]; o
 
   return (
     <ContextBox
-      title={t("activities.detail.moneyBox.title")}
+      title={t("activities.detail.tabs.money")}
       action={
         <button
           type="button"
@@ -241,7 +241,7 @@ export function TripMoneyBox({ entries, onOpen }: { entries: readonly Entry[]; o
       <dl>
         <ContextRow
           strong
-          label={t("activities.detail.moneyBox.result", { sign: net < 0 ? "loss" : "profit" })}
+          label={t("activities.detail.moneySummary.result", { sign: net < 0 ? "loss" : "profit" })}
           value={money(Math.abs(net))}
         />
         <ContextRow

@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 694679,
+    "ceiling": 701968,
     "raises": [
       {
         "date": "2026-10-06",
@@ -253,6 +253,12 @@
         "from": 694047,
         "to": 694679,
         "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694679,
+        "to": 701968,
+        "reason": "Record pages share one frame (#662): RecordHeader, RecordTabs, FactsSection, ContextColumn and StatusBlock components, the money entry's and the trip's record pages (Overview sections, money box, linked records, latest history), and their fr/en words, about 7.3 kB gzip across lazy chunks plus the catalog; the trip's old overview and assets panel are removed"
       }
     ]
   },
@@ -316,7 +322,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 261561,
+    "ceiling": 263354,
     "raises": [
       {
         "date": "2026-10-06",
@@ -545,6 +551,12 @@
         "from": 261338,
         "to": 261561,
         "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261561,
+        "to": 263354,
+        "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   }
