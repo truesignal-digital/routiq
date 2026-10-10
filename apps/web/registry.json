@@ -1077,6 +1077,24 @@
       ]
     },
     {
+      "name": "money-input",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/money-input.tsx",
+          "type": "registry:file",
+          "target": "components/money-input.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "input",
+        "utils"
+      ],
+      "dependencies": [
+        "react-i18next"
+      ]
+    },
+    {
       "name": "form-kit",
       "type": "registry:component",
       "files": [
@@ -1115,6 +1133,7 @@
         "command-form",
         "use-command-form",
         "date-field",
+        "money-input",
         "file-upload",
         "input",
         "select",

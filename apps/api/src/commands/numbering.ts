@@ -60,3 +60,17 @@ export async function nextActivityNumber(
   const seq = await nextScopedSequence(tx, ctx, `ACTIVITY:${branch.id}:${year}`);
   return formatNumber(branch.code, year, seq);
 }
+
+/**
+ * Work orders and problems are numbered per workspace, without branch or year
+ * (#608): a plain integer the client prefixes in its own words ("OT-0007",
+ * "WO-0007"). Same counter table and lock as the entry numbers, so the draw is
+ * gap-free and rolls back with a refused command.
+ */
+export async function nextWorkOrderNumber(tx: Tx, ctx: CommandContext): Promise<number> {
+  return Number(await nextScopedSequence(tx, ctx, "WORK_ORDER"));
+}
+
+export async function nextIssueNumber(tx: Tx, ctx: CommandContext): Promise<number> {
+  return Number(await nextScopedSequence(tx, ctx, "ISSUE"));
+}

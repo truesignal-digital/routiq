@@ -235,6 +235,10 @@ export const personListItem = z.object({
     .nullable(),
   branchId: z.uuid(),
   active: z.boolean(),
+  /** The login linked to this person (`link-person-login`), by principal id; null when none. */
+  loginPrincipalId: z.uuid().nullable(),
+  /** The person's, so a row action can send it as expectedVersion. */
+  rowVersion: z.number().int().positive(),
 });
 
 export const personListResponse = z.object({

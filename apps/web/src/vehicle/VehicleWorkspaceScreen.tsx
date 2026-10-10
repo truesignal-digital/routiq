@@ -13,7 +13,7 @@ import { contributes } from "@/modules/manifest.js";
 import { canViewDocuments } from "@/documents/permissions.js";
 import { useCategories } from "@/categories/useCategories.js";
 import { canReadFinance, canReadFinanceEntries } from "@/finance/permissions.js";
-import { canSeeWorkOrderCosts, canViewMaintenance } from "@/maintenance/permissions.js";
+import { canSeeWorkOrderCosts, canSeeWorkOrderEstimate, canViewMaintenance } from "@/maintenance/permissions.js";
 import { actionAvailability, actionDef, actionPermitted, type VehicleFacts } from "./actions.js";
 import { AllActionsSheet } from "./AllActionsSheet.js";
 import { useVehicle, VehicleCtx, type PanelControls, type PanelForm, type VehicleContextValue } from "./context.js";
@@ -81,6 +81,7 @@ function Workspace({ asset, me }: { asset: AssetDetail; me: MeContext }) {
     maintenance: canViewMaintenance(modules),
     money: canReadFinance(me.role, modules),
     entries: canReadFinanceEntries(me.role, modules),
+    workOrderEstimate: canSeeWorkOrderEstimate(me.role),
     workOrderCosts: canSeeWorkOrderCosts(me.role, modules),
     trips: canViewActivities(modules),
     documents: canViewDocuments(me.role, modules),

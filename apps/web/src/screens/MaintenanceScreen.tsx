@@ -20,7 +20,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMeContext } from "@/auth/me.js";
 import { useCommandLabel } from "@/commands/labels.js";
-import { useIssueColumns, useWorkOrderColumns, workOrderReference } from "@/maintenance/columns.js";
+import { useIssueColumns, useWorkOrderColumns } from "@/maintenance/columns.js";
+import { recordNumberText } from "@/lib/record-number.js";
 import {
   CancelWorkOrderDialog,
   CompleteWorkOrderDialog,
@@ -41,6 +42,7 @@ import {
   canReleaseAssets,
   canReportIssues,
   canResolveIssues,
+  workOrderMoneyShown,
 } from "@/maintenance/permissions.js";
 import {
   useIssues,
@@ -147,7 +149,8 @@ export function MaintenanceScreen() {
   // filter says: a closed one still names the grounding and the linked fault.
   const allIssuesQuery = useIssues();
 
-  const workOrderColumns = useWorkOrderColumns();
+  const money = workOrderMoneyShown(me?.role, me?.enabledModules);
+  const workOrderColumns = useWorkOrderColumns(money);
   const issueColumns = useIssueColumns();
 
   const workOrders = workOrdersQuery.data?.pages.flatMap((page) => page.items) ?? [];
@@ -342,13 +345,14 @@ export function MaintenanceScreen() {
                 // The row viewer is where the queue and the story meet: the
                 // table stays the scannable list, the sheet tells one row's life.
                 rowViewer={{
-                  title: (row) => workOrderReference(row.id),
+                  title: (row) => recordNumberText(t, "work_order", row.number),
                   description: (row) => row.description,
                   render: (row) => (
                     <WorkOrderSheet
                       row={row}
                       issues={issues}
                       permissions={permissions}
+                      money={money}
                       onAction={setDialog}
                     />
                   ),

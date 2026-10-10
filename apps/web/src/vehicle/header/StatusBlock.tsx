@@ -18,8 +18,17 @@ import { formatDate, formatRelativeTime, localizedLabel } from "@/lib/format.js"
 import { contributes } from "@/modules/manifest.js";
 import { useWorkOrder } from "@/maintenance/useMaintenance.js";
 import { useVehicle } from "../context.js";
-import { completionSignedOff, groundingFacts, groundingStep, situationOf, type Situation } from "../flow.js";
-import { recordReference, type PanelRef, type RoleStep } from "../model.js";
+import { RecordNumber } from "@/components/record-number";
+import { recordNumberText } from "@/lib/record-number.js";
+import {
+  completionSignedOff,
+  groundingFacts,
+  groundingStep,
+  situationOf,
+  vehicleRecordNumber,
+  type Situation,
+} from "../flow.js";
+import type { PanelRef, RoleStep } from "../model.js";
 import { LinkButton, useLockText, useStepLabel, withNodes } from "../parts.js";
 import { STEP_ICONS } from "../steps.js";
 
@@ -52,7 +61,9 @@ export function VehicleStatusBlock({ now = new Date() }: { now?: Date }) {
 
   const refLink = (kind: "work_order" | "issue", id: string | undefined) =>
     id === undefined ? null : (
-      <LinkButton onClick={() => openRef({ kind, id })}>{recordReference(id)}</LinkButton>
+      <LinkButton onClick={() => openRef({ kind, id })}>
+        <RecordNumber>{recordNumberText(t, kind, vehicleRecordNumber(asset, attention, id) ?? null)}</RecordNumber>
+      </LinkButton>
     );
 
   let tone: StatusTone = "neutral";
@@ -178,7 +189,7 @@ function availableFollow(
 
 function StatusAction({ step, record }: { step: RoleStep; record: PanelRef | null }) {
   const { t } = useTranslation();
-  const { panel } = useVehicle();
+  const { asset, attention, panel } = useVehicle();
   const stepLabel = useStepLabel();
   const lockText = useLockText();
   const reasonId = useId();
@@ -219,7 +230,10 @@ function StatusAction({ step, record }: { step: RoleStep; record: PanelRef | nul
       <Button variant="outline" className="bg-background desktop:h-9" onClick={() => panel.openRecord(record)}>
         {t("vehicle.status.openRecord", {
           kind: record.kind,
-          ref: record.kind === "readings" ? "" : recordReference(record.id),
+          ref:
+            record.kind === "work_order" || record.kind === "issue"
+              ? recordNumberText(t, record.kind, vehicleRecordNumber(asset, attention, record.id) ?? null)
+              : "",
         })}
         <ArrowRight aria-hidden />
       </Button>

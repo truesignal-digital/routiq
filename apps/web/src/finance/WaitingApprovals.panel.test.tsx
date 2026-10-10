@@ -45,6 +45,7 @@ const approver: MeContext = {
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],
   enabledPresets: ["TRUCKING"],
+  timezone: "Africa/Douala",
 };
 
 function entry(id: string, number: string, submittedBy = SUBMITTER) {

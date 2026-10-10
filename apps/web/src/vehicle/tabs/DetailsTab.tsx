@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { assetDetailQueryKey } from "@/assets/useAssetDetail.js";
 import { useActiveSession } from "@/auth/store.js";
+import { useWorkspaceToday } from "@/auth/workspace-day.js";
 import { applyTemplateFieldMetadata } from "@/commands/field-errors";
 import { formatDate, formatDateTime, formatMoney, localizedLabel, notRecorded } from "@/lib/format.js";
 import { NotRecorded } from "@/components/not-recorded.js";
@@ -38,14 +39,14 @@ import {
   editableSpecifications,
   formValuesOf,
   isDisposed,
-  todayIso,
   YEAR_BOUNDS,
   type DetailsFieldName,
   type DetailsFormValues,
   type DetailsProblem,
 } from "../details/model.js";
 import { makeAndModel } from "../header/IdentityStrip.js";
-import { recordReference } from "../model.js";
+import { RecordNumber } from "@/components/record-number";
+import { recordNumberText } from "@/lib/record-number.js";
 import { LinkButton } from "../parts.js";
 
 type Row = readonly [string, ReactNode];
@@ -173,7 +174,7 @@ function useNowRows(): Row[] {
           {t("vehicle.details.groundedSince", { date: formatDateTime(availability.since, locale) })}
           {" · "}
           <LinkButton onClick={() => panel.openRecord({ kind: "issue", id: availability.issue.id })}>
-            {recordReference(availability.issue.id)}
+            <RecordNumber>{recordNumberText(t, "issue", availability.issue.number)}</RecordNumber>
           </LinkButton>
         </>
       ) : availability.state === "AVAILABLE" ? (
@@ -353,7 +354,7 @@ function DetailsEditCard({
   const intent = useRef(
     createCommandIntent<UpdateAssetDetailsPayload>(commandClient, "update-asset-details", 1),
   );
-  const today = todayIso();
+  const today = useWorkspaceToday();
   const specifications = editableSpecifications(asset.templateCode);
 
   const problemMessage = (problem: DetailsProblem) =>

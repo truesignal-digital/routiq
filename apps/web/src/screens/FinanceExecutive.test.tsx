@@ -71,7 +71,7 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
         break;
       case "/v1/finance/summary":
         body = {
-          currency: "XAF", month: "2026-09", openPeriodCode: "2026-09", lastLockedPeriodCode: null,
+          currency: "XAF", month: "2026-09", unlockedPeriodCodes: [], lastLockedPeriodCode: null,
           outMinor: 0, inMinor: 0, missingReceipt: { count: 0, oldestEconomicDate: null }, waiting: null,
         };
         break;
@@ -196,7 +196,7 @@ it("opens a dashboard total in its period and retains branch/period after inspec
 
 it.each(["/finance/entries", `/finance/entries/${entry.id}`])("does not fetch financial records through a disabled-module direct link: %s", async (path) => {
   const { requests } = await openFinance(path, { financeEnabled: false });
-  await screen.findByText("This module is not enabled for your workspace.");
+  await screen.findByText("This module is not enabled for your company.");
   expect(screen.queryByText("FIN-EXEC")).toBeNull();
   expect(requests.some(({ url }) => url.pathname.startsWith("/v1/finance") || url.pathname.startsWith("/v1/history"))).toBe(false);
 });
