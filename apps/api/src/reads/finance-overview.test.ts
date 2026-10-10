@@ -8,7 +8,8 @@ import { setModule } from "../test/vendor.js";
 import { seedWorkspace } from "../test/seed.js";
 import { shiftMonth } from "./asset-finance.js";
 import { currentBusinessDate } from "./business-date.js";
-import { overviewSeriesMonths, overviewWindows } from "./finance-overview.js";
+import { overviewSeriesMonths, overviewWindows, summaryWindows } from "./finance-overview.js";
+import { summarySchedule } from "./overview-notice.js";
 
 describe("overview windows", () => {
   it("compares this month so far with the same days of last month", () => {
@@ -40,6 +41,34 @@ describe("overview windows", () => {
       "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03",
       "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09",
     ]);
+  });
+});
+
+describe("summary windows and schedule (#667)", () => {
+  it("talks about the month so far, and about last month before the 3rd", () => {
+    expect(summaryWindows("2026-10-09")).toEqual({
+      window: "MONTH_SO_FAR",
+      period: { from: "2026-10-01", to: "2026-10-09" },
+      comparison: { from: "2026-09-01", to: "2026-09-09" },
+    });
+    expect(summaryWindows("2026-10-02")).toEqual({
+      window: "LAST_MONTH",
+      period: { from: "2026-09-01", to: "2026-09-30" },
+      comparison: { from: "2026-08-01", to: "2026-08-31" },
+    });
+    expect(summaryWindows("2027-01-01").period).toEqual({ from: "2026-12-01", to: "2026-12-31" });
+    expect(summaryWindows("2027-01-03").window).toBe("MONTH_SO_FAR");
+  });
+
+  it("is due on Mondays and on the 1st, and remembers the last scheduled day", () => {
+    expect(summarySchedule("2026-10-05")).toEqual({ scheduledOn: "2026-10-05", scheduledToday: "MONDAY" });
+    expect(summarySchedule("2026-10-09")).toEqual({ scheduledOn: "2026-10-05", scheduledToday: null });
+    expect(summarySchedule("2026-10-11")).toEqual({ scheduledOn: "2026-10-05", scheduledToday: null });
+    // The 1st, a Thursday, then the Monday after it.
+    expect(summarySchedule("2026-10-01")).toEqual({ scheduledOn: "2026-10-01", scheduledToday: "MONTH_START" });
+    expect(summarySchedule("2026-10-03")).toEqual({ scheduledOn: "2026-10-01", scheduledToday: null });
+    // A Monday that is the 1st is the 1st.
+    expect(summarySchedule("2026-06-01")).toEqual({ scheduledOn: "2026-06-01", scheduledToday: "MONTH_START" });
   });
 });
 
@@ -343,6 +372,76 @@ describe("GET /v1/finance/overview", () => {
     expect(body.companyProfit).toBeNull();
     expect(body.expensesByCategory.length).toBeGreaterThan(0);
     expect(JSON.stringify(body)).not.toMatch(/profitMinor":-?\d/i);
+  });
+
+  it("picks the summary's template from the numbers and names what moved it most (#667)", async () => {
+    const body = await overview(actors.DIRECTOR);
+    if (Number(today.slice(8, 10)) < 3) {
+      // Before the 3rd it talks about last month, whose one trip-free month has nothing before it.
+      expect(body.summary).toMatchObject({ window: "LAST_MONTH", measure: "PROFIT" });
+      return;
+    }
+    expect(body.summary).toEqual({
+      template: "AHEAD",
+      measure: "PROFIT",
+      window: "MONTH_SO_FAR",
+      period: { from: periodDay, to: today },
+      comparison: { from: body.comparison.from, to: body.comparison.to },
+      currentMinor: 345_000,
+      comparisonMinor: 100_000,
+      revenueMinor: 840_000,
+      changePercent: 245,
+      reason: { kind: "REVENUE", category: null, changeMinor: 640_000 },
+      shortOf: null,
+      trips: { closed: 2, open: 1 },
+    });
+    // The same summary whatever range the tiles read.
+    expect((await overview(actors.DIRECTOR, "?range=TWELVE_MONTHS")).summary).toEqual(body.summary);
+    expect(body.notice.today).toBe(today);
+    expect(body.notice.changes).toEqual([
+      {
+        kind: "EXPENSES_UP",
+        key: `EXPENSES_UP:${periodDay}`,
+        expenseMinor: 495_000,
+        comparisonExpenseMinor: 100_000,
+        percent: 395,
+      },
+    ]);
+  });
+
+  it("tells the cashier about expenses, never profit, named by the category that grew most", async () => {
+    const body = await overview(actors.CASHIER);
+    if (Number(today.slice(8, 10)) < 3) return;
+    expect(body.summary).toMatchObject({
+      template: "BEHIND",
+      measure: "EXPENSES",
+      currentMinor: 370_000,
+      comparisonMinor: 100_000,
+      revenueMinor: null,
+      changePercent: 270,
+      reason: { kind: "CATEGORY", category: { code: "FUEL" }, changeMinor: 140_000 },
+    });
+  });
+
+  it("calls the first month with money the first month, and an empty month not enough data", async () => {
+    const other = await seedWorkspace(ctx.db);
+    const director = await seedActor(ctx.db, { workspaceId: other.workspace.id, role: "DIRECTOR" });
+    const empty = await overview(director);
+    expect(empty.summary).toMatchObject({ template: "NOT_ENOUGH_DATA", shortOf: "ENTRIES", measure: "EXPENSES", reason: null });
+    expect(empty.notice.changes).toEqual([]);
+
+    const day = Number(today.slice(8, 10)) < 3 ? `${shiftMonth(month, -1)}-01` : periodDay;
+    await api.ok(director.token, "record-expense", {
+      entryId: randomUUID(),
+      branchCode: "DLA",
+      categoryCode: "FUEL",
+      economicDate: day,
+      postings: [{ amountMinor: 50_000 }],
+      amountMinor: 50_000,
+      paymentMethod: "CASH",
+    });
+    const first = await overview(director);
+    expect(first.summary).toMatchObject({ template: "FIRST_MONTH", measure: "EXPENSES", currentMinor: 50_000, changePercent: null });
   });
 
   it("refuses every other role", async () => {

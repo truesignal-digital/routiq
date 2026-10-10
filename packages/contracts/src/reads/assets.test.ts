@@ -98,12 +98,18 @@ describe("asset overview contract", () => {
     canDrive: 5,
     grounded: { count: 2, first: { assetId, assetCode: "VH002", since: "2026-10-01T08:00:00.000Z" } },
     idle: { count: 4, days: 5, first: { assetId, assetCode: "VH004", lastTripAt: null } },
+    notice: { today: "2026-10-09", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] },
   };
 
   it("accepts the counts, and null for a module that is off", () => {
     expect(assetOverview.parse(overview)).toEqual(overview);
-    const off = { total: 3, canDrive: 3, grounded: null, idle: null };
+    const off = { total: 3, canDrive: 3, grounded: null, idle: null, notice: overview.notice };
     expect(assetOverview.parse(off)).toEqual(off);
+  });
+
+  it("requires the summary notice (#667)", () => {
+    const { notice: _notice, ...withoutNotice } = overview;
+    expect(assetOverview.safeParse(withoutNotice).success).toBe(false);
   });
 
   it("accepts no first vehicle when none is grounded or idle", () => {

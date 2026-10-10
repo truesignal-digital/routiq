@@ -3,6 +3,7 @@ import { activityCompleteness, activityStatus } from "./activities.js";
 import { historyActor } from "./history.js";
 import { listResponse } from "./list.js";
 import { issueStatus, maintenanceRecordNumber, workOrderStatus } from "./maintenance.js";
+import { overviewNoticeSchema } from "./overview-notice.js";
 
 export const assetLifecycleStatuses = [
   "REGISTERED",
@@ -111,6 +112,8 @@ export const assetOverview = /* @__PURE__ */ (() =>
           .nullable(),
       })
       .nullable(),
+    /** When the Trucks Overview's summary notice shows (#667). */
+    notice: overviewNoticeSchema(),
   }))();
 
 export type AssetOverviewQuery = z.infer<typeof assetOverviewQuery>;

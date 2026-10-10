@@ -1,15 +1,20 @@
 import {
   canReadLedger,
+  EXPENSES_UP_PERCENT,
+  FLAT_PERCENT,
   financeOverviewQuery,
   financeOverviewResponse,
   ledgerEntryStatuses,
   MONEY_OVERVIEW_READER_ROLES,
   OVERVIEW_SERIES_MONTHS,
   type FinanceOverviewResponse,
+  type MoneySummary,
   type OverviewCompanyProfit,
+  type OverviewNoticeChange,
   type OverviewRange,
+  type SummaryTemplate,
 } from "@routiq/contracts";
-import { and, eq, gte, inArray, isNotNull, lte, ne, notInArray, or, sql, type SQL } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, lt, lte, ne, notInArray, or, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { AuthContext } from "../auth/types.js";
@@ -32,6 +37,7 @@ import { defineRead } from "./define-read.js";
 import { entryEvidenceMissingSql } from "./entry-evidence.js";
 import { monthBounds } from "./finance.js";
 import { readableEntrySql } from "./money-scope.js";
+import { loadOverviewNotice } from "./overview-notice.js";
 import { invalidRequest } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
 import { readableTripSql } from "./trip-scope.js";
@@ -73,6 +79,29 @@ export function overviewWindows(
       to: lastDayOf(shiftMonth(month, -months - 1)),
     },
   };
+}
+
+/**
+ * The windows the summary sentence talks about, whatever the range: the month
+ * so far against the same days of last month; before the 3rd, last month
+ * against the month before (dashboards.html, summary sentence rules).
+ */
+export function summaryWindows(today: string): {
+  window: MoneySummary["window"];
+  period: DateWindow;
+  comparison: DateWindow;
+} {
+  const month = today.slice(0, 7);
+  if (Number(today.slice(8, 10)) < 3) {
+    const last = shiftMonth(month, -1);
+    const before = shiftMonth(month, -2);
+    return {
+      window: "LAST_MONTH",
+      period: { from: `${last}-01`, to: lastDayOf(last) },
+      comparison: { from: `${before}-01`, to: lastDayOf(before) },
+    };
+  }
+  return { window: "MONTH_SO_FAR", ...overviewWindows(today, "THIS_MONTH") };
 }
 
 /** The closed months the chart draws, oldest first. */
@@ -270,6 +299,26 @@ async function loadOverview(
 
   const gaps = await loadGaps(tx, readable, currency, period);
 
+  const earned =
+    totals.period.revenue !== 0n ||
+    totals.comparison.revenue !== 0n ||
+    [...seriesByMonth.values()].some((month) => month.revenue !== 0n);
+  const windows = summaryWindows(today);
+  const summaryTrips = !tripsOn
+    ? null
+    : range === "THIS_MONTH" && windows.window === "MONTH_SO_FAR" && trips !== null
+      ? { closed: trips.closedTrips, open: trips.openTrips }
+      : await countTrips(tx, auth, branchId, windows.period, timezone);
+  const { summary, expensesUp } = await loadSummary(tx, auth, {
+    posted,
+    entryJoin: entryJoin!,
+    windows,
+    withProfit,
+    earned,
+    trips: summaryTrips,
+  });
+  const notice = await loadOverviewNotice(tx, auth, modules, { branchId, today, timezone }, expensesUp);
+
   const windowTotals = (window: DateWindow, money: Money) => ({
     from: window.from,
     to: window.to,
@@ -312,7 +361,162 @@ async function loadOverview(
       openTrips: trips === null ? null : trips.openTrips,
       otherCurrencyEntries: gaps.otherCurrencyEntries,
     },
+    summary,
+    notice,
   };
+}
+
+/**
+ * The summary sentence's template and values (#667): profit for a company
+ * that records revenue and a viewer who reads profit, expenses otherwise,
+ * over `summaryWindows`. Also the big change the money read alone can see:
+ * expenses at least `EXPENSES_UP_PERCENT` % above the comparison.
+ */
+async function loadSummary(
+  tx: TenantTx,
+  auth: AuthContext,
+  input: {
+    posted: SQL[];
+    entryJoin: SQL;
+    windows: ReturnType<typeof summaryWindows>;
+    withProfit: boolean;
+    earned: boolean;
+    trips: { closed: number; open: number } | null;
+  },
+): Promise<{ summary: MoneySummary; expensesUp: OverviewNoticeChange[] }> {
+  const { posted, entryJoin, windows, withProfit, trips } = input;
+  const inPeriod = within(windows.period);
+  const rows = await tx
+    .select({
+      inPeriod: sql<boolean>`${inPeriod}`,
+      direction: financialEntries.direction,
+      categoryId: financialPostings.categoryId,
+      amountMinor: sql<string>`sum(${financialPostings.amountMinor})::text`,
+    })
+    .from(financialPostings)
+    .innerJoin(financialEntries, entryJoin)
+    .where(and(...posted, or(inPeriod, within(windows.comparison))))
+    .groupBy(sql`1`, sql`2`, sql`3`);
+
+  const totals = { period: zero(), comparison: zero() };
+  const byCategory = new Map<string, { period: bigint; comparison: bigint }>();
+  let periodLines = 0;
+  for (const row of rows) {
+    const amount = BigInt(row.amountMinor);
+    const window = row.inPeriod ? "period" : "comparison";
+    if (row.inPeriod) periodLines += 1;
+    add(totals[window], row.direction, amount);
+    if (row.direction === "EXPENSE") {
+      const category = byCategory.get(row.categoryId) ?? { period: 0n, comparison: 0n };
+      category[window] += amount;
+      byCategory.set(row.categoryId, category);
+    }
+  }
+
+  const earned = input.earned || totals.period.revenue !== 0n || totals.comparison.revenue !== 0n;
+  const measure: MoneySummary["measure"] = withProfit && earned ? "PROFIT" : "EXPENSES";
+  const value = (money: Money) => (measure === "PROFIT" ? money.revenue - money.expense : money.expense);
+  const current = value(totals.period);
+  const previous = value(totals.comparison);
+
+  const [earlier] = await tx
+    .select({ one: sql<number>`1` })
+    .from(financialEntries)
+    .where(and(...posted, lt(financialEntries.economicDate, windows.period.from)))
+    .limit(1);
+
+  let template: SummaryTemplate;
+  let shortOf: MoneySummary["shortOf"] = null;
+  let changePercent: number | null = null;
+  let reason: MoneySummary["reason"] = null;
+  const tripsTotal = trips === null ? 0 : trips.closed + trips.open;
+  if (periodLines === 0) {
+    template = "NOT_ENOUGH_DATA";
+    shortOf = "ENTRIES";
+  } else if (measure === "PROFIT" && trips !== null && tripsTotal > 0 && trips.closed * 2 < tripsTotal) {
+    template = "NOT_ENOUGH_DATA";
+    shortOf = "CLOSED_TRIPS";
+  } else if (earlier === undefined) {
+    template = "FIRST_MONTH";
+  } else {
+    const change = current - previous;
+    const size = change < 0n ? -change : change;
+    changePercent = previous > 0n ? Number((size * 100n + previous / 2n) / previous) : null;
+    const base = previous < 0n ? -previous : previous;
+    const flat = change === 0n || (base > 0n && size * 100n <= BigInt(FLAT_PERCENT) * base);
+    const better = measure === "PROFIT" ? change > 0n : change < 0n;
+    template = flat ? "FLAT" : better ? "AHEAD" : "BEHIND";
+    if (!flat) reason = await summaryReason(tx, auth, { measure, better, totals, byCategory });
+  }
+
+  const expensesUp: OverviewNoticeChange[] = [];
+  const spent = totals.period.expense;
+  const before = totals.comparison.expense;
+  if (before > 0n && spent * 100n >= before * BigInt(100 + EXPENSES_UP_PERCENT)) {
+    expensesUp.push({
+      kind: "EXPENSES_UP",
+      key: `EXPENSES_UP:${windows.period.from}`,
+      expenseMinor: serializeMinor(spent),
+      comparisonExpenseMinor: serializeMinor(before),
+      percent: Number(((spent - before) * 100n + before / 2n) / before),
+    });
+  }
+
+  return {
+    summary: {
+      template,
+      measure,
+      window: windows.window,
+      period: windows.period,
+      comparison: windows.comparison,
+      currentMinor: serializeMinor(current),
+      comparisonMinor: serializeMinor(previous),
+      revenueMinor: measure === "PROFIT" ? serializeMinor(totals.period.revenue) : null,
+      changePercent,
+      reason,
+      shortOf,
+      trips,
+    },
+    expensesUp,
+  };
+}
+
+/**
+ * The line that moved the result most in its direction: revenue (for profit)
+ * or one expense category. Ahead looks for the biggest gain, behind for the
+ * biggest drop; a line that moved the other way is never named.
+ */
+async function summaryReason(
+  tx: TenantTx,
+  auth: AuthContext,
+  input: {
+    measure: MoneySummary["measure"];
+    better: boolean;
+    totals: { period: Money; comparison: Money };
+    byCategory: Map<string, { period: bigint; comparison: bigint }>;
+  },
+): Promise<MoneySummary["reason"]> {
+  const { measure, better, totals, byCategory } = input;
+  // Each candidate's effect on the result: more revenue helps, more expense hurts.
+  const sign = better ? 1n : -1n;
+  let best: { categoryId: string | null; change: bigint; effect: bigint } | null = null;
+  if (measure === "PROFIT") {
+    const change = totals.period.revenue - totals.comparison.revenue;
+    if (change * sign > 0n) best = { categoryId: null, change, effect: change * sign };
+  }
+  for (const [categoryId, sums] of byCategory) {
+    const change = sums.period - sums.comparison;
+    const effect = -change * sign;
+    if (effect > 0n && (best === null || effect > best.effect)) best = { categoryId, change, effect };
+  }
+  if (best === null) return null;
+  if (best.categoryId === null) return { kind: "REVENUE", category: null, changeMinor: serializeMinor(best.change) };
+  const [category] = await tx
+    .select({ code: categories.code, labelFr: categories.labelFr, labelEn: categories.labelEn })
+    .from(categories)
+    .where(and(eq(categories.workspaceId, auth.workspaceId), eq(categories.id, best.categoryId)));
+  if (category === undefined) return null;
+  return { kind: "CATEGORY", category, changeMinor: serializeMinor(best.change) };
 }
 
 interface TripFacts {
@@ -335,24 +539,9 @@ async function loadTrips(
   period: DateWindow,
   timezone: string,
 ): Promise<TripFacts> {
-  const scope: SQL[] = [
-    readableTripSql(auth),
-    ...(branchId === undefined ? [] : [eq(activities.branchId, branchId)]),
-  ];
-  const closedInPeriod = and(
-    ...scope,
-    eq(activities.status, "CLOSED"),
-    sql`${activities.closedAt} >= ${dayStartSql(period.from, timezone)}`,
-    sql`${activities.closedAt} < ${dayStartSql(addDays(period.to, 1), timezone)}`,
-  )!;
-
-  const [counts] = await tx
-    .select({
-      closed: sql<number>`count(*) filter (where ${closedInPeriod})::int`,
-      open: sql<number>`count(*) filter (where ${activities.status} = 'OPEN')::int`,
-    })
-    .from(activities)
-    .where(and(...scope));
+  const scope = tripScope(auth, branchId);
+  const closedInPeriod = closedTripsSql(scope, period, timezone);
+  const counts = await countTrips(tx, auth, branchId, period, timezone);
 
   const carrierRows = await tx
     .selectDistinct({ tripId: activities.id, assetId: activityAssetSegments.assetId })
@@ -403,7 +592,40 @@ async function loadTrips(
     byVehicle.set(assetId, facts);
   }
 
-  return { closedTrips: counts?.closed ?? 0, openTrips: counts?.open ?? 0, byVehicle };
+  return { closedTrips: counts.closed, openTrips: counts.open, byVehicle };
+}
+
+const tripScope = (auth: AuthContext, branchId: string | undefined): SQL[] => [
+  readableTripSql(auth),
+  ...(branchId === undefined ? [] : [eq(activities.branchId, branchId)]),
+];
+
+/** Trips in `scope` closed in the period, by the workspace's day. */
+const closedTripsSql = (scope: SQL[], period: DateWindow, timezone: string): SQL =>
+  and(
+    ...scope,
+    eq(activities.status, "CLOSED"),
+    sql`${activities.closedAt} >= ${dayStartSql(period.from, timezone)}`,
+    sql`${activities.closedAt} < ${dayStartSql(addDays(period.to, 1), timezone)}`,
+  )!;
+
+/** Trips closed in the period and open now, scoped like the trips list. */
+async function countTrips(
+  tx: TenantTx,
+  auth: AuthContext,
+  branchId: string | undefined,
+  period: DateWindow,
+  timezone: string,
+): Promise<{ closed: number; open: number }> {
+  const scope = tripScope(auth, branchId);
+  const [counts] = await tx
+    .select({
+      closed: sql<number>`count(*) filter (where ${closedTripsSql(scope, period, timezone)})::int`,
+      open: sql<number>`count(*) filter (where ${activities.status} = 'OPEN')::int`,
+    })
+    .from(activities)
+    .where(and(...scope));
+  return { closed: counts?.closed ?? 0, open: counts?.open ?? 0 };
 }
 
 /**

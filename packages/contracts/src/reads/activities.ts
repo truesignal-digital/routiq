@@ -3,6 +3,7 @@ import { TRIP_CANCELLATION_REASONS } from "../commands/plan-trip.js";
 import { ACTIVITY_COMPLETENESS_CODES, TRIP_DISCREPANCY_CODES } from "../errors.js";
 import { entryCancellation } from "./finance.js";
 import { listQuery, listResponse } from "./list.js";
+import { overviewNoticeSchema } from "./overview-notice.js";
 
 /**
  * A trip's lifecycle (ADR-0012): PLANNED and CANCELLED come with Scheduling
@@ -338,6 +339,8 @@ export const activitySummary = /* @__PURE__ */ (() =>
         }),
       )
       .length(ACTIVITY_OVERVIEW_WEEKS),
+    /** When the Trips Overview's summary notice shows (#667). */
+    notice: overviewNoticeSchema(),
   }))();
 
 export type ActivitySummaryQuery = z.infer<typeof activitySummaryQuery>;

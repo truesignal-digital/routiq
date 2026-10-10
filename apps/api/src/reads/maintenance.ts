@@ -60,6 +60,7 @@ import {
   type WorkOrderMoneyVisibility,
 } from "./work-order-cost.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
+import { overviewNoticeToday } from "./overview-notice.js";
 
 /**
  * Newest first, always — both maintenance queues read that way and neither
@@ -182,7 +183,7 @@ export function registerMaintenanceReadRoutes(
         const inRepairWindow = sql`${workOrders.status} = 'COMPLETED'
           and ${workOrders.completedAt} >= now() - make_interval(days => ${REPAIR_WINDOW_DAYS}::int)`;
 
-        const { counts, firstGrounded, repairCost } = await read(async (tx) => {
+        const { counts, firstGrounded, repairCost, notice } = await read(async (tx) => {
           const [counts] = await tx
             .execute<{
               open_issues: number;
@@ -258,7 +259,8 @@ export function registerMaintenanceReadRoutes(
             .orderBy(asc(assetAvailabilityIntervals.openedAt), asc(assets.assetCode), asc(assets.id))
             .limit(1);
 
-          if (!costVisible) return { counts, firstGrounded, repairCost: null };
+          const notice = await overviewNoticeToday(tx, auth, modules, branchId);
+          if (!costVisible) return { counts, firstGrounded, repairCost: null, notice };
           // The same orders `repairsCounted` averages, in the workspace
           // currency only: amounts in two currencies never add up.
           const [workspace] = await tx
@@ -287,6 +289,7 @@ export function registerMaintenanceReadRoutes(
               currency,
               workOrders: cost?.workOrders ?? 0,
             },
+            notice,
           };
         });
 
@@ -311,6 +314,7 @@ export function registerMaintenanceReadRoutes(
           repairsCounted: counts?.repairs_counted ?? 0,
           repairWindowDays: REPAIR_WINDOW_DAYS,
           repairCost,
+          notice,
         });
       } catch (error) {
         req.log.error({ err: error }, "maintenance summary read failed");
