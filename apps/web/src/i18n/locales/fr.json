@@ -182,7 +182,8 @@
     "WORK_ORDER_ASSET_MISMATCH": "Cet ordre de travail concerne un autre actif.",
     "WORK_ORDER_NOT_COMPLETED": "Aucun ordre de travail terminé ne répond au problème qui a immobilisé cet actif. Terminez les travaux avant la remise en service.",
     "WORK_ORDER_ISSUE_MISMATCH": "Cet ordre de travail ne répond pas au problème qui a immobilisé l'actif.",
-    "WORK_ORDER_NOT_OPEN": "Cet ordre de travail n'est pas en cours : un coût ne peut y être imputé qu'une fois l'ordre approuvé, et tant qu'il n'est ni terminé, ni rejeté, ni annulé.",
+    "WORK_ORDER_NOT_OPEN": "Cet ordre de travail ne prend pas de coût pour l'instant : un coût s'y impute une fois l'ordre approuvé, mais pas pendant la validation de sa fin de travaux, ni s'il a été rejeté ou annulé.",
+    "LATE_COST_REASON_REQUIRED": "Cet ordre de travail est déjà terminé. Indiquez pourquoi le coût arrive après la clôture.",
     "WORK_ORDER_COST_ONLY": "Un ordre de travail ne reçoit que des coûts. Enregistrez cette recette sur le véhicule, sans ordre de travail.",
     "WORK_ORDER_COST_MISSING": "Indiquez le coût de la réparation, ou choisissez « Aucun coût » ou « Facture pas encore reçue ».",
     "WORK_ORDER_HAS_COSTS": "Des coûts ont déjà été enregistrés sur cet ordre de travail. Rouvrez le formulaire pour les voir.",
@@ -505,6 +506,9 @@
       "counterpartyPlaceholder": "Fournisseur, client…",
       "descriptionLabel": "Description (optionnel)",
       "descriptionPlaceholder": "Détails de l'écriture…",
+      "lateCostReasonLabel": "Raison",
+      "lateCostReasonPlaceholder": "Facture reçue après clôture",
+      "lateCostHint": "Ces travaux sont terminés : la facture passe en validation, quel que soit son montant.",
       "paymentRefLabel": "Référence de paiement (optionnel)",
       "paymentRefPlaceholder": "N° de reçu, N° de virement…",
       "assetLabel": "Actif (optionnel)",
@@ -2369,6 +2373,11 @@
         "detailCosts": "{actual} réels contre {expected} prévus",
         "detailActual": "{actual} réels"
       },
+      "WORK_ORDER_COST_TO_COME": {
+        "title": "Facture de la réparation {ref} à saisir",
+        "detail": "{description} · clôturé avant l'arrivée de la facture",
+        "detailDeclared": "{description} · déclaré {declared}, enregistré {recorded}"
+      },
       "ASSET_AWAITING_RELEASE": {
         "title": "Prêt pour la remise en service",
         "detail": "{override, select, yes {Le problème a été clos sans réparation ; la remise en service demande un motif.} other {La réparation est terminée.}}"
@@ -2415,6 +2424,7 @@
       "planned": "{amount} prévus",
       "noEstimate": "Sans estimation",
       "overBudget": "+{percent} %",
+      "costToCome": "Coût à venir",
       "doneOn": "Terminé le {date}",
       "cancelledOn": "Annulé le {date}",
       "refusedOn": "Refusé le {date}",
@@ -2646,6 +2656,12 @@
       "actualCostLater": "Renseigné à la fin des travaux",
       "invoicePending": "Facture pas encore reçue",
       "noCost": "Aucun coût",
+      "costToCome": {
+        "invoicePending": "Coût à venir : les travaux ont été clôturés avant l'arrivée de la facture.",
+        "invoiceAwaitingApproval": "Coût à venir : la facture est saisie et attend sa validation.",
+        "declared": "Coût à venir : déclaré {declared}, enregistré {recorded}.",
+        "declaredAwaitingApproval": "Coût à venir : déclaré {declared}, enregistré {recorded}. Un coût attend sa validation."
+      },
       "completed": "Terminé",
       "whatWasDone": "Travaux réalisés",
       "reason": "Motif",

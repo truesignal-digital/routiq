@@ -147,11 +147,18 @@ export const COMMAND_ERROR_CODES = [
    */
   "WORK_ORDER_ISSUE_MISMATCH",
   /**
-   * A cost attributed to a work order that is not APPROVED (#28): pending work
-   * has not been authorized, and completed, rejected or cancelled work is closed
-   * to new spend. Reversals are exempt — they correct what already stands.
+   * A cost attributed to a work order that takes none (#28): pending work has
+   * not been authorized, a completion awaiting sign-off is being judged on the
+   * cost it declared, and rejected or cancelled work is closed to new spend. A
+   * COMPLETED order takes the late invoice (#82). Reversals are exempt — they
+   * correct what already stands.
    */
   "WORK_ORDER_NOT_OPEN",
+  /**
+   * A cost on a work order that is already completed, with no description
+   * saying why it comes after the close (#82). The description is the reason.
+   */
+  "LATE_COST_REASON_REQUIRED",
   /**
    * A revenue line naming a work order (#432). A work order collects what a
    * repair cost; money coming in is never one of its lines, whoever records it.

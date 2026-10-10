@@ -231,11 +231,11 @@ describe("work-order cost attribution", () => {
     });
   });
 
-  describe("costs attach only to APPROVED work (#28)", () => {
+  // COMPLETED takes the late invoice (#82): late-work-order-cost.test.ts.
+  describe("costs attach only to APPROVED or COMPLETED work (#28, #82)", () => {
     for (const status of [
       "SUBMITTED",
       "COMPLETION_SUBMITTED",
-      "COMPLETED",
       "REJECTED",
       "CANCELLED",
     ] as const) {
