@@ -5,10 +5,12 @@ import {
   canApproveEntries,
   canEditPendingEntry,
   canManagePeriods,
+  canRecordAgain,
   canRecordFinance,
   canRecordRevenue,
   canReopenPeriod,
   canReverseEntry,
+  recordAgainStep,
 } from "./permissions.js";
 
 const FINANCE_ON = ["CORE", "FINANCE"] as const;
@@ -69,6 +71,44 @@ describe("a cost on a work order (#410, #414)", () => {
   it("leaves Finance's, the Cashier's and the driver's own expenses alone", () => {
     for (const role of ["FINANCE", "CASHIER", "DRIVER"] as const) {
       expect(canRecordFinance(role, FINANCE_ON)).toBe(true);
+    }
+  });
+});
+
+describe("Record again after a wrong-details cancellation (#559)", () => {
+  const onWorkOrder = { links: { workOrderId: "wo-1", workOrderAssetId: "asset-1" } };
+  const ownExpense = { links: { workOrderId: null, workOrderAssetId: null } };
+  const handlers = () => {
+    const calls: string[] = [];
+    return {
+      calls,
+      recordAgain: () => calls.push("record-again"),
+      openWorkOrder: (assetId: string, workOrderId: string) => calls.push(`open ${assetId} ${workOrderId}`),
+    };
+  };
+  const viewer = (role: Role) => ({ role, enabledModules: FINANCE_ON });
+
+  it("is offered on a work-order cost only to the roles that book one", () => {
+    // The two roles that cancel entries: Direction books work-order costs, Finance does not.
+    expect(ROLES.filter((role) => canRecordAgain(role, FINANCE_ON, onWorkOrder))).toEqual(["DIRECTOR", "ADMIN"]);
+    expect(canRecordAgain("FINANCE", FINANCE_ON, ownExpense)).toBe(true);
+  });
+
+  it("hands Finance the way to the work order instead", () => {
+    const h = handlers();
+    const step = recordAgainStep(viewer("FINANCE"), onWorkOrder, h);
+    expect(step.onRecordAgain).toBeUndefined();
+    step.onOpenWorkOrder?.();
+    expect(h.calls).toEqual(["open asset-1 wo-1"]);
+  });
+
+  it("keeps Record again for Direction, and for Finance on an entry with no work order", () => {
+    for (const [role, entry] of [["DIRECTOR", onWorkOrder], ["FINANCE", ownExpense]] as const) {
+      const h = handlers();
+      const step = recordAgainStep(viewer(role), entry, h);
+      expect(step.onOpenWorkOrder).toBeUndefined();
+      step.onRecordAgain?.();
+      expect(h.calls).toEqual(["record-again"]);
     }
   });
 });
