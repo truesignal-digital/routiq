@@ -1,5 +1,6 @@
+import type { QueryClient } from "@tanstack/react-query";
 import {
-  createRootRoute,
+  createRootRouteWithContext,
   createRoute,
   createRouter,
   redirect,
@@ -16,7 +17,19 @@ import {
 import { sessionStore } from "./auth/store.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
 import { PANEL_PATTERN } from "./vehicle/model.js";
-import { ScreenError, ScreenPending, SectionError, SectionPending, ShellPending } from "./shell/RoutePending.js";
+import { queryClient } from "./lib/query-client.js";
+// Static, unlike the shell: a skeleton must draw the moment a screen is
+// pending, and these add almost nothing the sign-in page does not carry.
+import {
+  HomeSkeleton,
+  ModuleListSkeleton,
+  RecordSkeleton,
+  RecordWorkspaceSkeleton,
+  SettingsListSkeleton,
+  TabSkeleton,
+  WideRecordSkeleton,
+} from "./components/page-skeletons.js";
+import { ScreenError, ScreenPending, SectionError } from "./shell/RoutePending.js";
 import { lazyScreen, retryFailedScreens } from "./shell/lazy-screen.js";
 
 /**
@@ -42,6 +55,8 @@ const FinanceEntryDetailScreen = lazyScreen(() => import("./screens/FinanceEntry
 const FinancePeriodsScreen = lazyScreen(() => import("./screens/FinancePeriodsScreen.js"), "FinancePeriodsScreen");
 // The shell arrives with the installed module manifests (`modules/app-shell.ts`): sign-in needs neither.
 const AppShell = lazyScreen(() => import("./modules/app-shell.js"), "AppShell");
+// On demand like the shell: the sign-in page carries neither (#495).
+const ShellPending = lazyScreen(() => import("./shell/ShellPending.js"), "ShellPending");
 const VehicleWorkspaceScreen = lazyScreen(() => import("./vehicle/VehicleWorkspaceScreen.js"), "VehicleWorkspaceScreen");
 const DetailsTab = lazyScreen(() => import("./vehicle/tabs/DetailsTab.js"), "DetailsTab");
 const DocumentsTab = lazyScreen(() => import("./vehicle/tabs/DocumentsTab.js"), "DocumentsTab");
@@ -51,7 +66,50 @@ const MoneyTab = lazyScreen(() => import("./vehicle/tabs/MoneyTab.js"), "MoneyTa
 const NowTab = lazyScreen(() => import("./vehicle/tabs/NowTab.js"), "NowTab");
 const TripsTab = lazyScreen(() => import("./vehicle/tabs/TripsTab.js"), "TripsTab");
 
-const rootRoute = createRootRoute();
+/** What every route's loader receives: the one Query cache the screens read too. */
+export interface RouterContext {
+  queryClient: QueryClient;
+}
+
+const rootRoute = createRootRouteWithContext<RouterContext>()();
+
+/**
+ * Each screen's loader starts its first view's reads (routes/*.loader.ts,
+ * #496), its module loaded on demand like the screen and fetched with the
+ * screens in the background (preloadScreens), so moving around offline needs
+ * no code.
+ */
+const LOADERS = {
+  home: () => import("./routes/home.loader.js"),
+  assets: () => import("./routes/assets.loader.js"),
+  vehicle: () => import("./routes/vehicle.loader.js"),
+  activities: () => import("./routes/activities.loader.js"),
+  finance: () => import("./routes/finance.loader.js"),
+  maintenance: () => import("./routes/maintenance.loader.js"),
+};
+
+/**
+ * A loader never fails or holds a navigation. Offline its module may be
+ * missing (and a failed fetch stays failed for the page's life) and its reads
+ * would wait for the connection, so the screen opens at once and shows its
+ * own loading state; a read that fails is left to the screen.
+ *
+ * A page whose module is off starts no reads: ModulePageGate shows "not
+ * included" instead, and every read would be refused (#326). Each loader
+ * still checks the member's role for its own reads.
+ */
+function startReads(args: ReadArgs, run: () => Promise<void>): Promise<void> | undefined {
+  if (!navigator.onLine) return undefined;
+  return import("./modules/app-shell.js")
+    .then(({ pageModuleOn }) => pageModuleOn(args.context.queryClient, args.location.pathname))
+    .then((on) => (on ? run() : undefined))
+    .catch(() => undefined);
+}
+
+interface ReadArgs {
+  context: RouterContext;
+  location: { pathname: string };
+}
 
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -71,13 +129,21 @@ const appRoute = createRoute({
       throw redirect({ to: "/login", search: { redirect: location.href } });
     }
   },
-  component: AppShell,
+  loader: ({ context, location }) =>
+    import("./shell/shell-loader.js").then(({ loadShell }) => loadShell(context.queryClient, location.href)),
+  // The frame shows at once, sized like the shell, so the shell replaces it
+  // without moving anything (#495); waiting on a timer would leave a blank page.
   pendingComponent: ShellPending,
+  pendingMs: 0,
+  pendingMinMs: 0,
+  component: AppShell,
 });
 
 const indexRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/",
+  loader: (args) => startReads(args, () => LOADERS.home().then((load) => load.home(args))),
+  pendingComponent: HomeSkeleton,
   component: DashboardScreen,
 });
 
@@ -89,12 +155,16 @@ const assetsRoute = createRoute({
   validateSearch: z.object({
     status: z.enum(["IN_SERVICE", "ATTENTION"]).optional().catch(undefined),
   }),
+  loaderDeps: ({ search }) => search,
+  loader: (args) => startReads(args, () => LOADERS.assets().then((load) => load.assets(args))),
+  pendingComponent: ModuleListSkeleton,
   component: AssetsStub,
 });
 
 const assetsNewRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/assets/new",
+  pendingComponent: ScreenPending,
   component: AssetRegisterScreen,
 });
 
@@ -115,14 +185,17 @@ const assetDetailRoute = createRoute({
       .optional()
       .catch(undefined),
   }),
+  loader: (args) => startReads(args, () => LOADERS.vehicle().then((load) => load.vehicle(args))),
+  pendingComponent: RecordWorkspaceSkeleton,
   component: VehicleWorkspaceScreen,
 });
 
 const vehicleNowRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "/",
+  loader: (args) => startReads(args, () => LOADERS.vehicle().then((load) => load.vehicleNow(args))),
   component: NowTab,
-  pendingComponent: SectionPending,
+  pendingComponent: TabSkeleton,
   errorComponent: SectionError,
 });
 
@@ -130,7 +203,7 @@ const vehicleMaintenanceRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "maintenance",
   component: MaintenanceTab,
-  pendingComponent: SectionPending,
+  pendingComponent: TabSkeleton,
   errorComponent: SectionError,
 });
 
@@ -143,7 +216,7 @@ const vehicleMoneyRoute = createRoute({
     evidence: z.literal("missing").optional().catch(undefined),
   }),
   component: MoneyTab,
-  pendingComponent: SectionPending,
+  pendingComponent: TabSkeleton,
   errorComponent: SectionError,
 });
 
@@ -151,7 +224,7 @@ const vehicleTripsRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "trips",
   component: TripsTab,
-  pendingComponent: SectionPending,
+  pendingComponent: TabSkeleton,
   errorComponent: SectionError,
 });
 
@@ -161,7 +234,7 @@ const vehicleDocumentsRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "documents",
   component: DocumentsTab,
-  pendingComponent: SectionPending,
+  pendingComponent: TabSkeleton,
   errorComponent: SectionError,
 });
 
@@ -172,7 +245,7 @@ const vehicleHistoryRoute = createRoute({
     kind: z.enum(VEHICLE_HISTORY_KINDS).optional().catch(undefined),
   }),
   component: HistoryTab,
-  pendingComponent: SectionPending,
+  pendingComponent: TabSkeleton,
   errorComponent: SectionError,
 });
 
@@ -180,13 +253,14 @@ const vehicleDetailsRoute = createRoute({
   getParentRoute: () => assetDetailRoute,
   path: "details",
   component: DetailsTab,
-  pendingComponent: SectionPending,
+  pendingComponent: TabSkeleton,
   errorComponent: SectionError,
 });
 
 const financeRecordRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/record",
+  pendingComponent: ModuleListSkeleton,
   component: FinanceRecordScreen,
 });
 
@@ -201,6 +275,9 @@ const financeEntriesRoute = createRoute({
     view: z.enum([...financialEntryFilters.shape.view.unwrap().options, "waiting"]).optional().catch(undefined),
     branch: z.literal("all").optional().catch(undefined),
   }),
+  loaderDeps: ({ search }) => search,
+  loader: (args) => startReads(args, () => LOADERS.finance().then((load) => load.financeEntries(args))),
+  pendingComponent: ModuleListSkeleton,
   component: FinanceEntriesScreen,
 });
 
@@ -213,6 +290,9 @@ const activitiesRoute = createRoute({
     from: z.iso.date().optional().catch(undefined),
     to: z.iso.date().optional().catch(undefined),
   }),
+  loaderDeps: ({ search }) => search,
+  loader: (args) => startReads(args, () => LOADERS.activities().then((load) => load.activities(args))),
+  pendingComponent: ModuleListSkeleton,
   component: ActivitiesScreen,
 });
 
@@ -225,12 +305,14 @@ const activityRecordRoute = createRoute({
     template: z.enum(["journey", "haulage"]).optional(),
     assetId: z.uuid().optional().catch(undefined),
   }),
+  pendingComponent: ScreenPending,
   component: ActivitySheetScreen,
 });
 
 const activityDetailRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/activities/$activityId",
+  pendingComponent: WideRecordSkeleton,
   component: ActivityDetailScreen,
 });
 
@@ -244,6 +326,9 @@ const maintenanceRoute = createRoute({
     status: workOrderStatus.optional().catch(undefined),
     issueStatus: issueStatus.optional().catch(undefined),
   }),
+  loaderDeps: ({ search }) => search,
+  loader: (args) => startReads(args, () => LOADERS.maintenance().then((load) => load.maintenance(args))),
+  pendingComponent: ModuleListSkeleton,
   component: MaintenanceScreen,
 });
 
@@ -253,6 +338,7 @@ const financeEntryDetailRoute = createRoute({
   // The entries list's ⋯ menu sends an operator straight into the reversal
   // dialog rather than carrying a second copy of it.
   validateSearch: z.object({ reverse: z.boolean().optional() }),
+  pendingComponent: RecordSkeleton,
   component: FinanceEntryDetailScreen,
 });
 
@@ -274,6 +360,7 @@ const financeApprovalsRoute = createRoute({
 const financePeriodsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/finance/periods",
+  pendingComponent: SettingsListSkeleton,
   component: FinancePeriodsScreen,
 });
 
@@ -290,6 +377,7 @@ const moreRoute = createRoute({
 const mySettingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/my-settings",
+  pendingComponent: ScreenPending,
   component: MySettingsScreen,
 });
 
@@ -297,24 +385,28 @@ const mySettingsRoute = createRoute({
 const personsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more/persons",
+  pendingComponent: SettingsListSkeleton,
   component: PersonsScreen,
 });
 
 const usersRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more/users",
+  pendingComponent: SettingsListSkeleton,
   component: UsersScreen,
 });
 
 const branchesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more/branches",
+  pendingComponent: SettingsListSkeleton,
   component: BranchesScreen,
 });
 
 const companySettingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/more/company",
+  pendingComponent: ScreenPending,
   component: CompanySettingsScreen,
 });
 
@@ -355,7 +447,24 @@ const routeTree = rootRoute.addChildren([
 
 // Inside the shell a slow screen shows its skeleton in the content slot, and a
 // screen that cannot open shows a translated error with Retry in the same slot.
-export const router = createRouter({ routeTree, defaultPendingComponent: ScreenPending, defaultErrorComponent: ScreenError });
+export const router = createRouter({
+  routeTree,
+  context: { queryClient },
+  defaultPendingComponent: ScreenPending,
+  defaultErrorComponent: ScreenError,
+  // The Query cache decides what is fresh (lib/query-client.ts); the router
+  // never keeps loader results of its own.
+  defaultPreloadStaleTime: 0,
+  // A pointer resting on a link, a focus, or a finger landing on it starts the
+  // screen's code and data before the click (#497).
+  defaultPreload: "intent",
+  defaultPreloadDelay: 50,
+  // A screen whose data takes longer than a second shows its page type's
+  // skeleton (#498). No minimum once shown: holding a skeleton over data that
+  // has arrived only delays the screen.
+  defaultPendingMs: 1_000,
+  defaultPendingMinMs: 0,
+});
 
 // Every navigation is a fresh chance to fetch a screen whose code failed before.
 router.subscribe("onBeforeLoad", () => {
@@ -370,6 +479,10 @@ export const AFTER_SIGN_IN = [AppShell, DashboardScreen];
 
 export function preloadAfterSignIn(): void {
   for (const screen of AFTER_SIGN_IN) void screen.preload();
+  // The shell's frame and loader are not screens, but sign-in waits on them too.
+  void ShellPending.preload();
+  void import("./shell/shell-loader.js").catch(() => undefined);
+  void LOADERS.home().catch(() => undefined);
 }
 
 /** Most-visited first, so a slow connection fetches the likely next screen before the rest. */
@@ -411,6 +524,10 @@ export async function preloadScreens(busy: () => boolean = () => false): Promise
   for (const screen of [...AFTER_SIGN_IN, ...SCREENS_BY_USE]) {
     while (busy()) await new Promise((resolve) => setTimeout(resolve, 250));
     await screen.preload();
+  }
+  for (const loader of Object.values(LOADERS)) {
+    while (busy()) await new Promise((resolve) => setTimeout(resolve, 250));
+    await loader().catch(() => undefined);
   }
 }
 

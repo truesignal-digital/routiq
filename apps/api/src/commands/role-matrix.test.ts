@@ -73,6 +73,8 @@ const MATRIX: Readonly<Record<string, Row>> = {
   "deactivate-member":                   [x, x, _, _, _, _],
   "reactivate-member":                   [x, x, _, _, _, _],
   "reset-member-pin":                    [x, x, _, _, _, _],
+  "link-person-login":                   [x, x, _, _, _, _], // ADMIN: logins it may manage, people in its branches
+  "unlink-person-login":                 [x, x, _, _, _, _],
   // Settings
   "create-branch":                       [x, _, _, _, _, _],
   "rename-branch":                       [x, _, _, _, _, _],

@@ -170,6 +170,7 @@ function meWith(role: MeContext["role"]): MeContext {
     branchScope: "ALL",
     enabledModules: ["CORE", "ASSETS", "ACTIVITIES"],
     enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+    timezone: "Africa/Douala",
   };
 }
 

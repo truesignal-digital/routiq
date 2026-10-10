@@ -546,7 +546,7 @@ describe("release-asset-to-service.v1", () => {
       const { assetId, workOrderId } = await groundedAsset();
       const steering = await reportIssue(assetId, true, "Direction bloquée");
       expect(await releaseLockedBy(assetId)).toEqual([
-        { id: steering, description: "Direction bloquée" },
+        { id: steering, number: expect.any(Number), description: "Direction bloquée" },
       ]);
 
       const refused = await post(adminToken, "release-asset-to-service", { assetId, workOrderId });
@@ -580,7 +580,7 @@ describe("release-asset-to-service.v1", () => {
         expectedVersion: 1,
       });
       expect(await releaseLockedBy(assetId)).toEqual([
-        { id: steering, description: "Direction bloquée" },
+        { id: steering, number: expect.any(Number), description: "Direction bloquée" },
       ]);
 
       const refused = await post(adminToken, "release-asset-to-service", {

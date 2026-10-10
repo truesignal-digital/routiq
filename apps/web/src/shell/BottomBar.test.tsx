@@ -30,6 +30,7 @@ function membership(role: Role, enabledModules: ModuleCode[] = EVERY): MeContext
     branchScope: "ALL",
     enabledModules,
     enabledPresets: ["TRUCKING"],
+    timezone: "Africa/Douala",
     displayName: "Emilienne Ngo",
     workspaceName: "Transports Ngwa",
   };

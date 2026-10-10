@@ -7,6 +7,8 @@ import type { UseMembersParams } from "../members/useMembers.js";
 
 /** One record per distinct query key — an unchanged key is a cache hit. */
 const issuedQueries: UseMembersParams[] = [];
+/** Whether the screen let the members read run, on its latest render. */
+let membersEnabled: boolean | undefined;
 
 vi.mock("react-i18next", async () => {
   const actual = await vi.importActual("react-i18next");
@@ -92,7 +94,8 @@ const refetch = vi.fn();
 const fetchNextPage = vi.fn();
 
 vi.mock("../members/useMembers.js", () => ({
-  useMembers: (params: UseMembersParams) => {
+  useMembers: (params: UseMembersParams, options?: { enabled?: boolean }) => {
+    membersEnabled = options?.enabled;
     const previous = issuedQueries[issuedQueries.length - 1];
     if (previous === undefined || JSON.stringify(previous) !== JSON.stringify(params)) {
       issuedQueries.push(params);
@@ -201,6 +204,7 @@ function rowMenu(name: string): HTMLElement {
 describe("UsersScreen", () => {
   beforeEach(() => {
     issuedQueries.length = 0;
+    membersEnabled = undefined;
     vi.clearAllMocks();
     meValue = director;
     mockDesktop();
@@ -232,6 +236,34 @@ describe("UsersScreen", () => {
     expect(screen.queryByRole("button", { name: "commands.add-member.label" })).toBeNull();
     },
   );
+
+  it.each(["FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"])(
+    "never asks the server for members as %s, who would be refused (#600)",
+    async (role) => {
+      meValue = { ...director, role, enabledModules: ["CORE", "ACTIVITIES"] };
+      render(<UsersScreen />);
+
+      expect(await screen.findByText("errors.ROLE_FORBIDDEN")).toBeTruthy();
+      expect(membersEnabled).toBe(false);
+    },
+  );
+
+  it("waits for the signed-in role before asking for members", () => {
+    meValue = undefined;
+    render(<UsersScreen />);
+    expect(membersEnabled).toBe(false);
+  });
+
+  it.each([
+    ["DIRECTOR", director],
+    ["ADMIN", doualaAdmin],
+  ])("asks the server for members as %s", async (_role, actor) => {
+    meValue = actor;
+    render(<UsersScreen />);
+
+    expect(await screen.findByText("Amina Fotso")).toBeTruthy();
+    expect(membersEnabled).toBe(true);
+  });
 
   it("asks the server for former members rather than filtering the loaded page", async () => {
     render(<UsersScreen />);

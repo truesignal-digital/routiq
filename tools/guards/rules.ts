@@ -90,6 +90,12 @@ const APPEND_ONLY_WRITERS: readonly { path: string; table: string; op: "update" 
     why: "links a superseded reading to the one that corrects it (superseded_by_id, supersede_reason)",
   },
   {
+    path: "apps/api/src/commands/person-login.ts",
+    table: "personLogins",
+    op: "update",
+    why: "ends a person's open login link when it is relinked or unlinked (ended_at, ended_by_command_id; #569)",
+  },
+  {
     path: "apps/api/src/commands/entry-decisions.ts",
     table: "financialPostings",
     op: "update",

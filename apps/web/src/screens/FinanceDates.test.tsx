@@ -9,6 +9,7 @@ import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
 import { router as applicationRouter } from "../router.js";
 import { entryVehicleFields } from "../test-entry-fields.js";
+import { QUERY_DEFAULTS } from "../lib/query-defaults.js";
 
 const entry: FinancialEntryDetail = {
   id: "00000000-0000-4000-8000-000000000010",
@@ -86,7 +87,7 @@ function serveFinanceReadFixtures() {
         break;
       case "/v1/finance/summary":
         body = {
-          currency: "XAF", month: "2026-09", openPeriodCode: "2026-09", lastLockedPeriodCode: null,
+          currency: "XAF", month: "2026-09", unlockedPeriodCodes: [], lastLockedPeriodCode: null,
           outMinor: 0, inMinor: 0, missingReceipt: { count: 0, oldestEconomicDate: null }, waiting: null,
         };
         break;
@@ -144,10 +145,11 @@ it.each(viewers)("preserves financial dates through list, drawer, detail and fil
   await i18n.changeLanguage(viewer.locale);
   sessionStore.save({ ...identity, token: "disposable-test-token", expiresAt: "2099-01-01T00:00:00Z" });
   const ledgerRequests = serveFinanceReadFixtures();
-  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client = new QueryClient({ defaultOptions: { queries: { ...QUERY_DEFAULTS, retry: false } } });
   const router = createRouter({
-    routeTree: applicationRouter.routeTree,
+    ...applicationRouter.options,
     history: createMemoryHistory({ initialEntries: ["/finance/entries"] }),
+    context: { queryClient: client },
   });
   render(
     <QueryClientProvider client={client}>

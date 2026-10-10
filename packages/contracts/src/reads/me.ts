@@ -19,6 +19,12 @@ export const meResponse = z.object({
   displayName: z.string().min(1),
   /** The company's name, not its sign-in slug. */
   workspaceName: z.string().min(1),
+  /**
+   * The workspace's time zone. "Today" and "this month" are the workspace's,
+   * not the device's: a phone set to another zone, or past midnight, must not
+   * move them (#639).
+   */
+  timezone: z.string().min(1),
   enabledModules: z.array(z.enum(MODULE_CODES)),
   /**
    * Workspaces provisioned before `provision-workspace` existed are

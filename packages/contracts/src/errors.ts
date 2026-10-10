@@ -111,6 +111,11 @@ export const COMMAND_ERROR_CODES = [
   "MEMBER_ROLE_NOT_GRANTABLE",
   /** An ADMIN reaching a member, or a branch scope, outside their own branches. */
   "MEMBER_BRANCH_OUT_OF_SCOPE",
+  /**
+   * `link-person-login` naming a login another person already holds. One
+   * login belongs to one person (ADR-0010); unlink it from them first.
+   */
+  "LOGIN_ALREADY_LINKED",
   /** DIRECTOR always covers every branch, so its branch scope can only be ALL. */
   "DIRECTOR_REQUIRES_ALL_BRANCHES",
   /** Deactivating the workspace's only remaining active branch. */

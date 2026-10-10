@@ -28,6 +28,7 @@ import { canAdministerBranches } from "@/branches/permissions.js";
 import { useBranches } from "@/branches/useBranches.js";
 
 const PRIMARY_COLUMN = { columnId: "code" } as const;
+const DEFAULT_SORTING: SortingState = [{ id: "code", desc: false }];
 
 const ACTION_ICONS: Record<BranchActionKey, typeof Pencil> = {
   rename: Pencil,
@@ -49,7 +50,7 @@ export function BranchesScreen() {
   const canAdminister = canAdministerBranches(me?.role);
 
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [sorting, setSorting] = useState<SortingState>([{ id: "code", desc: false }]);
+  const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   const [adding, setAdding] = useState(false);
   const [acting, setActing] = useState<{
     branch: BranchListItem;
@@ -157,6 +158,7 @@ export function BranchesScreen() {
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}
             sorting={sorting}
+            defaultSorting={DEFAULT_SORTING}
             onSortingChange={setSorting}
             primaryColumn={PRIMARY_COLUMN}
             rowActions={(branch) =>

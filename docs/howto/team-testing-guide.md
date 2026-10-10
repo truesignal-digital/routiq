@@ -276,7 +276,7 @@ Each scenario lists the trucking user. For Littoral Voyages, swap users with the
 - **Goal:** drivers capture costs but see only their own money.
 - **Log in as:** `sali` (Transports Ngwa) / `eric` (Littoral Voyages).
 - **Steps:** **Trips** → open a trip that is **On the road** (trucking: DLA-2026-00003; passenger: the Coaster's voyage) → **Record expense**. Category Fuel, amount 45,678. Save. Then **Home** → **View all entries**.
-- ✅ **Expected:** the expense is **Posted** and linked to the trip. The entries page says "Only the entries you recorded appear here." There is no **Money** in the sidebar and no **Revenue** tab in the form.
+- ✅ **Expected:** the expense is **Posted** and linked to the trip. The entries page's first line starts with "Your expenses." There is no **Money** in the sidebar and no **Revenue** tab in the form.
 - **Try to break it:** record 150,000 (should wait for Finance). Open a work order on VH003: amounts show "—", no **Record expense**. On the vehicle, use **More actions** → **Log fuel**.
 
 ### 8. The cashier records revenue in her branch only

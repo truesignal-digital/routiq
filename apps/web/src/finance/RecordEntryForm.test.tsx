@@ -565,6 +565,7 @@ describe("RecordEntryForm editing the author's pending entry", () => {
       activityNumber: null,
       workOrderId: null,
       workOrderAssetId: null,
+      workOrderNumber: null,
       workOrderDescription: null,
     },
     description: "Plaquettes de frein",

@@ -1,4 +1,6 @@
 import { activeSection, isSectionActive, type ShellSection } from "./sections.js";
+import type { ModuleCode } from "@routiq/contracts";
+import { pageOwner } from "../modules/manifest.js";
 
 export interface Crumb {
   /** Translation key; this module stays free of i18n so it can be unit-tested. */
@@ -86,14 +88,22 @@ function reachable(sections: readonly ShellSection[], to: string | undefined): b
  * `Accueil / <section> / <page>` for the current location. The last crumb is
  * always the page you are on and carries no `to`; everything before it links.
  * `recordLabel` names the record on a detail route; until the screen has
- * loaded it the crumb says what kind of record it is.
+ * loaded it the crumb says what kind of record it is. With `enabledModules`,
+ * a page whose module is off is named by that module's row (#617).
  */
 export function breadcrumbTrail(
   sections: readonly ShellSection[],
   pathname: string,
   recordLabel?: string,
+  enabledModules?: readonly ModuleCode[],
 ): Crumb[] {
   const crumbs: Crumb[] = [{ labelKey: "home.title", to: "/" }];
+  const owner = pageOwner(pathname);
+  if (owner !== undefined && enabledModules !== undefined && !enabledModules.includes(owner.code)) {
+    // ModulePageGate shows the module's not-included page in place of this
+    // one, titled with the module's row; anything deeper would link into it.
+    return [...crumbs, { labelKey: owner.row.labelKey }];
+  }
 
   const page = PAGE_TRAILS.find(({ pattern }) => matchesPattern(pattern, pathname));
   const section =

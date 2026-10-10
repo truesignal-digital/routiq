@@ -231,6 +231,54 @@ describe("breadcrumbTrail", () => {
   });
 });
 
+describe("a page whose module is off (#617)", () => {
+  const WITHOUT_MAINTENANCE: ModuleCode[] = ["CORE", "ASSETS", "ACTIVITIES", "FINANCE", "DOCUMENTS"];
+
+  function trailWith(enabledModules: ModuleCode[], pathname: string) {
+    return breadcrumbTrail(visibleSections("DIRECTOR", enabledModules), pathname, undefined, enabledModules).map(
+      ({ labelKey, to }) => [labelKey, to],
+    );
+  }
+
+  it("names the module's page, as the not-included page in its place does", () => {
+    expect(trailWith(WITHOUT_MAINTENANCE, "/maintenance")).toEqual([
+      ["home.title", "/"],
+      ["maintenance.title", undefined],
+    ]);
+  });
+
+  it("stops at the module's page below it too, linking nowhere the module is off", () => {
+    expect(trailWith(["CORE", "ASSETS"], "/finance/entries/00000000-0000-4000-8000-000000000010")).toEqual([
+      ["home.title", "/"],
+      ["finance.entries.title", undefined],
+    ]);
+    expect(trailWith(["CORE", "FINANCE"], "/assets/00000000-0000-4000-8000-000000000001/money")).toEqual([
+      ["home.title", "/"],
+      ["assets.title", undefined],
+    ]);
+  });
+
+  it("keeps the usual trail while the module is on", () => {
+    expect(trailWith([...WITHOUT_MAINTENANCE, "MAINTENANCE"], "/maintenance")).toEqual([
+      ["home.title", "/"],
+      ["maintenance.title", undefined],
+    ]);
+    expect(trailWith(WITHOUT_MAINTENANCE, "/finance/entries/00000000-0000-4000-8000-000000000010")).toEqual([
+      ["home.title", "/"],
+      ["finance.entries.title", "/finance/entries"],
+      ["finance.entries.detail.breadcrumb", undefined],
+    ]);
+  });
+
+  it("leaves core pages alone with every module off", () => {
+    expect(trailWith(["CORE"], "/more/users")).toEqual([
+      ["home.title", "/"],
+      ["users.title", undefined],
+    ]);
+    expect(trailWith(["CORE"], "/")).toEqual([["home.title", undefined]]);
+  });
+});
+
 describe("no crumb repeats the one before it", () => {
   const EVERY: ModuleCode[] = ["CORE", "ASSETS", "ACTIVITIES", "MAINTENANCE", "FINANCE", "DOCUMENTS"];
   const CATALOGS = { en, fr } as const;

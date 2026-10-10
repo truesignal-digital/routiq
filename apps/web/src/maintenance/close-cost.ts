@@ -121,10 +121,3 @@ export function toCompletionCost(
     }
   }
 }
-
-/** Today on the device's calendar — the day the closer is looking at. */
-export function todayIsoDate(now = new Date()): string {
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
-}

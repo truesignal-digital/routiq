@@ -60,7 +60,7 @@ export interface SectionCount {
  */
 const CORE_SECTIONS: readonly Omit<ShellSection, "module">[] = [
   // The landing route, and the one section every member keeps: its cards are
-  // module-gated individually, so the page is never empty of everything.
+  // module-gated individually, and with none it says why (#622).
   { key: "home", group: "daily", labelKey: "home.title", to: "/", icon: House },
   {
     key: "users",

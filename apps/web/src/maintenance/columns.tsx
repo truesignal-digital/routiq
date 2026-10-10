@@ -7,17 +7,10 @@ import { StatusBadge } from "@/components/status-badge.js";
 import { IssueStatusBadge } from "./IssueStatusBadge.js";
 import { WorkOrderStatusBadge, workOrderStatusTone } from "./WorkOrderStatusBadge.js";
 import { formatDate, formatMoney } from "@/lib/format.js";
+import { recordNumberText } from "@/lib/record-number.js";
 import { useIssueCategoryLabel } from "./issue-category.js";
 import { NotRecorded } from "@/components/not-recorded.js";
-
-/**
- * A work order has no number of its own — the read publishes only its id — so
- * the queue shows the head of that id. Enough to read a row out over the phone,
- * and never a fabricated sequence the server would disagree with.
- */
-export function workOrderReference(id: string): string {
-  return id.slice(0, 8).toUpperCase();
-}
+import type { WorkOrderMoneyShown } from "./permissions.js";
 
 function AssetCell({
   asset,
@@ -34,12 +27,19 @@ function AssetCell({
   );
 }
 
-export function useWorkOrderColumns(): DataTableColumn<WorkOrderListItem>[] {
+/**
+ * The queue's columns. A cost column the reader may not see is left out rather
+ * than filled with "Not recorded" (#640): the estimate for every role that
+ * reads work-order costs, the actual cost only while FINANCE is on too.
+ */
+export function useWorkOrderColumns(money: WorkOrderMoneyShown): DataTableColumn<WorkOrderListItem>[] {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
+  const { estimate, actual } = money;
 
   return useMemo(
-    () => [
+    () => {
+      const columns: DataTableColumn<WorkOrderListItem>[] = [
       {
         id: "reference",
         header: t("maintenance.workOrders.columns.reference"),
@@ -49,7 +49,7 @@ export function useWorkOrderColumns(): DataTableColumn<WorkOrderListItem>[] {
         },
         cell: ({ row }) => (
           <span className="tabular-nums whitespace-nowrap">
-            {workOrderReference(row.original.id)}
+            {recordNumberText(t, "work_order", row.original.number)}
           </span>
         ),
       },
@@ -138,8 +138,12 @@ export function useWorkOrderColumns(): DataTableColumn<WorkOrderListItem>[] {
           <WorkOrderStatusBadge status={row.original.status} />
         ),
       },
-    ],
-    [locale, t],
+    ];
+      return columns.filter(
+        (column) => (column.id !== "expectedCost" || estimate) && (column.id !== "actualCost" || actual),
+      );
+    },
+    [locale, t, estimate, actual],
   );
 }
 
@@ -150,6 +154,16 @@ export function useIssueColumns(): DataTableColumn<IssueListItem>[] {
 
   return useMemo(
     () => [
+      {
+        id: "reference",
+        header: t("maintenance.issues.columns.reference"),
+        meta: { phone: "meta", label: t("maintenance.issues.columns.reference") },
+        cell: ({ row }) => (
+          <span className="tabular-nums whitespace-nowrap">
+            {recordNumberText(t, "issue", row.original.number)}
+          </span>
+        ),
+      },
       {
         id: "asset",
         header: t("maintenance.issues.columns.asset"),
@@ -242,7 +256,7 @@ export function useIssueColumns(): DataTableColumn<IssueListItem>[] {
             <span className="flex flex-wrap gap-1">
               {row.original.workOrders.map((workOrder) => (
                 <StatusBadge key={workOrder.id} tone={workOrderStatusTone(workOrder.status)}>
-                  {workOrderReference(workOrder.id)}
+                  {recordNumberText(t, "work_order", workOrder.number)}
                 </StatusBadge>
               ))}
             </span>

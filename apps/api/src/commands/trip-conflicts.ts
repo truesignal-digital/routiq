@@ -3,7 +3,7 @@ import {
   type CommandWarningMetadata,
   type TripConflictCode,
 } from "@routiq/contracts";
-import { sql, type SQL } from "drizzle-orm";
+import { and, eq, isNull, ne, sql, type SQL } from "drizzle-orm";
 import { alias, type AnyPgColumn } from "drizzle-orm/pg-core";
 import {
   activities,
@@ -41,7 +41,8 @@ export function windowStartSql(trip: TripTable = activities): SQL<Date> {
 
 /**
  * PLANNED and CANCELLED: the planned end, else the end of the planned start's
- * business day. OPEN: the later of the planned end and now. CLOSED: the end.
+ * business day. OPEN and not yet ended: the later of the planned end and now.
+ * Ended (CLOSED, or an OPEN sheet saved with its end): the end.
  * Never before the start, so the range is always valid.
  */
 export function windowEndSql(timezone: string, trip: TripTable = activities): SQL<Date> {
@@ -49,7 +50,8 @@ export function windowEndSql(timezone: string, trip: TripTable = activities): SQ
     WHEN ${trip.status} IN ('PLANNED', 'CANCELLED') THEN COALESCE(
       ${trip.plannedEndAt},
       ${endOfBusinessDaySql(sql`${trip.plannedStartAt}`, timezone)})
-    WHEN ${trip.status} = 'OPEN' THEN GREATEST(${trip.plannedEndAt}, now(), ${trip.startedAt})
+    WHEN ${trip.status} = 'OPEN' AND ${trip.endedAt} IS NULL
+      THEN GREATEST(${trip.plannedEndAt}, now(), ${trip.startedAt})
     ELSE GREATEST(COALESCE(${trip.endedAt}, ${trip.startedAt}), ${trip.startedAt})
   END)`;
 }
@@ -91,6 +93,10 @@ export interface TripConflicts {
   codes: TripConflictCode[];
   /** The other trips behind each double booking, by trip number. */
   tripIds: CommandWarningMetadata;
+  /** The other trips holding one of this trip's vehicles, the same list as VEHICLE_DOUBLE_BOOKED's. */
+  vehicleTripIds: string[];
+  /** The other trips holding one of this trip's drivers, the same list as DRIVER_DOUBLE_BOOKED's. */
+  driverTripIds: string[];
 }
 
 /**
@@ -166,7 +172,96 @@ export async function tripConflicts(
     result.set(row.id, {
       codes: TRIP_CONFLICT_CODES.filter((code) => found[code]),
       tripIds: tripIdsByCode,
+      vehicleTripIds: row.vehicleTripIds,
+      driverTripIds: row.driverTripIds,
     });
   }
   return result;
+}
+
+/**
+ * The warnings a live or replayed start returns (ADR-0012 §4, #577, #653):
+ * planning's rules for the started trip, plus any other OPEN trip still
+ * holding its vehicle on an open segment or, not yet ended, its driver in the
+ * DRIVER crew,
+ * whatever the windows say (a phone clock running fast stamps a start ahead
+ * of now(), which the window rule would miss). VEHICLE_DOUBLE_BOOKED and
+ * DRIVER_DOUBLE_BOOKED name the other trips; VEHICLE_GROUNDED only with
+ * MAINTENANCE on. A start is a fact, so it is never refused for these. Run
+ * after the trip is OPEN with its segment and crew.
+ */
+export async function startedTripWarnings(
+  tx: TenantTx,
+  scope: { workspaceId: string; timezone: string; maintenanceOn: boolean },
+  tripId: string,
+): Promise<{ warnings: TripConflictCode[]; warningMetadata?: CommandWarningMetadata }> {
+  const conflicts = (await tripConflicts(tx, scope, [tripId])).get(tripId);
+
+  const mineSegment = alias(activityAssetSegments, "started_segment");
+  const theirSegment = alias(activityAssetSegments, "other_segment");
+  const vehicleHolders = await tx
+    .selectDistinct({ id: theirSegment.activityId })
+    .from(theirSegment)
+    .innerJoin(
+      activities,
+      and(eq(activities.workspaceId, theirSegment.workspaceId), eq(activities.id, theirSegment.activityId)),
+    )
+    .innerJoin(
+      mineSegment,
+      and(eq(mineSegment.workspaceId, theirSegment.workspaceId), eq(mineSegment.assetId, theirSegment.assetId)),
+    )
+    .where(
+      and(
+        eq(theirSegment.workspaceId, scope.workspaceId),
+        eq(mineSegment.activityId, tripId),
+        isNull(mineSegment.endedAt),
+        isNull(theirSegment.endedAt),
+        ne(theirSegment.activityId, tripId),
+        eq(activities.status, "OPEN"),
+      ),
+    );
+
+  const mineCrew = alias(activityPeople, "started_crew");
+  const theirCrew = alias(activityPeople, "other_crew");
+  const driverHolders = await tx
+    .selectDistinct({ id: theirCrew.activityId })
+    .from(theirCrew)
+    .innerJoin(
+      activities,
+      and(eq(activities.workspaceId, theirCrew.workspaceId), eq(activities.id, theirCrew.activityId)),
+    )
+    .innerJoin(
+      mineCrew,
+      and(eq(mineCrew.workspaceId, theirCrew.workspaceId), eq(mineCrew.personId, theirCrew.personId)),
+    )
+    .where(
+      and(
+        eq(theirCrew.workspaceId, scope.workspaceId),
+        eq(mineCrew.activityId, tripId),
+        eq(mineCrew.role, "DRIVER"),
+        eq(theirCrew.role, "DRIVER"),
+        ne(theirCrew.activityId, tripId),
+        eq(activities.status, "OPEN"),
+        isNull(activities.endedAt),
+      ),
+    );
+
+  const union = (listed: readonly string[], holding: ReadonlyArray<{ id: string }>) => [
+    ...new Set([...listed, ...holding.map((row) => row.id)]),
+  ];
+  const tripIdsByCode: Partial<Record<TripConflictCode, string[]>> = {
+    VEHICLE_DOUBLE_BOOKED: union(conflicts?.vehicleTripIds ?? [], vehicleHolders),
+    DRIVER_DOUBLE_BOOKED: union(conflicts?.driverTripIds ?? [], driverHolders),
+  };
+  const warnings = TRIP_CONFLICT_CODES.filter((code) =>
+    code === "VEHICLE_GROUNDED"
+      ? (conflicts?.codes.includes(code) ?? false)
+      : (tripIdsByCode[code]?.length ?? 0) > 0,
+  );
+  const warningMetadata: CommandWarningMetadata = {};
+  for (const code of warnings) {
+    const tripIds = tripIdsByCode[code];
+    if (tripIds !== undefined) warningMetadata[code] = { tripIds };
+  }
+  return Object.keys(warningMetadata).length > 0 ? { warnings, warningMetadata } : { warnings };
 }

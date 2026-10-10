@@ -10,11 +10,36 @@ export function isNotFound(error: unknown): boolean {
   );
 }
 
+/** Answers that come back the same however often they are asked again. */
+const REFUSED_STATUSES = ["_401", "_403", "_404", "_409"];
+
 /**
- * Query `retry` for reads that can miss: at most two retries, none for a 404,
- * so a record that is not there shows its not-found state at once instead of
- * after the default backoff (1 s + 2 s + 4 s).
+ * The server refused the read (signed out, not allowed, not there, in
+ * conflict), or there is no session to ask with. Asking again only delays the
+ * screen's answer and holds back the background screen preload (#600).
+ */
+export function isRefused(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (REFUSED_STATUSES.some((status) => error.message.endsWith(status)) ||
+      error.message === "AUTH_REQUIRED" ||
+      isNotFound(error))
+  );
+}
+
+/**
+ * The shared Query client's `retry`: three retries like the library default,
+ * none for a refusal.
+ */
+export function retryRead(failureCount: number, error: unknown): boolean {
+  return !isRefused(error) && failureCount < 3;
+}
+
+/**
+ * Query `retry` for reads that can miss: at most two retries, none for a 404
+ * or another refusal, so a record that is not there shows its not-found state
+ * at once instead of after the default backoff (1 s + 2 s + 4 s).
  */
 export function retryUnlessNotFound(failureCount: number, error: unknown): boolean {
-  return !isNotFound(error) && failureCount < 2;
+  return !isRefused(error) && failureCount < 2;
 }

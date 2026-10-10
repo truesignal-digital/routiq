@@ -55,7 +55,7 @@ export function branchStorageKey(workspaceSlug: string): string {
   return `routiq.branch.${workspaceSlug}`;
 }
 
-function readStoredBranch(workspaceSlug: string | undefined): string | null {
+export function readStoredBranch(workspaceSlug: string | undefined): string | null {
   if (workspaceSlug === undefined) return null;
   return localStorage.getItem(branchStorageKey(workspaceSlug));
 }
@@ -196,7 +196,11 @@ export function useCurrentBranch(): BranchContextValue {
  * It resolves to `undefined`, since "every branch" is the absence of a filter.
  */
 export function useAmbientBranchId(explicit?: string): string | undefined {
-  const { currentBranchId } = useCurrentBranch();
+  return ambientBranchId(useCurrentBranch().currentBranchId, explicit);
+}
+
+/** useAmbientBranchId without React, for a route loader (#496). */
+export function ambientBranchId(currentBranchId: CurrentBranchId, explicit?: string): string | undefined {
   if (explicit === ALL_BRANCHES) return undefined;
   if (explicit !== undefined && explicit !== "") return explicit;
   return currentBranchId === ALL_BRANCHES ? undefined : currentBranchId;

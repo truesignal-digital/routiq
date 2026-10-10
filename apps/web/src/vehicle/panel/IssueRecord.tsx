@@ -11,7 +11,8 @@ import { IssueStatusBadge } from "@/maintenance/IssueStatusBadge.js";
 import { Chronologie } from "@/maintenance/WorkOrderSheet.js";
 import { useVehicle, type PanelForm } from "../context.js";
 import { groundingFacts, isActiveWorkOrder, issueSteps } from "../flow.js";
-import { recordReference } from "../model.js";
+import { RecordNumber } from "@/components/record-number";
+import { recordNumberText } from "@/lib/record-number.js";
 import { DetailHeader, DetailSection, FactList, LinkButton, Note, SafetyMark } from "../parts.js";
 import { useIssue } from "../useVehicle.js";
 import { PanelFooter, PanelLoading, PanelMissing, RecordFileRow, useFormHost } from "./shared.js";
@@ -24,7 +25,7 @@ export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefi
   const { asset, viewer, panel, pinnedLabel } = useVehicle();
   const query = useIssue(id);
   const categoryLabel = useIssueCategoryLabel();
-  const host = useFormHost(t("vehicle.panel.issueTitle", { ref: recordReference(id) }));
+  const host = useFormHost(t("vehicle.panel.issueTitle", { ref: recordNumberText(t, "issue", query.data?.number) }));
   const locale = i18n.language;
 
   if (query.isPending) return <PanelLoading />;
@@ -80,7 +81,7 @@ export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefi
   return (
     <>
       <DetailHeader
-        eyebrow={t("vehicle.panel.issueEyebrow", { ref: recordReference(issue.id) })}
+        eyebrow={t("vehicle.panel.issueEyebrow", { ref: recordNumberText(t, "issue", issue.number) })}
         title={title}
         meta={
           <>
@@ -107,7 +108,7 @@ export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefi
                 <span className="flex flex-wrap gap-x-2">
                   {issue.workOrders.map((wo) => (
                     <LinkButton key={wo.id} onClick={() => panel.openRecord({ kind: "work_order", id: wo.id })}>
-                      {recordReference(wo.id)}
+                      <RecordNumber>{recordNumberText(t, "work_order", wo.number)}</RecordNumber>
                     </LinkButton>
                   ))}
                 </span>

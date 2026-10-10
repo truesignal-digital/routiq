@@ -59,7 +59,7 @@ function record(run: Run): void {
   process.stdout.write(`recorded in ${path.relative(process.cwd(), HISTORY_PATH)}\n`);
 }
 
-const fmt = (name: string, value: number) => (name.endsWith("_bytes") ? `${(value / 1024).toFixed(1)} kB` : name.endsWith(".requests") ? String(value) : `${Math.round(value)} ms`);
+const fmt = (name: string, value: number) => (name.endsWith("_bytes") ? `${(value / 1024).toFixed(1)} kB` : name.endsWith(".requests") || name.endsWith(".shifts") ? String(value) : `${Math.round(value)} ms`);
 
 async function main(): Promise<number> {
   if (command === "help" || args.includes("--help")) {

@@ -49,7 +49,7 @@ import {
 import { nextActivityNumber } from "./numbering.js";
 import { assertOwnTrip } from "./own-records.js";
 import { resolveOrCreatePlace } from "./places.js";
-import { tripConflicts } from "./trip-conflicts.js";
+import { startedTripWarnings, tripConflicts } from "./trip-conflicts.js";
 import { validateCustomValues } from "./templates.js";
 
 /**
@@ -709,7 +709,27 @@ const startPlannedTrip: CommandDefinition<StartPlannedTripPayload> = {
       changedFields: ["status", "startedAt", "discrepancyCodes", "rowVersion", "segments", "crew"],
     });
 
-    return { recordId: trip.id, rowVersion: trip.rowVersion, recordStatus: "OPEN", warnings };
+    // The vehicle may be grounded, or it or the driver still on another
+    // unfinished trip: the truck left, so the start stands and says so, live
+    // or replayed (#577, #653).
+    const collisions = await startedTripWarnings(
+      tx,
+      {
+        workspaceId: ctx.workspaceId,
+        timezone: await workspaceTimezone(tx, ctx.workspaceId),
+        maintenanceOn: await isModuleEnabled(tx, ctx.workspaceId, "MAINTENANCE"),
+      },
+      trip.id,
+    );
+    return {
+      recordId: trip.id,
+      rowVersion: trip.rowVersion,
+      recordStatus: "OPEN",
+      warnings: [...warnings, ...collisions.warnings],
+      ...(collisions.warningMetadata === undefined
+        ? {}
+        : { warningMetadata: collisions.warningMetadata }),
+    };
   },
 };
 
