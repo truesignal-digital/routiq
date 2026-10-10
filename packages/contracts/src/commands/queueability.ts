@@ -93,6 +93,8 @@ export const COMMAND_QUEUEABILITY = {
   "deactivate-member": false,
   "reactivate-member": false,
   "reset-member-pin": false,
+  "link-person-login": false,
+  "unlink-person-login": false,
   "cancel-work-order": false,
   "release-asset-to-service": false,
   /*
