@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { assetAttentionResponse, workOrderDetail } from "@routiq/contracts";
+import { assetAttentionResponse, financialEntryDetail, workOrderDetail } from "@routiq/contracts";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "../db/client.js";
@@ -386,6 +386,77 @@ describe("late repair invoices (#82)", () => {
       expect((await detail(admin, workOrderId)).costToCome).toBeNull();
     });
 
+    it("is settled by the net of the lines approved since the close: one of two invoices cancelled still settles it (#613)", async () => {
+      const workOrderId = await closedInvoicePending();
+      const first = await lateInvoice(admin, workOrderId, { amountMinor: 30_000 });
+      const second = await lateInvoice(admin, workOrderId, { amountMinor: 20_000 });
+      await api.ok(finance.token, "approve-entry", { entryId: first.entryId }, { expectedVersion: 1 });
+      await api.ok(finance.token, "approve-entry", { entryId: second.entryId }, { expectedVersion: 1 });
+      await api.ok(
+        finance.token,
+        "reverse-entry",
+        { originalEntryId: second.entryId, reversalEntryId: randomUUID(), reason: "Facture en double" },
+        { expectedVersion: 2 },
+      );
+
+      const settled = await detail(admin, workOrderId);
+      expect(settled.costToCome).toBeNull();
+      expect(settled.actualCostMinor).toBe(30_000);
+      expect(await costToComeItems(admin, workOrderId)).toEqual([]);
+    });
+
+    it("a line from before the close, cancelled after it, neither settles nor holds back the awaited invoice (#613)", async () => {
+      const workOrderId = await openWorkOrder();
+      const { entryId: deposit, reply } = await lateInvoice(director, workOrderId, {
+        amountMinor: 5_000,
+        description: "Acompte",
+      });
+      expect(reply.body.recordStatus).toBe("POSTED");
+      await api.ok(
+        technician.token,
+        "complete-work-order",
+        { workOrderId, costOutcome: "INVOICE_PENDING" },
+        { expectedVersion: 1 },
+        2,
+      );
+      // The cancellation is dated after the close, but the line it cancels is not.
+      await api.ok(
+        director.token,
+        "reverse-entry",
+        { originalEntryId: deposit, reversalEntryId: randomUUID(), reasonCode: "WRONG_DETAILS" },
+        { expectedVersion: 1 },
+        2,
+      );
+      expect((await detail(admin, workOrderId)).costToCome).toEqual({
+        reason: "INVOICE_PENDING",
+        awaitingApproval: false,
+      });
+
+      const { entryId } = await lateInvoice(admin, workOrderId, { amountMinor: 3_000 });
+      await api.ok(finance.token, "approve-entry", { entryId }, { expectedVersion: 1 });
+      expect((await detail(admin, workOrderId)).costToCome).toBeNull();
+      expect(await costToComeItems(admin, workOrderId)).toEqual([]);
+    });
+
+    it("lists every line the actual cost counts, those awaiting review included (#612)", async () => {
+      const workOrderId = await openWorkOrder();
+      await lateInvoice(admin, workOrderId, { amountMinor: 5_000, description: "Acompte" });
+      await api.ok(
+        technician.token,
+        "complete-work-order",
+        { workOrderId, costOutcome: "INVOICE_PENDING" },
+        { expectedVersion: 1 },
+        2,
+      );
+      await lateInvoice(technician, workOrderId, { amountMinor: 62_000 });
+
+      const order = await detail(admin, workOrderId);
+      expect(order.actualCostMinor).toBe(67_000);
+      expect(order.pendingCostLines?.map((line) => line.amountMinor)).toEqual([62_000]);
+      const listed = [...(order.costLines ?? []), ...(order.pendingCostLines ?? [])];
+      expect(listed.reduce((sum, line) => sum + line.amountMinor, 0)).toBe(order.actualCostMinor);
+    });
+
     it("a caller who may not read work-order costs sees neither the flag nor the item (#390)", async () => {
       const workOrderId = await closedInvoicePending();
       expect((await detail(driver, workOrderId)).costToCome).toBeNull();
@@ -425,6 +496,29 @@ describe("late repair invoices (#82)", () => {
       expect(again.body.recordStatus).toBe("SUBMITTED");
       await api.ok(finance.token, "approve-entry", { entryId }, { expectedVersion: 1 });
       expect((await detail(admin, workOrderId)).actualCostMinor).toBe(300_000);
+    });
+  });
+
+  describe("the entry says a new cost on its work order is late (#613)", () => {
+    async function entryDetail(entryId: string) {
+      const response = await api.get(admin.token, `/v1/finance/entries/${entryId}`);
+      expect(response.status).toBe(200);
+      return financialEntryDetail.parse(response.body);
+    }
+
+    it("is late once the order it names is completed, so Record again asks for a reason", async () => {
+      const workOrderId = await openWorkOrder();
+      const { entryId } = await lateInvoice(admin, workOrderId, { amountMinor: 5_000, description: "Acompte" });
+      expect((await entryDetail(entryId)).lateWorkOrderCost).toBe(false);
+
+      await api.ok(
+        technician.token,
+        "complete-work-order",
+        { workOrderId, costOutcome: "LINES" },
+        { expectedVersion: 1 },
+        2,
+      );
+      expect((await entryDetail(entryId)).lateWorkOrderCost).toBe(true);
     });
   });
 

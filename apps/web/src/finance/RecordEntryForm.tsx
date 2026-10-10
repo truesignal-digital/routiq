@@ -99,7 +99,8 @@ export interface RecordEntryFormProps {
   /**
    * The invoice for a work order that is already completed (#82): the server
    * holds it for review whatever the amount and needs a reason, which the
-   * description carries (LATE_COST_REASON_REQUIRED otherwise).
+   * description carries (LATE_COST_REASON_REQUIRED otherwise). A pre-filled
+   * entry says so itself (`lateWorkOrderCost`).
    */
   lateCost?: boolean | undefined;
 }
@@ -162,7 +163,7 @@ export function RecordEntryForm({
   onDismiss,
   editing,
   recordAgainFrom,
-  lateCost = false,
+  lateCost: lateCostProp = false,
 }: RecordEntryFormProps) {
   const { t } = useTranslation();
   const label = useCommandLabel();
@@ -172,6 +173,8 @@ export function RecordEntryForm({
   const intentRevenueRef = useRef<CommandIntent<RecordPayload> | undefined>(undefined);
   const intentUpdateRef = useRef<CommandIntent<UpdatePayload> | undefined>(undefined);
   const prefill = editing ?? recordAgainFrom;
+  // Recorded again or edited on a completed work order, it is a late invoice too (#613).
+  const lateCost = lateCostProp || prefill?.lateWorkOrderCost === true;
   const entryLink = prefill === undefined ? link : lineLink(prefill);
   const directionLocked = lockDirection || prefill !== undefined;
   const reference = useAssetRegistrationReference();

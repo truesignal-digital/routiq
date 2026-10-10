@@ -42,7 +42,6 @@ import { createCommandIntent, type CommandIntent } from "@/commands/intent.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import { usePeriods } from "@/finance/usePeriods.js";
 import {
-  currentPeriodCode,
   mergeImplicitCurrentPeriod,
   validateReopenReason,
 } from "@/finance/model.js";
@@ -77,7 +76,11 @@ export function FinancePeriodsScreen() {
   const reopenIntentRef = useRef<CommandIntent<ReopenPeriodPayloadType> | undefined>(undefined);
   const [actionError, setActionError] = useState<string>();
 
-  const periods = mergeImplicitCurrentPeriod(periodsQuery.data?.periods ?? []);
+  const currentPeriod = periodsQuery.data?.currentPeriodCode;
+  const periods =
+    periodsQuery.data === undefined
+      ? []
+      : mergeImplicitCurrentPeriod(periodsQuery.data.periods, periodsQuery.data.currentPeriodCode);
 
   // ADR-0001: the period list re-renders from the server's answer, never from a
   // locally patched cache.
@@ -283,7 +286,7 @@ export function FinancePeriodsScreen() {
       {actionDialog.open && (
         <ActionDialog
           action={actionDialog.action}
-          current={actionDialog.periodCode === currentPeriodCode()}
+          current={actionDialog.periodCode === currentPeriod}
           onLock={() => handleLock(actionDialog.periodCode)}
           onReopen={(reason) => handleReopen(actionDialog.periodCode, reason)}
           onCancel={() => setActionDialog({ open: false })}

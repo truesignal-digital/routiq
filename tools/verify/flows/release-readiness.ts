@@ -143,7 +143,7 @@ async function approverHint(ctx: DriveContext) {
 
   await amount.fill("1500000");
   const direction = form.getByText(
-    new RegExp(t("^Au-delà de 1.000.000.FCFA, cette saisie attend la Direction\\.$", "^Above FCFA.1,000,000, this entry waits for Direction\\.$")),
+    new RegExp(t("^Au-delà de 1.000.000.FCFA, cette saisie attend la Direction\\.$", "^Above FCFA.1,000,000, this entry waits for the Director\\.$")),
   );
   await direction.waitFor({ timeout: 5_000 }).catch(() => {
     throw new Error("at 1,500,000 the hint does not name Direction");
@@ -170,7 +170,7 @@ async function rejectDialog(ctx: DriveContext) {
   await (await openSidebar(page)).getByRole("link", { name: t("Argent", "Money") }).click();
   await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
   await quiet();
-  await page.getByRole("button", { name: t("En attente de votre approbation", "Waiting your approval"), exact: true }).click();
+  await page.getByRole("button", { name: t("En attente de votre approbation", "Waiting for your approval"), exact: true }).click();
   const row = page.locator("tr, [data-slot='data-table-row']").filter({ hasText: entry.entryNumber, visible: true });
   await row.waitFor();
   await quiet();

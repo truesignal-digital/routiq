@@ -23,7 +23,7 @@ const entry: FinancialEntryDetail = {
   description: "Vehicle fuel", paymentReference: null, sourceReference: null,
   rejectedReason: null, reversesEntryId: null, reversedByEntryId: null, cancellation: null,
   ...entryVehicleFields,
-  evidenceFiles: [], postings: [], directionDecides: false,
+  evidenceFiles: [], postings: [], directionDecides: false, approver: null,
 };
 let client: QueryClient;
 
@@ -112,7 +112,7 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
 }
 
 const languages = [
-  { locale: "en", money: "Money", waiting: "Waiting your approval", months: "Accounting months", fullScreen: "Open full screen", detail: "Entry detail", reverse: "Reverse", empty: "No entry recorded for this branch.", error: "We couldn't load entries. Please retry." },
+  { locale: "en", money: "Money", waiting: "Waiting for your approval", months: "Accounting months", fullScreen: "Open full screen", detail: "Entry detail", reverse: "Reverse", empty: "No entry recorded for this branch.", error: "We couldn't load entries. Please retry." },
   { locale: "fr-CM", money: "Argent", waiting: "En attente de votre approbation", months: "Mois comptables", fullScreen: "Ouvrir en plein écran", detail: "Détail de l'écriture", reverse: "Contre-passer", empty: "Aucune écriture pour cette agence.", error: "Impossible de charger les écritures. Réessayez." },
 ];
 const viewers = languages.flatMap((language) => [390, 1280].map((width) => ({ ...language, width })));
