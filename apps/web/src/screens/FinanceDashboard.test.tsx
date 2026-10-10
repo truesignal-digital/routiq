@@ -3,7 +3,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ComingUpResponse, FinanceOverviewResponse, FleetUsageResponse, ModuleCode, Role, TodoResponse } from "@routiq/contracts";
+import type { AssetOverview, ComingUpResponse, FinanceOverviewResponse, FleetUsageResponse, ModuleCode, Role, TodoResponse } from "@routiq/contracts";
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { DLA, internalFleetOverview, testOverview } from "../finance/dashboard/test-overview.js";
 import { i18n } from "../i18n/index.js";
@@ -46,6 +46,7 @@ const state = vi.hoisted(() => ({
   comingUp: undefined as ComingUpResponse | undefined,
   usage: undefined as FleetUsageResponse | undefined,
   usageEnabled: [] as boolean[],
+  fleet: undefined as AssetOverview | undefined,
 }));
 
 vi.mock("../overview/useMoneyOverview.js", () => ({
@@ -57,8 +58,8 @@ vi.mock("../overview/useFleetUsage.js", () => ({
     return { data: enabled ? state.usage : undefined, isPending: false, isError: false };
   },
 }));
-vi.mock("../assets/useAssetSummary.js", () => ({
-  useAssetSummary: () => ({ data: { total: 14, inService: 12, canDrive: 10, attention: 3 }, isPending: false }),
+vi.mock("../assets/useAssetOverview.js", () => ({
+  useAssetOverview: () => ({ data: state.fleet, isPending: false }),
 }));
 vi.mock("../dashboard/useFleetAttention.js", () => ({
   useTodo: () => ({ data: state.todo, isError: false, refetch: vi.fn() }),
@@ -68,6 +69,16 @@ vi.mock("../shell/branch-context.js", () => ({ useAmbientBranchId: () => state.b
 vi.mock("../hooks/use-mobile", () => ({ useIsMobile: () => state.mobile }));
 
 const { DashboardBranchesTab, DashboardOverviewTab, DashboardVehiclesTab } = await import("./FinanceDashboard.js");
+const { overviewTiles } = await import("../assets/TrucksOverview.js");
+
+/** The Trucks Overview's read: 12 vehicles not disposed, 10 of them can drive. */
+const FLEET: AssetOverview = {
+  total: 12,
+  canDrive: 10,
+  grounded: { count: 1, first: { assetId: "a3", assetCode: "VH003", since: "2026-10-01T08:00:00.000Z" } },
+  idle: null,
+  notice: { today: "2026-10-09", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] },
+};
 
 const SCOPE = { ambientBranch: "IGNORED" as const, branchIds: "ALL" as const };
 
@@ -143,6 +154,7 @@ beforeEach(async () => {
   state.comingUp = COMING_UP;
   state.usage = undefined;
   state.usageEnabled = [];
+  state.fleet = FLEET;
   vi.stubGlobal("ResizeObserver", class {
     observe() {}
     unobserve() {}
@@ -166,7 +178,25 @@ describe("Dashboard › Overview", () => {
     expect(tileText("profit")).toContain("▼");
     expect(tileText("revenue")).toContain("▲ 7%");
     expect(tileValue("canDrive")).toBe("10 of 12");
-    expect(tileText("canDrive")).toContain("2 in service are off the road");
+    expect(tileText("canDrive")).toContain("2 cannot drive today");
+  });
+
+  it("shows the Trucks Overview's can-drive count and denominator, from the same read (#699)", () => {
+    renderTab(<DashboardOverviewTab />);
+    const [trucks] = overviewTiles({ overview: FLEET, summary: undefined, comingUp: null, groundingCounted: true, t: i18n.t, language: "en" });
+    expect(trucks?.id).toBe("can-drive");
+    expect(`${trucks?.value} ${trucks?.hint}`).toBe(tileValue("canDrive"));
+  });
+
+  it("calls an empty fleet empty and a fleet that can all drive whole", () => {
+    state.fleet = { ...FLEET, total: 0, canDrive: 0, grounded: { count: 0, first: null } };
+    renderTab(<DashboardOverviewTab />);
+    expect(tileValue("canDrive")).toBe("0 of 0");
+    expect(tileText("canDrive")).toContain("No vehicle is in the fleet yet");
+    cleanup();
+    state.fleet = { ...FLEET, canDrive: 12, grounded: { count: 0, first: null } };
+    renderTab(<DashboardOverviewTab />);
+    expect(tileText("canDrive")).toContain("Every vehicle in the fleet can drive");
   });
 
   it("says what profit is and what was not counted yet", () => {

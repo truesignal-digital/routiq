@@ -3295,10 +3295,10 @@
       "companyCosts": "Company costs",
       "canDrive": "Vehicles that can drive",
       "canDriveValue": "{count} of {total}",
-      "offTheRoad": "{count, plural, one {# in service is off the road} other {# in service are off the road}}",
-      "allCanDrive": "Every vehicle in service can drive",
+      "cannotDrive": "{count, plural, one {# cannot drive today} other {# cannot drive today}}",
+      "allCanDrive": "Every vehicle in the fleet can drive",
       "profitHint": "{change} · {share} of revenue",
-      "noneInService": "No vehicle is in service",
+      "noneInFleet": "No vehicle is in the fleet yet",
       "costPerKm": "Cost per km",
       "perKmUnit": "{unit}/km",
       "costPerKmInfo": "Expenses recorded on vehicles ÷ their km, over the {count, plural, one {# vehicle} other {# vehicles}} whose km and expenses are known."

@@ -4,7 +4,7 @@ import { openSidebar, type DriveScript } from "../browser.js";
  * Home is the Dashboard (#666). Direction, finance and administrators get its
  * tabs, Overview · To do · Profit by truck · Profit by branch, under one
  * header. The Overview's tiles match `GET /v1/finance/overview` and
- * `GET /v1/assets/summary`, the profit bridge adds up from last month's profit
+ * `GET /v1/assets/overview`, the profit bridge adds up from last month's profit
  * to this month's, To do and Coming up count the whole Branch Scope, and the
  * range rides along from tab to tab. On a phone the tiles go two by two, To do
  * comes before the charts, the bridge is a list and the trucks card is "Trucks
@@ -44,19 +44,19 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet, account })
   if (read.status !== 200 || overview.period === undefined || overview.comparison === undefined) {
     throw new Error(`GET /v1/finance/overview → ${read.status}`);
   }
-  const fleet = (await apiGet("/v1/assets/summary")).body as { inService?: number; canDrive?: number };
+  const fleet = (await apiGet("/v1/assets/overview")).body as { total?: number; canDrive?: number };
   const todo = (await apiGet("/v1/todo")).body as { totalCount?: number; rows?: unknown[] };
   log(
     `api: 12 months revenue ${overview.period.revenueMinor}, expenses ${overview.period.expenseMinor}, profit ${overview.period.profitMinor}; ` +
-      `can drive ${fleet.canDrive} of ${fleet.inService}; to do ${todo.totalCount}`,
+      `can drive ${fleet.canDrive} of ${fleet.total}; to do ${todo.totalCount}`,
   );
 
   const tabNames = (await tabs.getByRole("tab").allTextContents()).map((name) => name.replace(/\d+$/, ""));
   log(`tabs: ${tabNames.join(" | ")}`);
   await page.locator("[data-metric='canDrive'] [data-slot='metric-value']").waitFor();
   const canDrive = (await page.locator("[data-metric='canDrive'] [data-slot='metric-value']").textContent())?.trim();
-  if (canDrive !== t(`${fleet.canDrive} sur ${fleet.inService}`, `${fleet.canDrive} of ${fleet.inService}`)) {
-    throw new Error(`can-drive tile shows ${canDrive}, assets summary says ${fleet.canDrive} of ${fleet.inService}`);
+  if (canDrive !== t(`${fleet.canDrive} sur ${fleet.total}`, `${fleet.canDrive} of ${fleet.total}`)) {
+    throw new Error(`can-drive tile shows ${canDrive}, assets overview says ${fleet.canDrive} of ${fleet.total}`);
   }
   await shot("overview", {
     caption: "Home is the Dashboard: Overview, To do, Profit by truck, Profit by branch; tiles against the same days last month",

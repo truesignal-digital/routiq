@@ -63,8 +63,6 @@ export const assetListResponse = listResponse(assetListItem);
 export const assetSummary = z.object({
   total: z.number().int().nonnegative(),
   inService: z.number().int().nonnegative(),
-  /** Of `inService`, those not grounded: the vehicles that can drive today (the Dashboard tile). */
-  canDrive: z.number().int().nonnegative(),
   attention: z.number().int().nonnegative(),
 });
 
@@ -94,6 +92,10 @@ export const assetOverviewQuery = /* @__PURE__ */ (() => z.object({ branchId: z.
 export const assetOverview = /* @__PURE__ */ (() =>
   z.object({
     total: z.number().int().nonnegative(),
+    /**
+     * Of `total`, in service and not grounded. The fleet's one can-drive count:
+     * the Dashboard tile and the Trucks Overview both show it (#699).
+     */
     canDrive: z.number().int().nonnegative(),
     grounded: z
       .object({

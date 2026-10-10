@@ -48,7 +48,7 @@ const MONEY = {
 
 const BODIES: [string, unknown][] = [
   ["/v1/assets/overview", OVERVIEW],
-  ["/v1/assets/summary", { total: 12, inService: 11, canDrive: 10, attention: 2 }],
+  ["/v1/assets/summary", { total: 12, inService: 11, attention: 2 }],
   ["/v1/coming-up", {
     businessDate: "2026-10-09",
     windowDays: 30,

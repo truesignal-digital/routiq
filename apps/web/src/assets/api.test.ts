@@ -142,7 +142,7 @@ describe("fetchAssets", () => {
 });
 
 describe("fetchAssetSummary", () => {
-  const counts = { total: 6, inService: 2, canDrive: 2, attention: 3 };
+  const counts = { total: 6, inService: 2, attention: 3 };
 
   it("parses the fleet counts", async () => {
     const result = await fetchAssetSummary(

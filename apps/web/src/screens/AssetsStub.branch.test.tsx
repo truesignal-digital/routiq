@@ -24,7 +24,7 @@ const DLA = { id: "branch-dla", code: "DLA", name: "Douala" };
 const YDE = { id: "branch-yde", code: "YDE", name: "Yaoundé" };
 
 const REFERENCE = { assetClasses: [], branches: [DLA, YDE] };
-const SUMMARY = { total: 1, inService: 1, canDrive: 1, attention: 0 };
+const SUMMARY = { total: 1, inService: 1, attention: 0 };
 const PAGE = {
   items: [
     {
