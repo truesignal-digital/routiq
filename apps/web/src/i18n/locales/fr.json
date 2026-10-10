@@ -17,6 +17,10 @@
     "title": "Accueil",
     "loadFailed": "Impossible de charger le tableau de bord. Veuillez réessayer.",
     "retry": "Réessayer",
+    "empty": {
+      "modulesOff": "L'accueil n'a rien à afficher : les modules qui le remplissent sont désactivés pour votre entreprise.",
+      "modulesOffCompanyPages": "L'accueil n'a rien à afficher : les modules qui le remplissent sont désactivés pour votre entreprise. Les pages Entreprise du menu restent disponibles."
+    },
     "cards": {
       "pendingApprovals": {
         "title": "Approbations en attente",
