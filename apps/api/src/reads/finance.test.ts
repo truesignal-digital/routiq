@@ -101,6 +101,7 @@ describe("finance reads", () => {
         activityNumber: null,
         workOrderId: null,
         workOrderAssetId: null,
+        workOrderNumber: null,
         workOrderDescription: null,
       },
     };
@@ -1632,6 +1633,7 @@ describe("finance entry fields for the vehicle workspace", () => {
       activityNumber: jobNumber,
       workOrderId,
       workOrderAssetId: truckA,
+      workOrderNumber: expect.any(Number),
       workOrderDescription: "Plaquettes",
     });
     const tolls = all.find((entry) => entry.category.code === "TOLLS");
@@ -1640,6 +1642,7 @@ describe("finance entry fields for the vehicle workspace", () => {
       activityNumber: null,
       workOrderId: null,
       workOrderAssetId: null,
+      workOrderNumber: null,
       workOrderDescription: null,
     });
     // The same answer under a filter on the other truck: the entry belongs to
@@ -1656,6 +1659,7 @@ describe("finance entry fields for the vehicle workspace", () => {
       activityNumber: jobNumber,
       workOrderId,
       workOrderAssetId: truckA,
+      workOrderNumber: expect.any(Number),
       workOrderDescription: "Plaquettes",
     });
   });

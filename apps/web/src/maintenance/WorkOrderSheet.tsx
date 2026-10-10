@@ -135,6 +135,7 @@ function SheetActions({
   const label = useCommandLabel();
   const workOrder: WorkOrderRef = {
     id: detail.id,
+    number: detail.number,
     assetId: detail.asset.id,
     status: detail.status,
     issueId: detail.issue?.id ?? null,

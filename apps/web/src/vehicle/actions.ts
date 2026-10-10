@@ -30,7 +30,6 @@ import {
 import { contributes } from "../modules/manifest.js";
 import { groundingFacts, isDisposed, releaseBlocker, releaseLockFor } from "./flow.js";
 import {
-  recordReference,
   type Lock,
   type LockKey,
   type PanelRef,
@@ -180,6 +179,14 @@ function recordOf(item: AssetAttentionItem): PanelRef {
   return { kind: "entry", id };
 }
 
+/** The work order or problem an item is about, for a lock reason that names it (#608). */
+function subjectRef(item: AssetAttentionItem): Pick<Lock, "ref"> {
+  const number = item.params.recordNumber ?? null;
+  if (item.subject.entityType === "work_order") return { ref: { kind: "work_order", number } };
+  if (item.subject.entityType === "operational_issue") return { ref: { kind: "issue", number } };
+  return {};
+}
+
 /**
  * A decision someone else must take: the first item the viewer did not make,
  * else locked with the maker reason, else locked because nothing waits.
@@ -194,7 +201,7 @@ function decision(
   if (first === undefined) return locked({ key: noneLock });
   const open = items.find((item) => !item.makerPrincipalIds.includes(viewer.principalId));
   if (open !== undefined) return enabled(recordOf(open));
-  return locked({ key: makerLock, params: { ref: recordReference(first.subject.id) } });
+  return locked({ key: makerLock, ...subjectRef(first) });
 }
 
 /**

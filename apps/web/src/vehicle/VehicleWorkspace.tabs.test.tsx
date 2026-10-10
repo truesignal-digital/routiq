@@ -7,6 +7,7 @@ import {
   ASSET_ID,
   ENTRY_ID,
   WORK_ORDER_ID,
+  WORK_ORDER_NUMBER,
   asset,
   documentRow,
   entryDetail,
@@ -484,12 +485,26 @@ describe("History", () => {
       entries: [
         entryRow({
           status: "POSTED",
-          assetLinks: { activityId: "00000000-0000-4000-8000-0000000000e4", activityNumber: "DLA-2026-00004", workOrderId: null },
+          assetLinks: {
+            activityId: "00000000-0000-4000-8000-0000000000e4",
+            activityNumber: "DLA-2026-00004",
+            workOrderId: null,
+            workOrderNumber: null,
+          },
         }),
       ],
     });
     const link = await screen.findByRole("button", { name: "for trip DLA-2026-00004" });
     expect(recordNumbers(link)).toEqual(["DLA-2026-00004"]);
+  });
+
+  it("names a Money row's work order by its number, kept on one line (#608)", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/money?period=2026-09`, {
+      role: "FINANCE",
+      entries: [entryRow({ status: "POSTED" })],
+    });
+    const link = await screen.findByRole("button", { name: "for work order WO-0007" });
+    expect(recordNumbers(link)).toEqual(["WO-0007"]);
   });
 });
 
@@ -499,7 +514,7 @@ describe("Maintenance and Trips", () => {
       role: "TECHNICIAN",
       workOrders: [workOrderRow("APPROVED")],
       issues: [
-        issueRow({ workOrders: [{ id: workOrderRow("APPROVED").id, status: "APPROVED" }] }),
+        issueRow({ workOrders: [{ id: workOrderRow("APPROVED").id, number: WORK_ORDER_NUMBER, status: "APPROVED" }] }),
         issueRow({ id: "00000000-0000-4000-8000-00000000c009", description: "Rear mudguard cracked", safetyCritical: false, category: "BODYWORK" }),
       ],
     });
@@ -509,6 +524,11 @@ describe("Maintenance and Trips", () => {
     // The problem already in a work order is not "new".
     expect(screen.queryByText("Brake pressure warning on the Kekem descent")).toBeNull();
     expect(await screen.findByText("Bodywork")).toBeTruthy();
+    // Each row reads by its number (#608).
+    const orderRow = screen.getByText("Brake repair: replace pads and air valve").closest("li")!;
+    expect(within(orderRow).getByText("WO-0007")).toBeTruthy();
+    expect(orderRow.textContent).toContain("from problem PRB-0003");
+    expect(within(screen.getByText("Rear mudguard cracked").closest("li")!).getByText("PRB-0003")).toBeTruthy();
   });
 
   it("lists a driver's work orders without an amount or a missing estimate (#390)", async () => {

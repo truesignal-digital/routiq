@@ -130,6 +130,8 @@ export const financialEntryListItem = z.object({
       activityId: z.uuid().nullable(),
       activityNumber: z.string().nullable(),
       workOrderId: z.uuid().nullable(),
+      /** The work order's number (#608); the client words the prefix. */
+      workOrderNumber: z.number().int().positive().nullable(),
     })
     .nullable(),
   /**
@@ -142,10 +144,9 @@ export const financialEntryListItem = z.object({
     activityNumber: z.string().nullable(),
     workOrderId: z.uuid().nullable(),
     workOrderAssetId: z.uuid().nullable(),
-    /**
-     * The work order's description, its title on the vehicle's Maintenance
-     * tab. Work orders carry no number (#547), so this is how they are named.
-     */
+    /** The work order's number (#608); the client words the prefix. */
+    workOrderNumber: z.number().int().positive().nullable(),
+    /** The work order's description, its title on the vehicle's Maintenance tab (#547). */
     workOrderDescription: z.string().nullable(),
   }),
 });

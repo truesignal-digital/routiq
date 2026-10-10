@@ -105,6 +105,7 @@ describe("GET /v1/assets/:assetId/attention", () => {
         partOfGrounding: true,
         makerPrincipalIds: [],
         params: {
+          recordNumber: expect.any(Number),
           description: "Freins qui grincent fortement à l'arrêt",
           safetyCritical: true,
           hasCompletedWorkOrder: false,
@@ -313,7 +314,12 @@ describe("GET /v1/assets/:assetId/attention", () => {
         subject: { entityType: "operational_issue", id: issueId, number: null, rowVersion: 1 },
         partOfGrounding: false,
         makerPrincipalIds: [],
-        params: { description: "Freins", safetyCritical: true, hasCompletedWorkOrder: true },
+        params: {
+          recordNumber: expect.any(Number),
+          description: "Freins",
+          safetyCritical: true,
+          hasCompletedWorkOrder: true,
+        },
       }),
     ]);
     const [interval] = await ctx.db

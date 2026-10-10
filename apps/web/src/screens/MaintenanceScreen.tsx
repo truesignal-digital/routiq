@@ -20,7 +20,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMeContext } from "@/auth/me.js";
 import { useCommandLabel } from "@/commands/labels.js";
-import { useIssueColumns, useWorkOrderColumns, workOrderReference } from "@/maintenance/columns.js";
+import { useIssueColumns, useWorkOrderColumns } from "@/maintenance/columns.js";
+import { recordNumberText } from "@/lib/record-number.js";
 import {
   CancelWorkOrderDialog,
   CompleteWorkOrderDialog,
@@ -345,7 +346,7 @@ export function MaintenanceScreen() {
                 // The row viewer is where the queue and the story meet: the
                 // table stays the scannable list, the sheet tells one row's life.
                 rowViewer={{
-                  title: (row) => workOrderReference(row.id),
+                  title: (row) => recordNumberText(t, "work_order", row.number),
                   description: (row) => row.description,
                   render: (row) => (
                     <WorkOrderSheet

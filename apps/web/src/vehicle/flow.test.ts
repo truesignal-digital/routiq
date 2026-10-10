@@ -300,7 +300,7 @@ describe("the step beside the status sentence", () => {
   });
 
   describe("another safety-critical problem still open (#501, server SAFETY_ISSUE_OPEN)", () => {
-    const steering = { id: OTHER_ID, description: "Steering locks on the left" };
+    const steering = { id: OTHER_ID, number: 5, description: "Steering locks on the left" };
     const completed = () => groundingWorkOrder("COMPLETED");
 
     it("locks the release beside the status sentence, naming the other problem", () => {
@@ -411,7 +411,7 @@ describe("the status sentence", () => {
   // #562: the server refuses the release while another safety-critical problem
   // is open (SAFETY_ISSUE_OPEN), so the sentence names it instead of a manager.
   it("names another open safety-critical problem instead of waiting on a release", () => {
-    const steering = { id: OTHER_ID, description: "Steering locks on the left" };
+    const steering = { id: OTHER_ID, number: 5, description: "Steering locks on the left" };
     const read = (workOrders: Parameters<typeof grounded>[0], issue = {}, signedOff = false) => {
       const situation = situationOf(asset({ availability: grounded(workOrders, issue, [steering]) }), [], now, signedOff);
       return situation.kind === "grounded" ? { phase: situation.phase, blockedBy: situation.blockedBy } : null;

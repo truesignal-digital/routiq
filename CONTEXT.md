@@ -61,6 +61,10 @@ _Avoid_: task, alert, notification
 What stands behind a financial entry: supplied (a file is linked), payment reference (paid by mobile money or bank with a reference), not expected (the category needs no receipt) or not supplied (evidence missing). It says what is attached, never that anyone checked it.
 _Avoid_: verified, receipt status
 
+**Work order number / problem number**:
+A per-workspace sequence the server gives a work order or a problem when the command creating it commits, shown with a prefix from the language ("OT-0007" / "WO-0007", "PB-0003" / "PRB-0003"). The uuid stays the key; the number never changes. A record not yet on the server shows "number pending".
+_Avoid_: id fragment, reference code
+
 **Actual Cost (of a work order)**:
 The sum of the work order's non-rejected cost lines, pending ones included and reversals netted. Derived on read once the work is declared complete, never typed. An amount typed by an old client at close is kept apart as the **declared cost**.
 _Avoid_: final cost, invoiced amount, typed cost

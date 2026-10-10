@@ -549,7 +549,7 @@
         "postingDate": "Posting date",
         "counterparty": "Counterparty",
         "linkedTo": "Linked to",
-        "workOrderLink": "Work order: {title}",
+        "workOrderLink": "Work order {ref}: {title}",
         "tripLink": "Activity {number}",
         "paymentMethod": "Payment method",
         "description": "Description",
@@ -688,7 +688,12 @@
     "notRecorded": "Not recorded",
     "add": "Add",
     "readFailed": "Could not load",
-    "howCalculated": "How this is calculated"
+    "howCalculated": "How this is calculated",
+    "recordNumber": {
+      "workOrder": "WO-{number}",
+      "issue": "PRB-{number}",
+      "pending": "number pending"
+    }
   },
   "dataTable": {
     "rowCount": "{count, plural, one {# row loaded} other {# rows loaded}}",
@@ -1174,6 +1179,7 @@
         "DISMISSED": "Dismissed"
       },
       "columns": {
+        "reference": "No.",
         "asset": "Asset",
         "description": "Description",
         "safety": "State",
