@@ -272,6 +272,66 @@ it("says a completed grounding order waits for a manager's release, not its own 
   expect(within(panel).queryByText(/Once it is completed/)).toBeNull();
 });
 
+it("names the other safety problem that blocks the release, not a manager (#588)", async () => {
+  await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+    ...scenario,
+    // A role with no step here, so the footer says who the order waits on.
+    role: "FINANCE",
+    asset: asset({
+      availability: grounded([groundingWorkOrder("COMPLETED")], {}, [
+        { id: "00000000-0000-4000-8000-0000000000f1", description: "Steering play on the left" },
+      ]),
+    }),
+    workOrders: [workOrderRow("COMPLETED")],
+    workOrderDetails: [workOrderDetail("COMPLETED", { completedAt: "2026-09-30T10:00:00.000Z" })],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+  expect(
+    within(panel).getByText(
+      "The work is done, but the vehicle stays grounded: another safety-critical problem is still open: “Steering play on the left”.",
+    ),
+  ).toBeTruthy();
+  expect(
+    within(panel).getByText("Waiting on another safety-critical problem to be closed: “Steering play on the left”."),
+  ).toBeTruthy();
+  expect(within(panel).queryByText(/until a manager releases it/)).toBeNull();
+  expect(within(panel).queryByText("Waiting on a manager to release the vehicle to service.")).toBeNull();
+});
+
+it("lists the lines awaiting review among the costs the actual cost counts (#612)", async () => {
+  const pending = {
+    postingId: "00000000-0000-4000-8000-0000000000e1",
+    entryId: "00000000-0000-4000-8000-0000000000e2",
+    entryNumber: "DLA-2026-00031",
+    description: "Garage labour",
+    amountMinor: 310_000,
+    currency: "XAF",
+    economicDate: "2026-09-30",
+    entryStatus: "SUBMITTED" as const,
+  };
+  await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+    ...scenario,
+    role: "ADMIN",
+    asset: asset({ availability: { state: "AVAILABLE", since: null } }),
+    workOrders: [workOrderRow("COMPLETED")],
+    workOrderDetails: [
+      workOrderDetail("COMPLETED", {
+        completedAt: "2026-09-30T10:00:00.000Z",
+        actualCostMinor: 310_000,
+        costLines: [],
+        pendingCostLines: [pending],
+      }),
+    ],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+  const costs = within(panel).getByRole("heading", { name: "Costs" }).closest("section");
+  expect(costs).not.toBeNull();
+  const line = within(costs as HTMLElement).getByText("DLA-2026-00031").closest("li");
+  expect(within(line as HTMLElement).getByText("Awaiting review")).toBeTruthy();
+  expect(within(panel).queryByText("No costs posted against this work order.")).toBeNull();
+  expect(within(panel).queryByText(/not counted in the posted costs/)).toBeNull();
+});
+
 describe("the grounding note's tone agrees with the vehicle header (#500)", () => {
   const completed = {
     ...scenario,
@@ -403,6 +463,19 @@ it("opens a receipt through the entry's own route, never the generic artifact ro
   const path = `/v1/finance/entries/${ENTRY_ID}/evidence/${artifactId}/download-url`;
   await waitFor(() => expect(open).toHaveBeenCalledWith(`https://files.test${path}`, "_blank", "noopener"));
   expect(recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/artifacts"))).toBe(false);
+});
+
+it.each([
+  ["FINANCE_APPROVES", "Waiting on Finance to review it."],
+  ["FINANCE_PEER_APPROVES", "Waiting on another Finance member or the Director to review it."],
+  ["DIRECTION_APPROVES", "Waiting on the Director to review it."],
+] as const)("says who reviews a waiting entry on its record (#542, %s)", async (approver, sentence) => {
+  await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+    role: "ADMIN",
+    entryDetails: [entryDetail({ approver, evidence: { state: "PAYMENT_REFERENCE", artifactCount: 0 } })],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Repairs/ });
+  expect(within(panel).getByText(new RegExp(`^${sentence}`))).toBeTruthy();
 });
 
 it("opens an issue's photo through the issue's own route", async () => {
@@ -674,12 +747,12 @@ describe("Cancel entry from the vehicle panel (#426)", () => {
     const form = await screen.findByRole("dialog", { name: "Cancel entry" });
     await user.click(within(form).getByRole("radio", { name: "Wrong details, to record again" }));
     // Said before the cancellation, not discovered after it.
-    expect(within(form).getByText(/Only Direction, the Administrator or a technician books work-order costs/)).toBeTruthy();
+    expect(within(form).getByText(/Only the Director, the Administrator or a technician books work-order costs/)).toBeTruthy();
     await user.click(within(form).getByRole("button", { name: "Cancel entry" }));
 
     await waitFor(() => expect(recorded.commands).toHaveLength(1));
     expect(recorded.commands[0]?.name).toBe("reverse-entry");
-    const done = await screen.findByText(/Ask Direction, the Administrator or the work order's technician/);
+    const done = await screen.findByText(/Ask the Director, the Administrator or the work order's technician/);
     expect(screen.queryByRole("button", { name: "Record again" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Open the work order" }));
@@ -713,7 +786,7 @@ describe("a note from Direction on its record (#98)", () => {
     const recorded = await openVehicle(path, { role: "TECHNICIAN", notes: [noteDetail()] });
     const user = userEvent.setup();
     const panel = await screen.findByRole("dialog", { name: "Note by Émilienne" });
-    expect(within(panel).getByText("Note from Direction")).toBeTruthy();
+    expect(within(panel).getByText("Note from the Director")).toBeTruthy();
     expect(within(panel).getByText(/Nobody has marked it as seen yet/)).toBeTruthy();
     await user.click(within(panel).getByRole("button", { name: "Mark as seen" }));
     const form = await screen.findByRole("dialog", { name: "Mark as seen" });
@@ -745,7 +818,7 @@ describe("a note from Direction on its record (#98)", () => {
   it("offers nothing on a note that is not Direction's", async () => {
     await openVehicle(path, { role: "DRIVER", notes: [noteDetail({ authorRole: "ADMIN" })] });
     const panel = await screen.findByRole("dialog", { name: "Note by Émilienne" });
-    expect(within(panel).queryByText("Note from Direction")).toBeNull();
+    expect(within(panel).queryByText("Note from the Director")).toBeNull();
     expect(within(panel).queryByRole("button", { name: "Mark as seen" })).toBeNull();
   });
 });

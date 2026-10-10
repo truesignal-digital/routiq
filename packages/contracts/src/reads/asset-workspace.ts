@@ -3,6 +3,7 @@ import { PROFITABILITY_LAYERS } from "../commands/categories.js";
 import { COMMAND_ORIGINS, moneyMinor } from "../envelope.js";
 import { ROLES } from "../roles.js";
 import { meterReadingSource, meterReadingType } from "./assets.js";
+import { entryApprover } from "./approval-chain.js";
 import { monthCode } from "./finance.js";
 import { historyActor, historyEntityType, historyFieldChange } from "./history.js";
 import { listQuery, listResponse } from "./list.js";
@@ -241,6 +242,8 @@ export const assetAttentionItem = z.object({
        * rule as `directionDecides` on the approvals queue and entry detail.
        */
       directionDecides: z.boolean(),
+      /** ENTRY_AWAITING_REVIEW only: who decides it, the same for every viewer (#542). */
+      approver: entryApprover,
     })
     .partial(),
 });

@@ -1,27 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { PeriodRead } from "@routiq/contracts";
-import {
-  currentPeriodCode,
-  mergeImplicitCurrentPeriod,
-  validateReopenReason,
-} from "./model.js";
+import { mergeImplicitCurrentPeriod, validateReopenReason } from "./model.js";
 import { canManagePeriods } from "./permissions.js";
 
-describe("FinancePeriods - currentPeriodCode", () => {
-  it("returns YYYY-MM format from today", () => {
-    const code = currentPeriodCode();
-    expect(code).toMatch(/^\d{4}-\d{2}$/);
-    const today = new Date();
-    const expected = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-    expect(code).toBe(expected);
-  });
-});
-
+// The current month comes from the server, cut in the workspace's time zone;
+// the device clock never decides it (#591).
 describe("FinancePeriods - mergeImplicitCurrentPeriod", () => {
-  it("adds implicit OPEN row for current month if not present", () => {
-    const today = new Date();
-    const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-
+  it("adds an implicit OPEN row for the server's current month if not present", () => {
     const periods: PeriodRead[] = [
       {
         periodCode: "2026-06",
@@ -32,10 +17,10 @@ describe("FinancePeriods - mergeImplicitCurrentPeriod", () => {
       },
     ];
 
-    const merged = mergeImplicitCurrentPeriod(periods);
+    const merged = mergeImplicitCurrentPeriod(periods, "2026-11");
     expect(merged).toHaveLength(2);
 
-    const implicitRow = merged.find((p) => p.periodCode === currentMonth);
+    const implicitRow = merged.find((p) => p.periodCode === "2026-11");
     expect(implicitRow).toBeDefined();
     expect(implicitRow?.status).toBe("OPEN");
     expect(implicitRow?.lockedAt).toBeNull();
@@ -43,13 +28,21 @@ describe("FinancePeriods - mergeImplicitCurrentPeriod", () => {
     expect(implicitRow?.rowVersion).toBe(0);
   });
 
-  it("does not duplicate if current month already exists", () => {
-    const today = new Date();
-    const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  it("ignores the device clock when it is in another month", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 9, 31, 23, 30));
+    try {
+      const merged = mergeImplicitCurrentPeriod([], "2026-11");
+      expect(merged.map((p) => p.periodCode)).toEqual(["2026-11"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
+  it("does not duplicate if the current month already exists", () => {
     const periods: PeriodRead[] = [
       {
-        periodCode: currentMonth,
+        periodCode: "2026-11",
         status: "OPEN",
         lockedAt: null,
         entryCount: 3,
@@ -57,11 +50,9 @@ describe("FinancePeriods - mergeImplicitCurrentPeriod", () => {
       },
     ];
 
-    const merged = mergeImplicitCurrentPeriod(periods);
+    const merged = mergeImplicitCurrentPeriod(periods, "2026-11");
     expect(merged).toHaveLength(1);
-    const first = merged[0];
-    expect(first).toBeDefined();
-    expect(first!.periodCode).toBe(currentMonth);
+    expect(merged[0]?.periodCode).toBe("2026-11");
   });
 
   it("preserves all non-current periods", () => {
@@ -82,7 +73,7 @@ describe("FinancePeriods - mergeImplicitCurrentPeriod", () => {
       },
     ];
 
-    const merged = mergeImplicitCurrentPeriod(periods);
+    const merged = mergeImplicitCurrentPeriod(periods, "2026-11");
     expect(merged.filter((p) => p.status === "LOCKED")).toHaveLength(2);
   });
 });

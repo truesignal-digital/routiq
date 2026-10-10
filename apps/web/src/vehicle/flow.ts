@@ -274,11 +274,17 @@ export function workOrderSteps(
 }
 
 /** Why the work order is stopped, from the viewer's side: who it is waiting on. */
-export type WorkOrderWaiting = "authorization" | "completion" | "signOff" | "release";
+export type WorkOrderWaiting = "authorization" | "completion" | "signOff" | "release" | "otherSafetyIssue";
 
+/**
+ * `otherSafetyIssueOpen`: another safety-critical problem on the vehicle is
+ * still open, which blocks the release before any manager can act (#588, the
+ * server's SAFETY_ISSUE_OPEN).
+ */
 export function workOrderWaiting(
   status: WorkOrderStatus,
   isGrounding: boolean,
+  otherSafetyIssueOpen = false,
 ): WorkOrderWaiting | null {
   switch (status) {
     case "SUBMITTED":
@@ -288,7 +294,8 @@ export function workOrderWaiting(
     case "COMPLETION_SUBMITTED":
       return "signOff";
     case "COMPLETED":
-      return isGrounding ? "release" : null;
+      if (!isGrounding) return null;
+      return otherSafetyIssueOpen ? "otherSafetyIssue" : "release";
     case "REJECTED":
     case "CANCELLED":
       return null;
@@ -602,7 +609,15 @@ export function situationOf(
 // Attention: the to-do list
 
 /** Who an item is waiting on, when it is not the viewer. */
-export type WaitingOn = "workshop" | "finance" | "manager" | "operations" | "recorder" | "team";
+export type WaitingOn =
+  | "workshop"
+  | "finance"
+  | "financePeer"
+  | "director"
+  | "manager"
+  | "operations"
+  | "recorder"
+  | "team";
 
 export interface Todo {
   item: AssetAttentionItem;
@@ -626,6 +641,15 @@ const WAITING_ON: Record<AssetAttentionItem["code"], WaitingOn> = {
   // Direction's own note waits for anyone on the vehicle to say they saw it.
   DIRECTION_NOTE: "team",
 };
+
+/** A waiting entry waits on whoever the read says decides it (#542). */
+function waitingOn(item: AssetAttentionItem): WaitingOn {
+  if (item.code === "ENTRY_AWAITING_REVIEW") {
+    if (item.params.approver === "DIRECTION_APPROVES") return "director";
+    if (item.params.approver === "FINANCE_PEER_APPROVES") return "financePeer";
+  }
+  return WAITING_ON[item.code];
+}
 
 export function attentionRecord(
   item: AssetAttentionItem,
@@ -729,7 +753,7 @@ export function buildTodos(
       item,
       record: attentionRecord(item, asset),
       step: attentionStep(item, viewer, asset),
-      who: WAITING_ON[item.code],
+      who: waitingOn(item),
     }));
 }
 
