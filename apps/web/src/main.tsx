@@ -1,12 +1,12 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { preloadAfterSignIn, preloadScreens, router } from "./router.js";
 import { sessionStore } from "./auth/store.js";
 import { retryFailedScreens } from "./shell/lazy-screen.js";
 import { reportError, startTelemetry } from "./telemetry/index.js";
-import { retryRead } from "./lib/query-retry.js";
+import { queryClient } from "./lib/query-client.js";
 import { initTheme } from "./lib/theme.js";
 import "./i18n/index.js";
 import "./styles.css";
@@ -14,10 +14,6 @@ import "./styles.css";
 // Before the first render, or the app paints light and then flips.
 initTheme();
 
-// The Query cache is not offline storage (§8) — no persistence plugin.
-// Reads keep the default networkMode: offline they pause, and the screens say
-// so (#576) until the connection returns.
-const queryClient = new QueryClient({ defaultOptions: { queries: { retry: retryRead } } });
 
 startTelemetry({ getToken: () => sessionStore.getToken(), queryClient, router });
 
