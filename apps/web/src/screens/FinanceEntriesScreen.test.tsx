@@ -535,6 +535,22 @@ describe("FinanceEntriesScreen", () => {
     ).toBeTruthy();
   });
 
+  it("sorts by entry number, not the hidden default, once Posting date is hidden (#548)", async () => {
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    await user.click(screen.getByRole("button", { name: "dataTable.view" }));
+    await user.click(
+      await screen.findByRole("menuitemcheckbox", { name: "finance.entries.detail.postingDate" }),
+    );
+
+    // An empty sort would send no param, and the read's default is postedAt:desc.
+    await waitFor(() => expect(issuedQueries.at(-1)).toEqual({ sort: "entryNumber:asc" }));
+    expect(
+      screen.getByRole("columnheader", { name: /finance\.entries\.detail\.entryNumber/ }).getAttribute("aria-sort"),
+    ).toBe("ascending");
+  });
+
   it("names the work order an entry belongs to and links to it (#87)", () => {
     render(<FinanceEntriesScreen />);
 

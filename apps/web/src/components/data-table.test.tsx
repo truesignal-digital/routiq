@@ -618,11 +618,34 @@ describe("DataTable", () => {
         );
       });
 
-      it("drops the sort when the default sort's column is hidden too", async () => {
+      it("sorts by the first visible sortable column when the default's column is hidden too", async () => {
         const onSortingChange = vi.fn();
         render(
           <DataTable
             columns={twoSortable}
+            data={data}
+            sorting={byName}
+            defaultSorting={byName}
+            onSortingChange={onSortingChange}
+            enableColumnVisibility
+          />,
+        );
+
+        await hide("Full name");
+
+        // Never `[]`: a server read would fall back to its own order, which can be the hidden column.
+        await waitFor(() =>
+          expect(onSortingChange).toHaveBeenCalledExactlyOnceWith([{ id: "email", desc: false }]),
+        );
+      });
+
+      it("drops the sort only when no visible column can sort", async () => {
+        const onSortingChange = vi.fn();
+        render(
+          <DataTable
+            columns={labelledColumns.map((column, index) =>
+              index === 0 ? { ...column, enableSorting: true } : column,
+            )}
             data={data}
             sorting={byName}
             defaultSorting={byName}
