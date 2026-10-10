@@ -90,6 +90,12 @@ const APPEND_ONLY_WRITERS: readonly { path: string; table: string; op: "update" 
     why: "links a superseded reading to the one that corrects it (superseded_by_id, supersede_reason)",
   },
   {
+    path: "apps/api/src/commands/person-login.ts",
+    table: "personLogins",
+    op: "update",
+    why: "ends a person's open login link when it is relinked or unlinked (ended_at, ended_by_command_id; #569)",
+  },
+  {
     path: "apps/api/src/commands/entry-decisions.ts",
     table: "financialPostings",
     op: "update",
@@ -289,6 +295,23 @@ function catalogKeys(file: SourceFile): { path: string; line: number; text: stri
   });
 }
 
+const isWorkflow = (path: string) => /^\.github\/workflows\/[^/]+\.ya?ml$/.test(path);
+
+/**
+ * CI's image pulls, off Docker Hub's anonymous rate limit (#603): every
+ * `image:` names its registry, and a workflow that runs the test suites tells
+ * testcontainers to pull through the mirror.
+ */
+function dockerHubPulls(files: readonly SourceFile[]): Violation[] {
+  return files.filter((file) => isWorkflow(file.path)).flatMap((file) => {
+    // A first path segment with a dot or a port is a registry host; anything else resolves to Docker Hub.
+    const bareImages = matchLines(file, /^\s*image:\s*["']?(?![\w.-]+[.:][\w.-]*\/)[\w.-]+(\/[\w.-]+)*(:[\w.-]+)?["']?\s*$/);
+    const mirrored = /^\s*TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX:\s*\S/m.test(file.content);
+    const testSteps = mirrored ? [] : matchLines(file, /\bpnpm\b.*\btest\b/);
+    return [...bareImages, ...testSteps];
+  });
+}
+
 export const RULES: readonly Rule[] = [
   {
     id: "A2",
@@ -449,6 +472,18 @@ export const RULES: readonly Rule[] = [
     name: "no-optimistic-cache",
     fix: "Render server truth plus the command's pending state (ADR-0001); never patch the query cache.",
     check: linesMatching(/\b(setQueryData|onMutate)\b/, isWebProduction),
+  },
+  {
+    id: "C1",
+    name: "ci-images-off-docker-hub",
+    fix: "Anonymous Docker Hub pulls are rate-limited and failed every CI run for hours (#603). Pull through the mirror: `image: mirror.gcr.io/library/postgres:17` (or another registry host), and set `TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX: mirror.gcr.io` in the env of a workflow that runs the tests.",
+    check: dockerHubPulls,
+  },
+  {
+    id: "C2",
+    name: "no-define-in-web-build",
+    fix: "A value compiled in through Vite `define` (commit, date, build id) renames the chunk it lands in and every chunk importing it, so the JS size totals move with each commit (#598). Put it in index.html instead, as the `routiq-version` meta tag in apps/web/vite.config.ts does, and read it at run time.",
+    check: linesMatching(/^\s*define\s*:/, (path) => /^apps\/[^/]+\/vite\.config\.[cm]?[jt]s$/.test(path)),
   },
   {
     id: "H6",
@@ -633,6 +668,15 @@ export const RULES: readonly Rule[] = [
             !/isolated: true|create database/i.test(file.content),
         )
         .flatMap((file) => matchLines(file, /\d{4}_\w+\.sql|drizzle\/\$\{/).slice(0, 1)),
+  },
+  {
+    id: "D1",
+    name: "workspace-day-one-helper",
+    fix: "Get the workspace time zone from workspaceTimezone() in apps/api/src/reads/workspace-day.ts, then pass it to currentBusinessDate() or currentPeriodCode(). \"The workspace's day\" has drifted between copies before (#511, #555, #560; #580).",
+    check: linesMatching(
+      /\bworkspaces\.timezone\b/,
+      (path) => isApiProduction(path) && path !== "apps/api/src/reads/workspace-day.ts" && path !== "apps/api/src/db/schema.ts",
+    ),
   },
   {
     id: "P1",

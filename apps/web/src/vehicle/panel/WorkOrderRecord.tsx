@@ -11,12 +11,12 @@ import {
   WorkOrderDecisionForm,
   type WorkOrderRef,
 } from "@/maintenance/MaintenanceDialogs.js";
-import { Chronologie, CostLines } from "@/maintenance/WorkOrderSheet.js";
+import { Chronologie, WorkOrderCosts } from "@/maintenance/WorkOrderSheet.js";
 import { useWorkOrder } from "@/maintenance/useMaintenance.js";
 import { WorkOrderStatusBadge } from "@/maintenance/WorkOrderStatusBadge.js";
 import { useVehicle, type PanelForm } from "../context.js";
 import { groundingFacts, situationOf, workOrderSteps, workOrderWaiting } from "../flow.js";
-import { recordReference } from "../model.js";
+import { recordNumberText } from "@/lib/record-number.js";
 import { DetailHeader, DetailSection, FactList, Note, SafetyMark } from "../parts.js";
 import {
   PanelFooter,
@@ -30,7 +30,7 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
   const { t, i18n } = useTranslation();
   const { asset, attention, viewer, panel, gates } = useVehicle();
   const query = useWorkOrder(id);
-  const host = useFormHost(t("vehicle.panel.workOrderTitle", { ref: recordReference(id) }));
+  const host = useFormHost(t("vehicle.panel.workOrderTitle", { ref: recordNumberText(t, "work_order", query.data?.number) }));
   const locale = i18n.language;
 
   if (query.isPending) return <PanelLoading />;
@@ -46,7 +46,12 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
     return <WorkOrderForm stepKey={form.key} wo={wo} host={host} />;
   }
 
-  const waiting = workOrderWaiting(wo.status, isGrounding);
+  // Another safety-critical problem blocks the release, whoever signs it (#588).
+  const others = isGrounding ? (grounding?.grounded.otherOpenSafetyIssues ?? []) : [];
+  const [otherIssue] = others;
+  const otherIssueParams =
+    otherIssue === undefined ? undefined : { count: others.length, description: otherIssue.description };
+  const waiting = workOrderWaiting(wo.status, isGrounding, otherIssue !== undefined);
   const actor = (name: string | null) => name ?? t("history.actor.unknown");
   // The vehicle header's own test, so the panel and the header never disagree on one screen.
   const situation = situationOf(asset, attention, new Date());
@@ -55,7 +60,7 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
   return (
     <>
       <DetailHeader
-        eyebrow={t("vehicle.panel.workOrderEyebrow", { ref: recordReference(wo.id) })}
+        eyebrow={t("vehicle.panel.workOrderEyebrow", { ref: recordNumberText(t, "work_order", wo.number) })}
         title={wo.description}
         meta={
           <>
@@ -79,14 +84,18 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
               aria-hidden
             />
             <span className="min-w-0 flex-1 text-sm font-medium">
-              {t("vehicle.panel.fromProblem", { ref: recordReference(wo.issue.id) })}
+              {t("vehicle.panel.fromProblem", { ref: recordNumberText(t, "issue", wo.issue.number) })}
             </span>
             <ChevronRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
           </button>
         )}
         {isGrounding && (
           <Note tone={repaired ? "warning" : "danger"}>
-            {t(wo.status === "COMPLETED" ? "vehicle.panel.keepsGroundedUntilRelease" : "vehicle.panel.keepsGrounded")}
+            {wo.status !== "COMPLETED"
+              ? t("vehicle.panel.keepsGrounded")
+              : otherIssueParams === undefined
+                ? t("vehicle.panel.keepsGroundedUntilRelease")
+                : t("vehicle.panel.keepsGroundedOtherIssueOpen", otherIssueParams)}
           </Note>
         )}
         {wo.status === "APPROVED" && wo.completionRejectReason !== null && (
@@ -122,7 +131,7 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
               }),
             ],
             // Costs a viewer may not read are left out, not shown as blanks.
-            ...(!gates.workOrderCosts
+            ...(!gates.workOrderEstimate
               ? []
               : ([
                   [
@@ -131,6 +140,10 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
                       ? t("vehicle.maintenance.noEstimate")
                       : formatMoney(wo.expectedCostMinor, { currency: wo.currency, locale }),
                   ],
+                ] as const)),
+            ...(!gates.workOrderCosts
+              ? []
+              : ([
                   [
                     t("vehicle.panel.actualCost"),
                     wo.actualCostMinor === null
@@ -167,20 +180,10 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
           </DetailSection>
         )}
 
-        {/* Null when the reader may not see work-order costs (#390). */}
+        {/* Null when the reader may not see work-order costs (#390, #328). */}
         {wo.costLines !== null && (
           <DetailSection title={t("vehicle.panel.costs")}>
-            {wo.costLines.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("maintenance.detail.costLinesEmpty")}</p>
-            ) : (
-              <CostLines lines={wo.costLines} locale={locale} />
-            )}
-          </DetailSection>
-        )}
-        {wo.pendingCostLines !== null && wo.pendingCostLines.length > 0 && (
-          <DetailSection title={t("maintenance.detail.pendingCostLines")}>
-            <p className="text-xs text-muted-foreground">{t("maintenance.detail.pendingCostLinesHint")}</p>
-            <CostLines lines={wo.pendingCostLines} locale={locale} />
+            <WorkOrderCosts detail={wo} locale={locale} />
           </DetailSection>
         )}
 
@@ -193,7 +196,7 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
       </div>
       <PanelFooter
         steps={steps}
-        waiting={waiting === null ? null : t(`vehicle.panel.waitingOn.${waiting}`)}
+        waiting={waiting === null ? null : t(`vehicle.panel.waitingOn.${waiting}`, otherIssueParams ?? {})}
         onStep={panel.openStep}
       />
     </>
@@ -212,6 +215,7 @@ function WorkOrderForm({
   const { asset, pinnedLabel, refresh, panel } = useVehicle();
   const ref: WorkOrderRef = {
     id: wo.id,
+    number: wo.number,
     assetId: wo.asset.id,
     status: wo.status,
     issueId: wo.issue?.id ?? null,

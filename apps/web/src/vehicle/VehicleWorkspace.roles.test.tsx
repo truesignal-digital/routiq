@@ -39,7 +39,9 @@ afterEach(async () => {
 });
 
 const inRepair = asset({ availability: grounded([groundingWorkOrder("APPROVED")]) });
-const WO_REF = groundingWorkOrder("APPROVED").id.slice(0, 8).toUpperCase();
+/** The grounding work order's number as each language prints it (#608). */
+const WO_REF = "WO-0007";
+const WO_REF_FR = "OT-0007";
 
 /** The status block: the sentence, its notes and the role's step. */
 async function sentence(): Promise<HTMLElement> {
@@ -202,7 +204,7 @@ describe("the status sentence and the step beside it, per role", () => {
       const block = await sentence();
       await waitFor(() =>
         expect(block.textContent).toContain(
-          `La réparation (${WO_REF}) est terminée ; en attente d'un responsable pour la remise en service.`,
+          `La réparation (${WO_REF_FR}) est terminée ; en attente d'un responsable pour la remise en service.`,
         ),
       );
       expect(block.textContent).not.toMatch(/validée/);
@@ -212,8 +214,8 @@ describe("the status sentence and the step beside it, per role", () => {
   // #562: nobody can release while another safety-critical problem is open, so
   // the sentence names that problem instead of sending people to a manager.
   describe("another safety-critical problem still open", () => {
-    const steering = { id: OTHER_ISSUE_ID, description: "Steering locks on the left" };
-    const OTHER_REF = OTHER_ISSUE_ID.slice(0, 8).toUpperCase();
+    const steering = { id: OTHER_ISSUE_ID, number: 5, description: "Steering locks on the left" };
+    const OTHER_REF = "PRB-0005";
     const blocked = asset({ availability: grounded([groundingWorkOrder("COMPLETED")], {}, [steering]) });
 
     it("names the open problem, not a manager", async () => {
@@ -225,8 +227,9 @@ describe("the status sentence and the step beside it, per role", () => {
         ),
       );
       expect(block.textContent).not.toMatch(/waiting on a manager/);
-      // Fixture ids share a prefix: the work order and the other problem both link.
-      expect(within(block).getAllByRole("button", { name: OTHER_REF })).toHaveLength(2);
+      // Each record links under its own number (#608).
+      expect(within(block).getByRole("button", { name: WO_REF })).toBeTruthy();
+      expect(within(block).getByRole("button", { name: OTHER_REF })).toBeTruthy();
     });
 
     it("says it in French", async () => {
@@ -234,7 +237,7 @@ describe("the status sentence and the step beside it, per role", () => {
       const block = await sentence();
       await waitFor(() =>
         expect(block.textContent).toContain(
-          `La réparation (${WO_REF}) est terminée, mais un autre problème critique est encore ouvert : « Steering locks on the left » (${OTHER_REF}). Il doit être clos avant la remise en service.`,
+          `La réparation (${WO_REF_FR}) est terminée, mais un autre problème critique est encore ouvert : « Steering locks on the left » (PB-0005). Il doit être clos avant la remise en service.`,
         ),
       );
       expect(block.textContent).not.toMatch(/en attente d'un responsable/);
@@ -247,7 +250,7 @@ describe("the status sentence and the step beside it, per role", () => {
     const release = block.getByRole("button", { name: "Remettre en service" }) as HTMLButtonElement;
     expect(release.disabled).toBe(true);
     expect(document.getElementById(release.getAttribute("aria-describedby") ?? "")?.textContent).toBe(
-      `Il faut d'abord que ${WO_REF} soit terminé.`,
+      `Il faut d'abord que ${WO_REF_FR} soit terminé.`,
     );
   });
 

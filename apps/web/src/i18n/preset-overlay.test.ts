@@ -172,6 +172,54 @@ describe("trip noun in the base catalog", () => {
   }
 });
 
+// #589: base strings without an overlay still said "activité"/"activity" in a
+// trucking or passenger workspace. The base noun for a trip is the activity,
+// so every base string that names it is overlaid by every preset, unless it
+// names something else.
+const ACTIVITY_NOUN = /activit/i;
+const NOT_THE_TRIP: Record<string, string> = {
+  "errors.PRESET_DISABLED": "the preset, the kind of fleet a workspace runs",
+  "errors.PRESET_ALREADY_SET": "the preset, the kind of fleet a workspace runs",
+  "errors.LAST_PRESET": "the preset, the kind of fleet a workspace runs",
+};
+
+describe("activity noun in the base catalog", () => {
+  const visible = (message: string) =>
+    message.replace(/\b\w+\s*\{(?!\s*\w+\s*[,}])/g, "{").replace(/\{\s*\w+\s*[,}]/g, "{");
+
+  for (const locale of LOCALES) {
+    it(`${locale}: every base string naming the activity is overlaid by every preset`, () => {
+      const offenders = flattenKeys(BASE[locale])
+        .filter((key) => ACTIVITY_NOUN.test(visible(String(at(BASE[locale], key)))))
+        .filter((key) => !(key in NOT_THE_TRIP))
+        .flatMap((key) =>
+          TEMPLATE_CODES.filter(
+            (preset) => at(PRESET_VOCABULARIES[preset][locale], key) === undefined,
+          ).map((preset) => `${key} (${preset})`),
+        );
+      expect(offenders).toEqual([]);
+    });
+
+    it(`${locale}: no overlay names the activity`, () => {
+      const offenders = TEMPLATE_CODES.flatMap((preset) => {
+        const overlay = PRESET_VOCABULARIES[preset][locale];
+        return flattenKeys(overlay)
+          .filter((key) => ACTIVITY_NOUN.test(visible(String(at(overlay, key)))))
+          .map((key) => `${key} (${preset})`);
+      });
+      expect(offenders).toEqual([]);
+    });
+  }
+
+  it("keeps the allow-list to base strings that still name the activity", () => {
+    for (const key of Object.keys(NOT_THE_TRIP)) {
+      for (const locale of LOCALES) {
+        expect(String(at(BASE[locale], key)), `${locale} ${key}`).toMatch(ACTIVITY_NOUN);
+      }
+    }
+  });
+});
+
 describe("presetVocabularyFor", () => {
   it("returns nothing while /v1/me is loading", () => {
     expect(presetVocabularyFor(undefined)).toBeUndefined();

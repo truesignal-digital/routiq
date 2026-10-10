@@ -96,6 +96,7 @@ const approver: MeContext = {
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],
   enabledPresets: ["TRUCKING"],
+  timezone: "Africa/Douala",
 };
 
 function renderScreen() {

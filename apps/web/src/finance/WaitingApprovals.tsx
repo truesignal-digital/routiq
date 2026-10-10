@@ -44,7 +44,7 @@ const DEFAULT_SORTING: SortingState = [{ id: "submittedAt", desc: false }];
 const APPROVALS_PAGE_SIZE = 100;
 
 /**
- * The Money page's "Waiting your approval" view (#314): the entries this
+ * The Money page's "Waiting for your approval" view (#314): the entries this
  * viewer may decide, oldest first, with Reject and Approve on each row. It
  * replaced the separate Approvals page; `/finance/approvals` redirects here.
  */
@@ -290,6 +290,7 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
           columnVisibility={columnVisibility}
           onColumnVisibilityChange={setColumnVisibility}
           sorting={sorting}
+          defaultSorting={DEFAULT_SORTING}
           onSortingChange={setSorting}
           primaryColumn={{ columnId: "entryNumber" }}
           rowViewer={{
