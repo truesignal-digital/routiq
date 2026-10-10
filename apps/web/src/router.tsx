@@ -1,5 +1,6 @@
+import type { QueryClient } from "@tanstack/react-query";
 import {
-  createRootRoute,
+  createRootRouteWithContext,
   createRoute,
   createRouter,
   redirect,
@@ -16,7 +17,8 @@ import {
 import { sessionStore } from "./auth/store.js";
 import { LoginScreen } from "./screens/LoginScreen.js";
 import { PANEL_PATTERN } from "./vehicle/model.js";
-import { ScreenError, ScreenPending, SectionError, SectionPending, ShellPending } from "./shell/RoutePending.js";
+import { queryClient } from "./lib/query-client.js";
+import { ScreenError, ScreenPending, SectionError, SectionPending } from "./shell/RoutePending.js";
 import { lazyScreen, retryFailedScreens } from "./shell/lazy-screen.js";
 
 /**
@@ -42,6 +44,8 @@ const FinanceEntryDetailScreen = lazyScreen(() => import("./screens/FinanceEntry
 const FinancePeriodsScreen = lazyScreen(() => import("./screens/FinancePeriodsScreen.js"), "FinancePeriodsScreen");
 // The shell arrives with the installed module manifests (`modules/app-shell.ts`): sign-in needs neither.
 const AppShell = lazyScreen(() => import("./modules/app-shell.js"), "AppShell");
+// On demand like the shell: the sign-in page carries neither (#495).
+const ShellPending = lazyScreen(() => import("./shell/ShellPending.js"), "ShellPending");
 const VehicleWorkspaceScreen = lazyScreen(() => import("./vehicle/VehicleWorkspaceScreen.js"), "VehicleWorkspaceScreen");
 const DetailsTab = lazyScreen(() => import("./vehicle/tabs/DetailsTab.js"), "DetailsTab");
 const DocumentsTab = lazyScreen(() => import("./vehicle/tabs/DocumentsTab.js"), "DocumentsTab");
@@ -51,7 +55,12 @@ const MoneyTab = lazyScreen(() => import("./vehicle/tabs/MoneyTab.js"), "MoneyTa
 const NowTab = lazyScreen(() => import("./vehicle/tabs/NowTab.js"), "NowTab");
 const TripsTab = lazyScreen(() => import("./vehicle/tabs/TripsTab.js"), "TripsTab");
 
-const rootRoute = createRootRoute();
+/** What every route's loader receives: the one Query cache the screens read too. */
+export interface RouterContext {
+  queryClient: QueryClient;
+}
+
+const rootRoute = createRootRouteWithContext<RouterContext>()();
 
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -71,8 +80,14 @@ const appRoute = createRoute({
       throw redirect({ to: "/login", search: { redirect: location.href } });
     }
   },
-  component: AppShell,
+  loader: ({ context, location }) =>
+    import("./shell/shell-loader.js").then(({ loadShell }) => loadShell(context.queryClient, location.href)),
+  // The frame shows at once, sized like the shell, so the shell replaces it
+  // without moving anything (#495); waiting on a timer would leave a blank page.
   pendingComponent: ShellPending,
+  pendingMs: 0,
+  pendingMinMs: 0,
+  component: AppShell,
 });
 
 const indexRoute = createRoute({
@@ -355,7 +370,12 @@ const routeTree = rootRoute.addChildren([
 
 // Inside the shell a slow screen shows its skeleton in the content slot, and a
 // screen that cannot open shows a translated error with Retry in the same slot.
-export const router = createRouter({ routeTree, defaultPendingComponent: ScreenPending, defaultErrorComponent: ScreenError });
+export const router = createRouter({
+  routeTree,
+  context: { queryClient },
+  defaultPendingComponent: ScreenPending,
+  defaultErrorComponent: ScreenError,
+});
 
 // Every navigation is a fresh chance to fetch a screen whose code failed before.
 router.subscribe("onBeforeLoad", () => {
@@ -370,6 +390,9 @@ export const AFTER_SIGN_IN = [AppShell, DashboardScreen];
 
 export function preloadAfterSignIn(): void {
   for (const screen of AFTER_SIGN_IN) void screen.preload();
+  // The shell's frame and loader are not screens, but sign-in waits on them too.
+  void ShellPending.preload();
+  void import("./shell/shell-loader.js").catch(() => undefined);
 }
 
 /** Most-visited first, so a slow connection fetches the likely next screen before the rest. */

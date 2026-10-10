@@ -253,7 +253,7 @@ export async function openVehicle(path: string, scenario: VehicleScenario) {
     defaultOptions: { queries: scenario.defaultRetries === true ? {} : { retry: false, retryDelay: 0 } },
   });
   const history = createMemoryHistory({ initialEntries: [path] });
-  const router = createRouter({ routeTree: applicationRouter.routeTree, history });
+  const router = createRouter({ routeTree: applicationRouter.routeTree, history, context: { queryClient: client } });
   await act(async () => {
     render(
       <QueryClientProvider client={client}>
