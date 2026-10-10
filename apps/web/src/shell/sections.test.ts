@@ -127,10 +127,10 @@ describe("row label = page title (#312)", () => {
   // The screen each row opens, and the source that renders its PageHeader.
   const SCREENS: Record<string, string> = {
     home: "screens/DashboardScreen.tsx",
-    assets: "screens/AssetsStub.tsx",
-    activities: "screens/ActivitiesScreen.tsx",
+    assets: "assets/TrucksFrame.tsx",
+    activities: "activities/TripsFrame.tsx",
     maintenance: "screens/MaintenanceScreen.tsx",
-    finances: "screens/FinanceEntriesScreen.tsx",
+    finances: "screens/FinanceScreen.tsx",
     persons: "screens/PersonsScreen.tsx",
     users: "screens/UsersScreen.tsx",
     branches: "screens/BranchesScreen.tsx",

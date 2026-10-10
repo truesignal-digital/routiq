@@ -25,7 +25,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   if (order?.asset === undefined) throw new Error("no work order in the seed (reseed?)");
   log(`work order ${order.id} on asset ${order.asset.id}`);
 
-  await nav("/maintenance");
+  await nav("/maintenance/work-orders");
   await quiet();
   const queue = page.getByRole("table").first();
   await shot("maintenance-queue", {

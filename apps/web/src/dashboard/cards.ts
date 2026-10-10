@@ -12,8 +12,16 @@ export type DashboardCardKey =
 export const HOME_PANEL_KEYS = ["moneyChart", "recentEntries"] as const;
 export type HomePanelKey = (typeof HOME_PANEL_KEYS)[number];
 
-/** What Home holds that a module can own: the tiles and the panels. */
-export type HomeCardKey = DashboardCardKey | HomePanelKey;
+/**
+ * The Dashboard's Overview and its tabs (#666): revenue, expenses, profit, To
+ * do and profit by vehicle and branch. Built on the money read, so the Money
+ * module owns it; without it Home keeps its tiles and panels.
+ */
+export const HOME_OVERVIEW_KEY = "overview";
+export type HomeOverviewKey = typeof HOME_OVERVIEW_KEY;
+
+/** What Home holds that a module can own: the tiles, the panels and the Overview. */
+export type HomeCardKey = DashboardCardKey | HomePanelKey | HomeOverviewKey;
 
 interface DashboardCardGate {
   key: DashboardCardKey;
@@ -38,7 +46,25 @@ const ALL_CARDS: DashboardCardGate[] = [
 ];
 
 /** Everything Home has, in order; the module manifests name theirs from these. */
-export const HOME_CARD_KEYS: readonly HomeCardKey[] = [...ALL_CARDS.map((card) => card.key), ...HOME_PANEL_KEYS];
+export const HOME_CARD_KEYS: readonly HomeCardKey[] = [
+  ...ALL_CARDS.map((card) => card.key),
+  ...HOME_PANEL_KEYS,
+  HOME_OVERVIEW_KEY,
+];
+
+/**
+ * role-config: who opens Home on the Dashboard's Overview (dashboards.html,
+ * "Who sees what"): the ledger readers, Direction and finance for every
+ * branch, an administrator for theirs. The cashier, the workshop and the
+ * driver keep Home's tiles and panels.
+ */
+export function showsDashboardOverview(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): boolean {
+  if (enabledModules === undefined) return false;
+  return contributes("homeCards", HOME_OVERVIEW_KEY, enabledModules) && canReadFinance(role, enabledModules);
+}
 
 /** While membership is loading no card can be justified, so none render. */
 export function visibleDashboardCards(

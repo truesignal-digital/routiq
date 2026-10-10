@@ -19,4 +19,5 @@ export const assetsManifest: WebModuleManifest = {
   recordPanels: [],
   historyKinds: [],
   fields: [],
+  pageTabs: [],
 };

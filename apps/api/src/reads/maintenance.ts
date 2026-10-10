@@ -4,6 +4,7 @@ import {
   issueListResponse,
   maintenanceSummary,
   maintenanceSummaryQuery,
+  OPEN_WORK_ORDER_STATUSES,
   workOrderDetail,
   workOrderListQuery,
   workOrderListResponse,
@@ -32,6 +33,7 @@ import {
   operationalIssues,
   principals,
   workOrders,
+  workspaces,
 } from "../db/schema.js";
 import type { TenantTx } from "../db/tenant.js";
 import { lastEventActors, toActor } from "./actors.js";
@@ -58,6 +60,7 @@ import {
   type WorkOrderMoneyVisibility,
 } from "./work-order-cost.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
+import { overviewNoticeToday } from "./overview-notice.js";
 
 /**
  * Newest first, always — both maintenance queues read that way and neither
@@ -162,13 +165,14 @@ export function registerMaintenanceReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/maintenance/summary", module: "MAINTENANCE", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedQuery = maintenanceSummaryQuery.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
         const { branchId } = parsedQuery.data;
+        const costVisible = workOrderMoneyVisibility(auth, modules).actual;
 
         const assetConditions: SQL[] = [eq(assets.workspaceId, auth.workspaceId)];
         if (auth.branchScope !== "ALL") {
@@ -176,61 +180,141 @@ export function registerMaintenanceReadRoutes(
         }
         if (branchId) assetConditions.push(eq(assets.branchId, branchId));
         const scopedAssetIds = sql`(select ${assets.id} from ${assets} where ${and(...assetConditions)})`;
+        const inRepairWindow = sql`${workOrders.status} = 'COMPLETED'
+          and ${workOrders.completedAt} >= now() - make_interval(days => ${REPAIR_WINDOW_DAYS}::int)`;
 
-        const [counts] = await read((tx) =>
-          tx.execute<{
-            open_issues: number;
-            open_safety_critical: number;
-            grounded: number;
-            approved_work_orders: number;
-            average_repair_days: string | null;
-            repairs_counted: number;
-          }>(sql`
-            select
-              (select count(*)::int from ${operationalIssues}
-                where ${operationalIssues.workspaceId} = ${auth.workspaceId}
-                  and ${operationalIssues.status} = 'OPEN'
-                  and ${operationalIssues.assetId} in ${scopedAssetIds}) as open_issues,
-              (select count(*)::int from ${operationalIssues}
-                where ${operationalIssues.workspaceId} = ${auth.workspaceId}
-                  and ${operationalIssues.status} = 'OPEN'
-                  and ${operationalIssues.safetyCritical}
-                  and ${operationalIssues.assetId} in ${scopedAssetIds}) as open_safety_critical,
-              (select count(distinct ${assetAvailabilityIntervals.assetId})::int
-                from ${assetAvailabilityIntervals}
-                where ${assetAvailabilityIntervals.workspaceId} = ${auth.workspaceId}
-                  and ${assetAvailabilityIntervals.closedAt} is null
-                  and ${assetAvailabilityIntervals.assetId} in ${scopedAssetIds}) as grounded,
-              (select count(*)::int from ${workOrders}
-                where ${workOrders.workspaceId} = ${auth.workspaceId}
-                  and ${workOrders.status} = 'APPROVED'
-                  and ${workOrders.assetId} in ${scopedAssetIds}) as approved_work_orders,
-              repairs.average_repair_days,
-              repairs.repairs_counted
-            from (
+        const { counts, firstGrounded, repairCost, notice } = await read(async (tx) => {
+          const [counts] = await tx
+            .execute<{
+              open_issues: number;
+              open_safety_critical: number;
+              grounded: number;
+              approved_work_orders: number;
+              open_work_orders: number;
+              waiting_approval: number;
+              waiting_completion: number;
+              average_repair_days: string | null;
+              repairs_counted: number;
+            }>(sql`
               select
-                round(avg(extract(epoch from (${workOrders.completedAt} - ${commands.executedAt})) / 86400)::numeric, 1)::text
-                  as average_repair_days,
-                count(*)::int as repairs_counted
-              from ${workOrders}
-              inner join ${commands} on ${commands.id} = ${workOrders.createdByCommandId}
-              where ${workOrders.workspaceId} = ${auth.workspaceId}
-                and ${workOrders.status} = 'COMPLETED'
-                and ${workOrders.completedAt} >= now() - make_interval(days => ${REPAIR_WINDOW_DAYS}::int)
-                and ${workOrders.assetId} in ${scopedAssetIds}
-            ) as repairs
-          `),
-        ).then((result) => result.rows);
+                (select count(*)::int from ${operationalIssues}
+                  where ${operationalIssues.workspaceId} = ${auth.workspaceId}
+                    and ${operationalIssues.status} = 'OPEN'
+                    and ${operationalIssues.assetId} in ${scopedAssetIds}) as open_issues,
+                (select count(*)::int from ${operationalIssues}
+                  where ${operationalIssues.workspaceId} = ${auth.workspaceId}
+                    and ${operationalIssues.status} = 'OPEN'
+                    and ${operationalIssues.safetyCritical}
+                    and ${operationalIssues.assetId} in ${scopedAssetIds}) as open_safety_critical,
+                (select count(distinct ${assetAvailabilityIntervals.assetId})::int
+                  from ${assetAvailabilityIntervals}
+                  where ${assetAvailabilityIntervals.workspaceId} = ${auth.workspaceId}
+                    and ${assetAvailabilityIntervals.closedAt} is null
+                    and ${assetAvailabilityIntervals.assetId} in ${scopedAssetIds}) as grounded,
+                orders.approved_work_orders,
+                orders.open_work_orders,
+                orders.waiting_approval,
+                orders.waiting_completion,
+                repairs.average_repair_days,
+                repairs.repairs_counted
+              from (
+                select
+                  count(*) filter (where ${workOrders.status} = 'APPROVED')::int as approved_work_orders,
+                  count(*) filter (where ${inArray(workOrders.status, [...OPEN_WORK_ORDER_STATUSES])})::int
+                    as open_work_orders,
+                  count(*) filter (where ${workOrders.status} = 'SUBMITTED')::int as waiting_approval,
+                  count(*) filter (where ${workOrders.status} = 'COMPLETION_SUBMITTED')::int as waiting_completion
+                from ${workOrders}
+                where ${workOrders.workspaceId} = ${auth.workspaceId}
+                  and ${workOrders.assetId} in ${scopedAssetIds}
+              ) as orders, (
+                select
+                  round(avg(extract(epoch from (${workOrders.completedAt} - ${commands.executedAt})) / 86400)::numeric, 1)::text
+                    as average_repair_days,
+                  count(*)::int as repairs_counted
+                from ${workOrders}
+                inner join ${commands} on ${commands.id} = ${workOrders.createdByCommandId}
+                where ${workOrders.workspaceId} = ${auth.workspaceId}
+                  and ${inRepairWindow}
+                  and ${workOrders.assetId} in ${scopedAssetIds}
+              ) as repairs
+            `)
+            .then((result) => result.rows);
+
+          const [firstGrounded] = await tx
+            .select({
+              assetId: assets.id,
+              assetCode: assets.assetCode,
+              since: assetAvailabilityIntervals.openedAt,
+            })
+            .from(assetAvailabilityIntervals)
+            .innerJoin(
+              assets,
+              and(
+                eq(assets.workspaceId, assetAvailabilityIntervals.workspaceId),
+                eq(assets.id, assetAvailabilityIntervals.assetId),
+              ),
+            )
+            .where(and(...assetConditions, isNull(assetAvailabilityIntervals.closedAt)))
+            .orderBy(asc(assetAvailabilityIntervals.openedAt), asc(assets.assetCode), asc(assets.id))
+            .limit(1);
+
+          const notice = await overviewNoticeToday(tx, auth, modules, branchId);
+          if (!costVisible) return { counts, firstGrounded, repairCost: null, notice };
+          // The same orders `repairsCounted` averages, in the workspace
+          // currency only: amounts in two currencies never add up.
+          const [workspace] = await tx
+            .select({ currency: workspaces.defaultCurrency })
+            .from(workspaces)
+            .where(eq(workspaces.id, auth.workspaceId));
+          const currency = workspace?.currency ?? "XAF";
+          const [cost] = await tx
+            .select({
+              amountMinor: sql<string>`coalesce(sum((${workOrderActualCostSql()})::bigint), 0)::text`,
+              workOrders: sql<number>`count(*)::int`,
+            })
+            .from(workOrders)
+            // Joined to the asset for the scope, which also keeps the
+            // correlated cost subquery's columns qualified.
+            .innerJoin(
+              assets,
+              and(eq(assets.workspaceId, workOrders.workspaceId), eq(assets.id, workOrders.assetId)),
+            )
+            .where(and(...assetConditions, inRepairWindow, eq(workOrders.currency, currency)));
+          return {
+            counts,
+            firstGrounded,
+            repairCost: {
+              amountMinor: serializeMinor(BigInt(cost?.amountMinor ?? "0")),
+              currency,
+              workOrders: cost?.workOrders ?? 0,
+            },
+            notice,
+          };
+        });
 
         return maintenanceSummary.parse({
           openIssues: counts?.open_issues ?? 0,
           openSafetyCritical: counts?.open_safety_critical ?? 0,
           grounded: counts?.grounded ?? 0,
+          firstGrounded:
+            firstGrounded === undefined
+              ? null
+              : {
+                  assetId: firstGrounded.assetId,
+                  assetCode: firstGrounded.assetCode,
+                  since: firstGrounded.since.toISOString(),
+                },
           approvedWorkOrders: counts?.approved_work_orders ?? 0,
+          openWorkOrders: counts?.open_work_orders ?? 0,
+          waitingApproval: counts?.waiting_approval ?? 0,
+          waitingCompletion: counts?.waiting_completion ?? 0,
           averageRepairDays:
             counts?.average_repair_days == null ? null : Number(counts.average_repair_days),
           repairsCounted: counts?.repairs_counted ?? 0,
           repairWindowDays: REPAIR_WINDOW_DAYS,
+          repairCost,
+          notice,
         });
       } catch (error) {
         req.log.error({ err: error }, "maintenance summary read failed");
@@ -249,7 +333,7 @@ export function registerMaintenanceReadRoutes(
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
-        const { status, branchId, assetId, cursor, limit } = parsedQuery.data;
+        const { status, open, branchId, assetId, cursor, limit } = parsedQuery.data;
 
         const result = await read(async (tx) => {
           const decodedCursor = cursor
@@ -269,6 +353,13 @@ export function registerMaintenanceReadRoutes(
           }
           if (branchId) conditions.push(eq(assets.branchId, branchId));
           if (status) conditions.push(eq(workOrders.status, status));
+          // The summary's `openWorkOrders` counts the same set.
+          if (open !== undefined) {
+            const openStatuses = [...OPEN_WORK_ORDER_STATUSES];
+            conditions.push(
+              open ? inArray(workOrders.status, openStatuses) : notInArray(workOrders.status, openStatuses),
+            );
+          }
           if (assetId) conditions.push(eq(workOrders.assetId, assetId));
           if (decodedCursor) {
             conditions.push(

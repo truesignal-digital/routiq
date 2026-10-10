@@ -1,7 +1,7 @@
 import type { ActivityDetail } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
 import { MetricStrip, type MetricTile, type MetricTiles } from "@/components/metric-strip.js";
-import { formatDateTime, formatMoney } from "@/lib/format.js";
+import { formatDateTime, profitOrLoss } from "@/lib/format.js";
 import { postedNetMinor } from "./ActivityMoney.js";
 
 export type ActivityOverviewData = Pick<
@@ -13,7 +13,7 @@ export interface ActivityOverviewProps {
   activity: ActivityOverviewData;
   /**
    * Whether the reader sees the trip's whole money. A driver gets only the
-   * entries they recorded (#264), and a net over those is no trip's net.
+   * entries they recorded (#264), and a profit over those is no trip's profit.
    */
   showNet: boolean;
 }
@@ -42,22 +42,22 @@ export function ActivityOverview({ activity, showNet }: ActivityOverviewProps) {
     value: new Intl.NumberFormat(locale).format(activity.legCount),
   };
 
-  // No net for a reader the server kept the ledger from (#103).
+  // No profit for a reader the server kept the ledger from (#103).
   if (activity.financialEntries === null || !showNet) {
     return <MetricStrip tiles={[started, ended, legs]} />;
   }
 
-  const net = postedNetMinor(activity.financialEntries);
+  const result = profitOrLoss(postedNetMinor(activity.financialEntries), { locale });
   const tiles: MetricTiles = [
     started,
     ended,
     {
-      label: t("activities.detail.overview.net"),
-      // The sign is spelled out, never left to colour alone; a job that lost
-      // money is exactly the tile that wants someone's attention.
-      value: formatMoney(net, { locale, sign: { context: "net" } }),
+      // Profit or Loss is spelled out, never left to colour or a minus sign; a
+      // job that lost money is exactly the tile that wants someone's attention.
+      label: result.label,
+      value: result.amount,
       hint: t("activities.detail.overview.postedOnly"),
-      ...(net < 0 ? { tone: "warning" as const } : {}),
+      ...(result.kind === "loss" ? { tone: "warning" as const } : {}),
     },
     legs,
   ];

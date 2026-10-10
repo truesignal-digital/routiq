@@ -7,6 +7,13 @@ import { router } from "../router.js";
  * why. A new screen gets a loader (routes/<screen>.loader.ts, #496) or a line here.
  */
 const NO_LOADER: Record<string, string> = {
+  "/app/assets": "the Trucks page's frame reads nothing of its own; each tab's route loads its reads (#665)",
+  "/app/activities": "the Trips page's frame reads nothing of its own; each tab's route loads its reads (#665)",
+  "/app/finance": "the Money page's frame; its Entries tab loads its reads (#664)",
+  "/app/finance/": "not yet: #504",
+  "/app/finance/approve": "not yet: #504",
+  "/app/assets/documents": "not yet: #504",
+  "/app/activities/planning": "not yet: #504",
   "/app/assets/$assetId/details": "reads only the vehicle, which its parent loads",
   "/app/more": "redirects to Home before it loads (#316)",
   "/app/finance/approvals": "redirects to the Money page's waiting view before it loads (#314)",

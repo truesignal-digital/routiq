@@ -24,12 +24,12 @@ export const maintenanceManifest: WebModuleManifest = {
       icon: Wrench,
       // role-config: the workshop page is for the people who run repairs.
       reads: (role) => WORKSHOP_PAGE_ROLES.includes(role),
-      // Opens the Problems tab on the open ones (#302 reads `tab` and `issueStatus`).
+      // Opens the Problems tab on the open ones (#665).
       count: {
         key: "maintenanceNew",
         labelKey: "shell.counts.maintenanceNew",
-        to: "/maintenance",
-        search: { tab: "issues", issueStatus: "OPEN" },
+        to: "/maintenance/problems",
+        search: { status: "OPEN" },
       },
     },
   ],
@@ -49,4 +49,5 @@ export const maintenanceManifest: WebModuleManifest = {
   recordPanels: ["work_order", "issue"],
   historyKinds: ["MAINTENANCE"],
   fields: ["entry.workOrderLink", "assets.attentionGrounding"],
+  pageTabs: [],
 };

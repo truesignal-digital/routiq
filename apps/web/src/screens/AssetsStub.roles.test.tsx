@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "../i18n/index.js";
 import { MeCtx, type MeContext } from "../auth/me.js";
+import { TrucksFrame } from "../assets/TrucksFrame.js";
 import { AssetsStub } from "./AssetsStub.js";
 import { applyNavigate, useTestSearch } from "../test-router.js";
 
@@ -12,6 +13,10 @@ import { applyNavigate, useTestSearch } from "../test-router.js";
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => applyNavigate,
   useSearch: () => useTestSearch(),
+  useRouterState: ({ select }: { select: (state: { location: { pathname: string } }) => unknown }) =>
+    select({ location: { pathname: "/assets/list" } }),
+  // The Trucks page frame draws the list tab here.
+  Outlet: () => <AssetsStub />,
   Link: ({
     to,
     params,
@@ -34,6 +39,7 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
+/** The Trucks page as the router draws it: the frame (header, tabs) around the list tab. */
 function renderWith(
   role: MeContext["role"],
   enabledModules: MeContext["enabledModules"] = ["CORE", "ASSETS"],
@@ -54,7 +60,7 @@ function renderWith(
   return render(
     <QueryClientProvider client={new QueryClient()}>
       <MeCtx.Provider value={me}>
-        <AssetsStub />
+        <TrucksFrame />
       </MeCtx.Provider>
     </QueryClientProvider>,
   );

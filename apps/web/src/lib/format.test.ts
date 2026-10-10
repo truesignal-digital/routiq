@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
+  formatPercent,
   formatMoney,
   formatDate,
   formatDateTime,
@@ -7,6 +8,7 @@ import {
   localDayKey,
   localizedLabel,
   notRecorded,
+  profitOrLoss,
 } from "./format.js";
 import { i18n } from "../i18n/index.js";
 
@@ -54,6 +56,34 @@ describe("format", () => {
         expect(en(-86_000)).toBe("−FCFA 86,000");
         expect(fr(-86_000)).toBe("−86 000 FCFA");
         expect(en(0)).toBe("FCFA 0");
+      });
+    });
+
+    describe("profitOrLoss", () => {
+      const plainText = (minor: number, locale: string) => {
+        const result = profitOrLoss(minor, { locale });
+        return { ...result, amount: plain(result.amount), text: plain(result.text) };
+      };
+
+      it("says Loss for a balance below zero, never a negative profit", () => {
+        expect(plainText(-86_000, "en")).toEqual({
+          kind: "loss",
+          label: "Loss",
+          amount: "FCFA 86,000",
+          text: "Loss FCFA 86,000",
+        });
+        expect(plainText(-86_000, "fr-CM")).toEqual({
+          kind: "loss",
+          label: "Perte",
+          amount: "86 000 FCFA",
+          text: "Perte 86 000 FCFA",
+        });
+      });
+
+      it("says Profit at zero and above, without a sign", () => {
+        expect(plainText(2_850_000, "fr-CM").text).toBe("Bénéfice 2 850 000 FCFA");
+        expect(plainText(2_850_000, "en").text).toBe("Profit FCFA 2,850,000");
+        expect(plainText(0, "en")).toMatchObject({ kind: "profit", label: "Profit", amount: "FCFA 0" });
       });
     });
 
@@ -275,5 +305,13 @@ describe("format", () => {
       await i18n.changeLanguage("fr-CM");
       expect(notRecorded()).toBe("Non renseigné");
     });
+  });
+});
+
+describe("formatPercent", () => {
+  it("writes a whole percent the reader's way, with plain spaces", () => {
+    expect(formatPercent(11, "en")).toBe("11%");
+    expect(formatPercent(11, "fr-CM")).toBe("11 %");
+    expect(formatPercent(7.4, "en")).toBe("7%");
   });
 });

@@ -37,7 +37,7 @@ const flow: DriveScript = async ({ page, shot, log, nav, t }) => {
   const shellHeader = page.locator("[data-slot='sidebar-inset'] > header");
   const coldHome = async () => {
     await page.goto(home);
-    await heading(t("Accueil", "Home")).waitFor({ timeout: 60_000 });
+    await heading(t("Tableau de bord", "Dashboard")).waitFor({ timeout: 60_000 });
   };
 
   // A: a transient failure during the background fetch, then online.

@@ -47,6 +47,22 @@
     },
     "columns": {
       "asset": "Truck"
+    },
+    "overview": {
+      "profit": {
+        "title": "Profit by truck"
+      },
+      "tiles": {
+        "idle": "No trip for {days}+ days"
+      },
+      "summary": {
+        "sentence": "{total, plural, =0 {No truck is in the fleet yet.} one {Can drive today: {canDrive, number} of # truck.} other {Can drive today: {canDrive, number} of # trucks.}}"
+      }
+    },
+    "filters": {
+      "availabilityOptions": {
+        "IDLE": "No trip for 5+ days"
+      }
     }
   },
   "documents": {
@@ -64,6 +80,11 @@
       },
       "filters": {
         "asset": "Truck"
+      }
+    },
+    "overview": {
+      "counted": {
+        "openTrips": "{count, plural, one {# trip is still open} other {# trips are still open}}: their money may still come."
       }
     }
   },
@@ -125,7 +146,17 @@
       }
     },
     "subtitle": "Every trip your trucks run, from start to close.",
-    "loadFailed": "We couldn't load trips. Please retry."
+    "loadFailed": "We couldn't load trips. Please retry.",
+    "overview": {
+      "weeks": {
+        "title": "Trips per week"
+      },
+      "summary": {
+        "sentence": "{started, plural, =0 {No trip has started this week yet.} one {# trip started this week; {closed, number} of them closed.} other {# trips started this week; {closed, number} of them closed.}}",
+        "open": "{open, plural, =0 {Nothing is still open.} one {# trip is still open.} other {# trips are still open.}}",
+        "counted": "{fuelCounted, select, yes {Closed trips missing data: {fuel, number} without fuel and {km, number} without km.} other {Closed trips missing data: {km, number} without km. Fuel is not counted: Money is off.}}"
+      }
+    }
   },
   "maintenance": {
     "workOrders": {
@@ -153,6 +184,11 @@
     "notify": {
       "success": {
         "assetReleased": "Truck returned to service"
+      }
+    },
+    "overview": {
+      "summary": {
+        "grounded": "{grounded, plural, =0 {No truck is off the road.} one {# truck is off the road.} other {# trucks are off the road.}}"
       }
     }
   },
@@ -291,5 +327,84 @@
     "VEHICLE_GROUNDED": "This truck is grounded right now. It must be released to service before it leaves.",
     "DRIVER_DOUBLE_BOOKED": "This driver is already booked on another trip at the same time.",
     "TRIP_STARTED_AFTER_CANCELLATION": "This trip had been cancelled, but it was started offline. It is running again."
+  },
+  "dashboard": {
+    "counted": {
+      "postedAndTrips": "Counted: {count, plural, one {# posted entry} other {# posted entries}} and {closed, plural, one {# closed trip} other {# closed trips}}."
+    },
+    "vehicles": {
+      "columns": {
+        "trips": "Trips",
+        "vehicle": "Truck"
+      },
+      "tripsCount": "{count, plural, one {# trip} other {# trips}}",
+      "tripsWithoutKm": "{count, plural, one {# trip without km} other {# trips without km}}",
+      "lossDetail": "{count, plural, =0 {No trip} one {# trip} other {# trips}} · {amount} spent",
+      "title": {
+        "profit": "Profit by truck",
+        "costs": "Cost by truck"
+      },
+      "description": {
+        "profit": "{period} · revenue and expenses recorded on each truck · losses first",
+        "costs": "{period} · expenses recorded on each truck · costliest first"
+      },
+      "atALossTitle": "Trucks at a loss",
+      "noneAtALoss": "No truck made a loss in this period.",
+      "empty": "No truck in this period.",
+      "lines": {
+        "allVehicles": "Profit of all trucks ({count})",
+        "branchVehicles": "Profit of this branch's trucks ({count})",
+        "otherVehicles": "Other branches' trucks in this branch's entries",
+        "revenueWithoutVehicle": "Revenue recorded on no truck",
+        "allVehicleCosts": "Costs of all trucks ({count})",
+        "branchVehicleCosts": "Costs of this branch's trucks ({count})",
+        "otherVehicleCosts": "Other branches' trucks in this branch's entries"
+      }
+    },
+    "comingUp": {
+      "rows": {
+        "TRIPS_PLANNED": {
+          "title": "{count, plural, one {# trip planned} other {# trips planned}}",
+          "detail": "{without, plural, =0 {every one has a truck} one {# without a truck yet} other {# without a truck yet}}"
+        }
+      }
+    },
+    "tabs": {
+      "vehicles": "Profit by truck"
+    },
+    "tiles": {
+      "vehicleCosts": "Truck costs",
+      "canDrive": "Trucks that can drive",
+      "allCanDrive": "Every truck in service can drive",
+      "noneInService": "No truck is in service"
+    },
+    "branches": {
+      "title": {
+        "profit": "Truck profit by branch",
+        "costs": "Truck costs by branch"
+      },
+      "description": {
+        "profit": "Which branch's trucks earn the most? {period}, {currency}.",
+        "costs": "Which branch's trucks cost the most? {period}, {currency}."
+      },
+      "empty": "No branch has trucks in this period.",
+      "hover": "{count, plural, one {# truck} other {# trucks}} · revenue {revenue} · expenses {expenses}",
+      "hoverCosts": "{count, plural, one {# truck} other {# trucks}} · expenses {expenses}",
+      "vehicleCount": "{count, plural, one {# truck} other {# trucks}}",
+      "columns": {
+        "vehicles": "Trucks",
+        "profit": "Truck profit"
+      }
+    }
+  },
+  "overview": {
+    "summary": {
+      "change": {
+        "groundedMany": "{count, plural, one {# truck was grounded in the last 7 days and is still off the road: {codes}.} other {# trucks were grounded in the last 7 days and are still off the road: {codes}.}}"
+      },
+      "money": {
+        "notEnoughTrips": "{window, select, lastMonth {In {month}, only {closed, number} of {total, plural, one {# trip was} other {# trips were}} closed, so it is too early to give a profit.} other {So far in {month}, only {closed, number} of {total, plural, one {# trip is} other {# trips are}} closed, so it is too early to give a profit.}}"
+      }
+    }
   }
 }

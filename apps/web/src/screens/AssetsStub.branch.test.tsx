@@ -24,7 +24,7 @@ const DLA = { id: "branch-dla", code: "DLA", name: "Douala" };
 const YDE = { id: "branch-yde", code: "YDE", name: "Yaoundé" };
 
 const REFERENCE = { assetClasses: [], branches: [DLA, YDE] };
-const SUMMARY = { total: 1, inService: 1, attention: 0 };
+const SUMMARY = { total: 1, inService: 1, canDrive: 1, attention: 0 };
 const PAGE = {
   items: [
     {
@@ -115,17 +115,16 @@ describe("assets explorer under the shell's current branch", () => {
     sessionStore.logout({ username: "ada", workspaceSlug: "ws-1" });
   });
 
-  it("narrows the list and the tiles to the current branch", async () => {
+  it("narrows the list to the current branch", async () => {
     localStorage.setItem(branchStorageKey("ws-1"), DLA.id);
-    const { listed, summarized } = stubFetch();
+    const { listed } = stubFetch();
 
     renderScreen();
     await screen.findByText("AST-001");
 
-    // Neither call passes a branch: `useAssets` and `useAssetSummary` declare
-    // themselves branch-scoped, and the shared layer injects it.
+    // The call passes no branch: `useAssets` declares itself branch-scoped,
+    // and the shared layer injects it. The tiles moved to the Overview (#665).
     await waitFor(() => expect(lastQuery(listed).get("branchId")).toBe(DLA.id));
-    await waitFor(() => expect(lastQuery(summarized).get("branchId")).toBe(DLA.id));
   });
 
   it("sends no branchId while the switcher is on all my branches", async () => {

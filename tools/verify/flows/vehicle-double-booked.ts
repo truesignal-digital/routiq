@@ -17,6 +17,7 @@ type Item = { code: string; subject: { id: string; number: string | null }; para
 const flow: DriveScript = async (ctx) => {
   const { page, t, shot, quiet, log } = ctx;
   await (await openSidebar(page)).getByRole("link", { name: t("Camions", "Trucks") }).click();
+  await page.locator("[data-slot='module-page-tabs']").getByRole("tab", { name: t("Camions", "Trucks") }).click();
   await page.getByRole("button", { name: /VH003/ }).first().click();
   await page.getByRole("heading", { level: 1, name: "VH003" }).waitFor();
   await quiet();

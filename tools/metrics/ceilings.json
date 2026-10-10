@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 718613,
+    "ceiling": 769734,
     "raises": [
       {
         "date": "2026-10-06",
@@ -287,13 +287,19 @@
       {
         "date": "2026-10-10",
         "from": 713902,
-        "to": 718613,
-        "reason": "#663 FormPage (section cards, So far, Still missing, phone steps and review) plus the sheet's live totals and Register a truck's sections"
+        "to": 764827,
+        "reason": "Summary notice on every Overview (#667) and Dashboard summary setting (#669): notice component, money sentence helper, verdict badge, fr/en words across the catalogs and the five Overview chunks, plus the Company settings section, form and read hook, about 6.9 kB gzip. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666) and module Overviews (#665) until they merge (re-recorded on develop 4dee04a4)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 764827,
+        "to": 769734,
+        "reason": "#663 FormPage (section cards, So far, Still missing, phone steps and review) plus the sheet's live totals and Register a truck's sections (re-recorded on develop 6cc4a1db)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22999,
+    "ceiling": 23417,
     "raises": [
       {
         "date": "2026-10-06",
@@ -352,13 +358,31 @@
       {
         "date": "2026-10-10",
         "from": 22832,
-        "to": 22999,
-        "reason": "#663 FormPage: container-query grid for the 760 px form column and 300 px So far column, sticky footer above the phone bottom bar"
+        "to": 22941,
+        "reason": "Money module page (#664): five-tile strip and the Overview's two-column grid add Tailwind classes"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 23091,
+        "reason": "Dashboard (#666): the two chart series tokens (blue, orange) and the bridge and branch-bar classes; the rest is #664's 109 B until #680 merges"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 23261,
+        "reason": "Summary notice (#667): its card and closed-line classes, 23 B; counted from develop's ceiling, so it also covers #666's 259 B and #665's overview parts until they merge"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 23261,
+        "to": 23417,
+        "reason": "#663 FormPage: container-query grid for the 760 px form column and 300 px So far column, sticky footer above the phone bottom bar (re-recorded on develop 6cc4a1db)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 266864,
+    "ceiling": 281019,
     "raises": [
       {
         "date": "2026-10-06",
@@ -615,8 +639,14 @@
       {
         "date": "2026-10-10",
         "from": 266200,
-        "to": 266864,
-        "reason": "#663 FormPage: the So far, section-state, step and review words in the fr/en catalogs (initial bundle), about 0.6 kB gzip"
+        "to": 280366,
+        "reason": "Summary notice on every Overview (#667) and Dashboard summary setting (#669): the notice's fr/en ICU sentences (money templates, module Overview sentences, trip-word overlays for both presets), the notice component, the summary setting's fr/en words and the schedule list in contracts, about 2.9 kB gzip. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666, about 7 kB) and module Overviews (#665, about 4.3 kB net of the shared #659/#664/#676 parts) until they merge (re-recorded on develop 4dee04a4)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 280366,
+        "to": 281019,
+        "reason": "#663 FormPage: the So far, section-state, step and review words in the fr/en catalogs (initial bundle), about 0.6 kB gzip (re-recorded on develop 6cc4a1db)"
       }
     ]
   }
