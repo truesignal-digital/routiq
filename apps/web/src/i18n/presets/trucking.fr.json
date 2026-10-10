@@ -60,7 +60,8 @@
     "entries": {
       "detail": {
         "asset": "Camion",
-        "tripLink": "Trajet {number}"
+        "tripLink": "Trajet {number}",
+        "truck": "Camion"
       },
       "filters": {
         "asset": "Camion"
@@ -99,7 +100,14 @@
         "branchOnly": "Seules les écritures de vos agences sur ce trajet."
       },
       "closedAt": "Clôturé le {date}",
-      "loadFailed": "Impossible de charger ce trajet."
+      "loadFailed": "Impossible de charger ce trajet.",
+      "status": {
+        "complete": "Compléter le trajet"
+      },
+      "sections": {
+        "truckAndCrew": "Camion et équipage"
+      },
+      "truck": "Camion"
     },
     "actions": {
       "reasonPlaceholder": "Pourquoi rouvrir ce trajet ?",

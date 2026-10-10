@@ -97,7 +97,10 @@
         "branchOnly": "Seules les écritures de vos agences sur ce voyage."
       },
       "closedAt": "Clôturé le {date}",
-      "loadFailed": "Impossible de charger ce voyage."
+      "loadFailed": "Impossible de charger ce voyage.",
+      "status": {
+        "complete": "Compléter le voyage"
+      }
     },
     "actions": {
       "reasonPlaceholder": "Pourquoi rouvrir ce voyage ?",

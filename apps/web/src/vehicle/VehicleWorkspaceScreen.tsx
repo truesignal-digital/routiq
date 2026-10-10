@@ -14,13 +14,11 @@ import { canViewDocuments } from "@/documents/permissions.js";
 import { useCategories } from "@/categories/useCategories.js";
 import { canReadFinance, canReadFinanceEntries } from "@/finance/permissions.js";
 import { canSeeWorkOrderCosts, canSeeWorkOrderEstimate, canViewMaintenance } from "@/maintenance/permissions.js";
-import { OtherBranchNotice } from "@/shell/BranchScopeNotices.js";
 import { actionAvailability, actionDef, actionPermitted, type VehicleFacts } from "./actions.js";
 import { AllActionsSheet } from "./AllActionsSheet.js";
 import { useVehicle, VehicleCtx, type PanelControls, type PanelForm, type VehicleContextValue } from "./context.js";
-import { FactsLine } from "./header/FactsLine.js";
-import { IdentityStrip } from "./header/IdentityStrip.js";
-import { StatusBlock } from "./header/StatusBlock.js";
+import { VehicleHeader } from "./header/IdentityStrip.js";
+import { VehicleStatusBlock } from "./header/StatusBlock.js";
 import {
   panelParam,
   parsePanel,
@@ -48,7 +46,7 @@ export function VehicleWorkspaceScreen() {
 
   if (assetQuery.isPending || me === undefined) {
     return (
-      <PageContainer width="wide">
+      <PageContainer>
         <LoadingState label={t("assets.detail.loading")} rows={3} />
       </PageContainer>
     );
@@ -58,7 +56,7 @@ export function VehicleWorkspaceScreen() {
     // Outside the caller's scope is a 404, never a 403: the vehicle simply is not theirs to see.
     const notFound = assetQuery.error?.message === "ASSET_DETAIL_404";
     return (
-      <PageContainer width="wide">
+      <PageContainer>
         {notFound ? (
           <EmptyState icon={<Truck className="size-7" aria-hidden />} message={t("vehicle.page.notFound")} />
         ) : (
@@ -151,13 +149,11 @@ function Workspace({ asset, me }: { asset: AssetDetail; me: MeContext }) {
 
   return (
     <VehicleCtx.Provider value={value}>
-      <PageContainer width="wide" className="pb-48 md:pb-28">
-        <header className="space-y-2.5">
-          <IdentityStrip />
-          <OtherBranchNotice branchCode={asset.branch.code} />
-          <StatusBlock />
-          <FactsLine />
-        </header>
+      <PageContainer className="pb-48 md:pb-28">
+        <div className="space-y-2.5">
+          <VehicleHeader />
+          <VehicleStatusBlock />
+        </div>
         <VehicleTabsNav />
         <div className="mt-5">
           <TabOutlet />

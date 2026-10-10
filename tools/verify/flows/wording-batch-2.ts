@@ -182,8 +182,9 @@ async function tripHistory(ctx: DriveContext, label: string, word: string) {
   await nav(`/activities/${trip.id}`);
   await page.getByRole("heading", { level: 1, name: trip.activityNumber }).waitFor();
   await quiet();
-  await page.getByRole("button", { name: t("Historique", "History"), exact: true }).click();
-  const sheet = page.getByRole("dialog", { name: t("Historique du dossier", "Record history") });
+// History is the record page's last tab (#662).
+  await page.getByRole("tab", { name: t("Historique", "History"), exact: true }).click();
+  const sheet = page.getByRole("region", { name: t("Historique du dossier", "Record history") });
   await sheet.waitFor();
   await quiet();
   let closed = sheet.getByText(word, { exact: true });

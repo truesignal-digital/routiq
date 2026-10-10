@@ -15,7 +15,8 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   log(`cancelling ${entry.entryNumber}`);
 
   await nav(`/finance/entries/${entry.id}`);
-  await page.getByRole("heading", { level: 1, name: t("Détail de l'écriture", "Entry detail") }).waitFor();
+  // The record page is titled with the entry's own number (#662).
+  await page.getByRole("heading", { level: 1, name: entry.entryNumber }).waitFor();
   await quiet();
   const cancel = t("Annuler l'écriture", "Cancel entry");
   await page.getByRole("button", { name: cancel, exact: true }).click();

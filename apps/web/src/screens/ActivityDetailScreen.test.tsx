@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import type { ActivityDetail } from "@routiq/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createElement, type ReactNode } from "react";
 import {
   afterAll,
@@ -15,14 +16,22 @@ import {
 } from "vitest";
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { i18n } from "../i18n/index.js";
+import { filledButtons, recordHeader } from "../test/record.js";
 
 const ACTIVITY_ID = "00000000-0000-4000-8000-000000000010";
 const COMMAND_ID = "3f1a9c40-1f2b-4d5e-9a77-2c0b1d8e4f60";
 
-const mocks = vi.hoisted(() => ({ useActivity: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  useActivity: vi.fn(),
+  navigate: vi.fn(),
+  open: vi.fn(),
+  search: { current: {} as { tab?: "legs" | "money" | "history" } },
+}));
 
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ activityId: ACTIVITY_ID }),
+  useSearch: () => mocks.search.current,
+  useNavigate: () => mocks.navigate,
   useRouterState: ({ select }: { select: (state: unknown) => unknown }) =>
     select({ location: { pathname: `/activities/${ACTIVITY_ID}` } }),
   Link: ({
@@ -49,10 +58,32 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("../activities/useActivities.js", () => ({ useActivity: mocks.useActivity }));
 
-// The header's action buttons own their own dialogs and command plumbing; this
-// screen only has to keep their slot.
-vi.mock("../activities/ActivityActions.js", () => ({
-  ActivityActions: () => <div data-testid="activity-actions" />,
+// The trip's forms own their own command plumbing (ActivityActions.test.tsx);
+// this screen only places the buttons: captures in the header, the close and
+// the fix for what is missing in the status block.
+vi.mock("../activities/ActivityActions.js", async () => {
+  const { Button } = await import("../components/ui/button");
+  return {
+    useActivityActions: (activity: ActivityDetail) => ({
+      buttons: {
+        close: activity.status === "OPEN" ? <Button>Close the activity</Button> : null,
+        leg: activity.status === "OPEN" ? <Button variant="outline">Record a leg</Button> : null,
+        reading: null,
+        expense: null,
+        substitute: null,
+        reopen: activity.status === "CLOSED" ? <Button variant="outline">Reopen the activity</Button> : null,
+      },
+      forms: null,
+      open: mocks.open,
+      can: { reopen: activity.status === "CLOSED" },
+    }),
+  };
+});
+
+// The trail has its own tests (record-history-sheet.test.tsx).
+vi.mock("../components/record-history-sheet.js", () => ({
+  RecordHistory: () => <div data-testid="history-tab" />,
+  LatestHistory: () => <section data-testid="latest-history" />,
 }));
 
 const { ActivityDetailScreen } = await import("./ActivityDetailScreen.js");
@@ -269,6 +300,18 @@ function sectionTitles(): string[] {
   );
 }
 
+function tabNames(): string[] {
+  return screen.getAllByRole("tab").map((tab) => (tab.textContent ?? "").trim());
+}
+
+function statusBlock(): HTMLElement | null {
+  return document.querySelector<HTMLElement>('[data-slot="status-block"]');
+}
+
+function showing(data: ActivityDetail) {
+  mocks.useActivity.mockReturnValue({ data, isPending: false, isError: false, refetch: vi.fn() });
+}
+
 function renderScreen(me: MeContext = manager) {
   return render(
     createElement(
@@ -289,43 +332,35 @@ afterAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.useActivity.mockReturnValue({
-    data: fullHaulage(),
-    isPending: false,
-    isError: false,
-    refetch: vi.fn(),
-  });
+  mocks.search.current = {};
+  showing(fullHaulage());
 });
 
 afterEach(() => {
   cleanup();
 });
 
-describe("activity detail — a full haulage job", () => {
-  it("stacks every module the record has data for", () => {
+describe("the trip's record header (#662)", () => {
+  it("titles the page with the trip number, its state beside it, and one facts line", () => {
     renderScreen();
 
-    expect(screen.getByRole("heading", { name: "DLA-2026-00042" })).toBeTruthy();
-    expect(screen.getByTestId("activity-actions")).toBeTruthy();
-    // The timeline is one action away from every record, and costs nothing
-    // until it is opened.
-    expect(screen.getByRole("button", { name: "History" })).toBeTruthy();
-    expect(sectionTitles()).toEqual([
-      "Planned vs actual",
-      "Assets and crew",
-      "Legs",
-      "Revenue and costs",
-    ]);
+    const header = recordHeader();
+    expect(within(header).getByRole("heading", { level: 1 }).textContent).toBe("DLA-2026-00042");
+    expect(within(header).getByText("Closed")).toBeTruthy();
+    const facts = header.querySelector('[data-slot="record-facts"]')?.textContent ?? "";
+    expect(facts).toContain("Haulage job");
+    expect(facts).toContain("Cimencam");
+    expect(facts).toContain("Closed ");
   });
 
-  it("surfaces the fields the old screen dropped on the floor", () => {
+  it("holds at most one filled button, and History is a tab, never a button", () => {
+    showing(sparseJourney());
     renderScreen();
 
-    expect(screen.getByText("Ciment en sacs, chargement à l'usine.")).toBeTruthy();
-    expect(screen.getAllByText(/^Closed /).length).toBeGreaterThan(0);
-    expect(screen.getByText("Douala → Edéa")).toBeTruthy();
-    expect(screen.getByText("Laden")).toBeTruthy();
-    expect(screen.getByText(/\+480 km/)).toBeTruthy();
+    expect(filledButtons(recordHeader())).toHaveLength(0);
+    expect(within(recordHeader()).getByRole("button", { name: "Record a leg" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "History" })).toBeNull();
+    expect(screen.getByRole("tab", { name: "History" })).toBeTruthy();
   });
 
   it("stamps where the record came from", () => {
@@ -334,82 +369,158 @@ describe("activity detail — a full haulage job", () => {
     const stamp = screen.getByText(/TRUCKING v2/);
     expect(stamp.textContent).toContain("command 3f1a9c40");
   });
+});
 
-  it("nets the posted money and links the lines out to finance", () => {
+describe("the trip's status block (#662)", () => {
+  it("is not there when nothing waits: a complete closed trip", () => {
+    renderScreen();
+    expect(statusBlock()).toBeNull();
+    // Reopen stays an ordinary header action.
+    expect(within(recordHeader()).getByRole("button", { name: "Reopen the activity" })).toBeTruthy();
+  });
+
+  it("holds the close while the trip is on the road", () => {
+    showing(sparseJourney());
+    renderScreen();
+
+    const block = statusBlock();
+    expect(block?.textContent).toContain("On the road");
+    expect(within(block as HTMLElement).getByRole("button", { name: "Close the activity" })).toBeTruthy();
+    expect(within(recordHeader()).queryByRole("button", { name: "Close the activity" })).toBeNull();
+  });
+
+  it("says what a trip closed with gaps misses and offers to complete it", async () => {
+    showing({
+      ...fullHaulage(),
+      completeness: "COMPLETE_WITH_EXCEPTIONS",
+      completenessCodes: ["ACTIVITY_MISSING_CREW", "ACTIVITY_NO_REVENUE"],
+    });
+    renderScreen();
+
+    const block = statusBlock() as HTMLElement;
+    expect(block.textContent).toContain("Closed, but 2 things are missing");
+    expect(within(block).getByText("No crew recorded")).toBeTruthy();
+    expect(within(block).getByText("No revenue attributed")).toBeTruthy();
+    await userEvent.click(within(block).getByRole("button", { name: "Complete the activity" }));
+    expect(mocks.open).toHaveBeenCalledWith("reopen");
+    // The fix is in the block; the header does not offer it twice.
+    expect(within(recordHeader()).queryByRole("button", { name: "Reopen the activity" })).toBeNull();
+  });
+});
+
+describe("the trip's tabs (#662)", () => {
+  it("are Overview, Legs, Money and History, in that order", () => {
+    renderScreen();
+    expect(tabNames()).toEqual(["Overview", "Legs2", "Money", "History"]);
+  });
+
+  it("keep the open tab in the address", async () => {
+    renderScreen();
+    await userEvent.click(screen.getByRole("tab", { name: /Legs/ }));
+    const call = mocks.navigate.mock.calls.at(-1)?.[0] as {
+      to: string;
+      search: (previous: Record<string, unknown>) => Record<string, unknown>;
+      replace: boolean;
+    };
+    expect(call.to).toBe(".");
+    expect(call.search({})).toEqual({ tab: "legs" });
+  });
+
+  it("shows the legs on Legs", () => {
+    mocks.search.current = { tab: "legs" };
+    renderScreen();
+
+    expect(screen.getByRole("tab", { name: /Legs/, selected: true })).toBeTruthy();
+    expect(screen.getByText("Douala → Edéa")).toBeTruthy();
+    expect(screen.getByText("Laden")).toBeTruthy();
+  });
+
+  it("shows the lines and the profit on Money, linking each line to its entry", () => {
+    mocks.search.current = { tab: "money" };
     renderScreen();
 
     const link = screen.getByRole("link", { name: /FIN-2026-0001/ });
-    expect(link.getAttribute("href")).toBe(
-      "/finance/entries/00000000-0000-4000-8000-000000000081",
-    );
-    expect(screen.getAllByText(/posted/i).length).toBeGreaterThan(0);
+    expect(link.getAttribute("href")).toBe("/finance/entries/00000000-0000-4000-8000-000000000081");
+    expect(screen.getAllByText("Profit").length).toBeGreaterThan(0);
+  });
+
+  it("shows the trail on History", () => {
+    mocks.search.current = { tab: "history" };
+    renderScreen();
+    expect(screen.getByTestId("history-tab")).toBeTruthy();
   });
 });
 
-describe("activity detail — a sparse open journey", () => {
-  beforeEach(() => {
-    mocks.useActivity.mockReturnValue({
-      data: sparseJourney(),
-      isPending: false,
-      isError: false,
-      refetch: vi.fn(),
-    });
-  });
-
-  it("leaves out every section with nothing in it", () => {
+describe("the trip's Overview (#662)", () => {
+  it("groups the facts like the sheet: vehicle and crew, then the job", () => {
     renderScreen();
 
-    // The overview band is the only card a bare record earns.
-    expect(sectionTitles()).toEqual([]);
-    expect(screen.queryByRole("table")).toBeNull();
+    expect(sectionTitles()).toEqual(["Vehicle and crew", "Job", "Planned vs actual"]);
+    expect(screen.getByText("Amadou Bello")).toBeTruthy();
+    expect(screen.getByText("Meter at departure").nextElementSibling?.textContent).toMatch(/^128,400 km$/);
+    expect(screen.getByText("Meter at arrival").nextElementSibling?.textContent).toMatch(/^128,880 km$/);
+    expect(screen.getByText("Ciment en sacs, chargement à l'usine.")).toBeTruthy();
+    expect(screen.getByText("Customer reference").nextElementSibling?.textContent).toBe("BC-8842");
   });
 
-  it("still answers the questions the header can answer", () => {
+  it("says Not recorded for what a bare open journey lacks", () => {
+    showing(sparseJourney());
     renderScreen();
 
-    expect(screen.getByRole("heading", { name: "YDE-2026-00007" })).toBeTruthy();
-    // One state, worded as on the vehicle's Trips tab; the end stays a time (#94).
-    expect(screen.getByText("On the road")).toBeTruthy();
-    expect(screen.queryByText("Open")).toBeNull();
-    expect(screen.queryByText("Running")).toBeNull();
     expect(screen.getByText("Ended").nextElementSibling?.textContent).toBe("Not recorded");
+    for (const label of ["Crew", "Meter at departure", "Customer", "Notes"]) {
+      expect(screen.getByText(label).nextElementSibling?.textContent, label).toBe("Not recorded");
+    }
     expect(screen.getByText(/PASSENGER_TRANSPORT v1/)).toBeTruthy();
   });
+});
 
-  it("keeps a zero net honest rather than hiding the tile", () => {
+describe("the trip's context column (#662)", () => {
+  it("holds the money box, the linked vehicle and the latest history", () => {
     renderScreen();
 
-    const net = screen.getByText("Net").nextElementSibling;
-    expect((net?.textContent ?? "").replace(/[^\d+-]/g, "")).toBe("0");
+    const aside = screen.getByRole("complementary", { name: "About this record" });
+    const money = within(aside).getByRole("heading", { name: "Money" }).closest("section") as HTMLElement;
+    const digits = (label: string) =>
+      (within(money).getByText(label).nextElementSibling?.textContent ?? "").replace(/[^\d]/g, "");
+    expect(digits("Profit")).toBe("500000");
+    expect(digits("Revenue")).toBe("900000");
+    expect(digits("Expenses")).toBe("400000");
+    expect(within(aside).getByRole("link", { name: /CAMION-03/ }).getAttribute("href")).toBe(
+      "/assets/00000000-0000-4000-8000-000000000051",
+    );
+    expect(within(aside).getByTestId("latest-history")).toBeTruthy();
+  });
+
+  it("calls a trip that lost money a loss, and a trip without revenue says so", () => {
+    showing({
+      ...fullHaulage(),
+      financialEntries: (fullHaulage().financialEntries ?? []).filter((entry) => entry.direction === "EXPENSE"),
+    });
+    renderScreen();
+
+    const aside = screen.getByRole("complementary", { name: "About this record" });
+    expect(within(aside).getByText("Loss").nextElementSibling?.textContent?.replace(/[^\d-]/g, "")).toBe("400000");
+    expect(within(aside).getByText("Revenue").nextElementSibling?.textContent).toBe("Not recorded");
   });
 });
 
-describe("activity detail — a reader the server keeps the ledger from (#103)", () => {
-  beforeEach(() => {
-    mocks.useActivity.mockReturnValue({
-      data: { ...fullHaulage(), financialEntries: null },
-      isPending: false,
-      isError: false,
-      refetch: vi.fn(),
-    });
-  });
-
-  it("shows the trip without its money section or net", () => {
+describe("a reader the server keeps the ledger from (#103)", () => {
+  it("shows the trip without its Money tab or money box", () => {
+    showing({ ...fullHaulage(), financialEntries: null });
     renderScreen();
 
-    expect(screen.getByRole("heading", { name: "DLA-2026-00042" })).toBeTruthy();
-    expect(sectionTitles()).toEqual(["Planned vs actual", "Assets and crew", "Legs"]);
-    expect(screen.queryByText("Net")).toBeNull();
+    expect(tabNames()).toEqual(["Overview", "Legs2", "History"]);
+    expect(screen.queryByText("Profit")).toBeNull();
     expect(screen.queryByRole("link", { name: /FIN-2026-0001/ })).toBeNull();
-    expect(screen.getByText("Legs", { selector: "dt" })).toBeTruthy();
   });
 });
 
 /**
- * #408: the money card says whose entries it lists from the reader's entries
+ * #408: the money tab says whose entries it lists from the reader's entries
  * scope. The counter reads its branches' entries, not only its own.
  */
-describe("activity detail — whose entries the money card lists (#408)", () => {
+describe("whose entries the money tab lists (#408)", () => {
   const sentences = {
     en: {
       own: "Only the entries you recorded on this activity.",
@@ -428,11 +539,14 @@ describe("activity detail — whose entries the money card lists (#408)", () => 
   for (const locale of ["en", "fr-CM"] as const) {
     it(`tells the driver and the cashier apart on the same trip (${locale})`, async () => {
       await i18n.changeLanguage(locale);
+      mocks.search.current = { tab: "money" };
       const { own, branch } = sentences[locale];
 
       const driver = renderScreen({ ...manager, role: "DRIVER" });
       expect(screen.getByText(own)).toBeTruthy();
       expect(screen.queryByText(branch)).toBeNull();
+      // A driver's own entries are no trip's money: no money box beside them.
+      expect(screen.queryByRole("heading", { name: locale === "en" ? "Money" : "Argent" })).toBeNull();
       driver.unmount();
 
       renderScreen({ ...manager, role: "CASHIER" });

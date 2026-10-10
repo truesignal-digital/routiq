@@ -552,7 +552,7 @@
         "REVERSED": "Annulée"
       },
       "detail": {
-        "title": "Détail de l'écriture",
+        "title": "Écriture",
         "notFound": "Cette écriture est introuvable.",
         "entryNumber": "Numéro d'écriture",
         "direction": "Direction",
@@ -579,7 +579,7 @@
         "reversedByEntry": "Annulée par l'écriture {number}",
         "rejectedReason": "Motif du rejet",
         "latePosting": "Comptabilisation tardive",
-        "breadcrumb": "Détail",
+        "breadcrumb": "Écriture",
         "editAction": "Modifier",
         "receipt": "Justificatif",
         "noReceiptFile": "Aucun fichier sur cette écriture.",
@@ -593,7 +593,40 @@
           "RECORDED": "Joint à la saisie · {date} · {name}",
           "ATTACHED": "Joint après coup · {date} · {name}"
         },
-        "cancellationReason": "Motif"
+        "cancellationReason": "Motif",
+        "statusBlock": {
+          "waiting": "En attente d'approbation",
+          "waitingYou": "En attente de votre approbation",
+          "waitingFollow": "{approver, select, DIRECTION_APPROVES {La Direction décide.} FINANCE_PEER_APPROVES {Un autre membre des Finances ou la Direction décide.} other {Les Finances décident.}} D'ici là, elle n'entre pas dans les totaux comptabilisés.",
+          "rejected": "Rejetée",
+          "rejectedFollow": "Elle reste dans l'historique et n'est jamais comptée.",
+          "rejectedReason": "Motif : « {reason} ». Elle reste dans l'historique et n'est jamais comptée.",
+          "cancelled": "Annulée",
+          "cancellation": "Cette écriture en annule une autre",
+          "cancelledReason": "Motif : {reason}.",
+          "noReceipt": "Pas encore de reçu",
+          "noReceiptFollow": "En attente du reçu de {name}."
+        },
+        "sections": {
+          "what": "Quoi",
+          "howMuch": "Qui et combien",
+          "proof": "Justificatif"
+        },
+        "truck": "Véhicule",
+        "recordedByLabel": "Saisie par",
+        "recordedBy": "Saisie par {name}",
+        "files": "Fichiers",
+        "fileCount": "{count, plural, =0 {Aucun fichier} one {# fichier} other {# fichiers}}",
+        "cancellationNoReceipt": "Le reçu est sur l'écriture annulée.",
+        "kind": "Nature",
+        "counted": "Dans les totaux comptabilisés",
+        "countedWhen": "{status, select, SUBMITTED {Après approbation} POSTED {Oui} REVERSED {Oui, avec son annulation} other {Jamais}}",
+        "month": "Mois comptable",
+        "notPosted": "Non comptabilisée",
+        "notLinked": "Liée à aucune autre fiche.",
+        "tabs": {
+          "receipt": "Reçu"
+        }
       },
       "viewer": {
         "description": "Date comptable {date}",
@@ -828,7 +861,6 @@
       "summary": "Résumé",
       "clientReference": "Réf. client",
       "endedAt": "Arrivée",
-      "assets": "Engins et équipage",
       "legs": "Étapes",
       "money": "Recettes et dépenses",
       "moneyCosts": "Dépenses",
@@ -837,9 +869,8 @@
       "overview": {
         "started": "Départ",
         "ended": "Arrivée",
-        "net": "Résultat",
-        "postedOnly": "lignes comptabilisées seulement",
-        "legs": "Étapes"
+        "legs": "Étapes",
+        "distance": "Distance"
       },
       "timeline": {
         "title": "Prévu et réalisé",
@@ -874,13 +905,45 @@
         "passengers": "Passagers"
       },
       "moneySummary": {
-        "net": "Résultat",
         "postedOnly": "comptabilisé seulement",
         "pending": "En attente d'approbation",
         "pendingHint": "Les lignes en attente sont listées mais restent hors du résultat.",
         "ownOnly": "Seules les écritures que vous avez saisies sur cette activité.",
-        "branchOnly": "Seules les écritures de vos agences sur cette activité."
-      }
+        "branchOnly": "Seules les écritures de vos agences sur cette activité.",
+        "result": "{sign, select, loss {Perte} other {Bénéfice}}"
+      },
+      "status": {
+        "openFollow": "Clôturez-la au retour ; les manques sont signalés, jamais inventés.",
+        "gaps": "{count, plural, one {Clôturée, mais # élément manque} other {Clôturée, mais # éléments manquent}}",
+        "gapsFollow": "Son bénéfice n'est pas fiable sans eux : rouvrez-la, ajoutez-les, clôturez-la de nouveau.",
+        "gapsManager": "Son bénéfice n'est pas fiable sans eux ; un responsable la rouvre.",
+        "complete": "Compléter l'activité"
+      },
+      "sections": {
+        "truckAndCrew": "Véhicule et équipage",
+        "job": "Mission"
+      },
+      "truck": "Véhicule",
+      "crew": "Équipage",
+      "startKm": "Compteur au départ",
+      "endKm": "Compteur à l'arrivée",
+      "type": "Type",
+      "customer": "Client",
+      "clientReferenceLabel": "Référence client",
+      "route": "Itinéraire",
+      "routeValue": "{from} → {to}",
+      "notes": "Notes",
+      "readingValue": "{value, number} {unit}",
+      "moneyBox": {
+        "revenue": "Recettes",
+        "expenses": "Dépenses"
+      },
+      "notLinked": "Aucun véhicule saisi.",
+      "tabs": {
+        "money": "Argent"
+      },
+      "noLegs": "Aucune étape saisie.",
+      "noMoney": "Aucune recette ni dépense saisie pour l'instant."
     },
     "actions": {
       "choose": "Choisir",
@@ -1769,7 +1832,9 @@
         "RECEIPT_EXPECTED": "Justificatif attendu",
         "NO_RECEIPT_EXPECTED": "Pas de justificatif attendu"
       }
-    }
+    },
+    "latest": "Derniers événements",
+    "allHistory": "Tout l'historique"
   },
   "dateField": {
     "placeholderDate": "jj/mm/aaaa",
@@ -2882,6 +2947,12 @@
         "searchPlaceholder": "Rechercher, ex. plein, renouveler, valider",
         "noMatch": "Aucune action ne correspond à « {query} »."
       }
+    },
+    "badge": {
+      "grounded": "Immobilisé",
+      "repaired": "En attente de remise en service",
+      "available": "Disponible",
+      "notAssessed": "Non évalué"
     }
   },
   "approvalRules": {
@@ -2949,6 +3020,17 @@
       "success": {
         "thresholdsSaved": "Seuils d'approbation enregistrés"
       }
+    }
+  },
+  "record": {
+    "context": "À propos de cet enregistrement",
+    "actionBar": "Décision",
+    "linked": "Liens",
+    "openTab": "Ouvrir l'onglet",
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "history": "Historique",
+      "label": "Sections de la fiche"
     }
   }
 }

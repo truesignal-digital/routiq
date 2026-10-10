@@ -94,7 +94,10 @@
         "ownOnly": "Only the entries you recorded on this trip.",
         "branchOnly": "Only the entries of your branches on this trip."
       },
-      "loadFailed": "We couldn't load this trip."
+      "loadFailed": "We couldn't load this trip.",
+      "status": {
+        "complete": "Complete the trip"
+      }
     },
     "actions": {
       "reasonPlaceholder": "Why reopen this trip?",

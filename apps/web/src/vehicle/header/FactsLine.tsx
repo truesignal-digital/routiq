@@ -1,76 +1,67 @@
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { formatRelativeTime } from "@/lib/format.js";
 import { useVehicle } from "../context.js";
-import { LinkButton, Sep, withNodes } from "../parts.js";
+import { LinkButton, withNodes } from "../parts.js";
 
-/** One quiet line of facts under the sentence; the Details section holds the rest. */
-export function FactsLine() {
+/** The quiet facts for the header's facts line; the Details section holds the rest. */
+export function useFactsLine(): ReactNode[] {
   const { t, i18n } = useTranslation();
   const { asset, gates, panel } = useVehicle();
   const locale = i18n.language;
   const reading = asset.lastReading;
 
-  return (
-    <div className="hidden items-center gap-x-2.5 gap-y-1 px-1 text-sm text-muted-foreground md:flex md:flex-wrap">
-      <span>
-        {withNodes((slots) => t("vehicle.facts.custodian", slots), {
-          name: (
-            <span className="font-medium text-foreground">
-              {asset.custodian?.displayName ?? t("vehicle.facts.nobody")}
-            </span>
-          ),
-        })}
+  const custodian = withNodes((slots) => t("vehicle.facts.custodian", slots), {
+    name: (
+      <span className="font-medium text-foreground">
+        {asset.custodian?.displayName ?? t("vehicle.facts.nobody")}
       </span>
-      {gates.trips && (
-        <>
-          <Sep />
-          <span>
-            {reading === null
-              ? t("vehicle.facts.noReading")
-              : withNodes(
-                  (slots) =>
-                    t("vehicle.facts.reading", {
-                      ...slots,
-                      readingType: reading.readingType,
-                      ago: formatRelativeTime(reading.observedAt, locale),
-                    }),
-                  {
-                    value: (
-                      <LinkButton onClick={() => panel.openRecord({ kind: "readings" })}>
-                        {t("vehicle.facts.readingValue", {
-                          readingType: reading.readingType,
-                          value: reading.value,
-                        })}
-                      </LinkButton>
-                    ),
-                  },
-                )}
-          </span>
-        </>
-      )}
-      <Sep />
-      <span>{t("vehicle.facts.locationNoReport")}</span>
-      <Sep />
-      <span>
-        {withNodes(
+    ),
+  });
+
+  const readingFact =
+    reading === null
+      ? t("vehicle.facts.noReading")
+      : withNodes(
           (slots) =>
-            asset.commissionedAt === null
-              ? slots["status"] ?? ""
-              : t("vehicle.facts.lifecycleSince", {
-                  ...slots,
-                  since: new Intl.DateTimeFormat(locale, { month: "short", year: "numeric" }).format(
-                    new Date(asset.commissionedAt),
-                  ),
-                }),
+            t("vehicle.facts.reading", {
+              ...slots,
+              readingType: reading.readingType,
+              ago: formatRelativeTime(reading.observedAt, locale),
+            }),
           {
-            status: (
-              <span className="font-medium text-foreground">
-                {t(`assets.status.${asset.lifecycleStatus}`)}
-              </span>
+            value: (
+              <LinkButton onClick={() => panel.openRecord({ kind: "readings" })}>
+                {t("vehicle.facts.readingValue", {
+                  readingType: reading.readingType,
+                  value: reading.value,
+                })}
+              </LinkButton>
             ),
           },
-        )}
-      </span>
-    </div>
+        );
+
+  const lifecycle = withNodes(
+    (slots) =>
+      asset.commissionedAt === null
+        ? slots["status"] ?? ""
+        : t("vehicle.facts.lifecycleSince", {
+            ...slots,
+            since: new Intl.DateTimeFormat(locale, { month: "short", year: "numeric" }).format(
+              new Date(asset.commissionedAt),
+            ),
+          }),
+    {
+      status: (
+        <span className="font-medium text-foreground">{t(`assets.status.${asset.lifecycleStatus}`)}</span>
+      ),
+    },
   );
+
+  return [
+    <span key="custodian">{custodian}</span>,
+    ...(gates.trips ? [<span key="reading">{readingFact}</span>] : []),
+    <span key="location">{t("vehicle.facts.locationNoReport")}</span>,
+    <span key="lifecycle">{lifecycle}</span>,
+  ];
 }

@@ -60,7 +60,8 @@
     "entries": {
       "detail": {
         "asset": "Truck",
-        "tripLink": "Trip {number}"
+        "tripLink": "Trip {number}",
+        "truck": "Truck"
       },
       "filters": {
         "asset": "Truck"
@@ -96,7 +97,14 @@
         "ownOnly": "Only the entries you recorded on this trip.",
         "branchOnly": "Only the entries of your branches on this trip."
       },
-      "loadFailed": "We couldn't load this trip."
+      "loadFailed": "We couldn't load this trip.",
+      "status": {
+        "complete": "Complete the trip"
+      },
+      "sections": {
+        "truckAndCrew": "Truck and crew"
+      },
+      "truck": "Truck"
     },
     "actions": {
       "reasonPlaceholder": "Why reopen this trip?",

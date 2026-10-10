@@ -383,6 +383,44 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "DS-5",
+    // #658: money entry, trip and register-a-truck each picked a width (736, 1 120, 544 px at 1920).
+    bad: [
+      file("apps/web/src/screens/AssetRegisterScreen.tsx", '<section className="mx-auto w-full max-w-xl px-4 py-6">'),
+      file("apps/web/src/screens/ActivityDetailScreen.tsx", '<div className="grid gap-4 lg:max-w-[840px]">'),
+      file("apps/web/src/screens/X.tsx", '<p className="mt-2 max-w-lg text-sm text-muted-foreground">{description}</p>'),
+      file("apps/web/src/screens/X.tsx", "<div style={{ maxWidth: 736 }}>"),
+    ],
+    good: [
+      file("apps/web/src/screens/AssetRegisterScreen.tsx", "<PageContainer>"),
+      // The frame and a part's own measure live in components/, not in a screen.
+      file("apps/web/src/components/page-container.tsx", 'className={cn("mx-auto w-full max-w-[1248px] px-4 py-6 sm:px-6", className)}'),
+      file("apps/web/src/components/page.tsx", '{description && <p className="mt-2 max-w-lg text-sm">{description}</p>}'),
+      file("apps/web/src/screens/MaintenanceScreen.test.tsx", 'expect(panel.className).toContain("max-w-[560px]");'),
+      file("apps/web/src/screens/X.tsx", '<div className="min-w-0 flex-1">'),
+      // Sign-in is outside the shell and its frame.
+      file("apps/web/src/screens/LoginScreen.tsx", '<main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col">'),
+    ],
+  },
+  {
+    id: "DS-6",
+    // #662: Edit and Cancel entry were full-width buttons under the money entry's card.
+    bad: [
+      file(
+        "apps/web/src/screens/FinanceEntryDetailScreen.tsx",
+        '<Button\n  variant="outline"\n  onClick={() => setEditOpen(true)}\n  className="w-full"\n>',
+      ),
+      file("apps/web/src/activities/detail/TripPage.tsx", '<Button className="w-full" onClick={close}>'),
+      file("apps/web/src/vehicle/tabs/NowTab.tsx", '<Button variant="outline" className="mt-4 w-full">'),
+    ],
+    good: [
+      file("apps/web/src/screens/FinanceEntryDetailScreen.tsx", '<Button variant="outline" onClick={onEdit}>'),
+      // A full-width control that is not a button, and a form panel that is not a record page.
+      file("apps/web/src/screens/FinanceEntryDetailScreen.tsx", '<SelectTrigger className="w-full">'),
+      file("apps/web/src/finance/RecordEntryForm.tsx", '<Button className="w-full" onClick={submit}>'),
+    ],
+  },
+  {
     id: "J1",
     bad: [file("apps/web/src/x.ts", "const ability = rules as any;")],
     good: [file("apps/web/src/x.test.ts", "const payload = good as any;"), file("apps/web/src/x.ts", "const count: number = 1;")],

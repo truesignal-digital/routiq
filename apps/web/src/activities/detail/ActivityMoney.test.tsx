@@ -147,8 +147,8 @@ describe("activity money card", () => {
     expect(original.querySelector(".line-through")).not.toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Show cancellation" }));
     expect(screen.getByText("Reason: Entered twice")).toBeDefined();
-    // The pair still nets to zero: the net is the freight alone.
-    expect(digits(summaryValue("Net"))).toBe("+900000");
+    // The pair still nets to zero: the profit is the freight alone.
+    expect(digits(summaryValue("Profit"))).toBe("900000");
   });
 
   it("renders nothing when no money touched the activity", () => {
@@ -161,7 +161,8 @@ describe("activity money card", () => {
     render(<ActivityMoney totals={false} scope="OWN_ENTRIES" entries={[entry()]} />);
 
     expect(screen.getByRole("link", { name: /FIN-2026-0001/ })).toBeDefined();
-    expect(screen.queryByText("Net")).toBeNull();
+    expect(screen.queryByText("Profit")).toBeNull();
+    expect(screen.queryByText("Loss")).toBeNull();
     expect(screen.getByText("Only the entries you recorded on this activity.")).toBeDefined();
   });
 
@@ -205,7 +206,7 @@ describe("activity money card", () => {
       />,
     );
 
-    expect(digits(summaryValue("Net"))).toBe("+900000");
+    expect(digits(summaryValue("Profit"))).toBe("900000");
     expect(digits(summaryValue("Awaiting approval"))).toBe("-400000");
     expect(screen.getByText(/posted only/)).toBeTruthy();
   });

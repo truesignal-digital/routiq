@@ -112,7 +112,6 @@ export function BranchesScreen() {
   if (me !== undefined && !canAdminister) {
     return (
       <PermissionDenied
-        width="wide"
         title={t("branches.title")}
         icon={<Building2 className="size-7" aria-hidden />}
         code="ROLE_FORBIDDEN"
@@ -121,9 +120,10 @@ export function BranchesScreen() {
   }
 
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader
         title={t("branches.title")}
+        description={t("branches.lead")}
         actions={
           <Button type="button" onClick={() => setAdding(true)}>
             <Plus className="size-4" aria-hidden />
@@ -131,7 +131,6 @@ export function BranchesScreen() {
           </Button>
         }
       />
-      <p className="mt-2 max-w-lg text-sm text-muted-foreground">{t("branches.lead")}</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
         <DataTableViewOptions

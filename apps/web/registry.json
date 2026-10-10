@@ -759,19 +759,14 @@
           "target": "screens/ActivityDetailScreen.tsx"
         },
         {
-          "path": "src/activities/detail/ActivityOverview.tsx",
+          "path": "src/activities/detail/TripPage.tsx",
           "type": "registry:file",
-          "target": "activities/detail/ActivityOverview.tsx"
+          "target": "activities/detail/TripPage.tsx"
         },
         {
           "path": "src/activities/detail/ActivityTimeline.tsx",
           "type": "registry:file",
           "target": "activities/detail/ActivityTimeline.tsx"
-        },
-        {
-          "path": "src/activities/detail/ActivityAssetsPanel.tsx",
-          "type": "registry:file",
-          "target": "activities/detail/ActivityAssetsPanel.tsx"
         },
         {
           "path": "src/activities/detail/ActivityLegs.tsx",
@@ -794,6 +789,8 @@
         "page-container",
         "permission-denied",
         "provenance-stamp",
+        "record-page",
+        "status-block",
         "utils"
       ],
       "dependencies": [
@@ -1150,6 +1147,45 @@
         "react-hook-form",
         "react-i18next",
         "zod"
+      ]
+    },
+    {
+      "name": "record-page",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/record-page.tsx",
+          "type": "registry:file",
+          "target": "components/record-page.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "card",
+        "tabs",
+        "not-recorded",
+        "record-number",
+        "utils"
+      ],
+      "dependencies": [
+        "react-i18next"
+      ]
+    },
+    {
+      "name": "status-block",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/status-block.tsx",
+          "type": "registry:file",
+          "target": "components/status-block.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "record-page",
+        "utils"
+      ],
+      "dependencies": [
+        "lucide-react"
       ]
     }
   ]
