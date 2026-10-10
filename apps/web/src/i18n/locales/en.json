@@ -387,8 +387,8 @@
       },
       "profit": {
         "title": "Profit by vehicle",
-        "question": "Which vehicles earn, which lose?",
-        "questionPeriod": "Which vehicles earn, which lose? {period}, {currency}.",
+        "question": "Which earn, which lose?",
+        "questionPeriod": "Which earn, which lose? {period}.",
         "empty": "No vehicle has money recorded this month.",
         "trips": "{count, plural, one {# closed} other {# closed}}",
         "tripsKm": "{count, plural, one {# closed} other {# closed}} · {km, number} km",

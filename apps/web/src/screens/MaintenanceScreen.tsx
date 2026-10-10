@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useRouterState, useSearch } from "@tanstack/react-router";
+import { useMatches, useNavigate, useSearch } from "@tanstack/react-router";
 import {
   CircleCheck,
   CircleSlash,
@@ -102,10 +102,14 @@ const MAINTENANCE_TAB_PATH = {
   "work-orders": "/maintenance/work-orders",
 } as const satisfies Record<MaintenanceTab, string>;
 
-export function activeMaintenanceTab(pathname: string): MaintenanceTab {
-  const segment = pathname.split("/").filter(Boolean)[1];
-  if (segment === "problems") return "problems";
-  if (segment === "work-orders") return "work-orders";
+/**
+ * The tab the router has matched. Read from the matches rather than the
+ * address, so a tab never renders before its own route (and the search it
+ * reads) is the active match.
+ */
+export function maintenanceTabOf(routeId: string | undefined): MaintenanceTab {
+  if (routeId === "/app/maintenance/problems") return "problems";
+  if (routeId === "/app/maintenance/work-orders") return "work-orders";
   return "overview";
 }
 
@@ -120,8 +124,7 @@ export function MaintenanceScreen() {
   const { t } = useTranslation();
   const label = useCommandLabel();
   const me = useMeContext();
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const tab = activeMaintenanceTab(pathname);
+  const tab = maintenanceTabOf(useMatches({ select: (matches) => matches.at(-1)?.routeId }));
 
   const permissions = {
     manage: canManageWorkOrders(me?.role, me?.enabledModules),

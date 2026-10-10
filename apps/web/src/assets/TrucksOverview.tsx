@@ -301,7 +301,7 @@ function ProfitByTruckCard({ overview, isPending }: { overview: FinanceOverviewR
       <CardHeader>
         <CardTitle>{t("assets.overview.profit.title")}</CardTitle>
         <CardDescription>
-          {period === undefined ? t("assets.overview.profit.question") : t("assets.overview.profit.questionPeriod", { period, currency })}
+          {period === undefined ? t("assets.overview.profit.question") : t("assets.overview.profit.questionPeriod", { period })}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">

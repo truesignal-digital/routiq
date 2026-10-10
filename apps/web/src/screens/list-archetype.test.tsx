@@ -28,6 +28,8 @@ vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({}),
   useRouterState: ({ select }: { select: (state: { location: { pathname: string } }) => unknown }) =>
     select({ location: { pathname: route.pathname } }),
+  useMatches: ({ select }: { select: (matches: Array<{ routeId: string }>) => unknown }) =>
+    select([{ routeId: `/app${route.pathname}` }]),
   Link: ({
     to,
     search,

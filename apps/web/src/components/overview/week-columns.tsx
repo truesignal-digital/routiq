@@ -83,7 +83,13 @@ export function WeekColumns({
                   {bar}
                 </Link>
               )}
-              <span className="w-full truncate text-center text-[10px] text-muted-foreground tabular-nums sm:text-[11px]">
+              <span
+                className={cn(
+                  "w-full text-center text-[10px] whitespace-nowrap text-muted-foreground tabular-nums sm:truncate sm:text-[11px]",
+                  // A phone has room for every third label, counted back from this week.
+                  (columns.length - 1 - index) % 3 !== 0 && "max-sm:invisible",
+                )}
+              >
                 {column.label}
               </span>
             </li>

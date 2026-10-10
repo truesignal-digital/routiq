@@ -59,6 +59,8 @@ vi.mock("@tanstack/react-router", async () => {
     useSearch: () => useTestSearch(),
     useRouterState: ({ select }: { select: (state: { location: { pathname: string } }) => unknown }) =>
       select({ location: { pathname: useSyncExternalStore(path.subscribe, path.get) } }),
+    useMatches: ({ select }: { select: (matches: Array<{ routeId: string }>) => unknown }) =>
+      select([{ routeId: `/app${useSyncExternalStore(path.subscribe, path.get)}` }]),
     Link: ({
       to,
       search: _search,

@@ -4,6 +4,7 @@ import {
   createRoute,
   createRouter,
   redirect,
+  type ParsedLocation,
 } from "@tanstack/react-router";
 import { z } from "zod";
 import {
@@ -81,6 +82,49 @@ function isBarePath(pathname: string, path: string): boolean {
   return pathname === path || pathname === `${path}/`;
 }
 
+/**
+ * #665: each list's tiles moved into its page's Overview, which now owns the
+ * bare address. An old filtered link (a bookmark, a notification) still lands
+ * on the list tab with the same filter; the bare address opens the Overview.
+ */
+function sendOldTrucksListLinks({ location }: { location: ParsedLocation }): void {
+  const search = location.search as { status?: unknown };
+  if (isBarePath(location.pathname, "/assets") && (search.status === "IN_SERVICE" || search.status === "ATTENTION")) {
+    throw redirect({ to: "/assets/list", search: { status: search.status }, replace: true });
+  }
+}
+
+const TRIP_LIST_FILTERS = ["status", "completeness", "from", "to", "missing"] as const;
+
+const tripListSearch = z.object({
+  status: activityStatus.optional().catch(undefined),
+  completeness: activityCompleteness.optional().catch(undefined),
+  from: z.iso.date().optional().catch(undefined),
+  to: z.iso.date().optional().catch(undefined),
+  missing: z.enum(ACTIVITY_MISSING_FILTERS).optional().catch(undefined),
+});
+
+function sendOldTripsListLinks({ location }: { location: ParsedLocation }): void {
+  const search = location.search as Record<string, unknown>;
+  if (isBarePath(location.pathname, "/activities") && TRIP_LIST_FILTERS.some((key) => search[key] !== undefined)) {
+    throw redirect({ to: "/activities/list", search: tripListSearch.parse(search), replace: true });
+  }
+}
+
+/** The Problems tab was `?tab=issues`; Work orders was the page's default tab. */
+function sendOldMaintenanceListLinks({ location }: { location: ParsedLocation }): void {
+  const search = location.search as { tab?: unknown; status?: unknown; issueStatus?: unknown };
+  if (!isBarePath(location.pathname, "/maintenance")) return;
+  if (search.tab === "issues" || search.issueStatus !== undefined) {
+    const status = issueStatus.safeParse(search.issueStatus);
+    throw redirect({ to: "/maintenance/problems", search: status.success ? { status: status.data } : {}, replace: true });
+  }
+  if (search.tab === "work-orders" || search.status !== undefined) {
+    const status = workOrderStatus.safeParse(search.status);
+    throw redirect({ to: "/maintenance/work-orders", search: status.success ? { status: status.data } : {}, replace: true });
+  }
+}
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
@@ -123,14 +167,7 @@ const indexRoute = createRoute({
 const assetsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/assets",
-  // The list's tiles moved into the Overview: an old `/assets?status=…` link
-  // lands on the Trucks tab with the same filter.
-  beforeLoad: ({ location }) => {
-    const search = location.search as { status?: unknown };
-    if (isBarePath(location.pathname, "/assets") && (search.status === "IN_SERVICE" || search.status === "ATTENTION")) {
-      throw redirect({ to: "/assets/list", search: { status: search.status }, replace: true });
-    }
-  },
+  beforeLoad: sendOldTrucksListLinks,
   component: TrucksFrame,
 });
 
@@ -329,16 +366,6 @@ const financeApproveRoute = createRoute({
   errorComponent: SectionError,
 });
 
-const TRIP_LIST_FILTERS = ["status", "completeness", "from", "to", "missing"] as const;
-
-const tripListSearch = z.object({
-  status: activityStatus.optional().catch(undefined),
-  completeness: activityCompleteness.optional().catch(undefined),
-  from: z.iso.date().optional().catch(undefined),
-  to: z.iso.date().optional().catch(undefined),
-  missing: z.enum(ACTIVITY_MISSING_FILTERS).optional().catch(undefined),
-});
-
 /**
  * The Trips page (#665): one header over Overview, Trips and, while
  * Scheduling is on, Planning. A trip's page and its sheet sit outside.
@@ -346,14 +373,7 @@ const tripListSearch = z.object({
 const activitiesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/activities",
-  // The list's tiles moved into the Overview: an old filtered link lands on
-  // the Trips tab with the same filters.
-  beforeLoad: ({ location }) => {
-    const search = location.search as Record<string, unknown>;
-    if (isBarePath(location.pathname, "/activities") && TRIP_LIST_FILTERS.some((key) => search[key] !== undefined)) {
-      throw redirect({ to: "/activities/list", search: tripListSearch.parse(search), replace: true });
-    }
-  },
+  beforeLoad: sendOldTripsListLinks,
   component: TripsFrame,
 });
 
@@ -410,20 +430,7 @@ const activityDetailRoute = createRoute({
 const maintenanceRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/maintenance",
-  // The list's tiles moved into the Overview: an old `?tab=issues` or
-  // `?status=` link lands on its tab with the same filter.
-  beforeLoad: ({ location }) => {
-    const search = location.search as { tab?: unknown; status?: unknown; issueStatus?: unknown };
-    if (!isBarePath(location.pathname, "/maintenance")) return;
-    if (search.tab === "issues" || search.issueStatus !== undefined) {
-      const status = issueStatus.safeParse(search.issueStatus);
-      throw redirect({ to: "/maintenance/problems", search: status.success ? { status: status.data } : {}, replace: true });
-    }
-    if (search.tab === "work-orders" || search.status !== undefined) {
-      const status = workOrderStatus.safeParse(search.status);
-      throw redirect({ to: "/maintenance/work-orders", search: status.success ? { status: status.data } : {}, replace: true });
-    }
-  },
+  beforeLoad: sendOldMaintenanceListLinks,
   component: MaintenanceScreen,
 });
 

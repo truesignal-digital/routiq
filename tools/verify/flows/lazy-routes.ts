@@ -137,6 +137,7 @@ const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
   const sidebar = await openSidebar(page);
   await sidebar.getByRole("link", { name: t("Camions", "Trucks"), exact: true }).click();
   await page.getByRole("heading", { level: 1, name: t("Camions", "Trucks") }).waitFor();
+  await page.locator("[data-slot='module-page-tabs']").getByRole("tab", { name: t("Camions", "Trucks") }).click();
   await quiet();
   const truck = page.getByRole("button", { name: /VH00\d/ }).first();
   if (await truck.isVisible().catch(() => false)) {

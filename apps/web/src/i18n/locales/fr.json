@@ -387,8 +387,8 @@
       },
       "profit": {
         "title": "Bénéfice par véhicule",
-        "question": "Quels véhicules gagnent, lesquels perdent ?",
-        "questionPeriod": "Quels véhicules gagnent, lesquels perdent ? {period}, {currency}.",
+        "question": "Lesquels gagnent, lesquels perdent ?",
+        "questionPeriod": "Lesquels gagnent, lesquels perdent ? {period}.",
         "empty": "Aucun véhicule n'a d'argent enregistré ce mois-ci.",
         "trips": "{count, plural, one {# clôture} other {# clôtures}}",
         "tripsKm": "{count, plural, one {# clôture} other {# clôtures}} · {km, number} km",
