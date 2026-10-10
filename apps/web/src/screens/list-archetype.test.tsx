@@ -108,7 +108,7 @@ const WEEKS = Array.from({ length: 12 }, (_, index) => ({
 
 /** Canned bodies by path prefix, longest first so `/v1/assets/summary` wins over `/v1/assets`. */
 const BODIES: [string, unknown][] = [
-  ["/v1/assets/summary", { total: 3, inService: 2, canDrive: 2, attention: 1 }],
+  ["/v1/assets/summary", { total: 3, inService: 2, attention: 1 }],
   ["/v1/assets/overview", {
     total: 3,
     canDrive: 2,

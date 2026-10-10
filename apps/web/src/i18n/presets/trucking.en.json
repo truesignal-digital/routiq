@@ -372,8 +372,8 @@
     "tiles": {
       "vehicleCosts": "Truck costs",
       "canDrive": "Trucks that can drive",
-      "allCanDrive": "Every truck in service can drive",
-      "noneInService": "No truck is in service"
+      "allCanDrive": "Every truck in the fleet can drive",
+      "noneInFleet": "No truck is in the fleet yet"
     },
     "branches": {
       "title": {

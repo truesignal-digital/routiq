@@ -3197,10 +3197,10 @@
       "companyCosts": "Frais généraux",
       "canDrive": "Véhicules disponibles",
       "canDriveValue": "{count} sur {total}",
-      "offTheRoad": "{count, plural, one {# en service est immobilisé} other {# en service sont immobilisés}}",
-      "allCanDrive": "Tous les véhicules en service peuvent rouler",
+      "cannotDrive": "{count, plural, one {# ne peut pas rouler aujourd’hui} other {# ne peuvent pas rouler aujourd’hui}}",
+      "allCanDrive": "Tous les véhicules de la flotte peuvent rouler",
       "profitHint": "{change} · {share} des recettes",
-      "noneInService": "Aucun véhicule en service"
+      "noneInFleet": "Aucun véhicule dans la flotte pour l’instant"
     },
     "counted": {
       "profitMeans": "Bénéfice = recettes − dépenses enregistrées dans ROUTIQ ; les impôts et les remboursements d’emprunt n’y sont pas.",

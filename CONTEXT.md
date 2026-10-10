@@ -49,6 +49,10 @@ _Avoid_: user, person
 Whether a vehicle may take on work, read from its availability intervals: **Grounded** while one is open, available otherwise. Not assessed when the maintenance module is off. Distinct from lifecycle and physical location.
 _Avoid_: lifecycle status, absence of recorded problems, absence of work orders
 
+**Can drive**:
+A vehicle in service and not **Grounded** (in service alone while the maintenance module is off). Counted out of the fleet not disposed (not sold, retired or written off), in the caller's branch scope. The Dashboard and the Trucks Overview show this one count.
+_Avoid_: available (alone), active
+
 **Grounded**:
 A vehicle with an open availability interval. A safety-critical issue opens one the moment it is reported; only a release to service closes it. Resolving the issue or completing the work does not.
 _Avoid_: out of service (a lifecycle word), broken down, unavailable flag

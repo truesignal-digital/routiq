@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { Link, useNavigate, useRouterState, useSearch } from "@tanstack/react-router";
-import type { AssetSummary, FinanceOverviewResponse } from "@routiq/contracts";
+import type { AssetOverview, FinanceOverviewResponse } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
 import { useMeContext } from "@/auth/me.js";
-import { useAssetSummary } from "@/assets/useAssetSummary.js";
+import { useAssetOverview } from "@/assets/useAssetOverview.js";
 import { FilterChips } from "@/components/filter-chips";
 import { MetricStrip, metricTiles, moneyMetric, type MetricTile } from "@/components/metric-strip.js";
 import { CompareBars } from "@/components/overview/compare-bars.js";
@@ -107,7 +107,8 @@ export function DashboardOverviewTab() {
   const windows = useWindows(overview);
   // role-config: the vehicles tile is the Vehicles module's, as on Home.
   const showFleet = contributes("homeCards", "assets", me?.enabledModules);
-  const fleet = useAssetSummary({}, showFleet);
+  // The Trucks Overview's read, so both tiles show one count (#699).
+  const fleet = useAssetOverview(showFleet);
   const todo = useTodo();
   const rows = overview === undefined ? [] : vehicleRows(overview, branchId);
   const steps = overview === undefined || mode !== "profit" ? undefined : profitBridge(overview);
@@ -316,7 +317,7 @@ function OverviewTiles({
 }: {
   overview: FinanceOverviewResponse | undefined;
   mode: DashboardMode;
-  fleet: AssetSummary | undefined;
+  fleet: AssetOverview | undefined;
   showFleet: boolean;
   isPending: boolean;
   isError: boolean;
@@ -375,22 +376,22 @@ function OverviewTiles({
     );
   }
   if (showFleet) {
-    const grounded = fleet === undefined ? 0 : fleet.inService - fleet.canDrive;
+    const cannotDrive = fleet === undefined ? 0 : fleet.total - fleet.canDrive;
     tiles.push({
       id: "canDrive",
       label: t("dashboard.tiles.canDrive"),
-      value: fleet === undefined ? null : t("dashboard.tiles.canDriveValue", { count: fleet.canDrive, total: fleet.inService }),
+      value: fleet === undefined ? null : t("dashboard.tiles.canDriveValue", { count: fleet.canDrive, total: fleet.total }),
       ...(fleet === undefined
         ? {}
         : {
             hint:
-              fleet.inService === 0
-                ? t("dashboard.tiles.noneInService")
-                : grounded > 0
-                  ? t("dashboard.tiles.offTheRoad", { count: grounded })
+              fleet.total === 0
+                ? t("dashboard.tiles.noneInFleet")
+                : cannotDrive > 0
+                  ? t("dashboard.tiles.cannotDrive", { count: cannotDrive })
                   : t("dashboard.tiles.allCanDrive"),
           }),
-      tone: grounded > 0 ? "warning" : "neutral",
+      tone: cannotDrive > 0 ? "warning" : "neutral",
       link: { to: "/assets" },
     });
   }

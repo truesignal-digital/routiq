@@ -3197,10 +3197,10 @@
       "companyCosts": "Company costs",
       "canDrive": "Vehicles that can drive",
       "canDriveValue": "{count} of {total}",
-      "offTheRoad": "{count, plural, one {# in service is off the road} other {# in service are off the road}}",
-      "allCanDrive": "Every vehicle in service can drive",
+      "cannotDrive": "{count, plural, one {# cannot drive today} other {# cannot drive today}}",
+      "allCanDrive": "Every vehicle in the fleet can drive",
       "profitHint": "{change} · {share} of revenue",
-      "noneInService": "No vehicle is in service"
+      "noneInFleet": "No vehicle is in the fleet yet"
     },
     "counted": {
       "profitMeans": "Profit = revenue − expenses recorded in ROUTIQ; taxes and loan repayments aren't in it.",

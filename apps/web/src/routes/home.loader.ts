@@ -1,4 +1,4 @@
-import { assetSummaryQueryOptions } from "../assets/useAssetSummary.js";
+import { assetOverviewQueryOptions } from "../assets/useAssetOverview.js";
 import { canOpenEntriesList, showsDashboardOverview } from "../dashboard/cards.js";
 import { rangeFromParam, type DashboardRangeParam } from "../dashboard/tabs.js";
 import { dashboardQueryOptions, HOME_RANGE_DAYS } from "../dashboard/useDashboard.js";
@@ -38,7 +38,7 @@ export async function dashboardOverview(args: LoaderArgs & { deps: RangeSearch }
     ensure(s.client, todoQueryOptions(s.slug)),
     ensure(s.client, comingUpQueryOptions(s.slug, 14)),
     contributes("homeCards", "assets", s.me?.enabledModules) &&
-      ensure(s.client, assetSummaryQueryOptions(s.slug, scopedParams({}, s.branch))),
+      ensure(s.client, assetOverviewQueryOptions(s.slug, scopedParams({}, s.branch))),
   );
 }
 
