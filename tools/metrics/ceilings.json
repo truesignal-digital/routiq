@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 775946,
+    "ceiling": 776035,
     "raises": [
       {
         "date": "2026-10-06",
@@ -293,8 +293,8 @@
       {
         "date": "2026-10-10",
         "from": 764827,
-        "to": 775946,
-        "reason": "Stacking #668 (km and daily status) and #699 (one can-drive count) on the #669 stack: their own raises were counted from #665 + #666 only, so the combined build carries both. Measured on the merge alone (0e44ed07); the #712 formatters on top shrink it slightly"
+        "to": 776035,
+        "reason": "The stack this PR sits on beyond develop: #668 km and daily status and #699 one can-drive count (about 11.1 kB, their own raises were counted from #665 + #666 only) and #711 Administrators change company settings (89 B). Measured on the merges alone; the #712 formatters shrink the build slightly"
       }
     ]
   },
