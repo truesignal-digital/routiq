@@ -242,6 +242,23 @@ describe("pre-push hook", () => {
   });
 });
 
+describe("pr-checks workflow", () => {
+  const workflow = readFileSync(join(import.meta.dirname, "../.github/workflows/pr-checks.yml"), "utf8");
+  const job = (name: string) => [...workflow.matchAll(/^  ([a-z-]+):\n((?:(?:    .*)?\n)*)/gm)].find((m) => m[1] === name)?.[2];
+
+  it("runs ratchet on every event, so a body edit that cancels a push's run can't leave it skipped", () => {
+    const ratchetJob = job("ratchet");
+    expect(ratchetJob).toBeDefined();
+    expect(ratchetJob).not.toMatch(/^    if:/m);
+    expect(workflow).toMatch(/types: \[opened, edited, synchronize, reopened\]/);
+  });
+
+  it("runs both checkers from the base branch's copy", () => {
+    expect(job("evidence")).toContain('git show "origin/$BASE_REF:tools/pr-evidence.ts"');
+    expect(job("ratchet")).toContain('git show "origin/$BASE_REF:tools/ratchet.ts"');
+  });
+});
+
 describe("pr-evidence", () => {
   const body = (video: string, found: string) =>
     `## What changed\n\nStuff\n\n## Walkthrough video\n\n<!-- hint -->\n${video}\n\n## Found while testing\n\n<!-- hint -->\n${found}\n`;

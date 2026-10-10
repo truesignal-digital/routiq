@@ -39,8 +39,9 @@ jobs:
 
   ratchet:
     name: ratchet
-    # The description does not affect the ratchet; skip re-runs on edits.
-    if: github.event.action != 'edited'
+    # No `if:` here. A body edit cancels the push's run (concurrency above), so
+    # skipping ratchet on `edited` would leave the head with a skipped, i.e.
+    # passing, ratchet. It takes about 10 s; run it on every event.
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
