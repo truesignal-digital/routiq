@@ -229,6 +229,17 @@ export const COMMAND_ERROR_CODES = [
    * NOT_A_DRIVER (their usual job is not Chauffeur).
    */
   "DRIVER_INELIGIBLE",
+  /**
+   * Turning a module off while a module that requires it is on (the module
+   * manifests' `requires`): Trips while Scheduling is on. `metadata.requiredBy`
+   * names them; turn those off first.
+   */
+  "MODULE_STILL_REQUIRED",
+  /**
+   * Turning a module on while a module it requires is off: Scheduling while
+   * Trips is off. `metadata.requires` names them; turn those on first.
+   */
+  "MODULE_DEPENDENCY_DISABLED",
 ] as const;
 
 export type CommandErrorCode = (typeof COMMAND_ERROR_CODES)[number];

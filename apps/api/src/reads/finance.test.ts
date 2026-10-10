@@ -512,7 +512,10 @@ describe("finance reads", () => {
         expect(recordStatus).toBe("SUBMITTED");
         submittedIds.push(entryId);
       }
-    });
+      // 102 commands through the whole pipeline, one commit each. Alone that
+      // takes under a second; with suites running in parallel it ran out of the
+      // 60 s default (#556). The tests below keep the normal budget.
+    }, 180_000);
 
     it("walks every page without duplicates or gaps", async () => {
       const pages = await walkEntries(pagedToken);

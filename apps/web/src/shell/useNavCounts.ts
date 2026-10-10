@@ -1,8 +1,15 @@
 import { useQueries } from "@tanstack/react-query";
-import { waitsOn, type ModuleCode, type NavCountKey, type NavCountsResponse } from "@routiq/contracts";
+import {
+  waitsOn,
+  type ModuleCode,
+  type NavCountKey,
+  type NavCountsResponse,
+  type Role,
+  type ToggleableModuleCode,
+} from "@routiq/contracts";
 import { useMeContext } from "../auth/me.js";
 import { sessionStore, useActiveSession } from "../auth/store.js";
-import { maintenanceQueryKey } from "../maintenance/useMaintenance.js";
+import { installedModules } from "../modules/manifest.js";
 
 export type NavCounts = Partial<Record<NavCountKey, number>>;
 
@@ -40,18 +47,32 @@ function sharedFetch(): Promise<NavCountsResponse> {
   return inflight;
 }
 
-const NAV_COUNT_KEYS = ["moneyWaiting", "maintenanceNew"] as const satisfies readonly NavCountKey[];
+interface CountSource {
+  key: NavCountKey;
+  module: ToggleableModuleCode;
+  /** The list the count belongs to; its invalidations reach the count. */
+  listKey: (slug: string | undefined) => unknown[];
+}
 
-/** The list each count belongs to; its invalidations reach the count. */
-const LIST_KEY: Record<NavCountKey, (slug: string | undefined) => unknown[]> = {
-  moneyWaiting: (slug) => ["ws", slug, "finance", "approvals"],
-  maintenanceNew: maintenanceQueryKey,
-};
+/** Every count comes with the manifest of the module whose list it counts. */
+function countSources(): CountSource[] {
+  return installedModules().flatMap((manifest) =>
+    manifest.navCounts.map((count) => ({ ...count, module: manifest.code })),
+  );
+}
 
-const MODULE_OF: Record<NavCountKey, ModuleCode> = {
-  moneyWaiting: "FINANCE",
-  maintenanceNew: "MAINTENANCE",
-};
+/**
+ * The counts that apply to this viewer: the owning module on and the role
+ * one the count waits on. A render hint only: the server answers null for a
+ * role that does not act.
+ */
+export function applicableCounts(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): CountSource[] {
+  if (role === undefined || enabledModules === undefined) return [];
+  return countSources().filter((source) => enabledModules.includes(source.module) && waitsOn(source.key, role));
+}
 
 /**
  * What waits on the viewer, counted by the server (`GET /v1/nav-counts`). The
@@ -62,26 +83,19 @@ export function useNavCounts(): NavCounts {
   const session = useActiveSession();
   const me = useMeContext();
   const slug = session?.workspaceSlug;
-  // A render hint only: the server answers null for a role that does not act.
   // A count that does not apply creates no query, so a signed-out shell keeps
   // nothing in the cache.
-  const keys = NAV_COUNT_KEYS.filter(
-    (key) =>
-      session !== undefined &&
-      me !== undefined &&
-      me.enabledModules.includes(MODULE_OF[key]) &&
-      waitsOn(key, me.role),
-  );
+  const sources = session === undefined ? [] : applicableCounts(me?.role, me?.enabledModules);
   const results = useQueries({
-    queries: keys.map((key) => ({
-      queryKey: [...LIST_KEY[key](slug), "nav-count"],
+    queries: sources.map(({ key, listKey }) => ({
+      queryKey: [...listKey(slug), "nav-count"],
       queryFn: sharedFetch,
       select: (counts: NavCountsResponse) => counts[key],
     })),
   });
 
   const counts: NavCounts = {};
-  keys.forEach((key, index) => {
+  sources.forEach(({ key }, index) => {
     const value = results[index]?.data;
     if (typeof value === "number" && value > 0) counts[key] = value;
   });

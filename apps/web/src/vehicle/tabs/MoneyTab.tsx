@@ -6,21 +6,21 @@ import type { AssetFinanceResponse, FinancialEntryListItem } from "@routiq/contr
 import { FilterChips } from "@/components/filter-chips";
 import { MetricStrip, moneyMetric, type MetricTile, type MetricTiles } from "@/components/metric-strip.js";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
+import { PermissionDenied } from "@/components/permission-denied.js";
 import { RecordText } from "@/components/record-number";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useCategories } from "@/documents/useCategories.js";
+import { useCategories } from "@/categories/useCategories.js";
 import { formatDate, formatMoney, localizedLabel, type MoneySign } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
+import { contributes } from "@/modules/manifest.js";
 import { useVehicle } from "../context.js";
 import { entrySteps } from "../flow.js";
 import { recordReference } from "../model.js";
-import { CardHead, LinkButton, RecordRow, RowIcon, RowMenu, Sep, SubHead, TabHeader } from "../parts.js";
+import { CardHead, LinkButton, RecordRow, RowIcon, RowMenu, Sep, SubHead, TabAction, TabHeader } from "../parts.js";
 import { EntryEventStatus, foldedAmountClass } from "@/finance/EntryCancellation.js";
 import { EvidenceMark } from "../panel/shared.js";
 import { useAssetFinance, useVehicleEntries, type VehicleEntriesFilter } from "../useVehicle.js";
-import { TabAction } from "./MaintenanceTab.js";
 import { periodLabel } from "./NowTab.js";
 
 type Chip = "posted" | "expenses" | "revenue" | "review" | "rejected" | "missing";
@@ -92,13 +92,13 @@ function currentMonth(): string {
 
 export function MoneyTab() {
   const { t } = useTranslation();
-  const { gates, me } = useVehicle();
+  const { gates } = useVehicle();
   if (!gates.money) {
     return (
       <PermissionDenied
         title={t("vehicle.tabs.money")}
         icon={<Receipt className="size-7" aria-hidden />}
-        code={deniedCode(me.enabledModules.includes("FINANCE"))}
+        code="ROLE_FORBIDDEN"
       />
     );
   }
@@ -474,7 +474,7 @@ function EntryRow({ entry }: { entry: FinancialEntryListItem }) {
               <span>{t(`vehicle.layers.${entry.category.layer}`)}</span>
             </>
           )}
-          {links?.activityId != null && (
+          {links?.activityId != null && contributes("fields", "entry.tripLink", viewer.enabledModules) && (
             <>
               <Sep />
               <LinkButton
@@ -488,7 +488,7 @@ function EntryRow({ entry }: { entry: FinancialEntryListItem }) {
               </LinkButton>
             </>
           )}
-          {links?.workOrderId != null && (
+          {links?.workOrderId != null && contributes("fields", "entry.workOrderLink", viewer.enabledModules) && (
             <>
               <Sep />
               <LinkButton
