@@ -61,6 +61,14 @@ export type PanelKind = PanelRef["kind"];
 
 export interface WebModuleManifest {
   code: ToggleableModuleCode;
+  /**
+   * Other modules whose code this module's screens import: a form that picks
+   * a vehicle, a trip that shows its money. Only these may be imported
+   * (`B1 module-boundaries`); anything shared more widely belongs in core.
+   * Unlike the contract's `requires`, the vendor may still turn one of them
+   * off: whatever it adds here goes with it.
+   */
+  uses: readonly ToggleableModuleCode[];
   navRows: readonly ModuleNavRow[];
   navCounts: readonly ModuleNavCount[];
   /** Home's tiles and panels. */
@@ -170,6 +178,10 @@ export function webManifestProblems(
     if (seen.has(manifest.code)) problems.push(`${manifest.code} has two web manifests`);
     seen.add(manifest.code);
     if (!catalogue.modules.includes(manifest.code)) problems.push(`${manifest.code} has no contract manifest`);
+    for (const used of manifest.uses) {
+      if (used === manifest.code) problems.push(`${manifest.code} uses itself`);
+      else if (!catalogue.modules.includes(used)) problems.push(`${manifest.code} uses ${used}, which has no contract manifest`);
+    }
   }
 
   for (const slot of KEYED_SLOTS) {

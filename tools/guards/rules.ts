@@ -1,4 +1,5 @@
 import { migrationIntegrity, migrationsBehindBase } from "./migrations.js";
+import { moduleBoundaryViolations } from "./module-boundaries.js";
 import { isTestFile, matchFile, matchLines, type SourceFile, type Violation } from "./scan.js";
 import { unsafeSqlConstruction } from "./sql.js";
 
@@ -650,6 +651,12 @@ export const RULES: readonly Rule[] = [
     name: "flow-shots-captioned",
     fix: 'Give the shot a caption: shot("label", { caption: "One English sentence: what this frame proves" }), and a highlight locator where something changed. Reels show the caption under the frame; without it a reviewer sees only the label.',
     check: linesMatching(/\bshot\(\s*(["'`])[^"'`]*\1\s*\)/, (path) => path.startsWith("tools/verify/flows/") && path.endsWith(".ts")),
+  },
+  {
+    id: "B1",
+    name: "module-boundaries",
+    fix: "Core never imports a module, and a module imports another only when its web manifest lists it in `uses` (AGENTS.md, Core vs modules; #330). Give core a slot the module fills through its manifest (apps/web/src/modules/manifest.ts), move a helper every module shares into core, or wire the module in at the composition entry (apps/web/src/modules/index.ts, router.tsx). Which paths are core, module or composition: tools/guards/module-boundaries.ts.",
+    check: moduleBoundaryViolations,
   },
   {
     id: "S1",

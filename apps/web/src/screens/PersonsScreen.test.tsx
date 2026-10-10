@@ -59,7 +59,7 @@ vi.mock("../activities/usePersons.js", () => ({
   },
 }));
 
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => ({
     data: { assetClasses: [], branches: [{ code: "DLA", name: "Douala" }] },
     isError: false,

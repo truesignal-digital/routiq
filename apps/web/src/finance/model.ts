@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CANCELLATION_REASON_CODES } from "@routiq/contracts";
-import { parseWholeAmount } from "../lib/format.js";
+// Money parsing is shared with every form that takes an amount, so it lives in lib.
+export { parseMoneyXaf } from "../lib/format.js";
 import type {
   recordExpensePayload,
   recordRevenuePayload,
@@ -14,14 +15,6 @@ type RecordExpensePayload = z.infer<typeof recordExpensePayload>;
 type RecordRevenuePayload = z.infer<typeof recordRevenuePayload>;
 type UpdatePendingEntryPayload = z.infer<typeof updatePendingEntryPayload>;
 
-/**
- * A typed XAF amount in minor units (exponent 0), read with the grouping of
- * the language the money input formatted it in. Null when empty or invalid.
- */
-export function parseMoneyXaf(input: string, locale?: string): number | null {
-  const amount = parseWholeAmount(input, locale);
-  return amount.kind === "amount" ? amount.minor : null;
-}
 
 /** A record's direction in words, where its own amount is shown unsigned. */
 export function amountKind(entry: {

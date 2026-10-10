@@ -10,7 +10,7 @@ import { PermissionDenied } from "@/components/permission-denied.js";
 import { RecordText } from "@/components/record-number";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useCategories } from "@/documents/useCategories.js";
+import { useCategories } from "@/categories/useCategories.js";
 import { formatDate, formatMoney, localizedLabel, type MoneySign } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
 import { contributes } from "@/modules/manifest.js";
@@ -21,7 +21,7 @@ import { CardHead, LinkButton, RecordRow, RowIcon, RowMenu, Sep, SubHead, TabHea
 import { EntryEventStatus, foldedAmountClass } from "@/finance/EntryCancellation.js";
 import { EvidenceMark } from "../panel/shared.js";
 import { useAssetFinance, useVehicleEntries, type VehicleEntriesFilter } from "../useVehicle.js";
-import { TabAction } from "./MaintenanceTab.js";
+import { TabAction } from "./TabAction.js";
 import { periodLabel } from "./NowTab.js";
 
 type Chip = "posted" | "expenses" | "revenue" | "review" | "rejected" | "missing";

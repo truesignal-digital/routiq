@@ -61,9 +61,9 @@ vi.mock("react-i18next", async () => {
 
 // The workspace's ISSUE_TYPE list: a category travels as its code and reads
 // back as the label in the viewer's language.
-vi.mock("../documents/useCategories.js", async () => {
-  const actual = await vi.importActual<typeof import("../documents/useCategories.js")>(
-    "../documents/useCategories.js",
+vi.mock("../categories/useCategories.js", async () => {
+  const actual = await vi.importActual<typeof import("../categories/useCategories.js")>(
+    "../categories/useCategories.js",
   );
   return {
     ...actual,

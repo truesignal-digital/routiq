@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCategories } from "@/documents/useCategories.js";
+import { useCategories } from "@/categories/useCategories.js";
 import { localizedLabel } from "@/lib/format.js";
 import { newEntryRow, PAYMENT_METHODS, type SheetFormValues } from "./form.js";
 

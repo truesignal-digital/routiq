@@ -37,10 +37,10 @@ import { useMeContext } from "@/auth/me.js";
 import { commandClient } from "@/commands/instance.js";
 import { createCommandIntent } from "@/commands/intent.js";
 import { useAssetOptions } from "@/assets/useAssetOptions.js";
-import { useAssetRegistrationReference } from "@/assets/reference.js";
+import { useAssetRegistrationReference } from "@/reference/asset-registration.js";
 import { ALL_BRANCHES } from "@/shell/branch-context.js";
 import { useFollowShellBranch } from "@/shell/branch-scope.js";
-import { useCategories } from "@/documents/useCategories.js";
+import { useCategories } from "@/categories/useCategories.js";
 import { localizedLabel } from "@/lib/format.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import { canRecordActivities, canRecordSheetRevenue } from "@/activities/permissions.js";
@@ -73,7 +73,7 @@ import {
   toSheetFormState,
   type SheetFormValues,
 } from "@/activities/sheet/form.js";
-import { parseMoneyXaf } from "@/finance/model.js";
+import { parseMoneyXaf } from "@/lib/format.js";
 
 function isTemplate(value: unknown): value is SheetTemplate {
   return value === "journey" || value === "haulage";

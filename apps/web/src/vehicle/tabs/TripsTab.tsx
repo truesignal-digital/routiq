@@ -12,7 +12,7 @@ import { formatDateTime, localizedLabel, notRecorded } from "@/lib/format.js";
 import { ALL_BRANCHES } from "@/shell/branch-context.js";
 import { useVehicle } from "../context.js";
 import { RecordRow, RowIcon, RowMenu, Sep, TabHeader } from "../parts.js";
-import { TabAction } from "./MaintenanceTab.js";
+import { TabAction } from "./TabAction.js";
 
 type TripFacts = Pick<ActivityListItem, "originName" | "destinationName">;
 

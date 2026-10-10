@@ -42,6 +42,7 @@ const CATALOGUE: SlotCatalogue = {
 
 const empty = (code: WebModuleManifest["code"], overrides: Partial<WebModuleManifest> = {}): WebModuleManifest => ({
   code,
+  uses: [],
   navRows: [],
   navCounts: [],
   homeCards: [],
@@ -69,6 +70,13 @@ describe("webManifestProblems", () => {
       "ASSETS has two web manifests",
       "FINANCE has no contract manifest",
     ]);
+  });
+
+  it("names a module that uses itself, or one with no contract manifest", () => {
+    const catalogue = { ...CATALOGUE, modules: ["ASSETS" as const, "FINANCE" as const] };
+    expect(
+      webManifestProblems([empty("ASSETS", { uses: ["ASSETS"] }), empty("FINANCE", { uses: ["DOCUMENTS"] })], catalogue),
+    ).toEqual(["ASSETS uses itself", "FINANCE uses DOCUMENTS, which has no contract manifest"]);
   });
 
   it("names a key no slot has", () => {
