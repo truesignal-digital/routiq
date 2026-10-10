@@ -27,7 +27,7 @@ describe("GET /v1/assets/usage", () => {
   let api: ReturnType<typeof apiClient>;
   let workspaceId: string;
   let yaoundeId: string;
-  const actors: Record<string, Actor> = {};
+  const actors = {} as Record<"DIRECTOR" | "FINANCE" | "ADMIN" | "CASHIER" | "TECHNICIAN" | "DRIVER", Actor>;
   const asset: Record<string, string> = {};
   const trip: Record<string, string> = {};
   const today = currentBusinessDate(new Date(), "Africa/Douala");
@@ -234,10 +234,10 @@ describe("GET /v1/assets/usage", () => {
 
   it("gives km and status to every role that reads vehicles, and money only to those that read vehicle money", async () => {
     for (const role of ["ADMIN", "FINANCE"] as const) {
-      expect((await usage(actors[role]!)).money).not.toBeNull();
+      expect((await usage(actors[role])).money).not.toBeNull();
     }
     for (const role of ["CASHIER", "TECHNICIAN", "DRIVER"] as const) {
-      const body = await usage(actors[role]!);
+      const body = await usage(actors[role]);
       expect(body.money, role).toBeNull();
       expect(body.vehicles.every((row) => row.money === null), role).toBe(true);
       expect(body.trips?.routes.every((route) => route.revenueMinor === null && route.revenuePerKmMinor === null), role).toBe(true);
@@ -246,15 +246,15 @@ describe("GET /v1/assets/usage", () => {
       expect(vehicle(body, "VH002").days.at(-1), role).toBe("ON_TRIP");
     }
     // A driver's route figures are their own trips only.
-    expect((await usage(actors.DRIVER!)).trips?.routes).toEqual([]);
+    expect((await usage(actors.DRIVER)).trips?.routes).toEqual([]);
   });
 
   it("stops at the caller's branches, and narrows by a branch inside them", async () => {
-    const admin = await usage(actors.ADMIN!);
+    const admin = await usage(actors.ADMIN);
     expect(admin.vehicles.map((row) => row.assetCode)).not.toContain("VH005");
     const yaounde = await usage(actors.DIRECTOR, `?branchId=${yaoundeId}`);
     expect(yaounde.vehicles.map((row) => row.assetCode)).toEqual(["VH005"]);
-    const outside = await usage(actors.ADMIN!, `?branchId=${yaoundeId}`);
+    const outside = await usage(actors.ADMIN, `?branchId=${yaoundeId}`);
     expect(outside.vehicles).toEqual([]);
     expect((await api.get(actors.DIRECTOR.token, "/v1/assets/usage?branchId=DLA")).status).toBe(400);
   });
@@ -281,9 +281,9 @@ describe("GET /v1/assets/usage", () => {
       link: { kind: "asset", id: asset.VH003, number: "VH003" },
       params: { amountMinor: 300, medianMinor: 150, percentAbove: 100, currency: "XAF" },
     });
-    expect(await fuelRows(actors.ADMIN!)).toHaveLength(1);
-    expect(await fuelRows(actors.TECHNICIAN!)).toEqual([]);
-    expect(await fuelRows(actors.CASHIER!)).toEqual([]);
+    expect(await fuelRows(actors.ADMIN)).toHaveLength(1);
+    expect(await fuelRows(actors.TECHNICIAN)).toEqual([]);
+    expect(await fuelRows(actors.CASHIER)).toEqual([]);
   });
 
   describe("with modules off", () => {
