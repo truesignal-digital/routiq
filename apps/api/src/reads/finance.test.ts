@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   financialEntryDetail,
   financialEntryListItem,
@@ -18,6 +18,7 @@ import {
   financialEntries,
   financialPostings,
   principals,
+  workspaces,
 } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
@@ -511,7 +512,10 @@ describe("finance reads", () => {
         expect(recordStatus).toBe("SUBMITTED");
         submittedIds.push(entryId);
       }
-    });
+      // 102 commands through the whole pipeline, one commit each. Alone that
+      // takes under a second; with suites running in parallel it ran out of the
+      // 60 s default (#556). The tests below keep the normal budget.
+    }, 180_000);
 
     it("walks every page without duplicates or gaps", async () => {
       const pages = await walkEntries(pagedToken);
@@ -1310,6 +1314,33 @@ describe("finance reads", () => {
       expect(
         body.periods.find((period) => period.periodCode === "2026-06")?.entryCount,
       ).toBe(1);
+    });
+
+    // The month-lock dialog takes "the current month" from here, not from the
+    // device clock (#591). 12:00 UTC on 31 October is already 1 November on
+    // Kiritimati (UTC+14) and still October in Douala (UTC+1).
+    it("returns the current period in the workspace's time zone", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-31T12:00:00Z"));
+      try {
+        const tokenIn = async (timezone: string) => {
+          const seeded = await seedWorkspace(db);
+          await db.update(workspaces).set({ timezone }).where(eq(workspaces.id, seeded.workspace.id));
+          const director = await seedMember(db, {
+            workspaceId: seeded.workspace.id,
+            role: "DIRECTOR",
+            allBranches: true,
+          });
+          return (
+            await createSession(db, { principalId: director.principal.id, workspaceId: seeded.workspace.id })
+          ).token;
+        };
+
+        expect((await fetchPeriods(await tokenIn("Pacific/Kiritimati"))).currentPeriodCode).toBe("2026-11");
+        expect((await fetchPeriods(await tokenIn("Africa/Douala"))).currentPeriodCode).toBe("2026-10");
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("reflects a lock-period.v1 lock", async () => {

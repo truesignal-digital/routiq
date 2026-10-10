@@ -41,6 +41,12 @@ jobs:
           # Deploy exactly the commit CI validated, not whatever main points at now.
           ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
+      # The web image cannot read git (.git is dockerignored), so the commit
+      # reaches its version meta tag as a build arg (#601). Short, like a local
+      # build's fallback. GITHUB_ENV keeps it for the rebuild in "Switch containers".
+      - name: Stamp the app version
+        run: echo "ROUTIQ_VERSION=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+
       - name: Build images
         run: $COMPOSE build
 

@@ -1,6 +1,7 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ceilingFor, judge, median, raise, renderReadme, tighten, tolerance, type Ceilings, type Measured, type Run } from "./perf.js";
-import { template } from "./run.js";
+import { ceilingFor, judge, median, raise, readCeilings, renderReadme, tighten, tolerance, type Ceilings, type Measured, type Run } from "./perf.js";
+import { measurableMetrics, SCREENS, template } from "./run.js";
 
 const time = (value: number) => ({ value, samples: [value], kind: "time" as const });
 const count = (value: number) => ({ value, samples: [value], kind: "count" as const });
@@ -88,5 +89,28 @@ describe("renderReadme", () => {
 describe("template", () => {
   it("groups screens by route, not by record", () => {
     expect(template("/assets/0f8fad5b-d9cb-469f-a165-70867728950e")).toBe("/assets/:id");
+  });
+});
+
+describe("the ceilings file", () => {
+  // A ceiling no run can produce fails every `pnpm perf run` as GONE (#574).
+  it("gates only metrics a run measures", () => {
+    const measurable = new Set(measurableMetrics());
+    expect(Object.keys(readCeilings()).filter((name) => !measurable.has(name))).toEqual([]);
+  });
+});
+
+describe("SCREENS", () => {
+  const router = readFileSync(new URL("../../apps/web/src/router.tsx", import.meta.url), "utf8");
+  const routeBlock = (path: string) => router.split("createRoute({").find((block) => block.includes(`path: "${path}"`));
+
+  // A redirect reports its journey under the screen it lands on, so the opened path never gets a ready time.
+  it("opens screens the router renders, not redirects", () => {
+    const problems = SCREENS.flatMap((screen) => {
+      const block = routeBlock(screen.replace(/:\w+/g, "$assetId"));
+      if (block === undefined) return [`${screen}: no route`];
+      return /\bredirect\(/.test(block) ? [`${screen}: redirects`] : [];
+    });
+    expect(problems).toEqual([]);
   });
 });
