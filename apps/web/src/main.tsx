@@ -7,14 +7,11 @@ import { sessionStore } from "./auth/store.js";
 import { retryFailedScreens } from "./shell/lazy-screen.js";
 import { reportError, startTelemetry } from "./telemetry/index.js";
 import { initTheme } from "./lib/theme.js";
-import { installAppModules } from "./modules/index.js";
 import "./i18n/index.js";
 import "./styles.css";
 
 // Before the first render, or the app paints light and then flips.
 initTheme();
-// Before the first render: the shell, Home and the vehicle read their module slots from it.
-installAppModules();
 
 // The Query cache is not offline storage (§8) — no persistence plugin.
 const queryClient = new QueryClient();

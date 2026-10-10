@@ -62,7 +62,7 @@ export const MODULE_MANIFESTS: readonly ModuleManifest[] = [
   {
     code: "ASSETS",
     requires: [],
-    presetDefaults: everyPreset(true),
+    presetDefaults: /* @__PURE__ */ everyPreset(true),
     commands: ["assign-asset", "commission-asset", "register-asset", "update-asset-details"],
     reads: [
       "/v1/assets",
@@ -73,22 +73,22 @@ export const MODULE_MANIFESTS: readonly ModuleManifest[] = [
       "/v1/assets/summary",
     ],
     roles: ALL_ROLES,
-    whenOff: offState("No fleet list and no vehicle pages; records made on vehicles stay where other modules show them."),
+    whenOff: /* @__PURE__ */ offState("No fleet list and no vehicle pages; records made on vehicles stay where other modules show them."),
   },
   {
     code: "DOCUMENTS",
     requires: [],
-    presetDefaults: everyPreset(true),
+    presetDefaults: /* @__PURE__ */ everyPreset(true),
     commands: ["add-or-renew-document"],
     reads: ["/v1/assets/:assetId/documents"],
     // The counter has no papers to keep or read.
     roles: ["DIRECTOR", "ADMIN", "FINANCE", "TECHNICIAN", "DRIVER"],
-    whenOff: offState("Vehicles show no papers and no expiry warnings."),
+    whenOff: /* @__PURE__ */ offState("Vehicles show no papers and no expiry warnings."),
   },
   {
     code: "FINANCE",
     requires: [],
-    presetDefaults: everyPreset(true),
+    presetDefaults: /* @__PURE__ */ everyPreset(true),
     commands: [
       "approve-entry",
       "attach-evidence",
@@ -110,12 +110,12 @@ export const MODULE_MANIFESTS: readonly ModuleManifest[] = [
       "/v1/finance/summary",
     ],
     roles: ALL_ROLES,
-    whenOff: offState("No money pages, totals or costs anywhere; trips and work orders keep their other facts."),
+    whenOff: /* @__PURE__ */ offState("No money pages, totals or costs anywhere; trips and work orders keep their other facts."),
   },
   {
     code: "ACTIVITIES",
     requires: [],
-    presetDefaults: everyPreset(true),
+    presetDefaults: /* @__PURE__ */ everyPreset(true),
     commands: [
       "close-activity",
       "create-activity",
@@ -136,12 +136,12 @@ export const MODULE_MANIFESTS: readonly ModuleManifest[] = [
       "/v1/places",
     ],
     roles: ALL_ROLES,
-    whenOff: offState("No trips, readings or people list; vehicles show no trip history."),
+    whenOff: /* @__PURE__ */ offState("No trips, readings or people list; vehicles show no trip history."),
   },
   {
     code: "MAINTENANCE",
     requires: [],
-    presetDefaults: everyPreset(true),
+    presetDefaults: /* @__PURE__ */ everyPreset(true),
     commands: [
       "approve-work-order",
       "approve-work-order-closure",
@@ -164,7 +164,7 @@ export const MODULE_MANIFESTS: readonly ModuleManifest[] = [
       "/v1/work-orders/:workOrderId",
     ],
     roles: ALL_ROLES,
-    whenOff: offState(
+    whenOff: /* @__PURE__ */ offState(
       "No workshop page, problems or work orders; a vehicle shows no grounding and nobody can report a problem.",
     ),
   },
@@ -172,7 +172,7 @@ export const MODULE_MANIFESTS: readonly ModuleManifest[] = [
     code: "SCHEDULING",
     requires: ["ACTIVITIES"],
     // ADR-0012 §8: off for every preset until the vendor turns it on.
-    presetDefaults: everyPreset(false),
+    presetDefaults: /* @__PURE__ */ everyPreset(false),
     commands: [
       "assign-trip",
       "cancel-planned-trip",
@@ -183,14 +183,19 @@ export const MODULE_MANIFESTS: readonly ModuleManifest[] = [
     ],
     reads: [],
     roles: ["DIRECTOR", "ADMIN", "DRIVER"],
-    whenOff: offState("No planning; trips start as they do today."),
+    whenOff: /* @__PURE__ */ offState("No planning; trips start as they do today."),
   },
 ];
 
 /** Modules a workspace does not have until the vendor turns them on (ADR-0005, ADR-0012 §8). */
-export const MODULES_OFF_BY_DEFAULT: readonly ModuleCode[] = MODULE_MANIFESTS.filter((manifest) =>
-  TEMPLATE_CODES.every((preset) => !manifest.presetDefaults[preset]),
-).map((manifest) => manifest.code);
+export const MODULES_OFF_BY_DEFAULT: readonly ModuleCode[] = /* @__PURE__ */ offByDefault(MODULE_MANIFESTS);
+
+// The manifests are data the web app's first load never reads: the pure marks let it drop them.
+function offByDefault(manifests: readonly ModuleManifest[]): ModuleCode[] {
+  return manifests
+    .filter((manifest) => TEMPLATE_CODES.every((preset) => !manifest.presetDefaults[preset]))
+    .map((manifest) => manifest.code);
+}
 
 /**
  * Whether a module is on, given the workspace's workspace_modules row for it,
