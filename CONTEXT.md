@@ -111,7 +111,7 @@ Revenue recorded on one vehicle minus the expenses recorded on it. Company Costs
 _Avoid_: contribution, vehicle margin
 
 **Company Costs** (fr: **Frais généraux**):
-Expenses not recorded on any vehicle: office rent, office staff, phones. Company profit = the sum of Vehicle Profits − Company Costs.
+Expenses not recorded on any vehicle: office rent, office staff, phones. Company profit = the sum of Vehicle Profits − Company Costs (+ any revenue recorded with no vehicle).
 _Avoid_: overheads, shared costs, indirect costs (in the UI)
 
 **Dashboard** (fr: **Tableau de bord**) and **Overview** (fr: **Vue d'ensemble**):
