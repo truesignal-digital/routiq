@@ -664,6 +664,15 @@ export const RULES: readonly Rule[] = [
         .flatMap((file) => matchLines(file, /\d{4}_\w+\.sql|drizzle\/\$\{/).slice(0, 1)),
   },
   {
+    id: "D1",
+    name: "workspace-day-one-helper",
+    fix: "Get the workspace time zone from workspaceTimezone() in apps/api/src/reads/workspace-day.ts, then pass it to currentBusinessDate() or currentPeriodCode(). \"The workspace's day\" has drifted between copies before (#511, #555, #560; #580).",
+    check: linesMatching(
+      /\bworkspaces\.timezone\b/,
+      (path) => isApiProduction(path) && path !== "apps/api/src/reads/workspace-day.ts" && path !== "apps/api/src/db/schema.ts",
+    ),
+  },
+  {
     id: "P1",
     name: "no-prototype-routes",
     fix: "Prototypes stay on their own branch; production routes never mount them.",
