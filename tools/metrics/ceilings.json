@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 689540,
+    "ceiling": 690999,
     "raises": [
       {
         "date": "2026-10-06",
@@ -205,6 +205,12 @@
         "from": 686158,
         "to": 689540,
         "reason": "#569 link-person-login: People screen login column and forms, plus their fr/en strings"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 689540,
+        "to": 690999,
+        "reason": "#608 work order and problem numbers on the vehicle, maintenance and finance screens"
       }
     ]
   },
@@ -262,7 +268,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 259911,
+    "ceiling": 260163,
     "raises": [
       {
         "date": "2026-10-06",
@@ -455,6 +461,12 @@
         "from": 259125,
         "to": 259911,
         "reason": "#569 link-person-login: fr/en strings for the Login column, link/change/unlink login forms and history labels (catalogs load up front until #602)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 259911,
+        "to": 260163,
+        "reason": "#608 work order and problem numbers: record-number formatter and catalog strings"
       }
     ]
   }
