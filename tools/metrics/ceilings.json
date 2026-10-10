@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 689328,
+    "ceiling": 692894,
     "raises": [
       {
         "date": "2026-10-06",
@@ -235,6 +235,12 @@
         "from": 688723,
         "to": 689328,
         "reason": "#577 fr/en strings and preset overlays for the vehicle double-booking flag"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 689328,
+        "to": 692894,
+        "reason": "#569 link-person-login: People screen login column and forms, plus their fr/en strings"
       }
     ]
   },
@@ -298,7 +304,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 260358,
+    "ceiling": 261228,
     "raises": [
       {
         "date": "2026-10-06",
@@ -509,6 +515,12 @@
         "from": 260139,
         "to": 260358,
         "reason": "#577 fr/en strings and preset overlays for the vehicle double-booking flag"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 260358,
+        "to": 261228,
+        "reason": "#569 link-person-login: fr/en strings for the Login column, link/change/unlink login forms and history labels (catalogs load up front until #602)"
       }
     ]
   }
