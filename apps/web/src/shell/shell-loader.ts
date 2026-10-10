@@ -18,9 +18,11 @@ import { applyPresetVocabulary, presetVocabularyFor } from "../i18n/preset-overl
 export async function loadShell(queryClient: QueryClient, href: string): Promise<MeContext | undefined> {
   const session = sessionStore.getActive();
   const slug = session?.workspaceSlug;
+  // One try each, whatever the client's default retry (#600): the shell does
+  // not wait out a backoff for them, and their hooks retry once it is drawn.
   const extras = Promise.allSettled([
-    queryClient.ensureQueryData(approvalChainQueryOptions(slug)),
-    queryClient.ensureQueryData(assetRegistrationReferenceQueryOptions(slug)),
+    queryClient.ensureQueryData({ ...approvalChainQueryOptions(slug), retry: false }),
+    queryClient.ensureQueryData({ ...assetRegistrationReferenceQueryOptions(slug), retry: false }),
   ]);
   let me: MeContext;
   try {
