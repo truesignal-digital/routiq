@@ -106,7 +106,7 @@ export function ActivitySheetScreen() {
   }
 
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader title={label("record-journey-sheet")} />
       <p className="mt-1 text-sm text-muted-foreground">
         {t("activities.record.subtitle")}

@@ -58,7 +58,7 @@ export function DashboardScreen() {
   }
 
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader title={t("home.title")} />
 
       {dashboard.isError && (

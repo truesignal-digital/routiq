@@ -24,7 +24,7 @@ export function ShellPending() {
 export function ScreenPending() {
   const { t } = useTranslation();
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <LoadingState label={t("shell.pageLoading")} />
     </PageContainer>
   );
@@ -62,7 +62,7 @@ function useScreenError({ error, reset }: ErrorComponentProps) {
 
 export function ScreenError(props: ErrorComponentProps) {
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <ErrorState {...useScreenError(props)} />
     </PageContainer>
   );

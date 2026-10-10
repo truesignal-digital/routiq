@@ -202,9 +202,10 @@ export function AssetsStub() {
   }, [summaryQuery.data, t, groundingCounted, urlSearch.status]);
 
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader
         title={t("assets.title")}
+        description={t("assets.subtitle")}
         actions={
           canManage ? (
             <Link
@@ -217,9 +218,6 @@ export function AssetsStub() {
           ) : undefined
         }
       />
-      <p className="mt-2 max-w-lg text-sm text-muted-foreground">
-        {t("assets.subtitle")}
-      </p>
 
       <MetricStrip
         className="mt-6"
