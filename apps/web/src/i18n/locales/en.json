@@ -466,7 +466,12 @@
       "lead": {
         "both": "Every expense and revenue. {open} is open; {locked} is locked.",
         "open": "Every expense and revenue. {open} is open.",
-        "none": "Every expense and revenue."
+        "none": "Every expense and revenue.",
+        "own": {
+          "both": "Your expenses. {open} is open; {locked} is locked.",
+          "open": "Your expenses. {open} is open.",
+          "none": "Your expenses."
+        }
       },
       "tiles": {
         "out": "Expenses in {month}",
