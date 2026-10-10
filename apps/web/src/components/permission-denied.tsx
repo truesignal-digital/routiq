@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState, PageHeader } from "@/components/page";
-import { PageContainer, type PageContainerProps } from "@/components/page-container";
+import { PageContainer } from "@/components/page-container";
 import { errorMessage } from "@/lib/error-message.js";
 
 export interface PermissionDeniedProps {
@@ -10,7 +10,6 @@ export interface PermissionDeniedProps {
   icon: ReactNode;
   /** A stable error code — `errors.*` owns the wording, never the screen. */
   code: string;
-  width?: PageContainerProps["width"];
 }
 
 /**
@@ -22,12 +21,11 @@ export function PermissionDenied({
   title,
   icon,
   code,
-  width,
 }: PermissionDeniedProps) {
   const { i18n } = useTranslation();
 
   return (
-    <PageContainer {...(width === undefined ? {} : { width })}>
+    <PageContainer>
       <PageHeader title={title} />
       <EmptyState className="mt-6" icon={icon} message={errorMessage(i18n, code)} />
     </PageContainer>

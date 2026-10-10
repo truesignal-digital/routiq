@@ -58,7 +58,7 @@ Rules across archetypes:
 - No colour literals in components; semantic tokens only. [DS-2]
 - The logo is drawn only by the brand component (R with map-pin counter and road stem; letter `currentColor`, pin brand blue). [DS-3]
 - Labels and badges in sentence case; no uppercase eyebrows or shouting badges. [DS-4]
-- `PageHeader` owns title + one-sentence description + actions; `PageContainer` owns gutters and width (`narrow` forms, `default` reading, `wide` lists and workspaces).
+- `PageHeader` owns title + one-sentence description + actions; `PageContainer` is the page frame and owns gutters and width: one width for every page, at most 1 200 px of content, centred, 24 px gutters (16 on a phone). Screens set no `max-w-*` of their own (guard DS-5, #658).
 - Not used: pill buttons, numbered section labels, monospace labels, italic accent words, decorative gradients, cream backgrounds.
 - Theme (neutral vs brand navy) is decision 1 in `choices.html`; the logo ships either way.
 

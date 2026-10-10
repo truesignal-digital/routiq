@@ -160,7 +160,6 @@ export function UsersScreen() {
   if (me !== undefined && !canAdminister) {
     return (
       <PermissionDenied
-        width="wide"
         title={t("users.title")}
         icon={<Users className="size-7" aria-hidden />}
         code="ROLE_FORBIDDEN"
@@ -169,9 +168,10 @@ export function UsersScreen() {
   }
 
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader
         title={t("users.title")}
+        description={t("users.lead")}
         actions={
           <Button type="button" onClick={() => setAdding(true)}>
             <UserPlus className="size-4" aria-hidden />
@@ -179,7 +179,6 @@ export function UsersScreen() {
           </Button>
         }
       />
-      <p className="mt-2 max-w-lg text-sm text-muted-foreground">{t("users.lead")}</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
         <DataTableViewOptions

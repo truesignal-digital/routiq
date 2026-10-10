@@ -70,7 +70,7 @@ export function FinanceEntriesScreen() {
   const me = useMeContext();
   if (me === undefined) return <LoadingState label={t("finance.entries.loading")} />;
   if (!canReadFinanceEntries(me.role, me.enabledModules)) {
-    return <PermissionDenied width="wide" title={t("finance.entries.title")}
+    return <PermissionDenied title={t("finance.entries.title")}
       icon={<FileText className="size-7" aria-hidden />}
       code="ROLE_FORBIDDEN" />;
   }
@@ -246,7 +246,7 @@ function FinanceEntriesContent() {
   const columns = useFinanceEntryColumns(LIST_COLUMNS);
 
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader
         title={t("finance.entries.title")}
         actions={
