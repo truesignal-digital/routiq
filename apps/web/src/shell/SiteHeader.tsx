@@ -50,6 +50,7 @@ export function SiteHeader() {
     // through (#57). The sticky z-10 header is the stacking context that keeps
     // the -z-10 layer above its own background.
     <header
+      data-shift-region="header"
       data-branch-scoped={scoped ? "true" : undefined}
       className={cn(
         "sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background px-3 sm:px-4",

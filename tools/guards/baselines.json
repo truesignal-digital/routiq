@@ -37,9 +37,6 @@
     "apps/web/src/vehicle/useVehicle.ts": 1,
     "apps/web/src/vehicle/VehicleWorkspaceScreen.tsx": 5
   },
-  "E1": {
-    "apps/web/src/components/money-input.tsx": 1
-  },
   "H16": {
     "apps/web/src/activities/detail/ActivityAssetsPanel.tsx": 3,
     "apps/web/src/activities/detail/ActivityOverview.tsx": 1,
