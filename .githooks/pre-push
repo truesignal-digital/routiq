@@ -1,0 +1,20 @@
+#!/bin/sh
+# Installed by the root `prepare` script (git config core.hooksPath .githooks).
+# Main and develop change only through reviewed PRs; every push must pass the
+# typecheck and the repo guards first.
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main | refs/heads/develop)
+      echo "pre-push: $remote_ref changes only through a PR. Push a feature branch instead." >&2
+      exit 1
+      ;;
+  esac
+done
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "pre-push: pnpm not found on PATH; cannot run the checks." >&2
+  exit 1
+fi
+
+pnpm typecheck && pnpm lint
