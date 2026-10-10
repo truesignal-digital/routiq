@@ -252,6 +252,11 @@ function entryLinkColumns() {
       where ${workOrders.workspaceId} = ${financialEntries.workspaceId}
         and ${workOrders.id} = ${firstLineSql(financialPostings.workOrderId)}
     )`,
+    linkWorkOrderNumber: sql<number | null>`(
+      select ${workOrders.number} from ${workOrders}
+      where ${workOrders.workspaceId} = ${financialEntries.workspaceId}
+        and ${workOrders.id} = ${firstLineSql(financialPostings.workOrderId)}
+    )`,
     linkWorkOrderDescription: sql<string | null>`(
       select ${workOrders.description} from ${workOrders}
       where ${workOrders.workspaceId} = ${financialEntries.workspaceId}
@@ -265,6 +270,7 @@ interface EntryLinkRow {
   linkActivityNumber: string | null;
   linkWorkOrderId: string | null;
   linkWorkOrderAssetId: string | null;
+  linkWorkOrderNumber: number | null;
   linkWorkOrderDescription: string | null;
 }
 
@@ -274,6 +280,7 @@ function toEntryLinks(row: EntryLinkRow): FinancialEntryListItem["links"] {
     activityNumber: row.linkActivityNumber,
     workOrderId: row.linkWorkOrderId,
     workOrderAssetId: row.linkWorkOrderAssetId,
+    workOrderNumber: row.linkWorkOrderNumber,
     workOrderDescription: row.linkWorkOrderDescription,
   };
 }
@@ -338,6 +345,14 @@ function entryItemColumns(assetId: string | undefined) {
       assetId === undefined
         ? sql<string | null>`null`
         : sql<string | null>`${firstAssetLineSql(assetId, financialPostings.workOrderId)}`,
+    assetWorkOrderNumber:
+      assetId === undefined
+        ? sql<number | null>`null`
+        : sql<number | null>`(
+            select ${workOrders.number} from ${workOrders}
+            where ${workOrders.workspaceId} = ${financialEntries.workspaceId}
+              and ${workOrders.id} = ${firstAssetLineSql(assetId, financialPostings.workOrderId)}
+          )`,
     ...entryLinkColumns(),
   };
 }
@@ -377,6 +392,7 @@ interface EntryItemRow extends EntryLinkRow {
   assetActivityId: string | null;
   assetActivityNumber: string | null;
   assetWorkOrderId: string | null;
+  assetWorkOrderNumber: number | null;
 }
 
 function toEntryItem(row: EntryItemRow, withAsset: boolean): FinancialEntryListItem {
@@ -426,6 +442,7 @@ function toEntryItem(row: EntryItemRow, withAsset: boolean): FinancialEntryListI
           activityId: row.assetActivityId,
           activityNumber: row.assetActivityNumber,
           workOrderId: row.assetWorkOrderId,
+          workOrderNumber: row.assetWorkOrderNumber,
         }
       : null,
     links: toEntryLinks(row),

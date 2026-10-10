@@ -15,7 +15,8 @@
     "observe": "pnpm --silent --filter @routiq/tools observe",
     "perf": "pnpm --silent --filter @routiq/tools perf",
     "db:generate": "pnpm --filter @routiq/api db:generate",
-    "db:migrate": "pnpm --filter @routiq/api db:migrate"
+    "db:migrate": "pnpm --filter @routiq/api db:migrate",
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
   },
   "packageManager": "pnpm@10.28.0"
 }

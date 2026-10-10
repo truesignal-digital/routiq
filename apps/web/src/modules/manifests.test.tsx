@@ -29,6 +29,7 @@ const OPEN_GATES: VehicleGates = {
   maintenance: true,
   money: true,
   entries: true,
+  workOrderEstimate: true,
   workOrderCosts: true,
   trips: true,
   documents: true,
@@ -37,6 +38,7 @@ const OPEN_GATES: VehicleGates = {
 const LINKS = {
   workOrderId: "00000000-0000-4000-8000-00000000d001",
   workOrderAssetId: ASSET_ID,
+  workOrderNumber: 7,
   workOrderDescription: "Changer les plaquettes",
   activityId: "00000000-0000-4000-8000-00000000b001",
   activityNumber: "DLA-2026-00042",
@@ -142,7 +144,7 @@ describe("direct links to a module that is off", () => {
     await closeVehicle();
   });
 
-  const NOT_INCLUDED = "This module is not enabled for your workspace.";
+  const NOT_INCLUDED = "This module is not enabled for your company.";
 
   it.each(PAGES)("%s's page %s says it is not included and reads nothing of it", async (code, path) => {
     const recorded = await openVehicle(path, { role: "DIRECTOR", modules: ["CORE", ...MODULES.filter((m) => m !== code)] });

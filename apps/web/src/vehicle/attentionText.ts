@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 import type { AssetAttentionItem } from "@routiq/contracts";
 import { formatDate, formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
-import { recordReference } from "./model.js";
+import { recordNumberText } from "@/lib/record-number.js";
 
 /**
  * An attention item's title and one line of facts, in the reader's language.
@@ -15,7 +15,11 @@ export function attentionText(
   const p = item.params;
   const money = (minor: number | undefined) =>
     minor === undefined ? "" : formatMoney(minor, { currency: p.currency ?? "XAF", locale });
-  const ref = item.subject.number ?? recordReference(item.subject.id);
+  const { entityType } = item.subject;
+  const ref =
+    entityType === "work_order" || entityType === "operational_issue"
+      ? recordNumberText(t, entityType === "work_order" ? "work_order" : "issue", p.recordNumber ?? null)
+      : (item.subject.number ?? "");
   const recorder = p.recordedBy?.displayName ?? t("history.actor.unknown");
   const values = {
     ref,
@@ -36,6 +40,7 @@ export function attentionText(
     override: p.overrideRequired === true ? "yes" : "no",
     name: recorder,
     when: formatDateTime(item.since, locale),
+    numbers: new Intl.ListFormat(locale, { style: "long", type: "conjunction" }).format(p.tripNumbers ?? []),
   };
   const key = `vehicle.attention.${item.code}`;
   // Which facts exist picks the whole sentence; nothing is glued together.
@@ -50,6 +55,8 @@ export function attentionText(
             : "detailActual"
           : item.code === "WORK_ORDER_COST_TO_COME" && p.declaredCostMinor !== undefined
             ? "detailDeclared"
-            : "detail";
+            : item.code === "VEHICLE_DOUBLE_BOOKED" && (p.tripNumbers ?? []).length === 0
+              ? "detailUnnamed"
+              : "detail";
   return { title: t(`${key}.title`, values), detail: t(`${key}.${detail}`, values) };
 }

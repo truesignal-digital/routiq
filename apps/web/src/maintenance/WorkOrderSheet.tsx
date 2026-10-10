@@ -21,6 +21,7 @@ import type {
   WorkOrderRef,
 } from "./MaintenanceDialogs.js";
 import { IssueStatusBadge } from "./IssueStatusBadge.js";
+import type { WorkOrderMoneyShown } from "./permissions.js";
 import { useWorkOrder } from "./useMaintenance.js";
 import { WorkOrderStatusBadge } from "./WorkOrderStatusBadge.js";
 import { useCommandLabel } from "../commands/labels.js";
@@ -81,17 +82,23 @@ export function Chronologie({
 }
 
 /**
- * Labour and parts booked against this repair, one list per set: the posted
- * lines are money spent, the pending ones are awaiting finance review and are
- * never read into it.
+ * Labour and parts booked against this repair, each line with its entry's
+ * status, so a line awaiting review reads as such. `otherBranchesMinor` adds
+ * one line for what was booked in branches the reader cannot see (#643): an
+ * amount, never those lines' details.
  */
 export function CostLines({
   lines,
+  otherBranchesMinor = 0,
+  currency,
   locale,
 }: {
   lines: readonly (WorkOrderCostLine | WorkOrderPendingCostLine)[];
+  otherBranchesMinor?: number;
+  currency: string;
   locale: string;
 }) {
+  const { t } = useTranslation();
   return (
     <ul className="flex flex-col gap-2">
       {lines.map((line) => (
@@ -115,7 +122,33 @@ export function CostLines({
           </span>
         </li>
       ))}
+      {otherBranchesMinor !== 0 && (
+        <li className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-md bg-foreground/[0.035] px-3 py-2">
+          <span className="text-xs text-muted-foreground">{t("maintenance.detail.otherBranchesCost")}</span>
+          <span className="tabular-nums whitespace-nowrap">
+            {formatMoney(otherBranchesMinor, { currency, locale })}
+          </span>
+        </li>
+      )}
     </ul>
+  );
+}
+
+/**
+ * A work order's costs as one list that adds up to its actual cost: the posted
+ * lines, those awaiting review (the actual cost counts them, #81, #612), and
+ * the sum booked in other branches (#643). Render only when the read sent the
+ * lines (`costLines` is null for a reader who may not see them).
+ */
+export function WorkOrderCosts({ detail, locale }: { detail: WorkOrderDetail; locale: string }) {
+  const { t } = useTranslation();
+  const lines = [...(detail.costLines ?? []), ...(detail.pendingCostLines ?? [])];
+  const otherBranchesMinor = detail.otherBranchesCostMinor ?? 0;
+  if (lines.length === 0 && otherBranchesMinor === 0) {
+    return <p className="text-sm text-muted-foreground">{t("maintenance.detail.costLinesEmpty")}</p>;
+  }
+  return (
+    <CostLines lines={lines} otherBranchesMinor={otherBranchesMinor} currency={detail.currency} locale={locale} />
   );
 }
 
@@ -135,6 +168,7 @@ function SheetActions({
   const label = useCommandLabel();
   const workOrder: WorkOrderRef = {
     id: detail.id,
+    number: detail.number,
     assetId: detail.asset.id,
     status: detail.status,
     issueId: detail.issue?.id ?? null,
@@ -229,12 +263,15 @@ export function WorkOrderSheet({
   row,
   issues,
   permissions,
+  money,
   onAction,
 }: {
   row: WorkOrderListItem;
   /** Signalements already loaded by the screen — where availability is published. */
   issues: readonly IssueListItem[];
   permissions: WorkOrderSheetPermissions;
+  /** Which amounts this reader sees: the estimate (#640), the actual cost (#328, #390). */
+  money: WorkOrderMoneyShown;
   onAction: (dialog: MaintenanceDialog) => void;
 }) {
   const { t, i18n } = useTranslation();
@@ -293,8 +330,8 @@ export function WorkOrderSheet({
             </span>,
           ],
           [t("maintenance.workOrders.columns.branch"), header.branch.name],
-          // Costs the read withheld (#390) are left out, not called unrecorded.
-          ...(detail?.costLines === null
+          // Costs the read withheld (#390, #640) are left out, not called unrecorded.
+          ...(!money.estimate
             ? []
             : ([
                 [
@@ -305,6 +342,10 @@ export function WorkOrderSheet({
                     formatMoney(header.expectedCostMinor, { currency: header.currency, locale })
                   ),
                 ],
+              ] satisfies [string, ReactNode][])),
+          ...(!money.actual
+            ? []
+            : ([
                 [
                   t("maintenance.workOrders.columns.actualCost"),
                   header.actualCostMinor === null ? (
@@ -382,31 +423,13 @@ export function WorkOrderSheet({
         )}
       </div>
 
-      {/* Null when the reader may not see work-order costs (#390). */}
+      {/* Null when the reader may not see work-order costs (#390, #328). */}
       {detail !== undefined && detail.costLines !== null && (
         <div>
           <h3 className="mb-3 text-sm font-semibold">
             {t("maintenance.detail.costLines")}
           </h3>
-          {detail.costLines.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {t("maintenance.detail.costLinesEmpty")}
-            </p>
-          ) : (
-            <CostLines lines={detail.costLines} locale={locale} />
-          )}
-        </div>
-      )}
-
-      {detail !== undefined && detail.pendingCostLines !== null && detail.pendingCostLines.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold">
-            {t("maintenance.detail.pendingCostLines")}
-          </h3>
-          <p className="mb-3 text-xs text-muted-foreground">
-            {t("maintenance.detail.pendingCostLinesHint")}
-          </p>
-          <CostLines lines={detail.pendingCostLines} locale={locale} />
+          <WorkOrderCosts detail={detail} locale={locale} />
         </div>
       )}
     </div>

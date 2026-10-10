@@ -663,7 +663,7 @@ export const financialPostings = pgTable(
   ],
 );
 
-/** Per-scope sequences for human-readable numbering (e.g. 'ENTRY:{branchId}:{year}'). */
+/** Per-scope sequences for human-readable numbering (e.g. 'ENTRY:{branchId}:{year}', 'WORK_ORDER', 'ISSUE'). */
 export const numberCounters = pgTable(
   "number_counters",
   {
@@ -720,6 +720,47 @@ export const persons = pgTable(
   (t) => [
     uniqueIndex("persons_ws_code_uq").on(t.workspaceId, t.personCode),
     index("persons_ws_branch_idx").on(t.workspaceId, t.branchId),
+    // One login, one person (ADR-0010). `membership_id` is the current link,
+    // which `link-person-login` and `unlink-person-login` alone write.
+    uniqueIndex("persons_ws_membership_uq")
+      .on(t.workspaceId, t.membershipId)
+      .where(sql`${t.membershipId} is not null`),
+  ],
+);
+
+/**
+ * Every link between a Person and a login (#569), one row per period. A link
+ * is ended, never rewritten: relinking ends the current row and opens a new
+ * one, unlinking only ends it. `persons.membership_id` mirrors the open row.
+ * Only `ended_at` and `ended_by_command_id` may be updated (migration 0047).
+ */
+export const personLogins = pgTable(
+  "person_logins",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => persons.id),
+    membershipId: uuid("membership_id")
+      .notNull()
+      .references(() => memberships.id),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    endedByCommandId: uuid("ended_by_command_id").references(() => commands.id),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("person_logins_open_person_uq")
+      .on(t.workspaceId, t.personId)
+      .where(sql`${t.endedAt} is null`),
+    uniqueIndex("person_logins_open_membership_uq")
+      .on(t.workspaceId, t.membershipId)
+      .where(sql`${t.endedAt} is null`),
   ],
 );
 
@@ -1023,6 +1064,12 @@ export const operationalIssues = pgTable(
     assetId: uuid("asset_id")
       .notNull()
       .references(() => assets.id),
+    /**
+     * Per-workspace sequence (#608), drawn from number_counters when the
+     * creating command commits; the uuid stays the key. The prefix ("OT-",
+     * "WO-") is the client's words, never stored. Set once, never edited.
+     */
+    number: integer("number").notNull(),
     description: text("description").notNull(),
     safetyCritical: boolean("safety_critical").notNull(),
     category: text("category"),
@@ -1048,6 +1095,7 @@ export const operationalIssues = pgTable(
   },
   (t) => [
     index("operational_issues_ws_asset_idx").on(t.workspaceId, t.assetId),
+    uniqueIndex("operational_issues_ws_number_uq").on(t.workspaceId, t.number),
   ],
 );
 
@@ -1075,6 +1123,12 @@ export const workOrders = pgTable(
       .notNull()
       .references(() => assets.id),
     issueId: uuid("issue_id").references((): AnyPgColumn => operationalIssues.id),
+    /**
+     * Per-workspace sequence (#608), drawn from number_counters when the
+     * creating command commits; the uuid stays the key. The prefix ("OT-",
+     * "WO-") is the client's words, never stored. Set once, never edited.
+     */
+    number: integer("number").notNull(),
     description: text("description").notNull(),
     /**
      * Plain `text` with no CHECK, as Drizzle emits it; the value set is held by
@@ -1128,6 +1182,7 @@ export const workOrders = pgTable(
   (t) => [
     index("work_orders_ws_asset_idx").on(t.workspaceId, t.assetId),
     index("work_orders_ws_status_idx").on(t.workspaceId, t.status),
+    uniqueIndex("work_orders_ws_number_uq").on(t.workspaceId, t.number),
   ],
 );
 

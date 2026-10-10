@@ -22,9 +22,11 @@ import {
   type CommandDefinition,
   type Tx,
 } from "./dispatcher.js";
+import { isModuleEnabled } from "../modules/registry.js";
 import { currentBusinessDate } from "../reads/business-date.js";
 import { workspaceTimezone } from "../reads/workspace-day.js";
 import { nextActivityNumber } from "./numbering.js";
+import { startedTripWarnings } from "./trip-conflicts.js";
 import { validateCustomValues } from "./templates.js";
 
 type CreateActivityPayload = z.infer<typeof createActivityPayload>;
@@ -114,11 +116,12 @@ const createActivity: CommandDefinition<CreateActivityPayload> = {
     }
 
     const startedAt = new Date(payload.startedAt);
+    const timezone = await workspaceTimezone(tx, ctx.workspaceId);
     const activityNumber = await nextActivityNumber(
       tx,
       ctx,
       branch,
-      currentBusinessDate(startedAt, await workspaceTimezone(tx, ctx.workspaceId)),
+      currentBusinessDate(startedAt, timezone),
     );
 
     await tx.insert(activities).values({
@@ -243,7 +246,26 @@ const createActivity: CommandDefinition<CreateActivityPayload> = {
       ],
     });
 
-    return { recordId: payload.activityId, rowVersion: 1, recordStatus: "OPEN", warnings };
+    // The vehicle may be grounded, or it or the driver already on another
+    // unfinished trip: accepted, and said (#577, #653).
+    const collisions = await startedTripWarnings(
+      tx,
+      {
+        workspaceId: ctx.workspaceId,
+        timezone,
+        maintenanceOn: await isModuleEnabled(tx, ctx.workspaceId, "MAINTENANCE"),
+      },
+      payload.activityId,
+    );
+    return {
+      recordId: payload.activityId,
+      rowVersion: 1,
+      recordStatus: "OPEN",
+      warnings: [...warnings, ...collisions.warnings],
+      ...(collisions.warningMetadata === undefined
+        ? {}
+        : { warningMetadata: collisions.warningMetadata }),
+    };
   },
 };
 

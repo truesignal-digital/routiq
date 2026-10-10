@@ -10,6 +10,7 @@ const me = {
   branchScope: ["9c4f5e1b-6d70-4182-9d2e-3f4a5b6c7d8e"],
   displayName: "Sali Ahmadou",
   workspaceName: "Transports Ngwa",
+  timezone: "Africa/Douala",
   enabledModules: ["CORE", "ASSETS"],
   enabledPresets: ["TRUCKING"],
 };
@@ -25,6 +26,12 @@ describe("meResponse", () => {
     expect(meResponse.safeParse(withoutName).success).toBe(false);
     expect(meResponse.safeParse(withoutWorkspace).success).toBe(false);
     expect(meResponse.safeParse({ ...me, displayName: "" }).success).toBe(false);
+  });
+
+  // #639: the web cuts "today" at the workspace's midnight, so it needs the zone.
+  it("requires the workspace's time zone", () => {
+    const { timezone: _timezone, ...withoutZone } = me;
+    expect(meResponse.safeParse(withoutZone).success).toBe(false);
   });
 
   it("accepts a whole-workspace scope", () => {

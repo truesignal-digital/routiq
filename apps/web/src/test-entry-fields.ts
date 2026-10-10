@@ -13,6 +13,7 @@ export const entryVehicleFields = {
     activityNumber: null,
     workOrderId: null,
     workOrderAssetId: null,
+    workOrderNumber: null,
     workOrderDescription: null,
   },
 };

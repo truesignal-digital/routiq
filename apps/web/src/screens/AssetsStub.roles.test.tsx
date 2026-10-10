@@ -49,6 +49,7 @@ function renderWith(
     branchScope: "ALL",
     enabledModules,
     enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+    timezone: "Africa/Douala",
   };
   return render(
     <QueryClientProvider client={new QueryClient()}>

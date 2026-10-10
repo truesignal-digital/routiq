@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UsePersonsParams } from "../activities/usePersons.js";
@@ -27,6 +27,8 @@ const persons = [
     defaultRole: "DRIVER" as const,
     branchId: "22222222-2222-4222-8222-222222222222",
     active: true,
+    loginPrincipalId: null,
+    rowVersion: 1,
   },
   {
     id: "33333333-3333-4333-8333-333333333333",
@@ -35,8 +37,61 @@ const persons = [
     defaultRole: null,
     branchId: "22222222-2222-4222-8222-222222222222",
     active: false,
+    loginPrincipalId: null,
+    rowVersion: 1,
+  },
+  {
+    id: "44444444-4444-4444-8444-444444444444",
+    displayName: "Sali Ngono",
+    personCode: "D-021",
+    defaultRole: "DRIVER" as const,
+    branchId: "22222222-2222-4222-8222-222222222222",
+    active: true,
+    loginPrincipalId: "55555555-5555-4555-8555-555555555555",
+    rowVersion: 2,
   },
 ];
+
+const members = [
+  {
+    principalId: "55555555-5555-4555-8555-555555555555",
+    displayName: "Sali Ngono",
+    username: "sali",
+    role: "DRIVER" as const,
+    branchScope: ["22222222-2222-4222-8222-222222222222"],
+    status: "ACTIVE" as const,
+    rowVersion: 1,
+    createdAt: "2026-10-01T00:00:00.000Z",
+  },
+];
+
+vi.mock("../members/useMembers.js", () => ({
+  useMembers: () => ({
+    data: { pages: [{ items: members, nextCursor: null }] },
+    isError: false,
+    isPending: false,
+  }),
+}));
+
+/** The forms own the commands (PersonLoginForms.test.tsx); this screen only opens them. */
+vi.mock("../members/PersonLoginForms.js", async () => {
+  const actual = await vi.importActual<typeof import("../members/PersonLoginForms.js")>(
+    "../members/PersonLoginForms.js",
+  );
+  return {
+    ...actual,
+    LinkPersonLoginForm: ({ person, logins }: { person: { displayName: string; loginPrincipalId: string | null }; logins: unknown[] }) => (
+      <div role="dialog" aria-label={person.loginPrincipalId === null ? "link-person-login" : "relink-person-login"}>
+        {person.displayName} · {logins.length}
+      </div>
+    ),
+    UnlinkPersonLoginForm: ({ person, loginLabel }: { person: { displayName: string }; loginLabel: string }) => (
+      <div role="dialog" aria-label="unlink-person-login">
+        {person.displayName} · {loginLabel}
+      </div>
+    ),
+  };
+});
 
 const refetch = vi.fn();
 
@@ -89,7 +144,9 @@ vi.mock("../activities/RegisterPersonDialog.js", () => ({
 }));
 
 const me = {
+  principalId: "66666666-6666-4666-8666-666666666666",
   role: "ADMIN" as const,
+  branchScope: "ALL" as const,
   enabledModules: ["CORE", "ACTIVITIES"] as const,
 };
 
@@ -115,9 +172,10 @@ describe("PersonsScreen", () => {
     render(<PersonsScreen />);
 
     expect(await screen.findByText("Amadou Bello")).toBeTruthy();
-    expect(screen.getByText("D-014")).toBeTruthy();
-    expect(screen.getByText("persons.roles.DRIVER")).toBeTruthy();
-    expect(screen.getByText("persons.active")).toBeTruthy();
+    const amadou = screen.getByText("Amadou Bello").closest("tr")!;
+    expect(within(amadou).getByText("D-014")).toBeTruthy();
+    expect(within(amadou).getByText("persons.roles.DRIVER")).toBeTruthy();
+    expect(within(amadou).getByText("persons.active")).toBeTruthy();
     // A person with neither code nor usual role still reads as a row.
     expect(screen.getByText("Estelle Ngo")).toBeTruthy();
     expect(screen.getByText("persons.inactive")).toBeTruthy();
@@ -170,6 +228,58 @@ describe("PersonsScreen", () => {
 
       expect(await screen.findByText("Amadou Bello")).toBeTruthy();
       expect(screen.queryByRole("button", { name: "commands.register-person.label" })).toBeNull();
+    },
+  );
+
+  function rowMenuOrNull(name: string): HTMLElement | null {
+    const row = screen.getByText(name).closest("tr");
+    if (row === null) throw new Error(`No row for ${name}`);
+    return within(row).queryByRole("button", { name: "dataTable.actions" });
+  }
+
+  it("offers the Administrateur to link a login to a person who has none (#569)", async () => {
+    render(<PersonsScreen />);
+
+    await screen.findByText("Amadou Bello");
+    await userEvent.click(rowMenuOrNull("Amadou Bello")!);
+    await userEvent.click(await screen.findByRole("menuitem", { name: "commands.link-person-login.label" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "link-person-login" });
+    // Sali's login is held by Sali's person, so nothing is free for Amadou.
+    expect(dialog.textContent).toBe("Amadou Bello · 0");
+  });
+
+  it("shows a linked person's login, and offers to change or unlink it", async () => {
+    render(<PersonsScreen />);
+
+    expect(await screen.findByText("persons.columns.login")).toBeTruthy();
+    const row = screen.getByText("Sali Ngono").closest("tr")!;
+    expect(within(row).getByText("persons.login.option")).toBeTruthy();
+
+    await userEvent.click(rowMenuOrNull("Sali Ngono")!);
+    expect(await screen.findByRole("menuitem", { name: "commands.link-person-login.relink.label" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("menuitem", { name: "commands.unlink-person-login.label" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "unlink-person-login" });
+    expect(dialog.textContent).toBe("Sali Ngono · persons.login.option");
+  });
+
+  it("offers no login action on an inactive person", async () => {
+    render(<PersonsScreen />);
+    await screen.findByText("Estelle Ngo");
+
+    expect(rowMenuOrNull("Estelle Ngo")).toBeNull();
+  });
+
+  it.each(["FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"])(
+    "%s sees no login column and no login action",
+    async (role) => {
+      meValue = { ...me, role };
+      render(<PersonsScreen />);
+      await screen.findByText("Amadou Bello");
+
+      expect(screen.queryByText("persons.columns.login")).toBeNull();
+      expect(rowMenuOrNull("Amadou Bello")).toBeNull();
     },
   );
 

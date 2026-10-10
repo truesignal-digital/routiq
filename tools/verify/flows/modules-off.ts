@@ -71,8 +71,8 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
     for (const code of off) if (OWNS[code].reads.test(path)) refused.push(`${code} ${request.method()} ${path}`);
   });
   const notIncluded = t(
-    "Ce module n'est pas activé pour votre espace de travail.",
-    "This module is not enabled for your workspace.",
+    "Ce module n'est pas activé pour votre entreprise.",
+    "This module is not enabled for your company.",
   );
   const phone = (page.viewportSize()?.width ?? 1440) < 768;
 

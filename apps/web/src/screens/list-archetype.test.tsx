@@ -133,6 +133,7 @@ function renderList(Screen: ComponentType) {
     branchScope: "ALL",
     enabledModules: ["CORE", "ASSETS", "ACTIVITIES", "MAINTENANCE"],
     enabledPresets: ["TRUCKING"],
+    timezone: "Africa/Douala",
     displayName: "Emilienne Ngo",
     workspaceName: "Transports Ngwa",
   };

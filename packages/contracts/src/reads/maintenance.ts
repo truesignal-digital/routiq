@@ -26,6 +26,15 @@ export const issueStatuses = ["OPEN", "RESOLVED", "DISMISSED"] as const;
 export const issueStatus = z.enum(issueStatuses);
 
 /**
+ * A work order's or problem's number (#608): a per-workspace sequence the
+ * server draws when the creating command commits; the uuid stays the key. The
+ * client adds the prefix in its own words ("OT-0007", "WO-0007"). Every record
+ * the server holds has one. Null is for a record the client holds before it
+ * reaches the server (captured offline), which shows as "number pending".
+ */
+export const maintenanceRecordNumber = z.number().int().positive().nullable();
+
+/**
  * An asset seen from the maintenance module: identity plus the two labels the
  * fleet is read by, same pair the asset list publishes. Registration is null
  * for anything not yet plated.
@@ -54,6 +63,7 @@ export const maintenanceBranchRef = z.object({
  */
 export const workOrderIssueRef = z.object({
   id: z.uuid(),
+  number: maintenanceRecordNumber,
   safetyCritical: z.boolean(),
 });
 
@@ -99,14 +109,16 @@ export const workOrderListQuery = listQuery({
 
 export const workOrderListItem = z.object({
   id: z.uuid(),
+  number: maintenanceRecordNumber,
   status: workOrderStatus,
   description: z.string(),
   asset: maintenanceAssetRef,
   branch: maintenanceBranchRef,
   /**
-   * Minor units, XAF exponent 0 — the client formats, it never divides. This
-   * and the other two amounts are null for a caller who may not read
-   * work-order costs (`canReadWorkOrderCosts`, #390).
+   * Minor units, XAF exponent 0 — the client formats, it never divides. The
+   * workshop's quote, a Maintenance fact (#640): null only for a caller who
+   * may not read work-order costs (`canReadWorkOrderCosts`, #390). The other
+   * two amounts are Finance's, and null also while FINANCE is off (#328).
    */
   expectedCostMinor: z.number().int().nullable(),
   /**
@@ -247,10 +259,17 @@ export const workOrderDetail = workOrderListItem.extend({
    * record, and its entry's branch is what finance scope is read against.
    * REJECTED entries are excluded — they record a spend that was refused.
    * Null, never an empty list, when the caller may not read work-order costs
-   * (`canReadWorkOrderCosts`, #390).
+   * (`canReadWorkOrderCosts`, #390) or FINANCE is off (#328).
    */
   costLines: z.array(workOrderCostLine).nullable(),
   pendingCostLines: z.array(workOrderPendingCostLine).nullable(),
+  /**
+   * The signed sum of the lines booked in branches outside the reader's scope
+   * (#643): one figure and never the lines themselves, so the listed lines
+   * plus this add up to the order's whole cost. 0 for a reader of every
+   * branch; null whenever the lines are.
+   */
+  otherBranchesCostMinor: z.number().int().nullable(),
 });
 
 const queryBoolean = z
@@ -267,11 +286,13 @@ export const issueListQuery = listQuery({
 /** A work order spawned by this signalement; an issue may spawn several. */
 export const issueWorkOrderRef = z.object({
   id: z.uuid(),
+  number: maintenanceRecordNumber,
   status: workOrderStatus,
 });
 
 export const issueListItem = z.object({
   id: z.uuid(),
+  number: maintenanceRecordNumber,
   asset: maintenanceAssetRef,
   branch: maintenanceBranchRef,
   description: z.string(),

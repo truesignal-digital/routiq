@@ -25,6 +25,7 @@ import { sessionStore } from "../../auth/store.js";
 import { i18n } from "../../i18n/index.js";
 import { router as applicationRouter } from "../../router.js";
 import { ALL_MODULES, ASSET_ID, BRANCH_ID, asset as assetFixture, finance as financeFixture, me } from "./fixtures.js";
+import { QUERY_DEFAULTS } from "../../lib/query-defaults.js";
 
 export const identity = { username: "vehicle-test", workspaceSlug: "vehicle-test" };
 
@@ -38,6 +39,8 @@ export interface VehicleScenario {
   members?: Record<string, Role>;
   modules?: ModuleCode[];
   principalType?: PrincipalType;
+  /** The workspace's time zone `/v1/me` names; the fixture's Douala otherwise. */
+  timezone?: string;
   width?: number;
   locale?: "en" | "fr-CM";
   asset?: AssetDetail;
@@ -154,6 +157,7 @@ export async function openVehicle(path: string, scenario: VehicleScenario) {
       return json({
         ...me(member ?? scenario.role, scenario.modules ?? ALL_MODULES),
         principalType: scenario.principalType ?? "HUMAN",
+        ...(scenario.timezone === undefined ? {} : { timezone: scenario.timezone }),
       });
     }
     if (p === "/v1/reference/asset-registration") {
@@ -247,10 +251,12 @@ export async function openVehicle(path: string, scenario: VehicleScenario) {
   sessionStore.save({ ...identity, token: "vehicle-test-token", expiresAt: "2099-01-01T00:00:00Z" });
   // Reads that set their own `retry` still retry here, but without the backoff.
   const client = new QueryClient({
-    defaultOptions: { queries: scenario.defaultRetries === true ? {} : { retry: false, retryDelay: 0 } },
+    defaultOptions: {
+      queries: { ...QUERY_DEFAULTS, ...(scenario.defaultRetries === true ? {} : { retry: false, retryDelay: 0 }) },
+    },
   });
   const history = createMemoryHistory({ initialEntries: [path] });
-  const router = createRouter({ routeTree: applicationRouter.routeTree, history });
+  const router: typeof applicationRouter = createRouter({ ...applicationRouter.options, history, context: { queryClient: client } });
   await act(async () => {
     render(
       <QueryClientProvider client={client}>

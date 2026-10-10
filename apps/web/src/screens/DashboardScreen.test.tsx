@@ -171,6 +171,7 @@ function membership(role: Role, enabledModules: ModuleCode[]): MeContext {
     branchScope: "ALL",
     enabledModules,
     enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+    timezone: "Africa/Douala",
   };
 }
 
@@ -382,6 +383,36 @@ describe("DashboardScreen — gating", () => {
 
     await waitFor(() => expect(kpiKeys().length).toBe(3));
     expect(kpiKeys()).not.toContain("pendingApprovals");
+  });
+
+  it("says why Home is empty when every module is off, and what the company keeps (#622)", async () => {
+    installFetch();
+    await renderHome(membership("DIRECTOR", ["CORE"]));
+
+    expect(
+      await screen.findByText(
+        "Home has nothing to show: the modules that fill it are switched off for your company. The Company pages in the menu still work.",
+      ),
+    ).toBeTruthy();
+    expect(kpiKeys()).toEqual([]);
+    expect(screen.queryByText("Expense and revenue")).toBeNull();
+  });
+
+  it("points no one at Company pages they do not have (#622)", async () => {
+    installFetch();
+    await renderHome(membership("DRIVER", ["CORE"]));
+
+    expect(
+      await screen.findByText("Home has nothing to show: the modules that fill it are switched off for your company."),
+    ).toBeTruthy();
+  });
+
+  it("shows no empty state while Home has a card", async () => {
+    installFetch();
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS"]));
+
+    await waitFor(() => expect(kpiKeys()).toEqual(["assets"]));
+    expect(screen.queryByText(/Home has nothing to show/)).toBeNull();
   });
 
   it("lets the Administrateur trace totals and recent entries", async () => {

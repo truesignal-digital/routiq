@@ -36,6 +36,9 @@ describe("maintenance schema", () => {
   let otherAssetId: string;
   let commandId: string;
   let otherCommandId: string;
+  let lastNumber = 0;
+  /** Numbers are unique per workspace (#608); the handlers draw them, these inserts bypass the handlers. */
+  const nextNumber = () => (lastNumber += 1);
 
   beforeAll(async () => {
     ctx = await createTestApp();
@@ -107,6 +110,7 @@ describe("maintenance schema", () => {
         ctx.db.insert(operationalIssues).values({
           id: randomUUID(),
           workspaceId,
+          number: nextNumber(),
           assetId,
           description: "Test issue",
           safetyCritical: true,
@@ -122,6 +126,7 @@ describe("maintenance schema", () => {
           ctx.db.insert(operationalIssues).values({
             id: randomUUID(),
             workspaceId: otherWorkspaceId,
+            number: nextNumber(),
             assetId: otherAssetId,
             description: "Cross-workspace issue",
             safetyCritical: false,
@@ -141,6 +146,7 @@ describe("maintenance schema", () => {
       await ctx.db.insert(operationalIssues).values({
         id: issueId,
         workspaceId,
+        number: nextNumber(),
         assetId,
         description: "Issue for work order test",
         safetyCritical: false,
@@ -154,6 +160,7 @@ describe("maintenance schema", () => {
         ctx.db.insert(workOrders).values({
           id: randomUUID(),
           workspaceId,
+          number: nextNumber(),
           assetId,
           issueId,
           description: "Repair work",
@@ -168,6 +175,7 @@ describe("maintenance schema", () => {
           ctx.db.insert(workOrders).values({
             id: randomUUID(),
             workspaceId,
+            number: nextNumber(),
             assetId: otherAssetId,
             description: "Cross-workspace work order",
             createdByCommandId: commandId,
@@ -185,6 +193,7 @@ describe("maintenance schema", () => {
       await ctx.db.insert(operationalIssues).values({
         id: issueId,
         workspaceId,
+        number: nextNumber(),
         assetId,
         description: "Safety-critical issue",
         safetyCritical: true,

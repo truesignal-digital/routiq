@@ -154,6 +154,7 @@ const SCOPE_TARGETS: readonly ScopeTargetDeclaration[] = [
       "deactivate-member.v1",
       "reactivate-member.v1",
       "reset-member-pin.v1",
+      "link-person-login.v1",
     ],
     meaning: "the member being added or administered, never the actor (ctx.principalId)",
   },

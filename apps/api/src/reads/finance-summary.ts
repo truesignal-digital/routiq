@@ -4,7 +4,7 @@ import {
   ledgerEntryStatuses,
   type Role,
 } from "@routiq/contracts";
-import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
@@ -59,20 +59,28 @@ export function registerFinanceSummaryReadRoutes(
           ...(branchId === undefined ? [] : [eq(financialEntries.branchId, branchId)]),
         ];
 
-        const latestPeriod = async (status: "OPEN" | "LOCKED") => {
-          const [row] = await tx
-            .select({ periodCode: postingPeriods.periodCode })
-            .from(postingPeriods)
-            .where(
-              and(
-                eq(postingPeriods.workspaceId, auth.workspaceId),
-                eq(postingPeriods.status, status),
-              ),
-            )
-            .orderBy(desc(postingPeriods.periodCode))
-            .limit(1);
-          return row?.periodCode ?? null;
-        };
+        const [lastLocked] = await tx
+          .select({ periodCode: postingPeriods.periodCode })
+          .from(postingPeriods)
+          .where(
+            and(
+              eq(postingPeriods.workspaceId, auth.workspaceId),
+              eq(postingPeriods.status, "LOCKED"),
+            ),
+          )
+          .orderBy(desc(postingPeriods.periodCode))
+          .limit(1);
+        const unlocked = await tx
+          .select({ periodCode: postingPeriods.periodCode })
+          .from(postingPeriods)
+          .where(
+            and(
+              eq(postingPeriods.workspaceId, auth.workspaceId),
+              eq(postingPeriods.status, "OPEN"),
+              lt(postingPeriods.periodCode, month),
+            ),
+          )
+          .orderBy(asc(postingPeriods.periodCode));
 
         // The entry's own signed amount: postings sum to it by invariant
         // (§3.4), and a reversal is a second, negative entry in the ledger set.
@@ -124,8 +132,8 @@ export function registerFinanceSummaryReadRoutes(
         return {
           currency,
           month,
-          openPeriodCode: await latestPeriod("OPEN"),
-          lastLockedPeriodCode: await latestPeriod("LOCKED"),
+          unlockedPeriodCodes: unlocked.map((row) => row.periodCode),
+          lastLockedPeriodCode: lastLocked?.periodCode ?? null,
           outMinor: BigInt(totals?.outMinor ?? "0"),
           inMinor: BigInt(totals?.inMinor ?? "0"),
           missing: { count: missing?.count ?? 0, oldest: missing?.oldest ?? null },
@@ -136,7 +144,7 @@ export function registerFinanceSummaryReadRoutes(
       return financeSummaryResponse.parse({
         currency: result.currency,
         month: result.month,
-        openPeriodCode: result.openPeriodCode,
+        unlockedPeriodCodes: result.unlockedPeriodCodes,
         lastLockedPeriodCode: result.lastLockedPeriodCode,
         outMinor: serializeMinor(result.outMinor),
         inMinor: serializeMinor(result.inMinor),

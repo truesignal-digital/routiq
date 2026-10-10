@@ -42,6 +42,7 @@ function membership(role: Role): MeContext {
     branchScope: "ALL",
     enabledModules: EVERY,
     enabledPresets: ["TRUCKING"],
+    timezone: "Africa/Douala",
     displayName: "Emilienne Ngo",
     workspaceName: "Transports Ngwa",
   };

@@ -59,6 +59,8 @@ export * from "./commands/release-asset-to-service.js";
 export * from "./commands/resolve-issue.js";
 export * from "./commands/dismiss-issue.js";
 export * from "./commands/change-issue-severity.js";
+export * from "./commands/link-person-login.js";
+export * from "./commands/unlink-person-login.js";
 export * from "./commands/reject-work-order.js";
 export * from "./commands/reject-work-order-completion.js";
 export * from "./commands/add-note.js";

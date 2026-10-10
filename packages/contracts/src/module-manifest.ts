@@ -110,7 +110,7 @@ export const MODULE_MANIFESTS: readonly ModuleManifest[] = [
       "/v1/finance/summary",
     ],
     roles: ALL_ROLES,
-    whenOff: /* @__PURE__ */ offState("No money pages, totals or costs anywhere; trips and work orders keep their other facts."),
+    whenOff: /* @__PURE__ */ offState("No money pages, totals or costs anywhere; trips keep their other facts, and work orders keep their estimate but show no actual cost or cost lines."),
   },
   {
     code: "ACTIVITIES",

@@ -8,15 +8,36 @@ export function canViewMaintenance(
 }
 
 /**
- * A work order's estimate, actual cost and cost lines: every role but the
- * driver (#390), and only while FINANCE is on (#328). The server sends null
+ * A work order's estimate: the workshop's quote, a Maintenance fact that drives
+ * approval (#640). Every role but the driver (#390), whatever FINANCE says.
+ */
+export function canSeeWorkOrderEstimate(role: Role | undefined): boolean {
+  return role !== undefined && canReadWorkOrderCosts(role);
+}
+
+/**
+ * A work order's actual cost and cost lines: Finance's figures (#328), for the
+ * estimate's roles and only while FINANCE is on. The server sends null
  * otherwise; this only decides how the screen words a figure it never received.
  */
 export function canSeeWorkOrderCosts(
   role: Role | undefined,
   enabledModules: readonly ModuleCode[] | undefined,
 ): boolean {
-  return role !== undefined && canReadWorkOrderCosts(role) && (enabledModules?.includes("FINANCE") ?? false);
+  return canSeeWorkOrderEstimate(role) && (enabledModules?.includes("FINANCE") ?? false);
+}
+
+/** Which of a work order's amounts a screen shows: the estimate, the actual cost. */
+export interface WorkOrderMoneyShown {
+  estimate: boolean;
+  actual: boolean;
+}
+
+export function workOrderMoneyShown(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+): WorkOrderMoneyShown {
+  return { estimate: canSeeWorkOrderEstimate(role), actual: canSeeWorkOrderCosts(role, enabledModules) };
 }
 
 /**

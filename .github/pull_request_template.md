@@ -4,7 +4,7 @@
 
 ## Walkthrough video
 
-<!-- Required when this PR changes apps/web/src or apps/api/src (tests excepted). Link a recording of the feature working in the app and nothing around it breaking: English UI, English captions. Include an https link here. The default is a reel from `pnpm verify drive ... --reel` (before and after with `pnpm verify reel --before` when behaviour changed); a long narrated walkthrough only when the owner asks. The automated pr-evidence check is supplied by PR #63 and applies once that workflow lands. -->
+<!-- Required when this PR changes apps/web/src or apps/api/src (tests excepted). Link a recording of the feature working in the app and nothing around it breaking: English UI, English captions. Include an https link here. The default is a reel from `pnpm verify drive ... --reel` (before and after with `pnpm verify reel --before` when behaviour changed); a long narrated walkthrough only when the owner asks. When nothing visible changed, write "Walkthrough video: not recorded (<reason>)" instead. The pr-evidence check fails without one of the two. -->
 
 ## Found while testing
 
@@ -25,5 +25,5 @@
 ## Checks
 
 - [ ] `pnpm typecheck`, `pnpm lint` and `pnpm test` pass
-- [ ] No guard baseline went up; `pnpm metrics` passes, or a raise is recorded with its reason
+- [ ] No guard baseline went up (the ratchet check enforces this); `pnpm metrics` passes, or a raise is recorded with its reason
 - [ ] Independent review approves the current PR head; all blocking findings are resolved
