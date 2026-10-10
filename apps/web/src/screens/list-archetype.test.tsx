@@ -69,6 +69,7 @@ const WORK_ORDER = {
   actualCostMinor: null,
   declaredCostMinor: null,
   costOutcome: null,
+  costToCome: null,
   currency: "XAF",
   issue: null,
   createdAt: "2026-10-06T08:00:00.000Z",

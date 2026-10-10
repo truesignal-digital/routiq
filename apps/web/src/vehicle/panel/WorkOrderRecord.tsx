@@ -92,6 +92,25 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
         {wo.status === "APPROVED" && wo.completionRejectReason !== null && (
           <Note>{t("vehicle.panel.completionSentBack", { reason: wo.completionRejectReason })}</Note>
         )}
+        {wo.costToCome !== null && (
+          <Note tone="warning">
+            {wo.costToCome.reason === "INVOICE_PENDING"
+              ? t(
+                  wo.costToCome.awaitingApproval
+                    ? "vehicle.panel.costToCome.invoiceAwaitingApproval"
+                    : "vehicle.panel.costToCome.invoicePending",
+                )
+              : t(
+                  wo.costToCome.awaitingApproval
+                    ? "vehicle.panel.costToCome.declaredAwaitingApproval"
+                    : "vehicle.panel.costToCome.declared",
+                  {
+                    declared: formatMoney(wo.costToCome.declaredCostMinor, { currency: wo.currency, locale }),
+                    recorded: formatMoney(wo.costToCome.recordedCostMinor, { currency: wo.currency, locale }),
+                  },
+                )}
+          </Note>
+        )}
 
         <FactList
           rows={[
@@ -224,6 +243,7 @@ function WorkOrderForm({
           pinnedAssetId={asset.id}
           pinnedAssetLabel={pinnedLabel}
           link={{ workOrderId: wo.id }}
+          lateCost={wo.status === "COMPLETED"}
           defaultBranchCode={asset.branch.code}
           back={host.back}
           onRecorded={() => {

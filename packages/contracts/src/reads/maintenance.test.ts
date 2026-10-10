@@ -31,6 +31,7 @@ const listItem = {
   actualCostMinor: null,
   declaredCostMinor: null,
   costOutcome: null,
+  costToCome: null,
   currency: "XAF",
   issue: {
     id: "aabbccdd-1122-4334-8556-677889900aab",
@@ -105,6 +106,24 @@ describe("work order list contract", () => {
     expect(workOrderListItem.safeParse({ ...listItem, costOutcome: "LATER" }).success).toBe(
       false,
     );
+  });
+
+  it("says why a completed order's cost is still to come, from the closed set (#82)", () => {
+    const completed = { ...listItem, status: "COMPLETED", completedAt: "2026-09-30T10:00:00.000Z" };
+    const accepts = (costToCome: unknown) =>
+      workOrderListItem.safeParse({ ...completed, costToCome }).success;
+    expect(accepts({ reason: "INVOICE_PENDING", awaitingApproval: false })).toBe(true);
+    expect(
+      accepts({
+        reason: "DECLARED_NOT_RECORDED",
+        declaredCostMinor: 50_000,
+        recordedCostMinor: 0,
+        awaitingApproval: true,
+      }),
+    ).toBe(true);
+    // The declared variant always carries both amounts.
+    expect(accepts({ reason: "DECLARED_NOT_RECORDED", awaitingApproval: false })).toBe(false);
+    expect(accepts({ reason: "LATER", awaitingApproval: false })).toBe(false);
   });
 
   it("wraps rows under `items` with a keyset cursor", () => {
