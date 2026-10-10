@@ -181,8 +181,8 @@ export const MODULE_MANIFESTS: readonly ModuleManifest[] = [
       "start-planned-trip",
       "update-planned-trip",
     ],
-    reads: [],
-    roles: ["DIRECTOR", "ADMIN", "DRIVER"],
+    reads: ["/v1/planning"],
+    roles: ["DIRECTOR", "ADMIN", "FINANCE", "TECHNICIAN", "DRIVER"],
     whenOff: /* @__PURE__ */ offState("No planning; trips start as they do today."),
   },
 ];

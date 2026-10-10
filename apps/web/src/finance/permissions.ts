@@ -157,6 +157,38 @@ export function canAddWorkOrderCost(
 }
 
 /**
+ * Record again after a "wrong details" cancellation: the copy keeps the
+ * original's lines, work order included, so a work-order cost goes back only
+ * through the roles that book one (#559). Finance cancels it and hands it on.
+ */
+export function canRecordAgain(
+  role: Role | undefined,
+  enabledModules: readonly ModuleCode[] | undefined,
+  entry: { links: { workOrderId: string | null } },
+): boolean {
+  return (
+    canRecordFinance(role, enabledModules) &&
+    (entry.links.workOrderId === null || canAddWorkOrderCost(role, enabledModules))
+  );
+}
+
+/**
+ * What Cancel entry offers after "wrong details": Record again when the viewer
+ * may record the copy, the way to the work order when it is a work-order cost
+ * someone else books, nothing otherwise. Spread onto `ReverseEntryForm`.
+ */
+export function recordAgainStep(
+  viewer: { role: Role; enabledModules: readonly ModuleCode[] } | undefined,
+  entry: { links: { workOrderId: string | null; workOrderAssetId: string | null } },
+  handlers: { recordAgain: () => void; openWorkOrder: (assetId: string, workOrderId: string) => void },
+): { onRecordAgain?: () => void; onOpenWorkOrder?: () => void } {
+  if (canRecordAgain(viewer?.role, viewer?.enabledModules, entry)) return { onRecordAgain: handlers.recordAgain };
+  const { workOrderId, workOrderAssetId } = entry.links;
+  if (workOrderId === null || workOrderAssetId === null) return {};
+  return { onOpenWorkOrder: () => handlers.openWorkOrder(workOrderAssetId, workOrderId) };
+}
+
+/**
  * "Modifier" on a pending entry (#85): its author only, whatever their role,
  * and only while it waits. Everyone else rejects it instead. The roles are the
  * ones that record entries at all, the workshop included; the server checks

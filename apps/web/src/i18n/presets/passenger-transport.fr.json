@@ -122,7 +122,9 @@
     },
     "subtitle": "Chaque voyage de vos véhicules, du départ à la clôture.",
     "status": {
-      "CLOSED": "Clôturé"
+      "PLANNED": "Planifié",
+      "CLOSED": "Clôturé",
+      "CANCELLED": "Annulé"
     },
     "state": {
       "closed": "Clôturé",
