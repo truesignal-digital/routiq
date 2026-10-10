@@ -72,10 +72,14 @@ export function UsersScreen() {
 
   const includeDeactivated = filterValues[DEACTIVATED_FILTER_ID] === "true";
   const sort = toSortParam(sorting);
-  const membersQuery = useMembers({
-    ...(includeDeactivated ? { includeDeactivated: true } : {}),
-    ...(sort === undefined ? {} : { sort }),
-  });
+  // Other roles are refused (#600), so the read waits for the role.
+  const membersQuery = useMembers(
+    {
+      ...(includeDeactivated ? { includeDeactivated: true } : {}),
+      ...(sort === undefined ? {} : { sort }),
+    },
+    { enabled: canAdminister },
+  );
   const members = useMemo(
     () => membersQuery.data?.pages.flatMap((page) => page.items) ?? [],
     [membersQuery.data],

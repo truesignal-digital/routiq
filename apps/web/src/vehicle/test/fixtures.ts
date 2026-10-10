@@ -179,6 +179,7 @@ export function attention(
     ENTRY_AWAITING_REVIEW: { entityType: "financial_entry", id: ENTRY_ID, number: "DLA-2026-00006", rowVersion: 1 },
     ENTRY_EVIDENCE_MISSING: { entityType: "financial_entry", id: ENTRY_ID, number: "DLA-2026-00006", rowVersion: 1 },
     DIRECTION_NOTE: { entityType: "note", id: NOTE_ID, number: null, rowVersion: null },
+    VEHICLE_DOUBLE_BOOKED: { entityType: "activity", id: TRIP_ID, number: "DLA-2026-00009", rowVersion: 1 },
   };
   return {
     code,

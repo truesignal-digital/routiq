@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 688770,
+    "ceiling": 692894,
     "raises": [
       {
         "date": "2026-10-06",
@@ -227,13 +227,25 @@
       {
         "date": "2026-10-10",
         "from": 688223,
-        "to": 688770,
-        "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
+        "to": 688723,
+        "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 688723,
+        "to": 689328,
+        "reason": "#577 fr/en strings and preset overlays for the vehicle double-booking flag"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 689328,
+        "to": 692894,
+        "reason": "#569 link-person-login: People screen login column and forms, plus their fr/en strings"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22508,
+    "ceiling": 22832,
     "raises": [
       {
         "date": "2026-10-06",
@@ -282,11 +294,17 @@
         "from": 22212,
         "to": 22508,
         "reason": "Field kit and form layouts (#292): layout measures, segmented choice and fold classes, about 300 B gzip"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22508,
+        "to": 22832,
+        "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 259777,
+    "ceiling": 261228,
     "raises": [
       {
         "date": "2026-10-06",
@@ -489,8 +507,20 @@
       {
         "date": "2026-10-10",
         "from": 259547,
-        "to": 259777,
-        "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
+        "to": 260139,
+        "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 260139,
+        "to": 260358,
+        "reason": "#577 fr/en strings and preset overlays for the vehicle double-booking flag"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 260358,
+        "to": 261228,
+        "reason": "#569 link-person-login: fr/en strings for the Login column, link/change/unlink login forms and history labels (catalogs load up front until #602)"
       }
     ]
   }

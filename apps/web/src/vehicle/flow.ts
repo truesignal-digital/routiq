@@ -641,6 +641,8 @@ const WAITING_ON: Record<AssetAttentionItem["code"], WaitingOn> = {
   ENTRY_EVIDENCE_MISSING: "recorder",
   // Direction's own note waits for anyone on the vehicle to say they saw it.
   DIRECTION_NOTE: "team",
+  // Closing the stale trip is done on the trip, which the row opens (#577).
+  VEHICLE_DOUBLE_BOOKED: "operations",
 };
 
 /** A waiting entry waits on whoever the read says decides it (#542). */
@@ -670,6 +672,8 @@ export function attentionRecord(
       return { kind: "entry", id };
     case "note":
       return { kind: "note", id };
+    case "activity":
+      return { kind: "trip", id };
     case "asset_availability_interval":
       return groundingRecord(asset);
   }
@@ -738,6 +742,9 @@ export function attentionStep(
     case "DIRECTION_NOTE":
       // Everyone who sees the vehicle may say they saw it, but not its author.
       return maker ? { kind: "none" } : go("acknowledge-note");
+    case "VEHICLE_DOUBLE_BOOKED":
+      // No step on the vehicle: the trip is closed from the trip itself.
+      return { kind: "none" };
   }
 }
 
