@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { FileText } from "lucide-react";
+import { FileText, House } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { DashboardResponse } from "@routiq/contracts";
 import { DataTable } from "@/components/data-table";
@@ -28,6 +28,7 @@ import {
   type FinanceEntryColumnId,
 } from "@/finance/entryColumns.js";
 import { useEntries } from "@/finance/useEntries.js";
+import { visibleSectionGroups } from "@/shell/sections.js";
 
 const DEFAULT_RANGE: ChartRange = 90;
 
@@ -50,6 +51,11 @@ export function DashboardScreen() {
   const panels = visibleHomePanels(me?.role, me?.enabledModules);
   const showChart = panels.includes("moneyChart");
   const showEntries = panels.includes("recentEntries");
+
+  if (me !== undefined && panels.length === 0 && visibleDashboardCards(me.role, me.enabledModules).length === 0) {
+    const groups = visibleSectionGroups(me.role, me.enabledModules);
+    return <EmptyHome hasCompanyPages={groups.some(({ key }) => key === "company")} />;
+  }
 
   return (
     <PageContainer width="wide">
@@ -92,6 +98,24 @@ export function DashboardScreen() {
           />
         )}
       </div>
+    </PageContainer>
+  );
+}
+
+/**
+ * Every card and panel on Home belongs to a module, and the assets card has no
+ * role gate: a Home with none means the modules behind it are off (#622).
+ */
+function EmptyHome({ hasCompanyPages }: { hasCompanyPages: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <PageContainer width="wide">
+      <PageHeader title={t("home.title")} />
+      <EmptyState
+        className="mt-6"
+        icon={<House className="size-7" aria-hidden />}
+        message={t(hasCompanyPages ? "home.empty.modulesOffCompanyPages" : "home.empty.modulesOff")}
+      />
     </PageContainer>
   );
 }
