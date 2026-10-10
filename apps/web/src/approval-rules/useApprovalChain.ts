@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import {
@@ -79,10 +79,19 @@ export function approvalChainKey(workspaceSlug: string | undefined) {
  * open screen on the member's next visit to it.
  */
 export function useApprovalChain() {
-  const session = useActiveSession();
-  return useQuery({
-    queryKey: approvalChainKey(session?.workspaceSlug),
-    enabled: session !== undefined,
+  return useQuery(approvalChainQueryOptions(useActiveSession()?.workspaceSlug));
+}
+
+/**
+ * Also loaded by the shell before it draws, so the rules notice is there at
+ * first paint or not at all (#495). Fresh for a minute, so the shell does not
+ * ask again for what its loader just fetched; a new screen still rechecks it.
+ */
+export function approvalChainQueryOptions(workspaceSlug: string | undefined) {
+  return queryOptions({
+    queryKey: approvalChainKey(workspaceSlug),
+    enabled: workspaceSlug !== undefined,
+    staleTime: 60_000,
     queryFn: ({ signal }) => {
       const token = sessionStore.getToken();
       if (token === undefined) throw new Error("AUTH_REQUIRED");
