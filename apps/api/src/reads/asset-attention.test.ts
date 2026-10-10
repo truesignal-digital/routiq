@@ -588,6 +588,8 @@ describe("GET /v1/assets/:assetId/attention", () => {
     );
     // Since the second start: that is when the vehicle came to be on both.
     const since = current.startedAt.toISOString();
+    // Same severity and since: the read orders the pair by subject id.
+    items.sort((left, right) => (left.subject.id === stale.id ? -1 : right.subject.id === stale.id ? 1 : 0));
     expect(items).toEqual([
       {
         code: "VEHICLE_DOUBLE_BOOKED",
@@ -619,6 +621,25 @@ describe("GET /v1/assets/:assetId/attention", () => {
       { expectedVersion: 1 },
     );
     expect(codes((await attention(manager.token, truck)).items)).toEqual([]);
+  });
+
+  it("flags both trips when the second start is stamped ahead of the server clock", async () => {
+    const truck = await seedAsset(ctx.app, admin.token);
+    for (const minutesAgo of [60, -2]) {
+      await api.ok(admin.token, "create-activity", {
+        activityId: randomUUID(),
+        branchCode: "DLA",
+        activityTypeCode: "HAULAGE_JOB",
+        templateCode: "TRUCKING",
+        primarySegmentId: randomUUID(),
+        primaryAssetId: truck,
+        startedAt: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
+      });
+    }
+    expect(codes((await attention(manager.token, truck)).items)).toEqual([
+      "VEHICLE_DOUBLE_BOOKED",
+      "VEHICLE_DOUBLE_BOOKED",
+    ]);
   });
 
   it("leaves the trip flag out while Activities is off", async () => {

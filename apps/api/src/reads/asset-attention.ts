@@ -19,7 +19,6 @@ import {
   ISSUE_CLOSURE_EVENTS,
   WORK_ORDER_COMPLETION_EVENTS,
 } from "../commands/work-order-lookup.js";
-import { tripConflicts } from "../commands/trip-conflicts.js";
 import type { Db } from "../db/client.js";
 import {
   activities,
@@ -570,19 +569,13 @@ async function entryItems(
 }
 
 /**
- * The vehicle on two unfinished trips at once (#577): every OPEN trip it is
- * carrier on, checked with the planning rule (`tripConflicts`) and kept to
- * clashes between those trips. One item per trip the caller may read, naming
- * the others the caller may read, since the moment the vehicle came to be on
- * both. A start is accepted with VEHICLE_DOUBLE_BOOKED; this is what stays
- * until someone closes the stale trip.
+ * The vehicle on two unfinished trips at once (#577): two OPEN trips holding
+ * it on open segments are the fact, whatever their windows say. One item per
+ * trip the caller may read, naming the others the caller may read, since the
+ * moment the vehicle came to be on both. A start is accepted with
+ * VEHICLE_DOUBLE_BOOKED; this is what stays until someone closes the stale trip.
  */
-async function tripItems(
-  tx: TenantTx,
-  auth: AuthContext,
-  assetId: string,
-  timezone: string,
-): Promise<AssetAttentionItem[]> {
+async function tripItems(tx: TenantTx, auth: AuthContext, assetId: string): Promise<AssetAttentionItem[]> {
   const holding = await tx
     .selectDistinct({
       id: activities.id,
@@ -606,20 +599,14 @@ async function tripItems(
         eq(activityAssetSegments.assetId, assetId),
         isNull(activityAssetSegments.endedAt),
       ),
-    );
+    )
+    .orderBy(activities.activityNumber, activities.id);
   if (holding.length < 2) return [];
 
-  const byId = new Map(holding.map((trip) => [trip.id, trip]));
-  const conflicts = await tripConflicts(
-    tx,
-    { workspaceId: auth.workspaceId, timezone, maintenanceOn: false },
-    [...byId.keys()],
-  );
   const items: AssetAttentionItem[] = [];
   for (const trip of holding) {
     if (!trip.readable) continue;
-    const others = (conflicts.get(trip.id)?.vehicleTripIds ?? []).flatMap((id) => byId.get(id) ?? []);
-    if (others.length === 0) continue;
+    const others = holding.filter((other) => other.id !== trip.id);
     const since = [trip, ...others]
       .map((each) => each.startedAt)
       .filter((at): at is Date => at !== null)
@@ -650,7 +637,7 @@ async function loadAttention(tx: TenantTx, auth: AuthContext, assetId: string, m
     items.push(...(await documentItems(tx, auth.workspaceId, assetId, businessDate, timezone)));
   }
   if (modules.has("ACTIVITIES")) {
-    items.push(...(await tripItems(tx, auth, assetId, timezone)));
+    items.push(...(await tripItems(tx, auth, assetId)));
   }
   // Ledger facts only for the roles that read the books (DECISIONS 1).
   if (modules.has("FINANCE") && canReadLedger(auth.role)) {

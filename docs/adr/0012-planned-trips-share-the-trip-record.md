@@ -184,8 +184,8 @@ resolves it. Nothing about a conflict is stored.
 
 A start counts as a booking for the vehicle (#577): `create-activity` and
 `start-planned-trip`, live or replayed offline, return `VEHICLE_DOUBLE_BOOKED`
-with `tripIds` when the started trip's vehicle is on another PLANNED or OPEN
-trip whose window overlaps, and the start still commits. While two OPEN trips
+with `tripIds` when the started trip's vehicle is on another PLANNED trip
+whose window overlaps, or another OPEN trip, and the start still commits. While two OPEN trips
 hold the same vehicle, the vehicle's attention read lists each one as
 `VEHICLE_DOUBLE_BOOKED`, recomputed like the board, until one is closed.
 

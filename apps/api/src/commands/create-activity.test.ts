@@ -290,6 +290,20 @@ describe("create-activity.v1", () => {
       });
     }
 
+    // A phone clock a few minutes fast is ordinary: the truck is still on the
+    // other open trip, whatever the start's stamp says.
+    it("warns when the start is stamped ahead of the server clock", async () => {
+      const truck = await seedAsset(ctx.app, managerToken);
+      const stale = build({ primaryAssetId: truck, startedAt: minutesAgo(60) });
+      await post(stale);
+      const reply = await post(build({ primaryAssetId: truck, startedAt: minutesAgo(-2) }));
+      expect(reply.statusCode, reply.body).toBe(200);
+      expect(reply.json()).toMatchObject({
+        warnings: ["VEHICLE_DOUBLE_BOOKED"],
+        warningMetadata: { VEHICLE_DOUBLE_BOOKED: { tripIds: [stale.activityId] } },
+      });
+    });
+
     it("does not warn once the other trip is closed, or for another vehicle", async () => {
       const truck = await seedAsset(ctx.app, managerToken);
       const done = build({ primaryAssetId: truck, startedAt: minutesAgo(240) });
