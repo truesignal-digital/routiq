@@ -19,6 +19,7 @@ describe("reads with one module off", () => {
   let workspaceId: string;
   let director: Actor;
   let truck: string;
+  const workOrderId = randomUUID();
   const original = new Map<string, unknown>();
 
   type AssetDetail = {
@@ -27,7 +28,22 @@ describe("reads with one module off", () => {
     lastReading: unknown;
     recentActivities: unknown[];
   };
-  type Attention = { items: Array<{ code: string }> };
+  type Attention = { items: Array<{ code: string; params: Record<string, unknown> }> };
+  type WorkOrderAmounts = {
+    expectedCostMinor: number | null;
+    actualCostMinor: number | null;
+    declaredCostMinor: number | null;
+    costToCome: unknown;
+  };
+  type WorkOrderDetail = WorkOrderAmounts & { costLines: unknown; pendingCostLines: unknown };
+  type RecordHistory = { items: Array<{ eventId: string; shownFields: string[] }> };
+  type EventDiff = { changes: Array<{ field: string }> };
+  const NO_AMOUNTS = {
+    expectedCostMinor: null,
+    actualCostMinor: null,
+    declaredCostMinor: null,
+    costToCome: null,
+  };
   type History = { items: Array<{ kind: string; amountMinor: number | null }> };
   type Dashboard = { openPeriod: unknown; pendingApprovals: unknown; series: unknown };
   type NavCounts = { moneyWaiting: number | null; maintenanceNew: number | null };
@@ -40,6 +56,9 @@ describe("reads with one module off", () => {
     "/v1/assets/summary",
     "/v1/dashboard",
     "/v1/nav-counts",
+    `/v1/work-orders?assetId=${truck}`,
+    `/v1/work-orders/${workOrderId}`,
+    `/v1/history/work_order/${workOrderId}`,
   ];
 
   async function read<T>(url: string): Promise<T> {
@@ -72,6 +91,12 @@ describe("reads with one module off", () => {
       assetId: truck,
       description: "Freins qui sifflent",
       safetyCritical: true,
+    });
+    await api.ok(director.token, "create-work-order", {
+      workOrderId,
+      assetId: truck,
+      description: "Révision des freins",
+      expectedCostMinor: 150_000,
     });
     await api.ok(director.token, "add-or-renew-document", {
       documentId: randomUUID(),
@@ -119,6 +144,15 @@ describe("reads with one module off", () => {
     );
     expect(new Set(await kinds())).toEqual(new Set(["LIFECYCLE", "MONEY", "MAINTENANCE", "DOCUMENTS", "READINGS", "TRIPS"]));
     expect((original.get("/v1/nav-counts") as NavCounts).maintenanceNew).toBe(1);
+    expect(original.get(`/v1/work-orders/${workOrderId}`)).toMatchObject({ expectedCostMinor: 150_000 });
+    const order = (original.get(`/v1/assets/${truck}/attention`) as Attention).items.find(
+      (item) => item.code.startsWith("WORK_ORDER_"),
+    );
+    expect(order?.params).toMatchObject({ expectedCostMinor: 150_000, currency: "XAF" });
+    const shown = (original.get(`/v1/history/work_order/${workOrderId}`) as RecordHistory).items.flatMap(
+      (item) => item.shownFields,
+    );
+    expect(shown).toContain("expectedCostMinor");
   });
 
   const OFF: Array<[ToggleableModuleCode, () => Promise<void>]> = [
@@ -136,6 +170,30 @@ describe("reads with one module off", () => {
           series: null,
         });
         expect((await read<NavCounts>("/v1/nav-counts")).moneyWaiting).toBeNull();
+
+        // A work order's estimate and its cost are Finance's figures (#328).
+        const list = await read<{ items: WorkOrderAmounts[] }>(`/v1/work-orders?assetId=${truck}`);
+        expect(list.items).toHaveLength(1);
+        for (const item of list.items) expect(item).toMatchObject(NO_AMOUNTS);
+        expect(await read<WorkOrderDetail>(`/v1/work-orders/${workOrderId}`)).toMatchObject({
+          ...NO_AMOUNTS,
+          costLines: null,
+          pendingCostLines: null,
+        });
+        const orders = (await read<Attention>(`/v1/assets/${truck}/attention`)).items.filter((item) =>
+          item.code.startsWith("WORK_ORDER_"),
+        );
+        expect(orders).toHaveLength(1);
+        for (const item of orders) {
+          expect(Object.keys(item.params).filter((key) => /Cost|currency/.test(key))).toEqual([]);
+        }
+        const timeline = await read<RecordHistory>(`/v1/history/work_order/${workOrderId}`);
+        expect(timeline.items.length).toBeGreaterThan(0);
+        for (const item of timeline.items) {
+          expect(item.shownFields.filter((field) => /Cost/.test(field))).toEqual([]);
+          const diff = await read<EventDiff>(`/v1/history/work_order/${workOrderId}/${item.eventId}`);
+          expect(diff.changes.filter((change) => /Cost/.test(change.field))).toEqual([]);
+        }
       },
     ],
     [

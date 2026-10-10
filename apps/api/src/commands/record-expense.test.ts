@@ -729,7 +729,8 @@ describe("record-expense.v1", () => {
 
   it("attributes a posting to an activity when the payload names one", async () => {
     const activityId = randomUUID();
-    const created = await postCommand(adminToken, "create-activity", {
+    // The driver's own trip: a driver puts money only on those (#592).
+    const created = await postCommand(token, "create-activity", {
       activityId,
       branchCode: "DLA",
       activityTypeCode: "HAULAGE_JOB",

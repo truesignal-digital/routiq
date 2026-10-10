@@ -70,7 +70,10 @@ export function ActivityMoney({ entries, totals, scope }: ActivityMoneyProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t("activities.detail.money")}</CardTitle>
+        {/* A driver reads expenses only (#593), so their card says so (#594). */}
+        <CardTitle>
+          {t(scope === "OWN_ENTRIES" ? "activities.detail.moneyCosts" : "activities.detail.money")}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <ul className="flex flex-col gap-1">
