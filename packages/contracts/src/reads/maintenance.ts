@@ -5,9 +5,11 @@ import { historyActor } from "./history.js";
 import { listQuery, listResponse } from "./list.js";
 
 /**
- * The owner's state machine (#28). APPROVED is open work — costs attach only
- * here. The two pending states exist only when a threshold rule demanded
- * review; COMPLETED, REJECTED and CANCELLED are terminal and never reopen.
+ * The owner's state machine (#28). APPROVED is open work, where costs attach;
+ * a COMPLETED order still takes the invoice that arrives after the close, and
+ * that one always waits for review (#82). The two pending states exist only
+ * when a threshold rule demanded review; COMPLETED, REJECTED and CANCELLED are
+ * terminal and never reopen.
  */
 export const workOrderStatuses = [
   "SUBMITTED",
@@ -55,6 +57,35 @@ export const workOrderIssueRef = z.object({
   safetyCritical: z.boolean(),
 });
 
+export const WORK_ORDER_COST_TO_COME_REASONS = ["INVOICE_PENDING", "DECLARED_NOT_RECORDED"] as const;
+
+/**
+ * A completed order whose cost is still to come (#82), derived on every read
+ * and never stored:
+ *
+ * - `INVOICE_PENDING`: closed with "invoice pending", and no cost line recorded
+ *   after the close has been approved yet.
+ * - `DECLARED_NOT_RECORDED`: a v1 close typed an amount, and the approved
+ *   lines (`recordedCostMinor`) are still below it ("declared 50 000,
+ *   recorded 0").
+ *
+ * Only approved lines settle it, so a late invoice awaiting review keeps the
+ * order flagged; `awaitingApproval` says one is waiting (for an "invoice
+ * pending" close, one recorded after the close).
+ */
+export const workOrderCostToCome = z.discriminatedUnion("reason", [
+  z.object({
+    reason: z.literal("INVOICE_PENDING"),
+    awaitingApproval: z.boolean(),
+  }),
+  z.object({
+    reason: z.literal("DECLARED_NOT_RECORDED"),
+    declaredCostMinor: z.number().int(),
+    recordedCostMinor: z.number().int(),
+    awaitingApproval: z.boolean(),
+  }),
+]);
+
 /**
  * No `sort`: a work-order queue has one meaningful order (newest first) and it
  * is fixed server-side. The cursor still carries it, because `decodeKeysetCursor`
@@ -91,6 +122,11 @@ export const workOrderListItem = z.object({
   declaredCostMinor: z.number().int().nullable(),
   /** What the closer said about the cost; null before completion and for v1 closes. */
   costOutcome: workOrderCostOutcome.nullable(),
+  /**
+   * Set while a completed order still has cost to come (#82). Null otherwise,
+   * and for a caller who may not read work-order costs.
+   */
+  costToCome: workOrderCostToCome.nullable(),
   currency: z.string().length(3),
   issue: workOrderIssueRef.nullable(),
   /** The work order row has no timestamp of its own; this is when its creating command executed. */
@@ -276,6 +312,7 @@ export const issueDetail = issueListItem.extend({
 });
 
 export type WorkOrderStatus = z.infer<typeof workOrderStatus>;
+export type WorkOrderCostToCome = z.infer<typeof workOrderCostToCome>;
 export type IssueStatus = z.infer<typeof issueStatus>;
 export type WorkOrderPendingCostLine = z.infer<typeof workOrderPendingCostLine>;
 export type WorkOrderListQuery = z.infer<typeof workOrderListQuery>;

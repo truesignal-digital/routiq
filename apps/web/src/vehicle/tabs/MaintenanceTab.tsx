@@ -241,6 +241,11 @@ function WorkOrderRow({ wo }: { wo: WorkOrderListItem }) {
                   })}
                 </span>
               )}
+              {wo.costToCome !== null && (
+                <span className="ml-1 text-xs font-medium text-warning-foreground">
+                  {t("vehicle.maintenance.costToCome")}
+                </span>
+              )}
             </div>
           )}
           <div className="text-xs text-muted-foreground">

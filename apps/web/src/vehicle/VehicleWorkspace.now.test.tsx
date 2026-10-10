@@ -2,7 +2,18 @@
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ASSET_ID, ME_ID, NOTE_ID, OTHER_ID, actor, attention, noteDetail } from "./test/fixtures.js";
+import {
+  ASSET_ID,
+  ME_ID,
+  NOTE_ID,
+  OTHER_ID,
+  WORK_ORDER_ID,
+  actor,
+  attention,
+  noteDetail,
+  workOrderDetail,
+  workOrderRow,
+} from "./test/fixtures.js";
 import { closeVehicle, openVehicle } from "./test/harness.js";
 
 vi.mock("../commands/instance.js", async () => {
@@ -116,6 +127,57 @@ describe("Direction's notes in the To do (#98)", () => {
     expect(await within(card).findByText(EMPTY)).toBeTruthy();
     expect(within(card).queryByRole("button", { name: "Mark as seen" })).toBeNull();
     expect(within(card).getByText("The team")).toBeTruthy();
+  });
+});
+
+describe("a repair whose invoice is still to come (#82)", () => {
+  const WO_REF = WORK_ORDER_ID.slice(0, 8).toUpperCase();
+
+  it("asks the workshop to enter the invoice, and opens the late invoice form on the order", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, {
+      role: "TECHNICIAN",
+      attention: [
+        attention("WORK_ORDER_COST_TO_COME", {
+          params: { description: "Brake repair", currency: "XAF" },
+        }),
+      ],
+      workOrders: [workOrderRow("COMPLETED")],
+      workOrderDetails: [
+        workOrderDetail("COMPLETED", {
+          completedAt: "2026-09-30T10:00:00.000Z",
+          costOutcome: "INVOICE_PENDING",
+          costToCome: { reason: "INVOICE_PENDING", awaitingApproval: false },
+        }),
+      ],
+    });
+    const card = await todoCard();
+    expect(await within(card).findByText(`Invoice for repair ${WO_REF} to enter`)).toBeTruthy();
+    expect(within(card).getByText(/^Brake repair · closed before the invoice arrived/)).toBeTruthy();
+
+    const user = userEvent.setup();
+    await user.click(within(card).getByRole("button", { name: "Record expense" }));
+    const form = await screen.findByRole("dialog", { name: "Record expense" });
+    expect(within(form).getByLabelText("Reason")).toBeTruthy();
+  });
+
+  it("says what a v1 close declared against what the books hold", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, {
+      role: "ADMIN",
+      attention: [
+        attention("WORK_ORDER_COST_TO_COME", {
+          params: {
+            description: "Brake repair",
+            currency: "XAF",
+            declaredCostMinor: 50_000,
+            recordedCostMinor: 0,
+          },
+        }),
+      ],
+    });
+    const card = await todoCard();
+    expect(
+      await within(card).findByText(/^Brake repair · declared FCFA\s50,000, recorded FCFA\s0/),
+    ).toBeTruthy();
   });
 });
 

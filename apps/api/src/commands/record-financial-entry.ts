@@ -12,6 +12,7 @@ import {
   type CommandDefinition,
 } from "./dispatcher.js";
 import {
+  namesCompletedWorkOrder,
   writeFinancialEntry,
   type FinancialEntryWriteRequest,
 } from "./financial-entry-writer.js";
@@ -29,7 +30,8 @@ interface FinancialEntryCommandConfig {
 /**
  * The workshop records what a repair cost, and nothing else: a TECHNICIAN
  * member's expense is accepted only when every line is attributed to a work
- * order, which the writer then holds to APPROVED status and branch scope.
+ * order, which the writer then holds to an open or completed order and
+ * branch scope.
  * Parts and labour are not the other roles' to book (`canBookWorkOrderCost`),
  * so no line of a DRIVER, FINANCE or CASHIER member may name a work order.
  */
@@ -96,11 +98,13 @@ function financialEntryCommand(
       },
     },
 
-    async approvalContext(_tx, _ctx, payload) {
+    async approvalContext(tx, ctx, payload) {
       return {
         branchCode: payload.branchCode,
         categoryCode: payload.categoryCode,
         amountMinor: payload.amountMinor,
+        // A repair invoice after the close always waits for review (#82).
+        requiresReview: await namesCompletedWorkOrder(tx, ctx, payload.postings),
       };
     },
 

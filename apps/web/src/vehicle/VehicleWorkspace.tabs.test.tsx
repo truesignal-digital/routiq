@@ -537,6 +537,7 @@ describe("Maintenance and Trips", () => {
         done("00000000-0000-4000-8000-00000000d101", "Weld the rear mudguard bracket", {
           costOutcome: "INVOICE_PENDING",
           actualCostMinor: 0,
+          costToCome: { reason: "INVOICE_PENDING", awaitingApproval: false },
         }),
         done("00000000-0000-4000-8000-00000000d102", "Replace the right rear tyre valve", {
           costOutcome: "NO_COST",
@@ -556,6 +557,9 @@ describe("Maintenance and Trips", () => {
       return within(item);
     };
     expect(row("Weld the rear mudguard bracket").getByText("Invoice not received yet")).toBeTruthy();
+    // The invoice is still to come (#82); the other two closed with their cost settled.
+    expect(row("Weld the rear mudguard bracket").getByText("Cost to come")).toBeTruthy();
+    expect(screen.getAllByText("Cost to come")).toHaveLength(1);
     expect(row("Replace the right rear tyre valve").getByText("No cost")).toBeTruthy();
     expect(row("Recharge the A/C").getByText(/55,000/)).toBeTruthy();
     expect(screen.queryByText(/FCFA\s0$/)).toBeNull();

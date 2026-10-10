@@ -186,7 +186,13 @@ describe("GET /v1/assets/:assetId/attention", () => {
       { expectedVersion: resubmitted.rowVersion },
     );
     body = await attention(manager.token, truck);
-    expect(codes(body.items)).toEqual(["ASSET_AWAITING_RELEASE"]);
+    // The v1 close declared 240 000 that the books do not hold: cost to come (#82).
+    expect(codes(body.items)).toEqual(["ASSET_AWAITING_RELEASE", "WORK_ORDER_COST_TO_COME"]);
+    expect(body.items[1]).toMatchObject({
+      subject: { entityType: "work_order", id: workOrderId },
+      partOfGrounding: false,
+      params: { declaredCostMinor: 240_000, recordedCostMinor: 0 },
+    });
     expect(body.items[0]).toMatchObject({
       severity: "CRITICAL",
       subject: { entityType: "asset_availability_interval" },
@@ -197,7 +203,8 @@ describe("GET /v1/assets/:assetId/attention", () => {
     });
 
     await api.ok(manager.token, "release-asset-to-service", { assetId: truck, workOrderId });
-    expect((await attention(manager.token, truck)).items).toEqual([]);
+    // The release settles the grounding, not the money.
+    expect(codes((await attention(manager.token, truck)).items)).toEqual(["WORK_ORDER_COST_TO_COME"]);
   });
 
   it("asks for an override release when the grounding signalement was closed without a work order", async () => {
@@ -250,7 +257,7 @@ describe("GET /v1/assets/:assetId/attention", () => {
     await api.ok(
       mechanic.token,
       "complete-work-order",
-      { workOrderId, actualCostMinor: 10_000 },
+      { workOrderId },
       { expectedVersion: created.rowVersion },
     );
 
@@ -292,7 +299,7 @@ describe("GET /v1/assets/:assetId/attention", () => {
     await api.ok(
       mechanic.token,
       "complete-work-order",
-      { workOrderId, actualCostMinor: 10_000, resolveLinkedIssue: false },
+      { workOrderId, resolveLinkedIssue: false },
       { expectedVersion: created.rowVersion },
     );
     const released = await api.ok(manager.token, "release-asset-to-service", { assetId: truck });
