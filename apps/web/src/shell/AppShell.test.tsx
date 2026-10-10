@@ -96,11 +96,12 @@ const SCREEN_PATHS = [
   "/assets/new",
   "/finance/entries",
   "/finance/periods",
+  "/maintenance",
 ] as const;
 
 let client = new QueryClient();
 
-async function renderShell(initialPath: string) {
+async function renderShell(initialPath: string, ready = () => screen.findByTestId("screen")) {
   const rootRoute = createRootRoute();
   const shellRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -147,7 +148,7 @@ async function renderShell(initialPath: string) {
       </I18nextProvider>
     </QueryClientProvider>,
   );
-  await screen.findByTestId("screen");
+  await ready();
   return router;
 }
 
@@ -256,6 +257,13 @@ describe("AppShell (sidebar frame)", () => {
     await renderShell("/finance/entries");
     const header = document.querySelector("[data-slot='sidebar-inset'] header");
     expect(header?.textContent).toContain("Money");
+  });
+
+  it("names a switched-off module's page in the site header, not just Home (#617)", async () => {
+    await renderShell("/maintenance", () => screen.findByText("This module is not enabled for your workspace."));
+    const header = document.querySelector("[data-slot='sidebar-inset'] header");
+    expect(header?.querySelector("[data-slot='breadcrumb-page']")?.textContent).toBe("Maintenance");
+    expect(screen.queryByTestId("screen")).toBeNull();
   });
 
   it("overrides the English labels the vendored trigger and rail ship with", async () => {
