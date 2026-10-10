@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 742646,
+    "ceiling": 764263,
     "raises": [
       {
         "date": "2026-10-06",
@@ -301,11 +301,17 @@
         "from": 713902,
         "to": 742646,
         "reason": "Dashboard (#666): Overview, To do, Profit by truck and Profit by branch tabs, the HTML profit bridge, branch bars, the 12-month chart on the Area chart Home already loads, and their loaders, about 22.5 kB; the rest is #664's Money page until #680 merges"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 713902,
+        "to": 764263,
+        "reason": "Summary notice on every Overview (#667): component, money sentence helper, verdict badge and fr/en words, about 6.3 kB gzip across the catalogs and the five Overview chunks. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666) and module Overviews (#665) until they merge"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 23091,
+    "ceiling": 23261,
     "raises": [
       {
         "date": "2026-10-06",
@@ -372,11 +378,17 @@
         "from": 22832,
         "to": 23091,
         "reason": "Dashboard (#666): the two chart series tokens (blue, orange) and the bridge and branch-bar classes; the rest is #664's 109 B until #680 merges"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 23261,
+        "reason": "Summary notice (#667): its card and closed-line classes, 23 B; counted from develop's ceiling, so it also covers #666's 259 B and #665's overview parts until they merge"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 273236,
+    "ceiling": 279795,
     "raises": [
       {
         "date": "2026-10-06",
@@ -641,6 +653,12 @@
         "from": 266200,
         "to": 273236,
         "reason": "Dashboard (#666): its words in fr and en (tabs, tiles, bridge, To do and Coming up sentences, profit lines) and the trucking and passenger overlays ship in the first-load i18n catalog, about 4.8 kB; the rest is #664's catalog words until #680 merges"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 266200,
+        "to": 279795,
+        "reason": "Summary notice on every Overview (#667): its fr/en ICU sentences (five money templates for profit and expenses, the module Overviews' sentences, trip-word overlays for both presets) in the first-load i18n catalog plus the notice component, about 2.3 kB gzip. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666, about 7 kB) and module Overviews (#665, about 4.3 kB net of the shared #659/#664/#676 parts) until they merge"
       }
     ]
   }
