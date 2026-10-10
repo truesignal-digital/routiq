@@ -32,7 +32,7 @@ Start from one GitHub issue that `triage-issue-reports` marked as a bug. Reprodu
 
 - Freeze the issue number before doing any work. Every later read and write uses it.
 - The coordinator is the only writer to GitHub (comments, labels, branches, PRs). Analysis subagents are read-only and return findings. Every child prompt says: do not run `gh issue comment`, `gh issue edit`, `gh pr create`, `git push`, or any other GitHub write.
-- A fix-phase code worker (`codex-worker` or an Opus subagent) may edit files only in the run's own worktree and may not push, comment or open PRs. The coordinator reviews its diff and runs the checks.
+- A fix-phase code worker (an Opus subagent) may edit files only in the run's own worktree and may not push, comment or open PRs. The coordinator reviews its diff and runs the checks.
 - The exact discriminating symptom must appear twice through real UI interaction (`pnpm verify drive`).
 - State inspection (`pnpm verify db`, `pnpm verify api` GETs) may confirm an observation. It must not inject or force the symptom. Never write to the database directly.
 - No confirmed repro means no authored fix.
