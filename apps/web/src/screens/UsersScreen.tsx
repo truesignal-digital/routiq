@@ -33,6 +33,7 @@ import { useMembers } from "@/members/useMembers.js";
 import { NotRecorded } from "@/components/not-recorded.js";
 
 const PRIMARY_COLUMN = { columnId: "displayName" } as const;
+const DEFAULT_SORTING: SortingState = [{ id: "displayName", desc: false }];
 const DEACTIVATED_FILTER_ID = "includeDeactivated";
 
 const ACTION_ICONS: Record<MemberActionKey, typeof ShieldCheck> = {
@@ -62,9 +63,7 @@ export function UsersScreen() {
 
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "displayName", desc: false },
-  ]);
+  const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   const [adding, setAdding] = useState(false);
   const [acting, setActing] = useState<{
     member: MemberListItem;
@@ -206,6 +205,7 @@ export function UsersScreen() {
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}
             sorting={sorting}
+            defaultSorting={DEFAULT_SORTING}
             onSortingChange={setSorting}
             primaryColumn={PRIMARY_COLUMN}
             rowActions={(member) =>

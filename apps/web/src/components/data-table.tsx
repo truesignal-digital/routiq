@@ -235,6 +235,10 @@ interface DataTableBaseProps<TData> {
   rowActions?: (row: TData) => DataTableRowAction<TData>[];
 
   sorting?: SortingState;
+  /**
+   * The table's own order: where uncontrolled sorting starts, and what any
+   * sorting falls back to when its column is hidden (#548).
+   */
   defaultSorting?: SortingState;
   onSortingChange?: (sorting: SortingState) => void;
 
@@ -330,6 +334,16 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
     }
     onSortingChange?.(next);
   };
+
+  // A list is never sorted by a column the viewer cannot see (#548). Hiding
+  // happens in the screen's own view menu too, so this watches the state
+  // rather than the menu.
+  const isHidden = (sort: SortingState[number]) => columnVisibilityState[sort.id] === false;
+  const sortsByHiddenColumn = sortingState.some(isHidden);
+  useEffect(() => {
+    if (!sortsByHiddenColumn) return;
+    handleSortingChange((defaultSorting ?? []).filter((sort) => !isHidden(sort)));
+  });
 
   const handleRowSelectionChange: OnChangeFn<RowSelectionState> = (updater) => {
     const next = typeof updater === "function" ? updater(rowSelectionState) : updater;

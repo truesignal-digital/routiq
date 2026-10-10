@@ -322,6 +322,7 @@ export function ActivitiesScreen() {
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}
             sorting={sorting}
+            defaultSorting={DEFAULT_SORTING}
             onSortingChange={setSorting}
             primaryColumn={{ columnId: "activityNumber" }}
             rowActions={(activity) => [

@@ -348,6 +348,7 @@ function FinanceEntriesContent() {
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}
             sorting={sorting}
+            defaultSorting={DEFAULT_SORTING}
             onSortingChange={setSorting}
             primaryColumn={{ columnId: "entryNumber" }}
             rowActions={(entry) => [
