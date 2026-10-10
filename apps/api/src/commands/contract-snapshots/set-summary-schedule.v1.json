@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schedule": {
+      "type": "string",
+      "enum": [
+        "MONDAY_AND_MONTH_START",
+        "MONDAY",
+        "MONTH_START",
+        "NEVER"
+      ]
+    }
+  },
+  "required": [
+    "schedule"
+  ],
+  "additionalProperties": false
+}

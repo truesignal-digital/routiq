@@ -15,7 +15,7 @@ import { ASSET_ID, viewer } from "../vehicle/test/fixtures.js";
 import { closeVehicle, openVehicle, type Recorded } from "../vehicle/test/harness.js";
 import { visibleTabs, type VehicleTab } from "../vehicle/VehicleTabsNav.js";
 import { APP_MODULES } from "./index.js";
-import { contributes, contributionOwner, FIELD_SLOTS } from "./manifest.js";
+import { contributes, contributionOwner, FIELD_SLOTS, PAGE_TAB_KEYS, PAGE_TABS } from "./manifest.js";
 
 /**
  * Every migrated module, on and off, for every role (#328): whatever the
@@ -70,6 +70,10 @@ function shown(role: Role, modules: ModuleCode[]): Array<[string, Owner]> {
     ...FIELD_SLOTS.filter((field) => contributes("fields", field, modules)).map((field): [string, Owner] => [
       `field ${field}`,
       own(contributionOwner("fields", field)),
+    ]),
+    ...PAGE_TAB_KEYS.filter((key) => contributes("pageTabs", key, modules)).map((key): [string, Owner] => [
+      `page tab ${key}`,
+      own(contributionOwner("pageTabs", key)),
     ]),
     ...(links.workOrder ? [["link workOrder", "MAINTENANCE"] as [string, Owner]] : []),
     ...(links.trip ? [["link trip", "ACTIVITIES"] as [string, Owner]] : []),
@@ -134,6 +138,11 @@ const PAGES: Array<[ToggleableModuleCode, string]> = APP_MODULES.flatMap((manife
   manifest.navRows.map((row): [ToggleableModuleCode, string] => [manifest.code, row.to]),
 );
 
+/** The tabs a module adds to another module's page (#665), as direct links. */
+const PAGE_TAB_LINKS: Array<[ToggleableModuleCode, string]> = APP_MODULES.flatMap((manifest) =>
+  manifest.pageTabs.map((key): [ToggleableModuleCode, string] => [manifest.code, PAGE_TABS[key].to]),
+);
+
 const TABS: Array<[ToggleableModuleCode, VehicleTab]> = APP_MODULES.flatMap((manifest) =>
   manifest.vehicleTabs.map((tab): [ToggleableModuleCode, VehicleTab] => [manifest.code, tab]),
 );
@@ -147,6 +156,12 @@ describe("direct links to a module that is off", () => {
   const NOT_INCLUDED = "This module is not enabled for your company.";
 
   it.each(PAGES)("%s's page %s says it is not included and reads nothing of it", async (code, path) => {
+    const recorded = await openVehicle(path, { role: "DIRECTOR", modules: ["CORE", ...MODULES.filter((m) => m !== code)] });
+    expect(await screen.findByText(NOT_INCLUDED)).toBeTruthy();
+    expect(moduleReads(recorded, code)).toEqual([]);
+  });
+
+  it.each(PAGE_TAB_LINKS)("%s's page tab %s says it is not included and reads nothing of it", async (code, path) => {
     const recorded = await openVehicle(path, { role: "DIRECTOR", modules: ["CORE", ...MODULES.filter((m) => m !== code)] });
     expect(await screen.findByText(NOT_INCLUDED)).toBeTruthy();
     expect(moduleReads(recorded, code)).toEqual([]);

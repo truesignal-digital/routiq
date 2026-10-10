@@ -1,8 +1,10 @@
 import {
   assetLifecycleStatuses,
   type AssetLifecycleStatus,
+  type AssetAvailabilityFilter,
   type AssetListItem,
   type AssetListResponse,
+  type AssetOverview,
   type AssetSummary,
 } from "@routiq/contracts";
 
@@ -10,6 +12,8 @@ export interface AssetListParams {
   status?: readonly AssetLifecycleStatus[];
   /** The Attention tile's set; the server decides what it covers. */
   attention?: true;
+  /** The Overview's tiles (#665): the same rule `/v1/assets/overview` counts by. */
+  availability?: AssetAvailabilityFilter;
   category?: string;
   branchId?: string;
   search?: string;
@@ -22,15 +26,16 @@ export interface AssetListParams {
 /** The list filters the summary shares. A status would count inside one bucket. */
 export type AssetSummaryParams = Omit<
   AssetListParams,
-  "status" | "attention" | "sort" | "cursor" | "limit"
+  "status" | "attention" | "availability" | "sort" | "cursor" | "limit"
 >;
 
-export type { AssetListResponse, AssetSummary };
+export type { AssetListResponse, AssetOverview, AssetSummary };
 
 function assetQuery(params: AssetListParams): string {
   const query = new URLSearchParams();
   for (const status of params.status ?? []) query.append("status", status);
   if (params.attention) query.append("attention", "true");
+  if (params.availability) query.append("availability", params.availability);
   if (params.category) query.append("category", params.category);
   if (params.branchId) query.append("branchId", params.branchId);
   if (params.search) query.append("search", params.search);
@@ -93,6 +98,24 @@ export async function fetchAssetSummary(
   return body;
 }
 
+export async function fetchAssetOverview(
+  token: string,
+  params: { branchId?: string } = {},
+  signal?: AbortSignal,
+  fetchImpl: typeof fetch = fetch,
+): Promise<AssetOverview> {
+  const body = await readJson(
+    `/v1/assets/overview${assetQuery(params)}`,
+    token,
+    "ASSET_OVERVIEW",
+    signal,
+    fetchImpl,
+  );
+
+  if (!isAssetOverview(body)) throw new Error("ASSET_OVERVIEW_INVALID_RESPONSE");
+  return body;
+}
+
 /**
  * Structural checks over the contract's own types: enough to catch a superseded
  * envelope or a dropped field, without re-policing formats the server owns.
@@ -127,12 +150,20 @@ function isAssetListItem(value: unknown): value is AssetListItem {
   );
 }
 
+/** A tile owned by a module that is off is null, never a missing key read as zero. */
+export function isAssetOverview(value: unknown): value is AssetOverview {
+  if (!isRecord(value)) return false;
+  const counted = (bucket: unknown) => bucket === null || (isRecord(bucket) && isCount(bucket["count"]));
+  return isCount(value["total"]) && isCount(value["canDrive"]) && counted(value["grounded"]) && counted(value["idle"]);
+}
+
 /** A missing bucket must never read as zero — a zero is a claim about the fleet. */
 function isAssetSummary(value: unknown): value is AssetSummary {
   return (
     isRecord(value) &&
     isCount(value["total"]) &&
     isCount(value["inService"]) &&
+    isCount(value["canDrive"]) &&
     isCount(value["attention"])
   );
 }

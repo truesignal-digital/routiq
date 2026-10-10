@@ -45,6 +45,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   };
 
   await (await openSidebar(page)).getByRole("link", { name: t("Camions", "Trucks") }).click();
+  await page.locator("[data-slot='module-page-tabs']").getByRole("tab", { name: t("Camions", "Trucks") }).click();
   await page.getByRole("button", { name: /VH003/ }).first().click();
   await page.getByRole("heading", { level: 1, name: "VH003" }).waitFor({ timeout: 90_000 });
   await quiet();
@@ -143,7 +144,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
 
   await closeDialogs();
   await signInAs(page, "finance");
-  await nav("/finance/entries?view=waiting");
+  await nav("/finance/approve");
   await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
   // A table row on desktop, a list row on a phone: the button names the entry either way.
   const approve = page.getByRole("button", {

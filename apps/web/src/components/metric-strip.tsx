@@ -55,27 +55,30 @@ export interface MetricTile {
 }
 
 /**
- * Two to four tiles. A fifth stops fitting a phone row without shrinking the
- * numbers past reading size. One is not a strip, but Home gates its tiles by
- * role and module, so a role that sees one module gets one tile.
+ * Two to five tiles. A phone shows them two to a row; five is the Overview's
+ * limit (dashboards.html: 4–5 tiles), past which the strip stops being a
+ * glance. One is not a strip, but Home gates its tiles by role and module, so
+ * a role that sees one module gets one tile.
  */
 export type MetricTiles =
   | readonly [MetricTile]
   | readonly [MetricTile, MetricTile]
   | readonly [MetricTile, MetricTile, MetricTile]
-  | readonly [MetricTile, MetricTile, MetricTile, MetricTile];
+  | readonly [MetricTile, MetricTile, MetricTile, MetricTile]
+  | readonly [MetricTile, MetricTile, MetricTile, MetricTile, MetricTile];
 
 /** Literal class strings so the Tailwind scanner can see every column count. */
-const COLUMNS: Record<1 | 2 | 3 | 4, string> = {
+const COLUMNS: Record<1 | 2 | 3 | 4 | 5, string> = {
   1: "grid-cols-2 sm:grid-cols-4",
   2: "grid-cols-2",
   3: "grid-cols-2 sm:grid-cols-3",
   4: "grid-cols-2 sm:grid-cols-4",
+  5: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5",
 };
 
 /** A list built at run time, as a strip: none when there is nothing to show. */
 export function metricTiles(list: readonly MetricTile[]): MetricTiles | undefined {
-  if (list.length === 0 || list.length > 4) return undefined;
+  if (list.length === 0 || list.length > 5) return undefined;
   return list as unknown as MetricTiles;
 }
 

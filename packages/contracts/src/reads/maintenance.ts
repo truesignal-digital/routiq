@@ -3,6 +3,7 @@ import { workOrderCostOutcome } from "../commands/complete-work-order.js";
 import { recordArtifact } from "./artifacts.js";
 import { historyActor } from "./history.js";
 import { listQuery, listResponse } from "./list.js";
+import { overviewNoticeSchema } from "./overview-notice.js";
 
 /**
  * The owner's state machine (#28). APPROVED is open work, where costs attach;
@@ -103,6 +104,8 @@ export const workOrderCostToCome = z.discriminatedUnion("reason", [
  */
 export const workOrderListQuery = listQuery({
   status: workOrderStatus.optional(),
+  /** Only the orders still open (OPEN_WORK_ORDER_STATUSES); with `status`, both apply. */
+  open: z.enum(["true", "false"]).transform((value) => value === "true").optional(),
   branchId: z.uuid().optional(),
   assetId: z.uuid().optional(),
 });
@@ -352,24 +355,54 @@ export const maintenanceSummaryQuery = z.object({
   branchId: z.uuid().optional(),
 });
 
+/** The work-order statuses still in the workshop's hands: the list's `open=true`. */
+export const OPEN_WORK_ORDER_STATUSES = ["SUBMITTED", "APPROVED", "COMPLETION_SUBMITTED"] as const satisfies readonly (typeof workOrderStatuses)[number][];
+
 /**
  * The Maintenance overview, counted in SQL over the caller's workspace and
  * branch scope (the asset's branch). `openIssues` equals what the issues list
  * shows for `status=OPEN`, `approvedWorkOrders` what the work-order list shows
- * for `status=APPROVED`. `grounded` counts vehicles holding an open
+ * for `status=APPROVED`, `openWorkOrders` what it shows for `open=true`,
+ * `waitingApproval` for `status=SUBMITTED` and `waitingCompletion` for
+ * `status=COMPLETION_SUBMITTED`. `grounded` counts vehicles holding an open
  * availability interval. `averageRepairDays` is the mean time from a work
  * order's creation to its completion over the orders completed in the last
  * `repairWindowDays` days, to one decimal; null when none completed.
+ *
+ * Built inside a pure call: the web reads it by its type only.
  */
-export const maintenanceSummary = z.object({
-  openIssues: z.number().int().nonnegative(),
-  openSafetyCritical: z.number().int().nonnegative(),
-  grounded: z.number().int().nonnegative(),
-  approvedWorkOrders: z.number().int().nonnegative(),
-  averageRepairDays: z.number().nonnegative().nullable(),
-  repairsCounted: z.number().int().nonnegative(),
-  repairWindowDays: z.number().int().positive(),
-});
+export const maintenanceSummary = /* @__PURE__ */ (() =>
+  z.object({
+    openIssues: z.number().int().nonnegative(),
+    openSafetyCritical: z.number().int().nonnegative(),
+    grounded: z.number().int().nonnegative(),
+    /** The vehicle grounded longest; null when none is. */
+    firstGrounded: z
+      .object({ assetId: z.uuid(), assetCode: z.string(), since: z.iso.datetime() })
+      .nullable(),
+    approvedWorkOrders: z.number().int().nonnegative(),
+    openWorkOrders: z.number().int().nonnegative(),
+    waitingApproval: z.number().int().nonnegative(),
+    waitingCompletion: z.number().int().nonnegative(),
+    averageRepairDays: z.number().nonnegative().nullable(),
+    repairsCounted: z.number().int().nonnegative(),
+    repairWindowDays: z.number().int().positive(),
+    /**
+     * The actual cost of the work orders completed in the same window (the
+     * order's cost lines, as the work order shows it), in the workspace
+     * currency. Null for a caller who may not read actual costs
+     * (`canReadWorkOrderCosts` and Money on): withheld, never zero.
+     */
+    repairCost: z
+      .object({
+        amountMinor: z.number().int(),
+        currency: z.string().length(3),
+        workOrders: z.number().int().nonnegative(),
+      })
+      .nullable(),
+    /** When the Maintenance Overview's summary notice shows (#667). */
+    notice: overviewNoticeSchema(),
+  }))();
 
 export type MaintenanceSummaryQuery = z.infer<typeof maintenanceSummaryQuery>;
 export type MaintenanceSummary = z.infer<typeof maintenanceSummary>;

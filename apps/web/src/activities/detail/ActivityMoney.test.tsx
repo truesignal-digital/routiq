@@ -157,7 +157,7 @@ describe("activity money card", () => {
     expect(container.innerHTML).toBe("");
   });
 
-  it("lists a driver's own entries without a net summed over them (#264)", () => {
+  it("lists a driver's own entries without a profit summed over them (#264)", () => {
     render(<ActivityMoney totals={false} scope="OWN_ENTRIES" entries={[entry()]} />);
 
     expect(screen.getByRole("link", { name: /FIN-2026-0001/ })).toBeDefined();
@@ -166,16 +166,16 @@ describe("activity money card", () => {
     expect(screen.getByText("Only the entries you recorded on this activity.")).toBeDefined();
   });
 
-  it("titles a driver's card Costs, everyone else's Revenue and costs (#594)", () => {
+  it("titles a driver's card Expenses, everyone else's Revenue and expenses (#594, #659)", () => {
     render(<ActivityMoney totals={false} scope="OWN_ENTRIES" entries={[entry({ direction: "EXPENSE" })]} />);
-    expect(screen.getByText("Costs")).toBeDefined();
-    expect(screen.queryByText("Revenue and costs")).toBeNull();
+    expect(screen.getByText("Expenses")).toBeDefined();
+    expect(screen.queryByText("Revenue and expenses")).toBeNull();
     expect(i18n.t("activities.detail.moneyCosts", { lng: "fr-CM" })).toBe("Dépenses");
     cleanup();
 
     for (const scope of ["LEDGER", "BRANCH_ENTRIES"] as const) {
       render(<ActivityMoney totals={scope === "LEDGER"} scope={scope} entries={[entry()]} />);
-      expect(screen.getByText("Revenue and costs")).toBeDefined();
+      expect(screen.getByText("Revenue and expenses")).toBeDefined();
       cleanup();
     }
   });
@@ -187,7 +187,7 @@ describe("activity money card", () => {
     expect(link.getAttribute("href")).toBe(`/finance/entries/${ENTRY_ID}`);
   });
 
-  it("labels the net as posted-only and keeps pending money out of it", () => {
+  it("labels the profit as posted-only and keeps pending money out of it", () => {
     render(
       <ActivityMoney
         totals
@@ -209,6 +209,23 @@ describe("activity money card", () => {
     expect(digits(summaryValue("Profit"))).toBe("900000");
     expect(digits(summaryValue("Awaiting approval"))).toBe("-400000");
     expect(screen.getByText(/posted only/)).toBeTruthy();
+  });
+
+  it("reads a trip that lost money as Loss / Perte, never a negative profit (#659)", async () => {
+    const lost = [entry({ direction: "EXPENSE", categoryCode: "FUEL", amountMinor: 86_000 })];
+    render(<ActivityMoney totals scope="LEDGER" entries={lost} />);
+
+    expect(digits(summaryValue("Loss"))).toBe("86000");
+    expect(screen.queryByText("Profit")).toBeNull();
+    cleanup();
+
+    await i18n.changeLanguage("fr-CM");
+    try {
+      render(<ActivityMoney totals scope="LEDGER" entries={lost} />);
+      expect(summaryValue("Perte").textContent?.replace(/[\u00a0\u202f]/g, " ")).toBe("86 000 FCFA");
+    } finally {
+      await i18n.changeLanguage("en");
+    }
   });
 
   it("says nothing about pending money when every line is posted", () => {

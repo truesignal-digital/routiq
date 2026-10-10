@@ -10,9 +10,10 @@ import { fetchAssetSummary, type AssetSummaryParams } from "./api.js";
  * would report the page as if it were the fleet. Branch-scoped like the list it
  * sits above, so the tiles count inside the same narrowing.
  */
-export function useAssetSummary(callerParams: AssetSummaryParams = {}) {
+export function useAssetSummary(callerParams: AssetSummaryParams = {}, enabled = true) {
   const session = useActiveSession();
-  return useQuery(assetSummaryQueryOptions(session?.workspaceSlug, useBranchScopedParams(callerParams)));
+  const options = assetSummaryQueryOptions(session?.workspaceSlug, useBranchScopedParams(callerParams));
+  return useQuery({ ...options, enabled: enabled && session !== undefined });
 }
 
 export function assetSummaryQueryOptions(workspaceSlug: string | undefined, params: AssetSummaryParams) {

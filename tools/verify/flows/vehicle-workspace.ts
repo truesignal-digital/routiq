@@ -9,6 +9,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   const sidebar = await openSidebar(page);
   await sidebar.getByRole("link", { name: t("Camions", "Trucks") }).click();
   await page.getByRole("heading", { name: t("Camions", "Trucks"), level: 1 }).waitFor();
+  await page.locator("[data-slot='module-page-tabs']").getByRole("tab", { name: t("Camions", "Trucks") }).click();
   await quiet();
   await shot("trucks-list", { caption: "Trucks list" });
 

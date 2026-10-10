@@ -6,7 +6,7 @@ import type { DriveScript } from "../browser.js";
  */
 const flow: DriveScript = async ({ page, t, nav, shot, log, apiGet }) => {
   await nav("/");
-  await page.getByRole("heading", { level: 1, name: t("Accueil", "Home") }).waitFor();
+  await page.getByRole("heading", { level: 1, name: t("Tableau de bord", "Dashboard") }).waitFor();
   await page.locator('[data-slot="metric-tile"]').first().waitFor();
   await shot("home", { caption: "Home: each card matches what the dashboard read returns" });
 

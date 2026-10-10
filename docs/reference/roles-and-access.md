@@ -111,6 +111,7 @@ whatever its access says.
 | People | Give, change or remove app access; reset PIN | ✓ every role but Direction | ✓ Chauffeur, Technicien, Caissier only | — | — | — | — |
 | People | Link a person to their login, change or unlink it (#569) | ✓ every role but Direction | ✓ Chauffeur, Technicien, Caissier only, people of their branches | — | — | — | — |
 | Settings | Branches, categories, approval bands | ✓ | — | — | — | — | — |
+| Settings | Dashboard summary schedule (#669) | ✓ | — | — | — | — | — |
 | Settings | Modules and template presets | vendor only (ADR-0005, confirmed 2026-10-08; `pnpm --filter @routiq/api entitlement`, #362) | — | — | — | — | — |
 | Any | Approve something you submitted | — | — | — | — | — | — |
 

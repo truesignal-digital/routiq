@@ -45,6 +45,16 @@
     },
     "columns": {
       "asset": "Vehicle"
+    },
+    "filters": {
+      "availabilityOptions": {
+        "IDLE": "No trip for 5+ days"
+      }
+    },
+    "overview": {
+      "tiles": {
+        "idle": "No trip for {days}+ days"
+      }
     }
   },
   "documents": {
@@ -62,6 +72,11 @@
       },
       "filters": {
         "asset": "Vehicle"
+      }
+    },
+    "overview": {
+      "counted": {
+        "openTrips": "{count, plural, one {# trip is still open} other {# trips are still open}}: their money may still come."
       }
     }
   },
@@ -123,7 +138,17 @@
       "activityTypesFailed": "Could not load trip types."
     },
     "subtitle": "Every trip your vehicles run, from start to close.",
-    "loadFailed": "We couldn't load trips. Please retry."
+    "loadFailed": "We couldn't load trips. Please retry.",
+    "overview": {
+      "weeks": {
+        "title": "Trips per week"
+      },
+      "summary": {
+        "sentence": "{started, plural, =0 {No trip has started this week yet.} one {# trip started this week; {closed, number} of them closed.} other {# trips started this week; {closed, number} of them closed.}}",
+        "open": "{open, plural, =0 {Nothing is still open.} one {# trip is still open.} other {# trips are still open.}}",
+        "counted": "{fuelCounted, select, yes {Closed trips missing data: {fuel, number} without fuel and {km, number} without km.} other {Closed trips missing data: {km, number} without km. Fuel is not counted: Money is off.}}"
+      }
+    }
   },
   "maintenance": {
     "workOrders": {
@@ -282,5 +307,32 @@
     "VEHICLE_DOUBLE_BOOKED": "This vehicle is already booked on another trip at the same time.",
     "DRIVER_DOUBLE_BOOKED": "This driver is already booked on another trip at the same time.",
     "TRIP_STARTED_AFTER_CANCELLATION": "This trip had been cancelled, but it was started offline. It is running again."
+  },
+  "dashboard": {
+    "counted": {
+      "postedAndTrips": "Counted: {count, plural, one {# posted entry} other {# posted entries}} and {closed, plural, one {# closed trip} other {# closed trips}}."
+    },
+    "vehicles": {
+      "columns": {
+        "trips": "Trips"
+      },
+      "tripsCount": "{count, plural, one {# trip} other {# trips}}",
+      "tripsWithoutKm": "{count, plural, one {# trip without km} other {# trips without km}}",
+      "lossDetail": "{count, plural, =0 {No trip} one {# trip} other {# trips}} · {amount} spent"
+    },
+    "comingUp": {
+      "rows": {
+        "TRIPS_PLANNED": {
+          "title": "{count, plural, one {# trip planned} other {# trips planned}}"
+        }
+      }
+    }
+  },
+  "overview": {
+    "summary": {
+      "money": {
+        "notEnoughTrips": "{window, select, lastMonth {In {month}, only {closed, number} of {total, plural, one {# trip was} other {# trips were}} closed, so it is too early to give a profit.} other {So far in {month}, only {closed, number} of {total, plural, one {# trip is} other {# trips are}} closed, so it is too early to give a profit.}}"
+      }
+    }
   }
 }

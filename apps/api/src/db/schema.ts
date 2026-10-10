@@ -7,6 +7,7 @@ import {
   PRINCIPAL_TYPES,
   PROFITABILITY_LAYERS,
   ROLES,
+  SUMMARY_SCHEDULES,
   TEMPLATE_CODES,
   TRIP_CANCELLATION_REASONS,
   type ActivityCompletenessCode,
@@ -1346,6 +1347,29 @@ export const approvalRuleAcknowledgements = pgTable(
     ),
   ],
 );
+
+/**
+ * Company-wide settings that belong to no module (#669), one row per
+ * workspace, written by `set-summary-schedule`. No row means every default:
+ * the first change inserts it. `updated_by_command_id` names the last change;
+ * the audit trail keeps every one.
+ */
+export const companySettings = pgTable("company_settings", {
+  workspaceId: uuid("workspace_id")
+    .primaryKey()
+    .references(() => workspaces.id),
+  summarySchedule: text("summary_schedule", { enum: SUMMARY_SCHEDULES })
+    .notNull()
+    .default("MONDAY_AND_MONTH_START"),
+  createdByCommandId: uuid("created_by_command_id")
+    .notNull()
+    .references(() => commands.id),
+  updatedByCommandId: uuid("updated_by_command_id")
+    .notNull()
+    .references(() => commands.id),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  rowVersion: integer("row_version").notNull().default(1),
+});
 
 /**
  * Field telemetry from the web app (ADR-0011). Its own schema because it is

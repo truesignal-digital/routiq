@@ -51,6 +51,7 @@ function statusBlock(ctx: DriveContext): Locator {
 async function groundedNamesTheOtherProblem(ctx: DriveContext) {
   const { page, t, shot, quiet, apiGet, log } = ctx;
   await (await openSidebar(page)).getByRole("link", { name: t("Camions", "Trucks") }).click();
+  await page.locator("[data-slot='module-page-tabs']").getByRole("tab", { name: t("Camions", "Trucks") }).click();
   await page.getByRole("button", { name: /VH003/ }).first().click();
   await page.getByRole("heading", { level: 1, name: "VH003" }).waitFor({ timeout: 90_000 });
   await quiet();
@@ -115,8 +116,8 @@ async function moneyTiles(ctx: DriveContext) {
   await (await openSidebar(page)).getByRole("link", { name: t("Argent", "Money") }).click();
   await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
   await quiet();
-  const out = page.getByRole("button", { name: new RegExp(`^${t("Sorties en", "Expenses in")} \\p{L}+`, "u") }).first();
-  const incoming = page.getByRole("button", { name: new RegExp(`^${t("Entrées en", "Revenue in")} \\p{L}+`, "u") }).first();
+  const out = page.getByRole("button", { name: new RegExp(`^${t("Dépenses en", "Expenses in")} \\p{L}+`, "u") }).first();
+  const incoming = page.getByRole("button", { name: new RegExp(`^${t("Recettes en", "Revenue in")} \\p{L}+`, "u") }).first();
   await out.waitFor();
   await incoming.waitFor();
   const body = (await page.locator("main").textContent()) ?? "";

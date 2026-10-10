@@ -139,6 +139,19 @@ export function canReadLedger(role: Role): boolean {
 }
 
 /**
+ * Who opens the money Overview (`GET /v1/finance/overview`, #660): the ledger
+ * readers with profit, and the cashier with their branch's revenue and
+ * expenses only (dashboards.html, "Who sees what"). Profit follows
+ * `canReadLedger`.
+ */
+export const MONEY_OVERVIEW_READER_ROLES = [
+  "DIRECTOR",
+  "ADMIN",
+  "FINANCE",
+  "CASHIER",
+] as const satisfies readonly Role[];
+
+/**
  * The roles that open the entries list and an entry's detail, each filtered by
  * its scope. The workshop reaches its cost lines through work orders instead.
  */

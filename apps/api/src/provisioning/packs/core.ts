@@ -86,6 +86,7 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
         "create-branch",
         "rename-branch",
         "set-branch-status",
+        "set-summary-schedule",
       ],
       ["DIRECTOR"],
     ),
@@ -201,6 +202,23 @@ export const corePack: {
       active: true,
       labelFr: "Permis",
       labelEn: "Permit",
+    },
+    // The papers a Cameroonian truck carries (#661); the French names are the
+    // ones people use in English too. Mirrored for existing workspaces by
+    // migration 0049.
+    {
+      kind: "DOCUMENT_TYPE",
+      code: "VISITE_TECHNIQUE",
+      active: true,
+      labelFr: "Visite technique",
+      labelEn: "Visite technique",
+    },
+    {
+      kind: "DOCUMENT_TYPE",
+      code: "CARTE_GRISE",
+      active: true,
+      labelFr: "Carte grise",
+      labelEn: "Carte grise",
     },
     {
       kind: "EXPENSE_CATEGORY",

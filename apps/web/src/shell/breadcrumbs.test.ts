@@ -113,17 +113,31 @@ describe("breadcrumbTrail", () => {
     ]);
   });
 
-  it("reads Home › Money on the Money page: the row names it once", () => {
-    expect(trailAt("/finance/entries")).toEqual([
+  it("reads Home › Money on the Money Overview: the row names it once", () => {
+    expect(trailAt("/finance")).toEqual([
       ["home.title", "/"],
       ["finance.entries.title", undefined],
     ]);
   });
 
-  it("adds a third crumb for an entry, the Money crumb linking back to the list", () => {
+  it("names a Money tab under the Money crumb, which links back to the Overview (#664)", () => {
+    expect(trailAt("/finance/entries")).toEqual([
+      ["home.title", "/"],
+      ["finance.entries.title", "/finance"],
+      ["finance.page.tabs.entries", undefined],
+    ]);
+    expect(trailAt("/finance/approve")).toEqual([
+      ["home.title", "/"],
+      ["finance.entries.title", "/finance"],
+      ["finance.page.tabs.approve", undefined],
+    ]);
+  });
+
+  it("adds a crumb for an entry, the Entries crumb linking back to the list", () => {
     expect(trailAt("/finance/entries/00000000-0000-4000-8000-000000000010")).toEqual([
       ["home.title", "/"],
-      ["finance.entries.title", "/finance/entries"],
+      ["finance.entries.title", "/finance"],
+      ["finance.page.tabs.entries", "/finance/entries"],
       ["finance.entries.detail.breadcrumb", undefined],
     ]);
   });
@@ -159,7 +173,7 @@ describe("breadcrumbTrail", () => {
   it("still names the record page, which no longer has a tab", () => {
     expect(trailAt("/finance/record")).toEqual([
       ["home.title", "/"],
-      ["finance.entries.title", "/finance/entries"],
+      ["finance.entries.title", "/finance"],
       ["finance.navigation.record", undefined],
     ]);
   });
@@ -227,7 +241,7 @@ describe("breadcrumbTrail", () => {
 
     expect(
       breadcrumbTrail(withoutFinance, "/finance/entries").map(({ labelKey }) => labelKey),
-    ).toEqual(["home.title", "finance.entries.title"]);
+    ).toEqual(["home.title", "finance.page.tabs.entries"]);
   });
 });
 
@@ -265,7 +279,8 @@ describe("a page whose module is off (#617)", () => {
     ]);
     expect(trailWith(WITHOUT_MAINTENANCE, "/finance/entries/00000000-0000-4000-8000-000000000010")).toEqual([
       ["home.title", "/"],
-      ["finance.entries.title", "/finance/entries"],
+      ["finance.entries.title", "/finance"],
+      ["finance.page.tabs.entries", "/finance/entries"],
       ["finance.entries.detail.breadcrumb", undefined],
     ]);
   });
