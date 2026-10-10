@@ -45,6 +45,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { MoneyInput } from "@/components/money-input.js";
 import { useMeContext } from "../auth/me.js";
+import { useWorkspaceToday } from "../auth/workspace-day.js";
 import { useActiveSession } from "../auth/store.js";
 import { PinnedAssetField } from "../assets/PinnedAssetField.js";
 import { useCategories } from "../categories/useCategories.js";
@@ -58,13 +59,12 @@ import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { parseMoneyXaf } from "../lib/format.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
 import { ALL_BRANCHES } from "../shell/branch-context.js";
-import { workOrderReference } from "./columns.js";
+import { recordNumberText } from "@/lib/record-number.js";
 import {
   defaultCostChoice,
   newCostLine,
   recordedCost,
   REPAIR_CATEGORY_CODE,
-  todayIsoDate,
   toCompletionCost,
   type CostChoice,
   type CostLineDraft,
@@ -85,6 +85,8 @@ type DecisionPayload = Readonly<Record<string, string>>;
  */
 export interface WorkOrderRef {
   id: string;
+  /** The server's number (#608); null until it has one. */
+  number: number | null;
   assetId: string;
   status: WorkOrderStatus;
   /** The signalement the order answers; null on preventive work. */
@@ -555,7 +557,8 @@ export function CompleteWorkOrderForm({
   const repairCategory = categories.find((category) => category.code === REPAIR_CATEGORY_CODE);
   // Loaded and without the repair category: the first line asks for one.
   const askCategory = categoriesQuery.isSuccess && repairCategory === undefined;
-  const [economicDate] = useState(() => todayIsoDate());
+  const today = useWorkspaceToday();
+  const [economicDate] = useState(today);
   const intent = useRef<CommandIntent<CompleteWorkOrderInput> | undefined>(undefined);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
 
@@ -1276,7 +1279,7 @@ export function ReleaseForm({
       <p className="text-sm text-muted-foreground">
         {subject.kind === "work-order"
           ? t("maintenance.actions.releaseSubject", {
-              reference: workOrderReference(subject.workOrder.id),
+              reference: recordNumberText(t, "work_order", subject.workOrder.number),
             })
           : subject.issue.description}
       </p>

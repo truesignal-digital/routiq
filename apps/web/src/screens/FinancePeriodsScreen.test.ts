@@ -44,6 +44,7 @@ const director: MeContext = {
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+  timezone: "Africa/Douala",
 };
 
 function renderScreen(me: MeContext = director, client = new QueryClient()) {
