@@ -210,6 +210,13 @@ export const financialEntryDetail = entryRecord.extend({
    * decide it, and for roles outside the entry chain.
    */
   directionDecides: z.boolean().default(false),
+  /**
+   * A line names a COMPLETED work order, so a cost recorded on it now, again
+   * or by an edit, is a late invoice (#82): it waits for review whatever its
+   * amount and needs a reason (LATE_COST_REASON_REQUIRED). Lets the form ask
+   * for the reason up front (#613). Absent reads as false.
+   */
+  lateWorkOrderCost: z.boolean().optional(),
 });
 
 export type EntryEvidenceState = z.infer<typeof entryEvidenceState>;
