@@ -1,7 +1,12 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Clock } from "lucide-react";
-import type { VehicleHistoryItem, VehicleHistoryKind } from "@routiq/contracts";
+import {
+  VEHICLE_HISTORY_KINDS,
+  type ModuleCode,
+  type VehicleHistoryItem,
+  type VehicleHistoryKind,
+} from "@routiq/contracts";
 import { FilterChips } from "@/components/filter-chips";
 import { RecordText } from "@/components/record-number";
 import { historyNote, Timeline, type TimelineEvent } from "@/components/timeline.js";
@@ -10,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatMoney, type MoneySign } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
+import { contributes } from "@/modules/manifest.js";
 import { useVehicle, type VehicleGates } from "../context.js";
 import { describeEvent, type EventTone } from "../historyEvents.js";
 import { LinkButton, Sep, TabHeader } from "../parts.js";
@@ -24,16 +30,21 @@ export const EVENT_TONE_CLASS: Record<EventTone, string> = {
   success: "bg-success/15 text-success-foreground",
 };
 
+/** Kinds core still gates itself; a module's own kinds come and go with its manifest. */
+const KIND_GATE: Partial<Record<VehicleHistoryKind, keyof VehicleGates>> = {
+  MONEY: "entries",
+  TRIPS: "trips",
+  DOCUMENTS: "documents",
+  READINGS: "trips",
+};
+
 /** The kinds this viewer can ask for: a hidden section's events are never offered. */
-function historyKinds(gates: VehicleGates): VehicleHistoryKind[] {
-  const kinds: VehicleHistoryKind[] = [];
-  if (gates.maintenance) kinds.push("MAINTENANCE");
-  if (gates.entries) kinds.push("MONEY");
-  if (gates.trips) kinds.push("TRIPS");
-  if (gates.documents) kinds.push("DOCUMENTS");
-  if (gates.trips) kinds.push("READINGS");
-  kinds.push("ASSIGNMENTS", "LIFECYCLE", "NOTES");
-  return kinds;
+export function historyKinds(gates: VehicleGates, enabledModules: readonly ModuleCode[]): VehicleHistoryKind[] {
+  return VEHICLE_HISTORY_KINDS.filter((kind) => {
+    if (!contributes("historyKinds", kind, enabledModules)) return false;
+    const gate = KIND_GATE[kind];
+    return gate === undefined || gates[gate];
+  });
 }
 
 /**
@@ -44,8 +55,8 @@ export function HistoryTab() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const search = useSearch({ strict: false }) as { kind?: VehicleHistoryKind };
-  const { asset, gates } = useVehicle();
-  const kinds = historyKinds(gates);
+  const { asset, gates, viewer } = useVehicle();
+  const kinds = historyKinds(gates, viewer.enabledModules);
   const kind = search.kind !== undefined && kinds.includes(search.kind) ? search.kind : undefined;
   const query = useAssetHistory(asset.id, kind, HISTORY_PAGE);
   const timelineEvent = useTimelineEvent();

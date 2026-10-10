@@ -1135,13 +1135,4 @@ describe("MaintenanceScreen — signalements tab", () => {
   });
 });
 
-describe("MaintenanceScreen — module gate", () => {
-  it("shows a denied surface when the module is off", async () => {
-    me = { ...admin, enabledModules: ["CORE", "ASSETS"] };
-    renderScreen();
-
-    expect(await screen.findByText("maintenance.title")).toBeTruthy();
-    expect(screen.queryByText(WORK_ORDER_REFERENCE)).toBeNull();
-    expect(screen.queryByRole("tab", { name: "maintenance.issues.tab" })).toBeNull();
-  });
-});
+// With the module off the shell never opens this screen: modules/maintenance/manifest.test.tsx.

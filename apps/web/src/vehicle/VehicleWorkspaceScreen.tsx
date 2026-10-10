@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Outlet, useNavigate, useParams, useRouter, useSearch } from "@tanstack/react-router";
+import { Outlet, useNavigate, useParams, useRouter, useRouterState, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { Truck } from "lucide-react";
+import { Lock, Truck } from "lucide-react";
 import type { AssetDetail } from "@routiq/contracts";
 import { canViewActivities } from "@/activities/permissions.js";
 import { useAssetDetail } from "@/assets/useAssetDetail.js";
 import { useMeContext, type MeContext } from "@/auth/me.js";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
+import { PermissionDenied } from "@/components/permission-denied.js";
+import { contributes } from "@/modules/manifest.js";
 import { canViewDocuments } from "@/documents/permissions.js";
 import { useCategories } from "@/documents/useCategories.js";
 import { canReadFinance, canReadFinanceEntries } from "@/finance/permissions.js";
@@ -15,7 +17,7 @@ import { canSeeWorkOrderCosts, canViewMaintenance } from "@/maintenance/permissi
 import { OtherBranchNotice } from "@/shell/BranchScopeNotices.js";
 import { actionAvailability, actionDef, actionPermitted, type VehicleFacts } from "./actions.js";
 import { AllActionsSheet } from "./AllActionsSheet.js";
-import { VehicleCtx, type PanelControls, type PanelForm, type VehicleContextValue } from "./context.js";
+import { useVehicle, VehicleCtx, type PanelControls, type PanelForm, type VehicleContextValue } from "./context.js";
 import { FactsLine } from "./header/FactsLine.js";
 import { IdentityStrip } from "./header/IdentityStrip.js";
 import { StatusBlock } from "./header/StatusBlock.js";
@@ -31,7 +33,7 @@ import {
 import { RecordPanel } from "./panel/RecordPanel.js";
 import { QuickActionBar } from "./QuickActionBar.js";
 import { useAssetAttention, useVehicleRefresh } from "./useVehicle.js";
-import { tabPath, VehicleTabsNav } from "./VehicleTabsNav.js";
+import { activeTab, tabPath, VehicleTabsNav } from "./VehicleTabsNav.js";
 
 /**
  * The vehicle workspace (#44): identity and status on top, the sections as
@@ -157,13 +159,32 @@ function Workspace({ asset, me }: { asset: AssetDetail; me: MeContext }) {
         </header>
         <VehicleTabsNav />
         <div className="mt-5">
-          <Outlet />
+          <TabOutlet />
         </div>
         <QuickActionBar />
         <RecordPanel />
         <AllActionsSheet open={allOpen} onOpenChange={setAllOpen} />
       </PageContainer>
     </VehicleCtx.Provider>
+  );
+}
+
+/**
+ * The section the URL names, unless its module is off: a direct link to a
+ * module's tab then says the module is not included, and its reads never run.
+ */
+function TabOutlet() {
+  const { t } = useTranslation();
+  const { asset, viewer } = useVehicle();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const tab = activeTab(pathname, asset.id);
+  if (contributes("vehicleTabs", tab, viewer.enabledModules)) return <Outlet />;
+  return (
+    <PermissionDenied
+      title={t(`vehicle.tabs.${tab}`)}
+      icon={<Lock className="size-7" aria-hidden />}
+      code="MODULE_DISABLED"
+    />
   );
 }
 

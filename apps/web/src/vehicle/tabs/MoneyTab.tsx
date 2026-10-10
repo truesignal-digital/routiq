@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { useCategories } from "@/documents/useCategories.js";
 import { formatDate, formatMoney, localizedLabel, type MoneySign } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
+import { contributes } from "@/modules/manifest.js";
 import { useVehicle } from "../context.js";
 import { entrySteps } from "../flow.js";
 import { recordReference } from "../model.js";
@@ -488,7 +489,7 @@ function EntryRow({ entry }: { entry: FinancialEntryListItem }) {
               </LinkButton>
             </>
           )}
-          {links?.workOrderId != null && (
+          {links?.workOrderId != null && contributes("fields", "entry.workOrderLink", viewer.enabledModules) && (
             <>
               <Sep />
               <LinkButton
