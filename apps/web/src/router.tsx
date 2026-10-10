@@ -427,6 +427,10 @@ export const router = createRouter({
   // The Query cache decides what is fresh (lib/query-client.ts); the router
   // never keeps loader results of its own.
   defaultPreloadStaleTime: 0,
+  // A pointer resting on a link, a focus, or a finger landing on it starts the
+  // screen's code and data before the click (#497).
+  defaultPreload: "intent",
+  defaultPreloadDelay: 50,
 });
 
 // Every navigation is a fresh chance to fetch a screen whose code failed before.
