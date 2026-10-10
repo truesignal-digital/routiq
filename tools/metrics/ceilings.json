@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 702004,
+    "ceiling": 721422,
     "raises": [
       {
         "date": "2026-10-06",
@@ -263,13 +263,37 @@
       {
         "date": "2026-10-10",
         "from": 694831,
-        "to": 702004,
+        "to": 703751,
+        "reason": "The shell's loading frame, its loader and the sidebar logo row as their own chunks (#495)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 703751,
+        "to": 710828,
+        "reason": "Route loaders and queryOptions factories for Home, Trucks, a vehicle, Trips, Money and Maintenance (#496)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 710828,
+        "to": 713353,
+        "reason": "Intent preloading and the sidebar preloader (#497)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 713353,
+        "to": 713902,
+        "reason": "Page-type skeletons for each screen route (#498)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 713902,
+        "to": 721422,
         "reason": "Record pages share one frame (#662): RecordHeader, RecordTabs, FactsSection, ContextColumn and StatusBlock components, the money entry's and the trip's record pages (Overview sections, money box, linked records, latest history), and their fr/en words, about 7.2 kB gzip across lazy chunks plus the catalog; the trip's old overview and assets panel are removed"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22832,
+    "ceiling": 22899,
     "raises": [
       {
         "date": "2026-10-06",
@@ -324,11 +348,17 @@
         "from": 22508,
         "to": 22832,
         "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 22899,
+        "reason": "Record pages share one frame (#662): record header, tabs, facts and context column classes beside the page frame (#658), about 70 B gzip after merging develop's page skeletons"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 263343,
+    "ceiling": 267920,
     "raises": [
       {
         "date": "2026-10-06",
@@ -561,7 +591,31 @@
       {
         "date": "2026-10-10",
         "from": 261561,
-        "to": 263343,
+        "to": 263756,
+        "reason": "Router context and the shell's loader (#495): the shared i18n and icon modules split into their own preloaded chunks once the shell loader also imports them; no shell or sidebar code is in the first load"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 263756,
+        "to": 264506,
+        "reason": "Route loaders (#496): the router's loader wiring, the offline and module-off guards and the read defaults"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 264506,
+        "to": 265616,
+        "reason": "Intent preloading (#497): the router's hover, focus and touch preload paths and the quiet-window sidebar preloader"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 265616,
+        "to": 266200,
+        "reason": "Page-type skeletons (#498): drawn the moment a screen is pending, so they ship with the router rather than on demand"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 266200,
+        "to": 267920,
         "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB"
       }
     ]
