@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 699097,
+    "ceiling": 701832,
     "raises": [
       {
         "date": "2026-10-06",
@@ -211,6 +211,12 @@
         "from": 692282,
         "to": 699097,
         "reason": "Route loaders and queryOptions factories for Home, Trucks, a vehicle, Trips, Money and Maintenance (#496)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 699097,
+        "to": 701832,
+        "reason": "Intent preloading and the sidebar preloader (#497)"
       }
     ]
   },
@@ -268,7 +274,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 261304,
+    "ceiling": 262331,
     "raises": [
       {
         "date": "2026-10-06",
@@ -467,6 +473,12 @@
         "from": 260621,
         "to": 261304,
         "reason": "Route loaders (#496): the router's loader wiring, the offline guard and the read defaults; each loader's module stays on demand"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261304,
+        "to": 262331,
+        "reason": "Intent preloading (#497): the router's hover, focus and touch preload paths and the quiet-wait before the sidebar preload; the sidebar preloader itself stays on demand"
       }
     ]
   }
