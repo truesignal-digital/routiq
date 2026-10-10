@@ -2270,6 +2270,7 @@
         "lead": "Available.",
         "sinceAndTrip": "In service since {since}; last activity {lastTrip}.",
         "sinceNoTrips": "In service since {since}; no activities yet.",
+        "sinceOnly": "In service since {since}.",
         "lastTripOnly": "Last activity {lastTrip}.",
         "noTrips": "No activities yet."
       },

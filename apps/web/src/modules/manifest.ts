@@ -36,6 +36,8 @@ export const FIELD_SLOTS = [
   "assets.attentionGrounding",
   /** A trip's money: its entries and net on the trip's page. */
   "trip.money",
+  /** The vehicle's status sentence naming its last trip, or that it has none. */
+  "vehicle.lastTrip",
 ] as const;
 export type FieldSlot = (typeof FIELD_SLOTS)[number];
 
