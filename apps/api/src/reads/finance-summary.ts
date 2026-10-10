@@ -8,8 +8,8 @@ import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
-import { commands, financialEntries, postingPeriods, workspaces } from "../db/schema.js";
-import { directionDecidesEntries, pendingApprovalConditions } from "./approvals-queue.js";
+import { financialEntries, postingPeriods, workspaces } from "../db/schema.js";
+import { decidablePendingEntries } from "./approvals-queue.js";
 import { currentBusinessDate } from "./business-date.js";
 import { defineRead, ENTRIES_GATE } from "./define-read.js";
 import { entryEvidenceMissingSql } from "./entry-evidence.js";
@@ -109,29 +109,7 @@ export function registerFinanceSummaryReadRoutes(
           // The same queue `/v1/finance/approvals` lists, less what this caller
           // cannot decide: their own submissions (maker-checker) and entries
           // above their band (Direction decides).
-          const pending = await tx
-            .select({
-              status: financialEntries.status,
-              branchId: financialEntries.branchId,
-              amountMinor: financialEntries.amountMinor,
-              currency: financialEntries.currency,
-              submittedAt: financialEntries.createdAt,
-              submittedBy: commands.initiatedByPrincipalId,
-            })
-            .from(financialEntries)
-            .innerJoin(
-              commands,
-              and(
-                eq(commands.workspaceId, financialEntries.workspaceId),
-                eq(commands.id, financialEntries.createdByCommandId),
-              ),
-            )
-            .where(and(...pendingApprovalConditions(auth, branchId)));
-          const directionDecides = await directionDecidesEntries(tx, auth, pending);
-          const decidable = pending.filter(
-            (entry, index) =>
-              entry.submittedBy !== auth.principalId && directionDecides[index] !== true,
-          );
+          const decidable = await decidablePendingEntries(tx, auth, branchId);
           waiting = { count: decidable.length, amountMinor: 0n, oldestSubmittedAt: null };
           for (const entry of decidable) {
             if (entry.currency === currency) {

@@ -83,7 +83,7 @@ describe("ApprovalRulesNotice (#422)", () => {
     expect(steps).toEqual([
       "Up to FCFA 150,000: posts directly",
       "Up to FCFA 1,000,000: Finance approves",
-      "Above FCFA 1,000,000: Direction approves",
+      "Above FCFA 1,000,000: the Director approves",
     ]);
   });
 
