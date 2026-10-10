@@ -3,7 +3,7 @@ import type { CompanySettingsResponse, OverviewNotice, Role } from "@routiq/cont
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
-import { auditEvents, companySettings } from "../db/schema.js";
+import { auditEvents, branches, companySettings } from "../db/schema.js";
 import { currentBusinessDate } from "../reads/business-date.js";
 import { summarySchedule } from "../reads/overview-notice.js";
 import { createTestApp } from "../test/fixture.js";
@@ -12,7 +12,8 @@ import { seedMember, seedWorkspace } from "../test/seed.js";
 /**
  * #669: Direction picks when the summary notice shows (Company settings ›
  * Dashboard summary) through set-summary-schedule, audited, and every
- * Overview read follows it.
+ * Overview read follows it. #711: so may an Administrator, for the whole
+ * company whatever their branches.
  */
 describe("set-summary-schedule (#669)", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -80,8 +81,9 @@ describe("set-summary-schedule (#669)", () => {
     expect(trucks).toMatchObject({ schedule: "MONDAY_AND_MONTH_START", ...summarySchedule(today()) });
   });
 
-  it("is read and changed by Direction alone", async () => {
-    for (const role of ["ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as const) {
+  it("is read and changed by the Director and the Administrators alone (#711)", async () => {
+    expect((await get(tokens.ADMIN, "/v1/company-settings")).statusCode).toBe(200);
+    for (const role of ["FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as const) {
       expect((await get(tokens[role], "/v1/company-settings")).statusCode, role).toBe(403);
       const refused = await post(tokens[role], "NEVER", { expectedVersion: 0 });
       expect(refused.statusCode, role).toBe(403);
@@ -151,5 +153,35 @@ describe("set-summary-schedule (#669)", () => {
       schedule: "MONDAY_AND_MONTH_START",
       ...summarySchedule(today()),
     });
+  });
+
+  it("lets an Administrator scoped to one branch change the company's schedule, audited in their name (#711)", async () => {
+    const [yaounde] = await ctx.db
+      .insert(branches)
+      .values({ workspaceId, code: "YDE", name: "Yaoundé" })
+      .returning();
+    const member = await seedMember(ctx.db, { workspaceId, role: "ADMIN", branchIds: [yaounde!.id] });
+    const token = (await createSession(ctx.db, { workspaceId, principalId: member.principal.id })).token;
+
+    const read = await get(token, "/v1/company-settings");
+    expect(read.statusCode).toBe(200);
+    const { version } = read.json() as CompanySettingsResponse;
+    const response = await post(token, "MONTH_START", { expectedVersion: version });
+    expect(response.statusCode).toBe(200);
+
+    // One row for the workspace: the company's setting, read the same by everyone.
+    const rows = await ctx.db.select().from(companySettings).where(eq(companySettings.workspaceId, workspaceId));
+    expect(rows).toHaveLength(1);
+    expect(await settings()).toEqual({ summarySchedule: "MONTH_START", version: version + 1 });
+    expect(await notice(tokens.DRIVER, "/v1/assets/overview")).toMatchObject({ schedule: "MONTH_START" });
+
+    const { commandId } = response.json() as { commandId: string };
+    expect(await audit(commandId)).toEqual([
+      expect.objectContaining({
+        eventType: "company-settings.summary-schedule-changed",
+        actorPrincipalId: member.principal.id,
+        afterState: { summarySchedule: "MONTH_START" },
+      }),
+    ]);
   });
 });

@@ -1,4 +1,5 @@
 import {
+  COMPANY_SETTINGS_ROLES,
   DEFAULT_SUMMARY_SCHEDULE,
   setSummarySchedulePayload,
   type SetSummarySchedulePayload,
@@ -16,16 +17,17 @@ import {
 
 /**
  * Company settings › Dashboard summary (#669): when the summary notice shows
- * on every Overview. Direction's, like every company setting (ADR-0009). The
- * workspace has no row until the first change, and its version is 0 until
- * then; the first change inserts the row at version 1. Choosing the schedule
+ * on every Overview. The Director's and the Administrators', like every company
+ * setting (ADR-0013, #711), and the whole workspace's whatever the caller's
+ * branches. The workspace has no row until the first change, and its version
+ * is 0 until then; the first change inserts the row at version 1. Choosing the schedule
  * already in force writes nothing but the command.no_change event (#153).
  */
 const setSummarySchedule: CommandDefinition<SetSummarySchedulePayload> = {
   name: "set-summary-schedule",
   version: 1,
   module: "CORE",
-  allowedRoles: ["DIRECTOR"],
+  allowedRoles: COMPANY_SETTINGS_ROLES,
   payloadSchema: setSummarySchedulePayload,
   branchAuthorization: { kind: "workspace" },
   async execute(tx, ctx, envelope, payload) {

@@ -75,8 +75,9 @@ describe("company settings migration", () => {
     const catalog = corePack.approvalRules
       .filter((rule) => rule.commandType === "set-summary-schedule")
       .map((rule) => rule.requiredRole);
-    expect(rows.map((row) => row.required_role)).toEqual(catalog);
-    expect(catalog).toEqual(["DIRECTOR"]);
+    // 0051 (#711) adds the Administrators' rule after this one.
+    expect(rows.map((row) => row.required_role).sort()).toEqual([...catalog].sort());
+    expect(catalog).toContain("DIRECTOR");
   });
 
   it("leaves the workspace on the default schedule, and refuses a schedule outside the list", async () => {

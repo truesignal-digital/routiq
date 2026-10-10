@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { ApprovalThresholdsResponse, Role } from "@routiq/contracts";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
 import type { Db } from "../db/client.js";
-import { approvalRuleChanges, approvalRules, auditEvents } from "../db/schema.js";
+import { approvalRuleChanges, approvalRules, auditEvents, branches } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 import { currentPeriodCode } from "./periods.js";
@@ -12,7 +12,8 @@ import { currentPeriodCode } from "./periods.js";
 /**
  * #354: Direction moves both bands of the money chain from Company settings,
  * through update-approval-threshold v2, and reads them back with the chain
- * each role now meets.
+ * each role now meets. #711: an Administrator may too, and moves the company's
+ * rule whatever their branches.
  */
 describe("approval thresholds (#354)", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -140,8 +141,9 @@ describe("approval thresholds (#354)", () => {
       expect(chainOf("DIRECTOR")).toEqual([{ upToMinor: null, outcome: "POSTS_DIRECTLY" }]);
     });
 
-    it("is Direction's alone: every other role is refused", async () => {
-      for (const role of ["ADMIN", "FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as const) {
+    it("is for the Director and the Administrators: every other role is refused (#711)", async () => {
+      expect((await read(tokens.ADMIN)).statusCode).toBe(200);
+      for (const role of ["FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as const) {
         const response = await read(tokens[role]);
         expect(response.statusCode, role).toBe(403);
       }
@@ -149,9 +151,9 @@ describe("approval thresholds (#354)", () => {
   });
 
   describe("update-approval-threshold v2", () => {
-    it("refuses every role but Direction", async () => {
+    it("refuses every role but the Director and the Administrators (#711)", async () => {
       const { version } = await current();
-      for (const role of ["ADMIN", "FINANCE"] as const) {
+      for (const role of ["FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"] as const) {
         const response = await post(
           tokens[role],
           "update-approval-threshold",
@@ -316,6 +318,91 @@ describe("approval thresholds (#354)", () => {
           requiredRole: "DRIVER",
         },
       ]);
+    });
+  });
+
+  describe("an Administrator scoped to one branch (#711)", () => {
+    const ADMIN_NAME = "Aminatou Administrator";
+    let scopedToken: string;
+    let scopedPrincipalId: string;
+
+    beforeAll(async () => {
+      const [yaounde] = await db
+        .insert(branches)
+        .values({ workspaceId, code: "YDE", name: "Yaoundé" })
+        .returning();
+      const member = await seedMember(db, {
+        workspaceId,
+        role: "ADMIN",
+        branchIds: [yaounde!.id],
+        username: ADMIN_NAME,
+      });
+      scopedPrincipalId = member.principal.id;
+      scopedToken = (await createSession(db, { workspaceId, principalId: scopedPrincipalId })).token;
+    });
+
+    const branchRules = () =>
+      db
+        .select({ id: approvalRules.id })
+        .from(approvalRules)
+        .where(and(eq(approvalRules.workspaceId, workspaceId), isNotNull(approvalRules.branchId)));
+
+    async function chainNotice(token: string) {
+      const response = await ctx.app.inject({
+        method: "GET",
+        url: "/v1/approval-chain",
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(response.statusCode).toBe(200);
+      return (response.json() as { notice: { changedBy: string | null } | null }).notice;
+    }
+
+    it("changes the company's bands, not a branch copy, and the audit event and notice name them", async () => {
+      expect((await read(scopedToken)).statusCode).toBe(200);
+      const branchRulesBefore = await branchRules();
+      const { version } = await current();
+
+      const response = await post(
+        scopedToken,
+        "update-approval-threshold",
+        2,
+        { recordingThresholdMinor: 250_000, financeCeilingMinor: 2_500_000 },
+        { expectedVersion: version },
+      );
+      expect(response.statusCode).toBe(200);
+
+      // The workspace-wide bands moved; no rule kept to a branch was written.
+      expect(await current()).toMatchObject({ recordingThresholdMinor: 250_000, financeCeilingMinor: 2_500_000 });
+      expect(await branchRules()).toEqual(branchRulesBefore);
+      expect(await recordExpense(tokens.DRIVER, 250_000)).toBe("POSTED");
+
+      const commandId = (response.json() as { commandId: string }).commandId;
+      const [event] = await db
+        .select()
+        .from(auditEvents)
+        .where(and(eq(auditEvents.workspaceId, workspaceId), eq(auditEvents.commandId, commandId)));
+      expect(event).toMatchObject({
+        eventType: "approval-threshold.updated",
+        actorPrincipalId: scopedPrincipalId,
+        afterState: { recordingThresholdMinor: "250000", financeCeilingMinor: "2500000" },
+      });
+
+      expect((await current()).lastChange).toMatchObject({ changedBy: ADMIN_NAME });
+      expect(await chainNotice(tokens.FINANCE)).toMatchObject({ changedBy: ADMIN_NAME });
+      expect(await chainNotice(tokens.ADMIN)).toMatchObject({ changedBy: ADMIN_NAME });
+      // Nobody is told about their own change.
+      expect(await chainNotice(scopedToken)).toBeNull();
+    });
+
+    it("moves the company's band through v1 too", async () => {
+      const branchRulesBefore = await branchRules();
+      const response = await post(scopedToken, "update-approval-threshold", 1, {
+        commandType: "approve-entry",
+        amountMaxMinor: 2_600_000,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(await current()).toMatchObject({ financeCeilingMinor: 2_600_000 });
+      expect(await branchRules()).toEqual(branchRulesBefore);
     });
   });
 });

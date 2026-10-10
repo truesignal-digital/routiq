@@ -20,7 +20,7 @@ const EXPECTED: Record<string, { daily: readonly [string, string][]; company: re
   },
   ADMIN: {
     daily: [["Tableau de bord", "Dashboard"], ["Camions", "Trucks"], ["Trajets", "Trips"], ["Maintenance", "Maintenance"], ["Argent", "Money"]],
-    company: [["Personnel", "People"], ["Utilisateurs", "Users"]],
+    company: [["Personnel", "People"], ["Utilisateurs", "Users"], ["Paramètres de l'entreprise", "Company settings"]],
   },
   FINANCE: {
     daily: [["Tableau de bord", "Dashboard"], ["Camions", "Trucks"], ["Trajets", "Trips"], ["Argent", "Money"]],
