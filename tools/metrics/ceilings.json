@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 694679,
+    "ceiling": 699437,
     "raises": [
       {
         "date": "2026-10-06",
@@ -253,11 +253,17 @@
         "from": 694047,
         "to": 694679,
         "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694679,
+        "to": 699437,
+        "reason": "#663 FormPage (section cards, So far, Still missing, phone steps and review) plus the sheet's live totals and Register a truck's sections"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22832,
+    "ceiling": 22968,
     "raises": [
       {
         "date": "2026-10-06",
@@ -312,11 +318,17 @@
         "from": 22508,
         "to": 22832,
         "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 22968,
+        "reason": "#663 FormPage: container-query grid for the 760 px form column and 300 px So far column, sticky footer above the phone bottom bar"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 261561,
+    "ceiling": 262183,
     "raises": [
       {
         "date": "2026-10-06",
@@ -545,6 +557,12 @@
         "from": 261338,
         "to": 261561,
         "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261561,
+        "to": 262183,
+        "reason": "#663 FormPage: the So far, section-state, step and review words in the fr/en catalogs (initial bundle), about 0.6 kB gzip"
       }
     ]
   }

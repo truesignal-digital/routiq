@@ -716,6 +716,31 @@
       "dependencies": ["@tanstack/react-router", "lucide-react", "react-i18next"]
     },
     {
+      "name": "form-page",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/form-page.tsx",
+          "type": "registry:file",
+          "target": "components/form-page.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "page",
+        "page-container",
+        "status-badge",
+        "not-recorded",
+        "button",
+        "card",
+        "utils"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "react-hook-form",
+        "react-i18next"
+      ]
+    },
+    {
       "name": "not-recorded",
       "type": "registry:component",
       "files": [

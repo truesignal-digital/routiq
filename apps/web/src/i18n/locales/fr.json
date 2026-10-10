@@ -281,7 +281,6 @@
       }
     },
     "form": {
-      "eyebrow": "Nouvel enregistrement",
       "assetCode": "Code de l'actif",
       "assetClass": "Classe d'actif",
       "branch": "Agence",
@@ -319,7 +318,19 @@
       },
       "chassisNumber": "Numéro de châssis",
       "acquisitionDate": "Date d'acquisition",
-      "acquisitionAmount": "Montant d'acquisition (FCFA)"
+      "acquisitionAmount": "Montant d'acquisition (FCFA)",
+      "description": "Recopiez les papiers. Seuls le code, la classe et l'agence sont nécessaires maintenant.",
+      "sections": {
+        "identity": "Identité",
+        "vehicle": "Plaque et marque",
+        "capacity": "Capacité",
+        "purchase": "Achat",
+        "papers": "Papiers"
+      },
+      "soFar": {
+        "makeAndModel": "Marque et modèle",
+        "files": "{count, plural, one {# fichier} other {# fichiers}}"
+      }
     },
     "actions": {
       "assignTo": "Affecter à l'agence",
@@ -388,6 +399,23 @@
     "search": {
       "placeholder": "Tapez pour chercher",
       "empty": "Aucun résultat"
+    },
+    "page": {
+      "done": "Terminé",
+      "notStarted": "Pas commencé",
+      "missing": "{count, plural, one {# manquant} other {# manquants}}",
+      "nothingMissing": "Rien ne manque",
+      "soFar": "Jusqu'ici",
+      "stillMissing": "Il manque encore",
+      "go": "Aller",
+      "goTo": "Aller à {field}",
+      "hintWithDraft": "{missing} · brouillon enregistré à {time}",
+      "step": "Étape {current} sur {total}",
+      "review": "Vérification",
+      "next": "Suivant",
+      "back": "Retour",
+      "change": "Modifier",
+      "changeSection": "Modifier {section}"
     }
   },
   "fileUpload": {
@@ -1127,6 +1155,17 @@
           "BANK": "Banque",
           "OTHER": "Autre"
         }
+      },
+      "soFar": {
+        "asset": "Engin",
+        "route": "Itinéraire",
+        "routeValue": "{from} → {to}",
+        "distance": "Distance",
+        "distanceValue": "{km, number} km",
+        "revenue": "Recettes",
+        "expenses": "Dépenses",
+        "profit": "Bénéfice",
+        "loss": "Perte"
       }
     },
     "subtitle": "Chaque activité de votre flotte, du départ à la clôture.",

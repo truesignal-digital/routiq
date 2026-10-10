@@ -17,10 +17,21 @@ const flow: DriveScript = async ({ page, t, lang, nav, shot, quiet, log, apiGet 
   await page.getByRole("heading", { level: 1, name: t("Saisir une fiche", "Record a sheet") }).waitFor();
   await quiet();
 
+  // On a phone the sheet is one step per section (#663): walk to the one a
+  // step needs, from the first step. On a wide screen every section shows.
+  const footer = page.locator("[data-slot=form-page-footer]");
+  const showStep = async (has: ReturnType<typeof page.locator>) => {
+    const back = page.locator("[data-slot=form-page-step]").getByRole("button", { name: t("Retour", "Back"), exact: true });
+    while ((await back.count()) > 0) await back.click();
+    const next = footer.getByRole("button", { name: t("Suivant", "Next"), exact: true });
+    while (!(await has.isVisible()) && (await next.count()) > 0) await next.click();
+  };
+
   const money = page
     .locator('[data-slot="card"]')
     .filter({ has: page.getByRole("button", { name: t("Ajouter une dépense", "Add expense"), exact: true }) });
   const addRevenue = money.getByRole("button", { name: t("Ajouter une recette", "Add revenue"), exact: true });
+  await showStep(money);
   await money.scrollIntoViewIfNeeded();
   await shot("money-section", {
     caption: "A driver's sheet offers Add expense only: revenue is the office's to record",
@@ -35,14 +46,20 @@ const flow: DriveScript = async ({ page, t, lang, nav, shot, quiet, log, apiGet 
     const options = page.getByRole("option");
     await (option === undefined ? options.first() : options.filter({ hasText: option }).first()).click();
   };
+  await showStep(page.getByRole("combobox").filter({ hasText: t("Choisir une agence", "Choose a branch") }));
   // Douala: the demo's vehicles live there, and the asset list follows the branch.
   await pick(t("Choisir une agence", "Choose a branch"), /DLA/);
   await pick(t("Choisir un type", "Choose a type"));
+  const vehiclePicker = page
+    .getByRole("combobox")
+    .filter({ hasText: lang === "fr" ? /^Choisir un (engin|camion|véhicule)/ : /^Choose an? (asset|truck|vehicle)/ });
+  await showStep(vehiclePicker);
   // The preset names the vehicle: a truck, or a vehicle on a passenger line.
   await pick(lang === "fr" ? /^Choisir un (engin|camion|véhicule)/ : /^Choose an? (asset|truck|vehicle)/);
   await page.getByLabel(t("Départ", "Departure"), { exact: true }).fill(t("07/10/2026 06:00", "10/07/2026 06:00"));
   await page.getByLabel(t("Arrivée", "Arrival"), { exact: true }).fill(t("07/10/2026 14:30", "10/07/2026 14:30"));
 
+  await showStep(money);
   const lines = await money.getByRole("combobox").count();
   if (lines === 0) await money.getByRole("button", { name: t("Ajouter une dépense", "Add expense"), exact: true }).click();
   await money.getByRole("combobox").first().click();
@@ -57,7 +74,10 @@ const flow: DriveScript = async ({ page, t, lang, nav, shot, quiet, log, apiGet 
     wrong.push("line 1 can still be switched to revenue");
   }
 
-  await page.getByRole("button", { name: t("Enregistrer la fiche", "Record sheet"), exact: true }).click();
+  // The review step holds the buttons on a phone.
+  const record = footer.getByRole("button", { name: t("Enregistrer la fiche", "Record sheet"), exact: true });
+  await showStep(record);
+  await record.click();
   await page.waitForURL((url) => /^\/activities\/[0-9a-f-]{36}$/.test(url.pathname), { timeout: 20_000 });
   await quiet();
   await shot("trip-recorded", { caption: "The trip is recorded with the driver's expense" });

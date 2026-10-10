@@ -638,6 +638,19 @@ export const RULES: readonly Rule[] = [
     check: linesMatching(/\buppercase\b|\bsmall-caps\b/, isWebStyled),
   },
   {
+    id: "DS-5",
+    name: "page-width-from-frame",
+    fix: "A screen takes its width from the page frame, PageContainer (components/page-container.tsx): one width for every page, so moving between pages never makes the content jump (#658, docs/design/consistency/fullpages.html#frame). Drop the max-w-* class; a measure that belongs to a part (PageHeader's description, a form column) lives in that component under components/.",
+    check: linesMatching(
+      /(?<![\w-])max-w-|\bmaxWidth\s*:/,
+      // The sign-in page sits outside the app shell, so it has no page frame to take a width from.
+      (path) =>
+        isWebProduction(path) &&
+        path.startsWith("apps/web/src/screens/") &&
+        path !== "apps/web/src/screens/LoginScreen.tsx",
+    ),
+  },
+  {
     id: "J1",
     name: "no-any",
     fix: "Type it: use the contract's types, unknown plus a guard, or a generic.",

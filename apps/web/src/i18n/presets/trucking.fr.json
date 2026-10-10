@@ -122,7 +122,10 @@
         "rowAttribute": "Imputer la ligne {position} à ce trajet",
         "attributeHint": "Décochez si la somme revient à l'engin et non au trajet : une réparation reste hors de la fiche."
       },
-      "activityTypesFailed": "Impossible de charger les types de trajet."
+      "activityTypesFailed": "Impossible de charger les types de trajet.",
+      "soFar": {
+        "asset": "Camion"
+      }
     },
     "subtitle": "Chaque trajet de vos camions, du départ à la clôture.",
     "status": {

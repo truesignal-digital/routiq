@@ -120,7 +120,10 @@
         "rowAttribute": "Imputer la ligne {position} à ce voyage",
         "attributeHint": "Décochez si la somme revient à l'engin et non au voyage : une réparation reste hors de la fiche."
       },
-      "activityTypesFailed": "Impossible de charger les types de voyage."
+      "activityTypesFailed": "Impossible de charger les types de voyage.",
+      "soFar": {
+        "asset": "Véhicule"
+      }
     },
     "subtitle": "Chaque voyage de vos véhicules, du départ à la clôture.",
     "status": {
