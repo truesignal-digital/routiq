@@ -745,8 +745,10 @@
     "branchEmptyHint": "No activity for this branch.",
     "loadMore": "Load more",
     "status": {
+      "PLANNED": "Planned",
       "OPEN": "On the road",
-      "CLOSED": "Closed"
+      "CLOSED": "Closed",
+      "CANCELLED": "Cancelled"
     },
     "state": {
       "onTheRoad": "On the road",

@@ -312,6 +312,19 @@ export const TRIP_DISCREPANCY_CODES = [
 
 export type TripDiscrepancyCode = (typeof TRIP_DISCREPANCY_CODES)[number];
 
+/**
+ * A booking's collisions (ADR-0012 §4): the warnings the plan and edit
+ * commands return, recomputed by the planning read on every read and never
+ * stored. One vocabulary with the command warnings.
+ */
+export const TRIP_CONFLICT_CODES = [
+  "VEHICLE_DOUBLE_BOOKED",
+  "VEHICLE_GROUNDED",
+  "DRIVER_DOUBLE_BOOKED",
+] as const satisfies readonly CommandWarningCode[];
+
+export type TripConflictCode = (typeof TRIP_CONFLICT_CODES)[number];
+
 export type ApiErrorCode = AuthErrorCode | ValidationErrorCode | CommandErrorCode;
 
 export interface ApiError {

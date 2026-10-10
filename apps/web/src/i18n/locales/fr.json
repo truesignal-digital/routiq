@@ -745,8 +745,10 @@
     "branchEmptyHint": "Aucune activité pour cette agence.",
     "loadMore": "Charger plus",
     "status": {
+      "PLANNED": "Planifiée",
       "OPEN": "En route",
-      "CLOSED": "Clôturée"
+      "CLOSED": "Clôturée",
+      "CANCELLED": "Annulée"
     },
     "state": {
       "onTheRoad": "En route",
