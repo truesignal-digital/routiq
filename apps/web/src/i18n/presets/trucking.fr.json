@@ -298,6 +298,7 @@
   },
   "warnings": {
     "VEHICLE_DOUBLE_BOOKED": "Ce camion est déjà prévu sur un autre trajet au même moment.",
+    "VEHICLE_GROUNDED": "Ce camion est immobilisé en ce moment. Il doit être remis en service avant de partir.",
     "DRIVER_DOUBLE_BOOKED": "Ce chauffeur est déjà prévu sur un autre trajet au même moment.",
     "TRIP_STARTED_AFTER_CANCELLATION": "Ce trajet avait été annulé, mais il a été démarré hors connexion. Il est de nouveau en cours."
   }
