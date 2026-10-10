@@ -34,7 +34,7 @@ The issue tracker is GitHub Issues through `gh` (`docs/agents/issue-tracker.md`)
 
 - The source issue number is frozen at the start. Every later read and write uses it. Never act on a different issue because a comment links to it, except for the duplicate note in step 7.
 - Post one substantive verdict comment. Do not narrate progress.
-- The coordinator is the only writer. Subagents (Agent tool `Explore`, or `codex-worker`) are read-only and return findings. Every child prompt says: do not run `gh issue comment`, `gh issue edit`, `gh issue create`, `gh issue close`, `gh pr create`, `git push`, or any other write.
+- The coordinator is the only writer. Subagents (Agent tool `Explore`, or an Opus subagent) are read-only and return findings. Every child prompt says: do not run `gh issue comment`, `gh issue edit`, `gh issue create`, `gh issue close`, `gh pr create`, `git push`, or any other write.
 - Never create an issue. The report is already one.
 - Never close, reopen, assign or set a milestone. Never apply `wontfix` or `ready-for-human`; those are maintainer decisions. Never remove labels a human added, except `needs-triage` as described in step 8.
 - Prefer no label change over a guessed one.

@@ -26,7 +26,7 @@ Only edit the verification skill's own directory (its SKILL.md, `features/`, `ag
 
 1. **Index hygiene.** Read the feature map README and list its sibling files. Fix missing, extra, duplicate, or dead entries. Lightweight; no generated inventory.
 
-2. **Source wave.** One read-only subagent per feature file, launched concurrently in one message (Agent tool with `subagent_type: "Explore"`, or `codex-worker` for bulk reading). Each explains "how does this user-facing feature work?" from source, flags likely doc drift with `file:line` citations, and returns one concise live-verification recipe. Children never drive the app and never edit files. Return shape: feature summary / source entry points / likely drift or none / one recipe.
+2. **Source wave.** One read-only subagent per feature file, launched concurrently in one message (Agent tool with `subagent_type: "Explore"`, or an Opus subagent for bulk reading). Each explains "how does this user-facing feature work?" from source, flags likely doc drift with `file:line` citations, and returns one concise live-verification recipe. Children never drive the app and never edit files. Return shape: feature summary / source entry points / likely drift or none / one recipe.
 
 3. **Reconcile.** Every feature file has a returned summary. Merge overlapping recipes into as few app states as practical. Spot-check cited drift; don't re-prove clean claims. Sweep recent churn (`git log` on `apps/web/src/router.tsx`, locale files, `apps/api/scripts/seed-demo.ts`) for user-facing surfaces missing from the map; require a concrete source path before calling one missing.
 

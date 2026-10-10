@@ -68,7 +68,7 @@ Correct the log, not the story. The audit never edits or removes a row, even an 
 
 ## Cross-model review of the trail
 
-Before handing back, have a model from a different family read the trail. Self-review is not a substitute. From a Claude session, use a `codex-worker` subagent (GPT); from a Codex session, ask a Claude subagent. The reviewer reads the audit trail and the run's transcript, then flags what the user should pay attention to. Not a redo of the work, a scan for what's suboptimal or risky.
+Before handing back, have a different model read the trail. Self-review is not a substitute. From an Opus session, use a Fable subagent; from a Fable session, an Opus subagent. Claude models only: never GPT or Codex. The reviewer reads the audit trail and the run's transcript, then flags what the user should pay attention to. Not a redo of the work, a scan for what's suboptimal or risky.
 
 - Decisions logged with weak or absent evidence.
 - Verification steps skipped or claimed without proof in the transcript.
