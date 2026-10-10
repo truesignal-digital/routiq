@@ -17,16 +17,16 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   const show = page.getByRole("button", { name: t("Afficher le résumé", "Show summary") });
   const close = page.getByRole("button", { name: t("Fermer le résumé", "Close the summary") });
 
-  type Notice = { today: string; scheduledOn: string; scheduledToday: string | null; changes: Array<{ kind: string; key: string }> };
+  type Notice = { today: string; schedule: string; scheduledOn: string | null; scheduledToday: string | null; changes: Array<{ kind: string; key: string }> };
   const read = await apiGet("/v1/finance/overview");
   const body = read.body as { summary?: { template: string; measure: string; window: string }; notice?: Notice };
   if (read.status !== 200 || body.summary === undefined || body.notice === undefined) {
     throw new Error(`GET /v1/finance/overview → ${read.status} without a summary and notice`);
   }
-  const due = body.notice.scheduledToday !== null || body.notice.changes.length > 0;
+  const due = body.notice.schedule !== "NEVER" && (body.notice.scheduledToday !== null || body.notice.changes.length > 0);
   log(
     `api: summary ${body.summary.template} (${body.summary.measure}, ${body.summary.window}); today ${body.notice.today}, ` +
-      `scheduled ${body.notice.scheduledOn} (${body.notice.scheduledToday ?? "not today"}), changes ${body.notice.changes.map((change) => change.kind).join(", ") || "none"}`,
+      `${body.notice.schedule}, scheduled ${body.notice.scheduledOn ?? "never"} (${body.notice.scheduledToday ?? "not today"}), changes ${body.notice.changes.map((change) => change.kind).join(", ") || "none"}`,
   );
 
   await (await openSidebar(page)).getByRole("link", { name: t("Tableau de bord", "Dashboard"), exact: true }).click();
