@@ -130,6 +130,28 @@ describe("Direction's notes in the To do (#98)", () => {
   });
 });
 
+describe("entries waiting on someone else (#542)", () => {
+  it("names the Director above Finance's band, and a colleague on Finance's own entry", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, {
+      role: "FINANCE",
+      attention: [
+        attention("ENTRY_AWAITING_REVIEW", { params: { directionDecides: true, approver: "DIRECTION_APPROVES" } }),
+        attention("ENTRY_AWAITING_REVIEW", {
+          makerPrincipalIds: [ME_ID],
+          subject: { entityType: "financial_entry", id: OTHER_ID, number: "DLA-2026-00007", rowVersion: 1 },
+          params: { approver: "FINANCE_PEER_APPROVES" },
+        }),
+      ],
+    });
+    const card = await todoCard();
+    const user = userEvent.setup();
+    await user.click(await within(card).findByRole("button", { name: /^Waiting on others/ }));
+    expect(within(card).getByText("The Director")).toBeTruthy();
+    expect(within(card).getByText("Another Finance member or the Director")).toBeTruthy();
+    expect(within(card).queryByText("Finance")).toBeNull();
+  });
+});
+
 describe("a repair whose invoice is still to come (#82)", () => {
   const WO_REF = WORK_ORDER_ID.slice(0, 8).toUpperCase();
 

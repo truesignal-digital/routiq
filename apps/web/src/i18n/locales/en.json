@@ -68,7 +68,7 @@
     "screenFailed": "Something went wrong on this page. Try again.",
     "retry": "Try again",
     "counts": {
-      "moneyWaiting": "{count, plural, one {# expense waiting for your approval} other {# expenses waiting for your approval}}",
+      "moneyWaiting": "{count, plural, one {# entry waiting for your approval} other {# entries waiting for your approval}}",
       "maintenanceNew": "{count, plural, one {# new problem to handle} other {# new problems to handle}}",
       "tooltip": "{label}: {waiting}"
     },
@@ -471,7 +471,7 @@
       "tiles": {
         "out": "Expenses in {month}",
         "in": "Revenue in {month}",
-        "waiting": "Waiting your approval",
+        "waiting": "Waiting for your approval",
         "waitingHint": "{amount} · oldest {age}",
         "missing": "Missing receipt",
         "missingHint": "Oldest {date}"
@@ -557,6 +557,7 @@
         "asset": "Asset",
         "postingAmount": "Amount",
         "reversalChain": "Cancellation",
+        "directionDecides": "Above your approval band: the Director decides.",
         "reversesEntry": "Cancellation of entry {number}",
         "reversedByEntry": "Cancelled by entry {number}",
         "rejectedReason": "Rejection reason",
@@ -2325,6 +2326,8 @@
       "manager": "A manager",
       "operations": "Operations",
       "recorder": "Whoever recorded it",
+      "director": "The Director",
+      "financePeer": "Another Finance member or the Director",
       "team": "The team"
     },
     "now": {
@@ -2709,7 +2712,7 @@
         "signOff": "Waiting on a manager to sign off the work and its cost.",
         "release": "Waiting on a manager to release the vehicle to service.",
         "planning": "Waiting on the workshop to plan a work order.",
-        "entryReview": "Waiting on finance to review it. Until then it is not counted in posted totals.",
+        "entryReview": "Waiting on {approver, select, DIRECTION_APPROVES {the Director} FINANCE_PEER_APPROVES {another Finance member or the Director} other {Finance}} to review it. Until then it is not counted in posted totals.",
         "entryReceipt": "Waiting on {name} to attach the receipt.",
         "documentRenewal": "Waiting on operations to renew it."
       },

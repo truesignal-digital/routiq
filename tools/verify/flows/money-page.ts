@@ -2,7 +2,7 @@ import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
  * Money is one page (#314): the lead line names the open and last locked
- * month, the tiles match `GET /v1/finance/summary`, the "Waiting your approval"
+ * month, the tiles match `GET /v1/finance/summary`, the "Waiting for your approval"
  * tile opens the queue with Reject and Approve on each row, Reject asks for a
  * reason, Approve is one tap, the old /finance/approvals link lands on the same
  * view, and Accounting months is one click from the header. Mutates the slot
@@ -38,7 +38,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
     highlight: page.locator("[data-slot='metric-strip']"),
   });
 
-  const waitingTile = page.getByRole("button", { name: t("En attente de votre approbation", "Waiting your approval"), exact: true });
+  const waitingTile = page.getByRole("button", { name: t("En attente de votre approbation", "Waiting for your approval"), exact: true });
   const shown = (await page.locator("[data-slot='metric-tile']").filter({ has: waitingTile }).locator("[data-slot='metric-value']").textContent())?.trim();
   if (shown !== String(body.waiting.count)) throw new Error(`waiting tile shows ${shown}, API says ${body.waiting.count}`);
   await waitingTile.click();

@@ -170,7 +170,7 @@ async function rejectDialog(ctx: DriveContext) {
   await (await openSidebar(page)).getByRole("link", { name: t("Argent", "Money") }).click();
   await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
   await quiet();
-  await page.getByRole("button", { name: t("En attente de votre approbation", "Waiting your approval"), exact: true }).click();
+  await page.getByRole("button", { name: t("En attente de votre approbation", "Waiting for your approval"), exact: true }).click();
   const row = page.locator("tr, [data-slot='data-table-row']").filter({ hasText: entry.entryNumber, visible: true });
   await row.waitFor();
   await quiet();

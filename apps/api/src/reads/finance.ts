@@ -36,6 +36,7 @@ import {
 import {
   countPendingOutsideBranch,
   directionDecidesEntries,
+  entryApprovers,
   pendingApprovalConditions,
 } from "./approvals-queue.js";
 import {
@@ -766,10 +767,12 @@ export function registerFinanceReadRoutes(
           const evidenceFiles = await entryEvidenceFiles(tx, auth.workspaceId, entry);
           const recorders = await commandActors(tx, auth.workspaceId, [entry.createdByCommandId]);
           const [directionDecides = false] = await directionDecidesEntries(tx, auth, [entry]);
+          const [approver = null] = await entryApprovers(tx, auth.workspaceId, [entry]);
 
           return {
             entry,
             directionDecides,
+            approver,
             category,
             periodCode,
             postings: postingsRows,
@@ -794,6 +797,7 @@ export function registerFinanceReadRoutes(
           evidenceFiles,
           recordedBy,
           directionDecides,
+          approver,
         } = result;
 
         const mappedPostings = postings.map((p) => ({
@@ -856,6 +860,7 @@ export function registerFinanceReadRoutes(
           links: toEntryLinks(entry),
           evidenceFiles,
           directionDecides,
+          approver,
         };
 
         return financialEntryDetail.parse(response);

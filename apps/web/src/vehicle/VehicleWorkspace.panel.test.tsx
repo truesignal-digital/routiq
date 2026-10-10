@@ -405,6 +405,19 @@ it("opens a receipt through the entry's own route, never the generic artifact ro
   expect(recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/artifacts"))).toBe(false);
 });
 
+it.each([
+  ["FINANCE_APPROVES", "Waiting on Finance to review it."],
+  ["FINANCE_PEER_APPROVES", "Waiting on another Finance member or the Director to review it."],
+  ["DIRECTION_APPROVES", "Waiting on the Director to review it."],
+] as const)("says who reviews a waiting entry on its record (#542, %s)", async (approver, sentence) => {
+  await openVehicle(`/assets/${ASSET_ID}/money?panel=entry:${ENTRY_ID}`, {
+    role: "ADMIN",
+    entryDetails: [entryDetail({ approver, evidence: { state: "PAYMENT_REFERENCE", artifactCount: 0 } })],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Repairs/ });
+  expect(within(panel).getByText(new RegExp(`^${sentence}`))).toBeTruthy();
+});
+
 it("opens an issue's photo through the issue's own route", async () => {
   const open = vi.fn();
   vi.stubGlobal("open", open);

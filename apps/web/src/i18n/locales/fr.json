@@ -68,7 +68,7 @@
     "screenFailed": "Un problème est survenu sur cette page. Réessayez.",
     "retry": "Réessayer",
     "counts": {
-      "moneyWaiting": "{count, plural, one {# dépense attend votre approbation} other {# dépenses attendent votre approbation}}",
+      "moneyWaiting": "{count, plural, one {# écriture attend votre approbation} other {# écritures attendent votre approbation}}",
       "maintenanceNew": "{count, plural, one {# nouveau problème à traiter} other {# nouveaux problèmes à traiter}}",
       "tooltip": "{label} : {waiting}"
     },
@@ -557,6 +557,7 @@
         "asset": "Actif",
         "postingAmount": "Montant",
         "reversalChain": "Annulation",
+        "directionDecides": "Au-dessus de votre seuil d'approbation : la Direction décide.",
         "reversesEntry": "Annulation de l'écriture {number}",
         "reversedByEntry": "Annulée par l'écriture {number}",
         "rejectedReason": "Motif du rejet",
@@ -2325,6 +2326,8 @@
       "manager": "Un responsable",
       "operations": "L'exploitation",
       "recorder": "L'auteur de la saisie",
+      "director": "La Direction",
+      "financePeer": "Un autre membre de la Finance ou la Direction",
       "team": "L'équipe"
     },
     "now": {
@@ -2709,7 +2712,7 @@
         "signOff": "En attente de la validation des travaux et de leur coût par un responsable.",
         "release": "En attente de la remise en service par un responsable.",
         "planning": "En attente d'un ordre de travail de l'atelier.",
-        "entryReview": "En attente d'examen par la finance. D'ici là, elle n'est pas comptée dans le comptabilisé.",
+        "entryReview": "En attente d'examen par {approver, select, DIRECTION_APPROVES {la Direction} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} other {la Finance}}. D'ici là, elle n'est pas comptée dans le comptabilisé.",
         "entryReceipt": "En attente du reçu de {name}.",
         "documentRenewal": "En attente du renouvellement par l'exploitation."
       },

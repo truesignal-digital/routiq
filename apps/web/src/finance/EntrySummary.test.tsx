@@ -97,6 +97,7 @@ const entry: FinancialEntryDetail = {
   ...entryVehicleFields,
   evidenceFiles: [],
   directionDecides: false,
+  approver: null,
   postings: [],
 };
 

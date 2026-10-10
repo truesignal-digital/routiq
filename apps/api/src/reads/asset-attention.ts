@@ -41,7 +41,7 @@ import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
 import { costToCome, workOrderActualCostSql, workOrderCostToComeColumns } from "./work-order-cost.js";
 import { dayStartSql, workspaceTimezone } from "./workspace-day.js";
-import { directionDecidesEntries } from "./approvals-queue.js";
+import { directionDecidesEntries, entryApprovers } from "./approvals-queue.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 import { directionNoteItems } from "./notes.js";
 
@@ -486,6 +486,7 @@ async function entryItems(
       amountMinor: financialEntries.amountMinor,
       rowVersion: financialEntries.rowVersion,
       createdAt: financialEntries.createdAt,
+      createdByCommandId: financialEntries.createdByCommandId,
       currency: financialEntries.currency,
       categoryLabelFr: categories.labelFr,
       categoryLabelEn: categories.labelEn,
@@ -518,6 +519,7 @@ async function entryItems(
     .where(and(...conditions));
 
   const directionDecides = await directionDecidesEntries(tx, auth, rows);
+  const approvers = await entryApprovers(tx, auth.workspaceId, rows);
   const items: AssetAttentionItem[] = [];
   for (const [index, row] of rows.entries()) {
     const recordedBy = toActor({
@@ -546,7 +548,11 @@ async function entryItems(
         since: row.createdAt.toISOString(),
         partOfGrounding: false,
         makerPrincipalIds: row.recorderPrincipalId ? [row.recorderPrincipalId] : [],
-        params: { ...params, directionDecides: directionDecides[index] ?? false },
+        params: {
+          ...params,
+          directionDecides: directionDecides[index] ?? false,
+          ...(approvers[index] ? { approver: approvers[index] } : {}),
+        },
       });
     }
     if (row.evidenceMissing) {

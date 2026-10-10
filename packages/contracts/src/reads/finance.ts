@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PROFITABILITY_LAYERS } from "../commands/categories.js";
 import { cancellationReasonCode } from "../commands/reverse-entry.js";
+import { entryApprover } from "./approval-chain.js";
 import { historyActor } from "./history.js";
 import { listResponse } from "./list.js";
 
@@ -209,6 +210,8 @@ export const financialEntryDetail = entryRecord.extend({
    * decide it, and for roles outside the entry chain.
    */
   directionDecides: z.boolean().default(false),
+  /** Who decides it while it waits, the same for every viewer (#542); null once it no longer waits. */
+  approver: entryApprover.nullable().default(null),
 });
 
 export type EntryEvidenceState = z.infer<typeof entryEvidenceState>;

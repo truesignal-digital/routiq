@@ -123,6 +123,24 @@ afterEach(() => {
   cleanup();
 });
 
+// #542: Finance opened an entry above its band and found no Approve or Reject,
+// and no reason why.
+describe("an entry above the viewer's approval band", () => {
+  it("says the Director decides instead of offering Approve and Reject", () => {
+    signedIn(OTHER_ID, "FINANCE");
+    showing(entry({ amountMinor: 1_450_000, directionDecides: true, approver: "DIRECTION_APPROVES" }));
+    expect(screen.queryByRole("button", { name: /^Approve/ })).toBeNull();
+    expect(screen.getByText("Above your approval band: the Director decides.")).toBeTruthy();
+  });
+
+  it("says nothing of the kind inside the band", () => {
+    signedIn(OTHER_ID, "FINANCE");
+    showing(entry({ directionDecides: false, approver: "FINANCE_APPROVES" }));
+    expect(screen.getByRole("button", { name: /^Approve/ })).toBeTruthy();
+    expect(screen.queryByText("Above your approval band: the Director decides.")).toBeNull();
+  });
+});
+
 describe("Edit on the finance entry detail", () => {
   it("is offered to the author while the entry waits, and opens the pre-filled form on the side panel", async () => {
     signedIn(AUTHOR_ID);

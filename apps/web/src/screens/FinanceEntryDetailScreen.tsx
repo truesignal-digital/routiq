@@ -66,11 +66,13 @@ function FinanceEntryDetailContent() {
   // role-config: an approver decides while the entry waits, never on their own
   // entry (the maker guard the server also enforces), and never above their
   // approval band, where the Director decides.
-  const canDecide =
+  const mayDecideOthers =
     entryQuery.data?.status === "SUBMITTED" &&
     canApproveEntries(me?.role, me?.enabledModules) &&
-    !isOwnSubmission(entryQuery.data.recordedBy.principalId ?? "", me?.principalId) &&
-    !entryQuery.data.directionDecides;
+    !isOwnSubmission(entryQuery.data.recordedBy.principalId ?? "", me?.principalId);
+  const canDecide = mayDecideOthers && !entryQuery.data?.directionDecides;
+  // Says why Approve and Reject are missing above the band (#542).
+  const decidesAboveBand = mayDecideOthers && entryQuery.data?.directionDecides === true;
   // role-config: the author alone, while it waits, and only an entry this
   // single-line form can write back whole.
   const canEdit =
@@ -154,6 +156,10 @@ function FinanceEntryDetailContent() {
                 void refreshFinance();
               }}
             />
+          )}
+
+          {decidesAboveBand && (
+            <p className="text-sm text-muted-foreground">{t("finance.entries.detail.directionDecides")}</p>
           )}
 
           {canDecide && (
