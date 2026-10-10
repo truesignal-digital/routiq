@@ -18,7 +18,7 @@ export const DESKTOP_VIEWPORTS = [
   { width: 1280, height: 800 },
 ] as const;
 
-export const FIT_ROUTES = ["/finance/entries", "/activities", "/finance/entries?view=waiting"] as const;
+export const FIT_ROUTES = ["/finance/entries", "/activities", "/finance/approve"] as const;
 
 /** Routes with a default sort: its column must be on screen at every width. */
 const SORTED_ROUTES: readonly string[] = ["/finance/entries"];

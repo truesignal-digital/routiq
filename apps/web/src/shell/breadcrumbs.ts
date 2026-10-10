@@ -48,17 +48,20 @@ export const PAGE_TRAILS: readonly PageTrail[] = [
   },
   { pattern: "/finance/record", trail: [{ labelKey: "finance.navigation.record" }] },
   // The page title keys, so the Money and Accounting months rows name these pages once.
-  { pattern: "/finance/entries", trail: [{ labelKey: "finance.entries.title" }] },
+  // The Money page's tabs (#664): Overview is the section itself, the others
+  // name their tab under it so a phone gets a step back up.
+  { pattern: "/finance/entries", trail: [{ labelKey: "finance.page.tabs.entries" }] },
+  { pattern: "/finance/approve", trail: [{ labelKey: "finance.page.tabs.approve" }] },
   {
     pattern: "/finance/entries/$entryId",
     trail: [
-      { labelKey: "finance.entries.title", to: "/finance/entries" },
+      { labelKey: "finance.page.tabs.entries", to: "/finance/entries" },
       { labelKey: "finance.entries.detail.breadcrumb", record: true },
     ],
     elsewhere: "assets",
   },
-  // Redirects to the waiting view; named the same in case a frame renders first.
-  { pattern: "/finance/approvals", trail: [{ labelKey: "finance.money.lens.waiting" }] },
+  // Redirects to the To approve tab; named the same in case a frame renders first.
+  { pattern: "/finance/approvals", trail: [{ labelKey: "finance.page.tabs.approve" }] },
   { pattern: "/finance/periods", trail: [{ labelKey: "finance.periods.title" }] },
   { pattern: "/my-settings", trail: [{ labelKey: "mySettings.title" }] },
   { pattern: "/more/persons", trail: [{ labelKey: "persons.title" }] },

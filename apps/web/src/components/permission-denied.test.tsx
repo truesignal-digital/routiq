@@ -18,6 +18,8 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
   useParams: () => ({ assetId: "00000000-0000-4000-8000-000000000099" }),
   useSearch: () => ({}),
+  useRouterState: () => "/finance",
+  Outlet: () => null,
   Link: ({ children }: { children?: ReactNode }) => children,
 }));
 
@@ -49,13 +51,13 @@ vi.mock("../documents/useDocuments.js", () => ({
   useAssetDocuments: () => pendingQuery,
 }));
 
-const { FinanceEntriesScreen } = await import("../screens/FinanceEntriesScreen.js");
+const { FinanceScreen } = await import("../screens/FinanceScreen.js");
 const { FinancePeriodsScreen } = await import("../screens/FinancePeriodsScreen.js");
 const { FinanceRecordScreen } = await import("../screens/FinanceRecordScreen.js");
 
 const SCREENS = [
   ["record", FinanceRecordScreen],
-  ["entries", FinanceEntriesScreen],
+  ["money", FinanceScreen],
   ["periods", FinancePeriodsScreen],
 ] as const;
 

@@ -323,6 +323,47 @@
       "dependencies": []
     },
     {
+      "name": "module-page",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/module-page.tsx",
+          "type": "registry:file",
+          "target": "components/module-page.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "page",
+        "page-container",
+        "tabs"
+      ],
+      "dependencies": [
+        "@tanstack/react-router"
+      ]
+    },
+    {
+      "name": "overview",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/overview/compare-bars.tsx",
+          "type": "registry:file",
+          "target": "components/overview/compare-bars.tsx"
+        },
+        {
+          "path": "src/components/overview/to-do-list.tsx",
+          "type": "registry:file",
+          "target": "components/overview/to-do-list.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "button"
+      ],
+      "dependencies": [
+        "@tanstack/react-router"
+      ]
+    },
+    {
       "name": "utils",
       "type": "registry:lib",
       "files": [

@@ -327,10 +327,10 @@ describe("finance period command routing", () => {
     expect(periodCodesInOrder()).toEqual([CURRENT, "2026-06"]);
   });
 
-  it("uses the wide container the other finance list screens use", () => {
+  it("sits in the page frame every other page uses (#658)", () => {
     const { container } = renderScreen();
 
-    expect(container.querySelector("section")?.className).toContain("max-w-6xl");
+    expect(container.querySelector("section")?.hasAttribute("data-page-frame")).toBe(true);
   });
 
   // #585: a locked month still takes late entries, into the current month

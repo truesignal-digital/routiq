@@ -143,7 +143,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
 
   await closeDialogs();
   await signInAs(page, "finance");
-  await nav("/finance/entries?view=waiting");
+  await nav("/finance/approve");
   await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
   // A table row on desktop, a list row on a phone: the button names the entry either way.
   const approve = page.getByRole("button", {

@@ -251,9 +251,10 @@ export function ActivitiesScreen() {
 
 
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader
         title={t("activities.title")}
+        description={t("activities.subtitle")}
         actions={
           canRecord ? (
             <Button
@@ -266,10 +267,6 @@ export function ActivitiesScreen() {
           ) : undefined
         }
       />
-
-      <p className="mt-2 max-w-lg text-sm text-muted-foreground">
-        {t("activities.subtitle")}
-      </p>
 
       <MetricStrip
         className="mt-6"

@@ -66,7 +66,7 @@ export function ActivityDetailScreen() {
   const middleColumns = (hasTimeline ? 1 : 0) + (hasAssets ? 1 : 0);
 
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader
         title={activity.activityNumber}
         actions={
@@ -103,7 +103,7 @@ export function ActivityDetailScreen() {
       </div>
 
       {activity.description !== null && activity.description !== "" && (
-        <p className="mt-3 max-w-prose text-sm">{activity.description}</p>
+        <p className="mt-3 text-sm">{activity.description}</p>
       )}
 
       {/* An open activity has no verdict yet, and the spacer must go with it. */}

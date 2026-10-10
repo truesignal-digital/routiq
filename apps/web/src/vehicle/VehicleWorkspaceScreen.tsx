@@ -48,7 +48,7 @@ export function VehicleWorkspaceScreen() {
 
   if (assetQuery.isPending || me === undefined) {
     return (
-      <PageContainer width="wide">
+      <PageContainer>
         <LoadingState label={t("assets.detail.loading")} rows={3} />
       </PageContainer>
     );
@@ -58,7 +58,7 @@ export function VehicleWorkspaceScreen() {
     // Outside the caller's scope is a 404, never a 403: the vehicle simply is not theirs to see.
     const notFound = assetQuery.error?.message === "ASSET_DETAIL_404";
     return (
-      <PageContainer width="wide">
+      <PageContainer>
         {notFound ? (
           <EmptyState icon={<Truck className="size-7" aria-hidden />} message={t("vehicle.page.notFound")} />
         ) : (
@@ -151,7 +151,7 @@ function Workspace({ asset, me }: { asset: AssetDetail; me: MeContext }) {
 
   return (
     <VehicleCtx.Provider value={value}>
-      <PageContainer width="wide" className="pb-48 md:pb-28">
+      <PageContainer className="pb-48 md:pb-28">
         <header className="space-y-2.5">
           <IdentityStrip />
           <OtherBranchNotice branchCode={asset.branch.code} />

@@ -474,30 +474,12 @@
       "record": "Record"
     },
     "money": {
-      "lead": {
-        "unlocked": "Every expense and revenue. {months} {count, plural, one {isn't} other {aren't}} locked yet. Tiles show {month}.",
-        "unlockedMany": "Every expense and revenue. {count} months aren't locked yet, starting with {oldest}. Tiles show {month}.",
-        "locked": "Every expense and revenue. {locked} is locked. Tiles show {month}.",
-        "none": "Every expense and revenue. Tiles show {month}.",
-        "own": {
-          "unlocked": "Your expenses. {months} {count, plural, one {isn't} other {aren't}} locked yet. Tiles show {month}.",
-          "unlockedMany": "Your expenses. {count} months aren't locked yet, starting with {oldest}. Tiles show {month}.",
-          "locked": "Your expenses. {locked} is locked. Tiles show {month}.",
-          "none": "Your expenses. Tiles show {month}."
-        }
-      },
       "tiles": {
-        "out": "Expenses in {month}",
-        "in": "Revenue in {month}",
-        "waiting": "Waiting for your approval",
         "waitingHint": "{amount} · oldest {age}",
         "missing": "Missing receipt",
         "missingHint": "Oldest {date}"
       },
       "lens": {
-        "waiting": "Waiting approval",
-        "out": "Expenses this month",
-        "in": "Revenue this month",
         "missing": "Missing receipt",
         "clear": "Clear filter: {name}"
       }
@@ -617,7 +599,8 @@
         "ledger": "Posted and cancelled",
         "periodPlaceholder": "Period (YYYY-MM)",
         "asset": "Asset",
-        "assetOption": "{code} — {name}"
+        "assetOption": "{code} — {name}",
+        "economicMonth": "Dated {month}"
       },
       "events": {
         "cancelledIn": "Cancelled in {month}",
@@ -697,6 +680,70 @@
       "decidedTitle": "This entry has already been decided",
       "decidedBody": "An approver approved or rejected it while you were editing. Your changes were not saved.",
       "branchUnknown": "The branch it was recorded in"
+    },
+    "page": {
+      "description": "Every revenue and expense.",
+      "descriptionOwn": "The expenses you recorded.",
+      "tabs": {
+        "label": "Money sections",
+        "overview": "Overview",
+        "entries": "Entries",
+        "approve": "To approve",
+        "waitingCount": "{count, plural, one {entry waiting} other {entries waiting}}"
+      }
+    },
+    "overview": {
+      "loadFailed": "Could not load the overview. Try again.",
+      "range": {
+        "label": "Period",
+        "month": "This month",
+        "3-months": "3 months",
+        "12-months": "12 months"
+      },
+      "period": "{period} compared with {comparison}",
+      "change": {
+        "moved": "{arrow} {change} vs {period}",
+        "same": "Same as {period}"
+      },
+      "tiles": {
+        "expenses": "Expenses",
+        "revenue": "Revenue",
+        "approve": "To approve",
+        "monthClose": "{month} close"
+      },
+      "counted": {
+        "posted": "Counted: {count, plural, one {# posted entry} other {# posted entries}}.",
+        "waiting": "Not counted: {count, plural, one {# entry in the period waits} other {# entries in the period wait}} for approval ({amount}).",
+        "missingReceipt": "{count, plural, one {# entry in the period has} other {# entries in the period have}} no receipt.",
+        "openTrips": "{count, plural, one {# activity is still open} other {# activities are still open}}: their money may still come.",
+        "otherCurrency": "{count, plural, one {# entry in another currency is} other {# entries in another currency are}} left out."
+      },
+      "categories": {
+        "title": "Expenses by category",
+        "question": "Where did spending change?",
+        "description": "Where did spending change? {period} (bar) against {comparison} (mark).",
+        "versus": "vs {amount}",
+        "other": "{count, plural, one {# other category} other {# other categories}}",
+        "empty": "No expenses in either period.",
+        "open": "Open Entries"
+      },
+      "todo": {
+        "title": "To do",
+        "empty": "Nothing waits for you.",
+        "approve": "{count, plural, one {# entry waits} other {# entries wait}} for your approval",
+        "missing": "{count, plural, one {# entry has} other {# entries have}} no receipt",
+        "openApprove": "Open To approve",
+        "openEntries": "Open in Entries",
+        "review": "Review",
+        "closeMonth": "Close {month}"
+      },
+      "monthClose": {
+        "locked": "Locked",
+        "open": "Open",
+        "none": "No entries",
+        "earlier": "Earlier, not locked: {months}",
+        "earlierMany": "{count} earlier months not locked"
+      }
     }
   },
   "common": {
@@ -705,6 +752,10 @@
     "add": "Add",
     "readFailed": "Could not load",
     "howCalculated": "How this is calculated",
+    "profit": "Profit",
+    "loss": "Loss",
+    "profitAmount": "Profit {amount}",
+    "lossAmount": "Loss {amount}",
     "recordNumber": {
       "workOrder": "WO-{number}",
       "issue": "PRB-{number}",
@@ -830,14 +881,13 @@
       "endedAt": "Ended",
       "assets": "Assets and crew",
       "legs": "Legs",
-      "money": "Revenue and costs",
-      "moneyCosts": "Costs",
+      "money": "Revenue and expenses",
+      "moneyCosts": "Expenses",
       "km": "{count} km",
       "closedAt": "Closed {date}",
       "overview": {
         "started": "Started",
         "ended": "Ended",
-        "net": "Net",
         "postedOnly": "posted lines only",
         "legs": "Legs"
       },
@@ -874,10 +924,9 @@
         "passengers": "Passengers"
       },
       "moneySummary": {
-        "net": "Net",
         "postedOnly": "posted only",
         "pending": "Awaiting approval",
-        "pendingHint": "Lines awaiting approval are listed but stay out of the net.",
+        "pendingHint": "Lines awaiting approval are listed but stay out of the profit.",
         "ownOnly": "Only the entries you recorded on this activity.",
         "branchOnly": "Only the entries of your branches on this activity."
       }
@@ -985,7 +1034,7 @@
         "flavourJourney": "Seats",
         "flavourHaulage": "Cargo",
         "money": "Revenue and expenses",
-        "moneyCosts": "Costs"
+        "moneyCosts": "Expenses"
       },
       "branchLabel": "Branch",
       "chooseBranch": "Choose a branch",
@@ -998,7 +1047,7 @@
       "clientReferenceLabel": "Client ref. (optional)",
       "clientReferencePlaceholder": "Order or docket number",
       "descriptionLabel": "Notes (optional)",
-      "descriptionPlaceholder": "What the sheet notes in the margin",
+      "descriptionPlaceholder": "Anything else the sheet says",
       "primaryAssetLabel": "Primary asset",
       "chooseAsset": "Choose an asset",
       "startedAtLabel": "Departure",
@@ -2518,7 +2567,7 @@
       "revenue": "Posted revenue",
       "revenueHint": "Posted is not cash received",
       "entryCount": "{count, plural, one {# entry} other {# entries}}",
-      "byCategory": "Spending by category",
+      "byCategory": "Expenses by category",
       "byCategoryHint": "Posted, {period}",
       "lastSixMonths": "Last 6 months",
       "lastSixMonthsHint": "Posted entries by posting period",
@@ -2542,7 +2591,7 @@
       "forTrip": "for activity {number}",
       "forWorkOrder": "for work order {ref}",
       "ofEntry": "of a {amount} entry",
-      "lifetime": "Lifetime, all posted entries since registration: revenue {revenue} · expenses {expenses} · net {net}. Recorded figures, not cash paid or profit."
+      "lifetime": "Lifetime, all posted entries since registration: Revenue {revenue} · Expenses {expenses} · {result}. Recorded in ROUTIQ: not cash paid, and taxes and loan repayments are not in it."
     },
     "layers": {
       "DIRECT": "Direct",

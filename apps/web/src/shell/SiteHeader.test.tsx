@@ -111,7 +111,7 @@ describe("SiteHeader breadcrumb", () => {
   });
 
   it("walks Home / Money, naming the page once", () => {
-    pathname = "/finance/entries";
+    pathname = "/finance";
     render(<SiteHeader />);
 
     expect(crumbs()).toEqual([
@@ -120,13 +120,14 @@ describe("SiteHeader breadcrumb", () => {
     ]);
   });
 
-  it("gives an entry a third crumb, after the Money crumb that links back to the list", () => {
+  it("gives an entry its crumb after the Entries tab, which links back to the list", () => {
     pathname = "/finance/entries/00000000-0000-4000-8000-000000000010";
     render(<SiteHeader />);
 
     expect(crumbs()).toEqual([
       ["home.title", "/"],
-      ["finance.entries.title", "/finance/entries"],
+      ["finance.entries.title", "/finance"],
+      ["finance.page.tabs.entries", "/finance/entries"],
       ["finance.entries.detail.breadcrumb", null],
     ]);
   });
@@ -137,7 +138,7 @@ describe("SiteHeader breadcrumb", () => {
 
     expect(crumbs()).toEqual([
       ["home.title", "/"],
-      ["finance.entries.title", "/finance/entries"],
+      ["finance.entries.title", "/finance"],
       ["finance.navigation.record", null],
     ]);
   });
@@ -221,7 +222,7 @@ describe("SiteHeader breadcrumb", () => {
       const { container } = render(<SiteHeader />);
 
       expect(phoneCrumb(container)?.getAttribute("href")).toBe("/finance/entries");
-      expect(phoneCrumb(container)?.textContent).toBe("finance.entries.title");
+      expect(phoneCrumb(container)?.textContent).toBe("finance.page.tabs.entries");
     });
 
     it("steps back to Trips from a trip and from Record a trip", () => {

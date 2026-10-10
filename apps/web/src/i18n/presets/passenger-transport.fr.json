@@ -63,6 +63,11 @@
       "filters": {
         "asset": "Véhicule"
       }
+    },
+    "overview": {
+      "counted": {
+        "openTrips": "{count, plural, one {# voyage est encore ouvert} other {# voyages sont encore ouverts}} : leur argent peut encore arriver."
+      }
     }
   },
   "activities": {

@@ -264,9 +264,10 @@ export function MaintenanceScreen() {
   }
 
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader
         title={t("maintenance.title")}
+        description={t("maintenance.subtitle")}
         actions={
           <div className="flex flex-wrap gap-2">
             {canReport && (
@@ -291,10 +292,6 @@ export function MaintenanceScreen() {
           </div>
         }
       />
-
-      <p className="mt-2 max-w-lg text-sm text-muted-foreground">
-        {t("maintenance.subtitle")}
-      </p>
 
       <MetricStrip
         className="mt-6"

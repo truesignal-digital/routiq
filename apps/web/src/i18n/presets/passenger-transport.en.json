@@ -63,6 +63,11 @@
       "filters": {
         "asset": "Vehicle"
       }
+    },
+    "overview": {
+      "counted": {
+        "openTrips": "{count, plural, one {# trip is still open} other {# trips are still open}}: their money may still come."
+      }
     }
   },
   "activities": {

@@ -2,7 +2,7 @@ import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
  * A driver's money views say and hold expenses only (#593, #594). Sali's trip
- * page titles its money card "Costs", so does the trip sheet's, her money
+ * page titles its money card "Expenses", so does the trip sheet's, her money
  * list holds expenses only (GET /v1/finance/entries), and VH001's readings
  * name her trip but not Boris's (GET /v1/assets/:id/readings).
  *
@@ -30,13 +30,13 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet, nav }) => 
   if (lines.length === 0 || lines.some((line) => line.direction !== "EXPENSE")) {
     throw new Error(`trip money for the driver: ${JSON.stringify(lines)}`);
   }
-  const costs = page.getByText(t("Dépenses", "Costs"), { exact: true }).first();
+  const costs = page.getByText(t("Dépenses", "Expenses"), { exact: true }).first();
   await costs.scrollIntoViewIfNeeded();
-  if ((await page.getByText(t("Recettes et dépenses", "Revenue and costs"), { exact: true }).count()) > 0) {
+  if ((await page.getByText(t("Recettes et dépenses", "Revenue and expenses"), { exact: true }).count()) > 0) {
     throw new Error("the trip page still says revenue");
   }
   await shot("trip-costs", {
-    caption: `Her trip ${own.activityNumber}: the money card is titled Costs and lists her fuel only`,
+    caption: `Her trip ${own.activityNumber}: the money card is titled Expenses and lists her fuel only`,
     highlight: costs.locator("xpath=ancestor::*[@data-slot='card'][1]"),
   });
 
@@ -44,10 +44,10 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet, nav }) => 
   await page.getByRole("heading", { level: 1, name: t("Trajets", "Trips") }).waitFor();
   await page.getByRole("button", { name: t("Saisir une fiche", "Record a sheet") }).first().click();
   await quiet();
-  const sheetCosts = page.getByText(t("Dépenses", "Costs"), { exact: true }).first();
+  const sheetCosts = page.getByText(t("Dépenses", "Expenses"), { exact: true }).first();
   await sheetCosts.scrollIntoViewIfNeeded();
   await shot("sheet-costs", {
-    caption: "Her trip sheet's money card is titled Costs too: she adds expenses only",
+    caption: "Her trip sheet's money card is titled Expenses too: she adds expenses only",
     highlight: sheetCosts.locator("xpath=ancestor::*[@data-slot='card'][1]"),
   });
 

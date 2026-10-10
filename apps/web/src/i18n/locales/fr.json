@@ -474,30 +474,12 @@
       "record": "Saisie"
     },
     "money": {
-      "lead": {
-        "unlocked": "Toutes les dépenses et recettes. {months} {count, plural, one {n'est pas encore clôturé} other {ne sont pas encore clôturés}}. Les totaux portent sur {month}.",
-        "unlockedMany": "Toutes les dépenses et recettes. {count} mois ne sont pas encore clôturés, à partir de {oldest}. Les totaux portent sur {month}.",
-        "locked": "Toutes les dépenses et recettes. {locked} est clôturé. Les totaux portent sur {month}.",
-        "none": "Toutes les dépenses et recettes. Les totaux portent sur {month}.",
-        "own": {
-          "unlocked": "Vos dépenses. {months} {count, plural, one {n'est pas encore clôturé} other {ne sont pas encore clôturés}}. Les totaux portent sur {month}.",
-          "unlockedMany": "Vos dépenses. {count} mois ne sont pas encore clôturés, à partir de {oldest}. Les totaux portent sur {month}.",
-          "locked": "Vos dépenses. {locked} est clôturé. Les totaux portent sur {month}.",
-          "none": "Vos dépenses. Les totaux portent sur {month}."
-        }
-      },
       "tiles": {
-        "out": "Sorties en {month}",
-        "in": "Entrées en {month}",
-        "waiting": "En attente de votre approbation",
         "waitingHint": "{amount} · la plus ancienne {age}",
         "missing": "Justificatif manquant",
         "missingHint": "Le plus ancien : {date}"
       },
       "lens": {
-        "waiting": "En attente d’approbation",
-        "out": "Sorties du mois",
-        "in": "Entrées du mois",
         "missing": "Justificatif manquant",
         "clear": "Retirer le filtre : {name}"
       }
@@ -617,7 +599,8 @@
         "ledger": "Comptabilisées et annulées",
         "periodPlaceholder": "Période (AAAA-MM)",
         "asset": "Actif",
-        "assetOption": "{code} — {name}"
+        "assetOption": "{code} — {name}",
+        "economicMonth": "Datées de {month}"
       },
       "events": {
         "cancelledIn": "Annulée en {month}",
@@ -697,6 +680,70 @@
       "decidedTitle": "Cette écriture a déjà été traitée",
       "decidedBody": "Un approbateur l'a approuvée ou rejetée pendant que vous la modifiiez. Vos changements n'ont pas été enregistrés.",
       "branchUnknown": "L'agence d'origine"
+    },
+    "page": {
+      "description": "Toutes les recettes et dépenses.",
+      "descriptionOwn": "Les dépenses que vous avez enregistrées.",
+      "tabs": {
+        "label": "Sections de l’argent",
+        "overview": "Vue d'ensemble",
+        "entries": "Écritures",
+        "approve": "À approuver",
+        "waitingCount": "{count, plural, one {écriture en attente} other {écritures en attente}}"
+      }
+    },
+    "overview": {
+      "loadFailed": "Impossible de charger la vue d'ensemble. Réessayez.",
+      "range": {
+        "label": "Période",
+        "month": "Ce mois",
+        "3-months": "3 mois",
+        "12-months": "12 mois"
+      },
+      "period": "{period} comparé à {comparison}",
+      "change": {
+        "moved": "{arrow} {change} vs {period}",
+        "same": "Comme {period}"
+      },
+      "tiles": {
+        "expenses": "Dépenses",
+        "revenue": "Recettes",
+        "approve": "À approuver",
+        "monthClose": "Clôture de {month}"
+      },
+      "counted": {
+        "posted": "Compté : {count, plural, one {# écriture comptabilisée} other {# écritures comptabilisées}}.",
+        "waiting": "Non compté : {count, plural, one {# écriture de la période attend} other {# écritures de la période attendent}} une approbation ({amount}).",
+        "missingReceipt": "{count, plural, one {# écriture de la période n’a} other {# écritures de la période n’ont}} pas de justificatif.",
+        "openTrips": "{count, plural, one {# activité est encore ouverte} other {# activités sont encore ouvertes}} : leur argent peut encore arriver.",
+        "otherCurrency": "{count, plural, one {# écriture dans une autre devise est laissée} other {# écritures dans une autre devise sont laissées}} de côté."
+      },
+      "categories": {
+        "title": "Dépenses par catégorie",
+        "question": "Où les dépenses ont-elles changé ?",
+        "description": "Où les dépenses ont-elles changé ? {period} (barre) face à {comparison} (repère).",
+        "versus": "vs {amount}",
+        "other": "{count, plural, one {# autre catégorie} other {# autres catégories}}",
+        "empty": "Aucune dépense sur les deux périodes.",
+        "open": "Ouvrir les écritures"
+      },
+      "todo": {
+        "title": "À faire",
+        "empty": "Rien ne vous attend.",
+        "approve": "{count, plural, one {# écriture attend} other {# écritures attendent}} votre approbation",
+        "missing": "{count, plural, one {# écriture n’a} other {# écritures n’ont}} pas de justificatif",
+        "openApprove": "Ouvrir À approuver",
+        "openEntries": "Ouvrir dans les écritures",
+        "review": "Vérifier",
+        "closeMonth": "Clôturer {month}"
+      },
+      "monthClose": {
+        "locked": "Verrouillé",
+        "open": "Ouvert",
+        "none": "Aucune écriture",
+        "earlier": "Avant, non clôturés : {months}",
+        "earlierMany": "{count} mois précédents non clôturés"
+      }
     }
   },
   "common": {
@@ -705,6 +752,10 @@
     "add": "Ajouter",
     "readFailed": "Chargement impossible",
     "howCalculated": "Mode de calcul",
+    "profit": "Bénéfice",
+    "loss": "Perte",
+    "profitAmount": "Bénéfice {amount}",
+    "lossAmount": "Perte {amount}",
     "recordNumber": {
       "workOrder": "OT-{number}",
       "issue": "PB-{number}",
@@ -837,7 +888,6 @@
       "overview": {
         "started": "Départ",
         "ended": "Arrivée",
-        "net": "Résultat",
         "postedOnly": "lignes comptabilisées seulement",
         "legs": "Étapes"
       },
@@ -874,10 +924,9 @@
         "passengers": "Passagers"
       },
       "moneySummary": {
-        "net": "Résultat",
         "postedOnly": "comptabilisé seulement",
         "pending": "En attente d'approbation",
-        "pendingHint": "Les lignes en attente sont listées mais restent hors du résultat.",
+        "pendingHint": "Les lignes en attente sont listées mais restent hors du bénéfice.",
         "ownOnly": "Seules les écritures que vous avez saisies sur cette activité.",
         "branchOnly": "Seules les écritures de vos agences sur cette activité."
       }
@@ -998,7 +1047,7 @@
       "clientReferenceLabel": "Réf. client (facultatif)",
       "clientReferencePlaceholder": "N° de bon ou de commande",
       "descriptionLabel": "Observations (facultatif)",
-      "descriptionPlaceholder": "Ce que la fiche note en marge",
+      "descriptionPlaceholder": "Ce que la fiche indique d'autre",
       "primaryAssetLabel": "Engin principal",
       "chooseAsset": "Choisir un engin",
       "startedAtLabel": "Départ",
@@ -2542,7 +2591,7 @@
       "forTrip": "pour l'activité {number}",
       "forWorkOrder": "pour l'ordre de travail {ref}",
       "ofEntry": "sur une écriture de {amount}",
-      "lifetime": "Depuis l'enregistrement, toutes écritures comptabilisées : recettes {revenue} · dépenses {expenses} · net {net}. Montants saisis, ni trésorerie ni bénéfice."
+      "lifetime": "Depuis l'enregistrement, toutes écritures comptabilisées : Recettes {revenue} · Dépenses {expenses} · {result}. Montants saisis dans ROUTIQ : ni trésorerie, ni impôts, ni remboursements de prêt."
     },
     "layers": {
       "DIRECT": "Direct",

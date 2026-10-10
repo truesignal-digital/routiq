@@ -232,7 +232,7 @@ export function FinancePeriodsScreen() {
   }
 
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader
         title={t("finance.periods.title")}
       />
