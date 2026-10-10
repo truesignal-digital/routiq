@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { WalletCards } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
+import { PermissionDenied } from "@/components/permission-denied.js";
 import { useMeContext } from "@/auth/me.js";
 import { canRecordFinance, canRecordRevenue } from "@/finance/permissions.js";
 import { RecordEntryForm } from "@/finance/RecordEntryForm.js";
@@ -23,7 +23,7 @@ export function FinanceRecordScreen() {
       <PermissionDenied
         title={t("finance.record.title")}
         icon={<WalletCards className="size-7" aria-hidden />}
-        code={deniedCode(me.enabledModules.includes("FINANCE"))}
+        code="ROLE_FORBIDDEN"
       />
     );
   }

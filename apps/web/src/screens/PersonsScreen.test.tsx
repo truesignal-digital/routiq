@@ -59,7 +59,7 @@ vi.mock("../activities/usePersons.js", () => ({
   },
 }));
 
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => ({
     data: { assetClasses: [], branches: [{ code: "DLA", name: "Douala" }] },
     isError: false,
@@ -173,11 +173,5 @@ describe("PersonsScreen", () => {
     },
   );
 
-  it("shows a denied surface when the module is off", async () => {
-    meValue = { role: "ADMIN", enabledModules: ["CORE"] };
-    render(<PersonsScreen />);
-
-    expect(await screen.findByText("persons.title")).toBeTruthy();
-    expect(screen.queryByText("Amadou Bello")).toBeNull();
-  });
+  // With Trips off the shell never opens this screen: modules/manifests.test.tsx.
 });

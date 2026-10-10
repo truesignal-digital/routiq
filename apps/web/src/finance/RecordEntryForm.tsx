@@ -35,11 +35,11 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { PinnedAssetField } from "../assets/PinnedAssetField.js";
-import { useAssetRegistrationReference } from "../assets/reference.js";
+import { useAssetRegistrationReference } from "../reference/asset-registration.js";
 import { useAssetOptions } from "../assets/useAssetOptions.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
-import { useCategories } from "../documents/useCategories.js";
+import { useCategories } from "../categories/useCategories.js";
 import { localizedLabel } from "../lib/format.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
 import { ALL_BRANCHES } from "../shell/branch-context.js";

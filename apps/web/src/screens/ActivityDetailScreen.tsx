@@ -1,5 +1,4 @@
 import { useParams } from "@tanstack/react-router";
-import { Route as RouteIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ActivityActions } from "@/activities/ActivityActions.js";
 import { CompletenessBanner } from "@/activities/CompletenessBanner.js";
@@ -9,13 +8,12 @@ import { ActivityLegs } from "@/activities/detail/ActivityLegs.js";
 import { ActivityMoney } from "@/activities/detail/ActivityMoney.js";
 import { ActivityOverview } from "@/activities/detail/ActivityOverview.js";
 import { ActivityTimeline } from "@/activities/detail/ActivityTimeline.js";
-import { canViewActivities } from "@/activities/permissions.js";
 import { useActivity } from "@/activities/useActivities.js";
 import { useMeContext } from "@/auth/me.js";
 import { canReadFinance, entriesScope } from "@/finance/permissions.js";
+import { contributes } from "@/modules/manifest.js";
 import { ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
 import { ProvenanceStamp } from "@/components/provenance-stamp.js";
 import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 import { formatDateTime, localizedLabel } from "@/lib/format.js";
@@ -26,19 +24,9 @@ export function ActivityDetailScreen() {
   const { t, i18n } = useTranslation();
   const { activityId } = useParams({ from: "/app/activities/$activityId" });
   const me = useMeContext();
-  const canView = canViewActivities(me?.enabledModules);
   const activityQuery = useActivity(activityId);
   useRecordCrumb(activityQuery.data?.activityNumber);
 
-  if (me !== undefined && !canView) {
-    return (
-      <PermissionDenied
-        title={t("activities.title")}
-        icon={<RouteIcon className="size-7" aria-hidden />}
-        code={deniedCode(me.enabledModules.includes("ACTIVITIES"))}
-      />
-    );
-  }
 
   if (activityQuery.isPending) {
     return (
@@ -64,7 +52,9 @@ export function ActivityDetailScreen() {
   const locale = i18n.language;
   // role-config: the trip's net is for the ledger readers; a driver reads only
   // the entries they recorded (#264).
-  const tripTotals = canReadFinance(me?.role, me?.enabledModules);
+  // Money's field on a trip: its entries and totals go with the module.
+  const tripMoney = contributes("fields", "trip.money", me?.enabledModules);
+  const tripTotals = tripMoney && canReadFinance(me?.role, me?.enabledModules);
 
   // The two halves of the middle band each disappear on their own; a lone
   // survivor takes the full width rather than sitting beside a hole.
@@ -139,7 +129,7 @@ export function ActivityDetailScreen() {
         <ActivityLegs legs={activity.legs} />
         {/* Null for roles that read no entries, or with FINANCE off (#103). A
             driver's list is their own entries only (#264). */}
-        {activity.financialEntries !== null && (
+        {tripMoney && activity.financialEntries !== null && (
           <ActivityMoney
             entries={activity.financialEntries}
             totals={tripTotals}

@@ -33,14 +33,14 @@ vi.mock("@/finance/useEntry.js", () => ({ useEntry: mocks.entry }));
 vi.mock("@/finance/EntrySummary.js", () => ({ EntrySummary: () => null }));
 vi.mock("@/components/record-history-sheet.js", () => ({ RecordHistorySheet: () => null }));
 vi.mock("@/shell/BranchScopeNotices.js", () => ({ OtherBranchNotice: () => null }));
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => ({
     data: { assetClasses: [], branches: [{ id: BRANCH_ID, code: "DLA", name: "Douala" }] },
     isPending: false,
     isError: false,
   }),
 }));
-vi.mock("../documents/useCategories.js", () => ({
+vi.mock("../categories/useCategories.js", () => ({
   useCategories: () => ({
     data: [{ code: "FUEL", labelFr: "Carburant", labelEn: "Fuel" }],
     isPending: false,
