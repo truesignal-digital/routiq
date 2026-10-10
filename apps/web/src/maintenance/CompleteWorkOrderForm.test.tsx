@@ -85,6 +85,7 @@ function makeDetail(overrides: Partial<WorkOrderDetail> = {}): WorkOrderDetail {
     chronologie: [],
     costLines: [],
     pendingCostLines: [],
+    otherBranchesCostMinor: 0,
     ...overrides,
   };
 }

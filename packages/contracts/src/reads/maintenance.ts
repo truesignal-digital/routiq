@@ -115,9 +115,10 @@ export const workOrderListItem = z.object({
   asset: maintenanceAssetRef,
   branch: maintenanceBranchRef,
   /**
-   * Minor units, XAF exponent 0 — the client formats, it never divides. This
-   * and the other two amounts are null for a caller who may not read
-   * work-order costs (`canReadWorkOrderCosts`, #390).
+   * Minor units, XAF exponent 0 — the client formats, it never divides. The
+   * workshop's quote, a Maintenance fact (#640): null only for a caller who
+   * may not read work-order costs (`canReadWorkOrderCosts`, #390). The other
+   * two amounts are Finance's, and null also while FINANCE is off (#328).
    */
   expectedCostMinor: z.number().int().nullable(),
   /**
@@ -258,10 +259,17 @@ export const workOrderDetail = workOrderListItem.extend({
    * record, and its entry's branch is what finance scope is read against.
    * REJECTED entries are excluded — they record a spend that was refused.
    * Null, never an empty list, when the caller may not read work-order costs
-   * (`canReadWorkOrderCosts`, #390).
+   * (`canReadWorkOrderCosts`, #390) or FINANCE is off (#328).
    */
   costLines: z.array(workOrderCostLine).nullable(),
   pendingCostLines: z.array(workOrderPendingCostLine).nullable(),
+  /**
+   * The signed sum of the lines booked in branches outside the reader's scope
+   * (#643): one figure and never the lines themselves, so the listed lines
+   * plus this add up to the order's whole cost. 0 for a reader of every
+   * branch; null whenever the lines are.
+   */
+  otherBranchesCostMinor: z.number().int().nullable(),
 });
 
 const queryBoolean = z

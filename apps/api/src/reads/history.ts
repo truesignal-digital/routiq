@@ -2,7 +2,6 @@ import { isDeepStrictEqual } from "node:util";
 import {
   canReadDocuments,
   canReadLedger,
-  canReadWorkOrderCosts,
   moneyReadScope,
   readsOwnTripsOnly,
   HISTORY_ENTITY_MODULE,
@@ -15,6 +14,7 @@ import {
   type HistoryEntityType,
   type HistoryFieldChange,
   type ListSort,
+  type ModuleCode,
 } from "@routiq/contracts";
 import { and, eq, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
@@ -41,7 +41,8 @@ import {
   workspaces,
 } from "../db/schema.js";
 import type { TenantTx } from "../db/tenant.js";
-import { presentChanges, shownChanges } from "./history-present.js";
+import { presentChanges, shownChanges, type MoneyShown } from "./history-present.js";
+import { workOrderMoneyVisibility } from "./work-order-cost.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import { canReadEntry } from "./money-scope.js";
 import { canReadTrip } from "./trip-scope.js";
@@ -176,16 +177,20 @@ function projectState(
 /**
  * A vehicle's purchase price is a ledger figure (#121): the same rule as the
  * vehicle's own detail and its History tab. A work order's amounts follow the
- * work-order reads (#390, #328). Posting-line totals are money too, under the same
- * rule.
+ * work-order reads: the estimate for every role that reads work-order costs
+ * (#390, #640), the rest only while FINANCE is on too (#328). Posting-line
+ * totals are money too, under the same rule.
  */
 function showsHistoryMoney(
   entityType: HistoryEntityType,
   auth: AuthContext,
-  modules: ReadonlySet<string>,
-): boolean {
+  modules: ReadonlySet<ModuleCode>,
+): MoneyShown {
   if (entityType === "asset") return canReadLedger(auth.role) && modules.has("FINANCE");
-  if (entityType === "work_order") return canReadWorkOrderCosts(auth.role) && modules.has("FINANCE");
+  if (entityType === "work_order") {
+    const visible = workOrderMoneyVisibility(auth, modules);
+    return (field) => (field === "expectedCostMinor" ? visible.estimate : visible.actual);
+  }
   return true;
 }
 

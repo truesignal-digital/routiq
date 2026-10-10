@@ -565,21 +565,34 @@ describe("Maintenance and Trips", () => {
     expect(item.queryByText(/planned/)).toBeNull();
   });
 
-  it("shows no work-order amount, nor a missing estimate, while FINANCE is off (#328)", async () => {
-    // What the API sends with FINANCE off: every amount null, no cost lines.
-    const hidden = { expectedCostMinor: null, actualCostMinor: null, declaredCostMinor: null, costToCome: null };
+  it("keeps the estimate but shows no actual cost or cost lines while FINANCE is off (#640)", async () => {
+    // What the API sends with FINANCE off: the estimate, and no Finance figure.
+    const hidden = { actualCostMinor: null, declaredCostMinor: null, costToCome: null };
     await openVehicle(`/assets/${ASSET_ID}/maintenance?panel=work_order:${WORK_ORDER_ID}`, {
       role: "DIRECTOR",
       modules: ALL_MODULES.filter((code) => code !== "FINANCE"),
       workOrders: [workOrderRow("APPROVED", hidden)],
-      workOrderDetails: [workOrderDetail("APPROVED", { ...hidden, costLines: null, pendingCostLines: null })],
+      workOrderDetails: [
+        workOrderDetail("APPROVED", { ...hidden, costLines: null, pendingCostLines: null, otherBranchesCostMinor: null }),
+      ],
     });
     const dialog = await screen.findByRole("dialog", { name: "Brake repair: replace pads and air valve" });
-    expect(within(dialog).queryByText("Expected cost")).toBeNull();
+    expect(within(dialog).getByText("Expected cost")).toBeTruthy();
     expect(within(dialog).queryByText("Actual cost")).toBeNull();
+    expect(within(dialog).queryByRole("heading", { name: "Costs" })).toBeNull();
     const item = within(screen.getAllByText("Brake repair: replace pads and air valve").find((el) => el.closest("li"))!.closest("li")!);
-    expect(item.queryByText("No estimate")).toBeNull();
-    expect(item.queryByText(/planned|XAF|FCFA/)).toBeNull();
+    expect(item.getByText(/planned/)).toBeTruthy();
+  });
+
+  it("says Money is not included when FINANCE is off, without reading the books", async () => {
+    const recorded = await openVehicle(`/assets/${ASSET_ID}/money`, {
+      role: "DIRECTOR",
+      modules: ALL_MODULES.filter((code) => code !== "FINANCE"),
+    });
+    expect(await screen.findByText("This module is not enabled for your company.")).toBeTruthy();
+    expect(
+      recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/finance") || url.pathname.endsWith("/finance")),
+    ).toBe(false);
   });
 
   it("says what a closed order's cost is instead of inventing a zero (#131)", async () => {

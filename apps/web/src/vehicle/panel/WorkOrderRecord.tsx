@@ -11,7 +11,7 @@ import {
   WorkOrderDecisionForm,
   type WorkOrderRef,
 } from "@/maintenance/MaintenanceDialogs.js";
-import { Chronologie, CostLines } from "@/maintenance/WorkOrderSheet.js";
+import { Chronologie, WorkOrderCosts } from "@/maintenance/WorkOrderSheet.js";
 import { useWorkOrder } from "@/maintenance/useMaintenance.js";
 import { WorkOrderStatusBadge } from "@/maintenance/WorkOrderStatusBadge.js";
 import { useVehicle, type PanelForm } from "../context.js";
@@ -131,7 +131,7 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
               }),
             ],
             // Costs a viewer may not read are left out, not shown as blanks.
-            ...(!gates.workOrderCosts
+            ...(!gates.workOrderEstimate
               ? []
               : ([
                   [
@@ -140,6 +140,10 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
                       ? t("vehicle.maintenance.noEstimate")
                       : formatMoney(wo.expectedCostMinor, { currency: wo.currency, locale }),
                   ],
+                ] as const)),
+            ...(!gates.workOrderCosts
+              ? []
+              : ([
                   [
                     t("vehicle.panel.actualCost"),
                     wo.actualCostMinor === null
@@ -176,16 +180,10 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
           </DetailSection>
         )}
 
-        {/* Null when the reader may not see work-order costs (#390). The lines
-            awaiting review are listed too, marked as such: the actual cost
-            counts them (#81), and the list must add up to it (#612). */}
+        {/* Null when the reader may not see work-order costs (#390, #328). */}
         {wo.costLines !== null && (
           <DetailSection title={t("vehicle.panel.costs")}>
-            {wo.costLines.length + (wo.pendingCostLines?.length ?? 0) === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("maintenance.detail.costLinesEmpty")}</p>
-            ) : (
-              <CostLines lines={[...wo.costLines, ...(wo.pendingCostLines ?? [])]} locale={locale} />
-            )}
+            <WorkOrderCosts detail={wo} locale={locale} />
           </DetailSection>
         )}
 

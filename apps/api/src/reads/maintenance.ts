@@ -1,5 +1,4 @@
 import {
-  canReadWorkOrderCosts,
   issueDetail,
   issueListQuery,
   issueListResponse,
@@ -12,7 +11,7 @@ import {
   type ListSort,
   type ModuleCode,
 } from "@routiq/contracts";
-import { and, asc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, notInArray, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
@@ -54,7 +53,9 @@ import {
   parseActualCost,
   workOrderActualCostSql,
   workOrderCostToComeColumns,
+  workOrderMoneyVisibility,
   type CostToComeFacts,
+  type WorkOrderMoneyVisibility,
 } from "./work-order-cost.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 
@@ -97,39 +98,26 @@ function serializeOptionalMinor(value: bigint | null): number | null {
 }
 
 /**
- * Work-order money is Finance's (#328): the estimate and the cost summed from
- * entries show only to a role that reads work-order costs (#390) while FINANCE
- * is on.
- */
-function workOrderCostsVisible(auth: AuthContext, modules: ReadonlySet<ModuleCode>): boolean {
-  return canReadWorkOrderCosts(auth.role) && modules.has("FINANCE");
-}
-
-/**
- * A work order's three amounts and its cost still to come (#82), or null for
- * each when work-order costs are hidden from the caller. Null, never zero:
- * a hidden figure must not read as a free repair.
+ * A work order's amounts and its cost still to come (#82), each null when the
+ * caller may not read it. Null, never zero: a hidden figure must not read as a
+ * free repair.
  */
 function workOrderAmounts(
-  visible: boolean,
+  visible: WorkOrderMoneyVisibility,
   row: CostToComeFacts & {
     expectedCostMinor: bigint | null;
     actualCostMinor: string | null;
   },
 ) {
-  if (!visible) {
-    return {
-      expectedCostMinor: null,
-      actualCostMinor: null,
-      declaredCostMinor: null,
-      costToCome: null,
-    };
-  }
   return {
-    expectedCostMinor: serializeOptionalMinor(row.expectedCostMinor),
-    actualCostMinor: serializeOptionalMinor(parseActualCost(row.actualCostMinor)),
-    declaredCostMinor: serializeOptionalMinor(row.declaredCostMinor),
-    costToCome: costToCome(row),
+    expectedCostMinor: visible.estimate ? serializeOptionalMinor(row.expectedCostMinor) : null,
+    ...(visible.actual
+      ? {
+          actualCostMinor: serializeOptionalMinor(parseActualCost(row.actualCostMinor)),
+          declaredCostMinor: serializeOptionalMinor(row.declaredCostMinor),
+          costToCome: costToCome(row),
+        }
+      : { actualCostMinor: null, declaredCostMinor: null, costToCome: null }),
   };
 }
 
@@ -389,7 +377,7 @@ export function registerMaintenanceReadRoutes(
             code: row.branchCode,
             name: row.branchName,
           },
-          ...workOrderAmounts(workOrderCostsVisible(auth, modules), row),
+          ...workOrderAmounts(workOrderMoneyVisibility(auth, modules), row),
           costOutcome: row.costOutcome,
           currency: row.currency,
           issue:
@@ -554,8 +542,14 @@ export function registerMaintenanceReadRoutes(
             )
             .orderBy(asc(auditEvents.occurredAt), asc(auditEvents.id));
 
-          if (!workOrderCostsVisible(auth, modules)) {
-            return { header, eventRows, costRows: null, completedBy: completers.get(header.id) ?? null };
+          if (!workOrderMoneyVisibility(auth, modules).actual) {
+            return {
+              header,
+              eventRows,
+              costRows: null,
+              otherBranchesCostMinor: null,
+              completedBy: completers.get(header.id) ?? null,
+            };
           }
 
           // A cost line is a financial record: its entry's branch is read
@@ -568,7 +562,25 @@ export function registerMaintenanceReadRoutes(
             eq(financialPostings.direction, "EXPENSE"),
             inArray(financialEntries.status, ["POSTED", "REVERSED", "SUBMITTED"]),
           ];
+          // The lines outside the reader's branches still count in the actual
+          // cost (#81). They come back as one sum and nothing else (#643), so
+          // the list adds up without exposing another branch's records.
+          let otherBranchesCostMinor = 0n;
           if (auth.branchScope !== "ALL") {
+            const [other] = await tx
+              .select({
+                sum: sql<string>`coalesce(sum(${financialPostings.amountMinor}), 0)::text`,
+              })
+              .from(financialPostings)
+              .innerJoin(
+                financialEntries,
+                and(
+                  eq(financialEntries.workspaceId, financialPostings.workspaceId),
+                  eq(financialEntries.id, financialPostings.financialEntryId),
+                ),
+              )
+              .where(and(...costConditions, notInArray(financialEntries.branchId, auth.branchScope)));
+            otherBranchesCostMinor = BigInt(other?.sum ?? "0");
             costConditions.push(inArray(financialEntries.branchId, auth.branchScope));
           }
           const costRows = await tx
@@ -597,7 +609,13 @@ export function registerMaintenanceReadRoutes(
               asc(financialPostings.lineNo),
             );
 
-          return { header, eventRows, costRows, completedBy: completers.get(header.id) ?? null };
+          return {
+            header,
+            eventRows,
+            costRows,
+            otherBranchesCostMinor,
+            completedBy: completers.get(header.id) ?? null,
+          };
         });
 
         if (!result) {
@@ -606,7 +624,7 @@ export function registerMaintenanceReadRoutes(
             .send({ error: { code: "REFERENCE_NOT_FOUND" } });
         }
 
-        const { header, eventRows, costRows, completedBy } = result;
+        const { header, eventRows, costRows, otherBranchesCostMinor, completedBy } = result;
         const costLine = (line: NonNullable<typeof costRows>[number]) => ({
           ...line,
           amountMinor: serializeMinor(line.amountMinor),
@@ -626,7 +644,7 @@ export function registerMaintenanceReadRoutes(
             code: header.branchCode,
             name: header.branchName,
           },
-          ...workOrderAmounts(workOrderCostsVisible(auth, modules), header),
+          ...workOrderAmounts(workOrderMoneyVisibility(auth, modules), header),
           costOutcome: header.costOutcome,
           currency: header.currency,
           issue:
@@ -670,6 +688,7 @@ export function registerMaintenanceReadRoutes(
             costRows?.filter((line) => line.entryStatus !== "SUBMITTED").map(costLine) ?? null,
           pendingCostLines:
             costRows?.filter((line) => line.entryStatus === "SUBMITTED").map(costLine) ?? null,
+          otherBranchesCostMinor: serializeOptionalMinor(otherBranchesCostMinor),
         });
       } catch (error) {
         req.log.error({ err: error }, "work order detail read failed");

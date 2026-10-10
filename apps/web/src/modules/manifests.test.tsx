@@ -29,6 +29,7 @@ const OPEN_GATES: VehicleGates = {
   maintenance: true,
   money: true,
   entries: true,
+  workOrderEstimate: true,
   workOrderCosts: true,
   trips: true,
   documents: true,

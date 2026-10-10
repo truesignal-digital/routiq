@@ -42,6 +42,7 @@ import {
   canReleaseAssets,
   canReportIssues,
   canResolveIssues,
+  workOrderMoneyShown,
 } from "@/maintenance/permissions.js";
 import {
   useIssues,
@@ -148,7 +149,8 @@ export function MaintenanceScreen() {
   // filter says: a closed one still names the grounding and the linked fault.
   const allIssuesQuery = useIssues();
 
-  const workOrderColumns = useWorkOrderColumns();
+  const money = workOrderMoneyShown(me?.role, me?.enabledModules);
+  const workOrderColumns = useWorkOrderColumns(money);
   const issueColumns = useIssueColumns();
 
   const workOrders = workOrdersQuery.data?.pages.flatMap((page) => page.items) ?? [];
@@ -353,6 +355,7 @@ export function MaintenanceScreen() {
                       row={row}
                       issues={issues}
                       permissions={permissions}
+                      money={money}
                       onAction={setDialog}
                     />
                   ),

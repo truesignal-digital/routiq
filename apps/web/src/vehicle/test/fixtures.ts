@@ -264,6 +264,7 @@ export function workOrderDetail(status: WorkOrderStatus, overrides: Partial<Work
     ],
     costLines: [],
     pendingCostLines: [],
+    otherBranchesCostMinor: 0,
     ...overrides,
   };
 }
