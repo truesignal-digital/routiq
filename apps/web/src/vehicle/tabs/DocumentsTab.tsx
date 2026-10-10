@@ -10,9 +10,8 @@ import { formatDate, formatRelativeTime, localizedLabel } from "@/lib/format.js"
 import { cn } from "@/lib/utils";
 import { useVehicle } from "../context.js";
 import { may } from "../flow.js";
-import { RecordRow, RowIcon, RowMenu, Sep, TabHeader } from "../parts.js";
+import { RecordRow, RowIcon, RowMenu, Sep, TabAction, TabHeader } from "../parts.js";
 import { earlierVersions } from "../panel/DocumentRecord.js";
-import { TabAction } from "./MaintenanceTab.js";
 
 export function DocumentsTab() {
   const { t } = useTranslation();
