@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PROFITABILITY_LAYERS } from "../commands/categories.js";
+import { periodCode } from "../commands/lock-period.js";
 import { cancellationReasonCode } from "../commands/reverse-entry.js";
 import { historyActor } from "./history.js";
 import { listResponse } from "./list.js";
@@ -260,6 +261,11 @@ export const periodRead = z.object({
 
 export const periodsResponse = z.object({
   periods: z.array(periodRead),
+  /**
+   * The month it is now in the workspace's time zone, the one late postings
+   * fall into. Clients use it instead of the device clock (#591).
+   */
+  currentPeriodCode: periodCode,
 });
 
 export type PendingApprovalItem = z.infer<typeof pendingApprovalItem>;

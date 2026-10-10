@@ -26,6 +26,7 @@ import { monthBounds } from "./finance.js";
 import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
 import { defineRead, LEDGER_GATE } from "./define-read.js";
+import { workspaceTimezone } from "./workspace-day.js";
 
 const SERIES_MONTHS = 6;
 
@@ -77,11 +78,12 @@ async function loadFinance(
   requestedPeriod: string | undefined,
 ) {
   const [workspace] = await tx
-    .select({ currency: workspaces.defaultCurrency, timezone: workspaces.timezone })
+    .select({ currency: workspaces.defaultCurrency })
     .from(workspaces)
     .where(eq(workspaces.id, auth.workspaceId));
   const currency = workspace?.currency ?? "XAF";
-  const periodCode = requestedPeriod ?? currentPeriodCode(new Date(), workspace?.timezone ?? "Africa/Douala");
+  const periodCode =
+    requestedPeriod ?? currentPeriodCode(new Date(), await workspaceTimezone(tx, auth.workspaceId));
 
   const [period] = await tx
     .select({ status: postingPeriods.status })
