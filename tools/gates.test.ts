@@ -99,6 +99,9 @@ describe("git guardrails hook", () => {
     expect(decide("git push", context("develop"))).toBeDefined();
     expect(decide("git push origin HEAD", context("main"))).toBeDefined();
     expect(decide("git push -u origin", context("develop"))).toBeDefined();
+    expect(decide("git push origin 2>&1 | tail -3", context("develop"))).toBeDefined();
+    expect(decide("git push origin > /tmp/push.log", context("develop"))).toBeDefined();
+    expect(decide("git push -u origin feat/x > /tmp/push.log 2>&1", context("develop"))).toBeUndefined();
     expect(decide("git push", context("feat/x"))).toBeUndefined();
   });
 

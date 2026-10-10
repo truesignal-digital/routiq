@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 /**
@@ -106,7 +106,16 @@ export function citedException(log: string, adrFiles: readonly string[]): string
   return adrFiles.some((name) => name.startsWith(`${number}-`)) ? `ADR-${number}` : undefined;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+/** True when node runs this file directly (resolving symlinks such as macOS /tmp), not when a test imports it. */
+function isMain(): boolean {
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(process.argv[1] ?? "")).href;
+  } catch {
+    return false;
+  }
+}
+
+if (isMain()) {
   const base = `origin/${process.env.BASE_REF ?? "develop"}`;
   const rewritten = PROTECTED.filter((path) => {
     const stat = git(["diff", "--numstat", `${base}...HEAD`, "--", path]) ?? "";

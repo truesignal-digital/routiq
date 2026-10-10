@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -112,7 +112,13 @@ export function segments(command: string): Segment[] {
       else if (word !== "env" && word !== "command" && word !== "time") break;
       start++;
     }
-    const rest = words.slice(start);
+    const rest: string[] = [];
+    for (let i = start; i < words.length; i++) {
+      const word = words[i] as string;
+      const redirect = /^\d*(<<-?|>>?|<)(.*)$/.exec(word);
+      if (redirect === null) rest.push(word);
+      else if (redirect[2] === "") i++;
+    }
     if (rest[0] === "cd" && rest[1] !== undefined) {
       const target = expandHome(rest[1]);
       cwd = cwd === undefined ? target : resolve(cwd, target);
@@ -296,7 +302,16 @@ function baseOf(viewArgs: string[], env: Record<string, string>, cwd: string | u
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+/** True when node runs this file directly (resolving symlinks such as macOS /tmp), not when a test imports it. */
+function isMain(): boolean {
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(process.argv[1] ?? "")).href;
+  } catch {
+    return false;
+  }
+}
+
+if (isMain()) {
   const input = JSON.parse(readFileSync(0, "utf8")) as { cwd?: string; tool_input?: { command?: string } };
   const at = (cwd: string | undefined) => (cwd === undefined ? input.cwd : resolve(input.cwd ?? process.cwd(), cwd));
   const reason = decide(input.tool_input?.command ?? "", {

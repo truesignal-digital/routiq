@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 /**
@@ -72,7 +73,16 @@ export function evidenceProblems(body: string, files: readonly string[]): string
   return problems;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+/** True when node runs this file directly (resolving symlinks such as macOS /tmp), not when a test imports it. */
+function isMain(): boolean {
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(process.argv[1] ?? "")).href;
+  } catch {
+    return false;
+  }
+}
+
+if (isMain()) {
   const base = `origin/${process.env.BASE_REF ?? "develop"}`;
   const files = execFileSync("git", ["diff", "--name-only", `${base}...HEAD`], { encoding: "utf8" })
     .split("\n")
