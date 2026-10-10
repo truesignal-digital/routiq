@@ -93,7 +93,8 @@
       "moneySummary": {
         "ownOnly": "Only the entries you recorded on this trip.",
         "branchOnly": "Only the entries of your branches on this trip."
-      }
+      },
+      "loadFailed": "We couldn't load this trip."
     },
     "actions": {
       "reasonPlaceholder": "Why reopen this trip?",
@@ -115,9 +116,11 @@
         "attributeLabel": "Charge to this trip",
         "rowAttribute": "Charge line {position} to this trip",
         "attributeHint": "Clear this when the money belongs to the asset rather than the trip: a repair stays off the sheet."
-      }
+      },
+      "activityTypesFailed": "Could not load trip types."
     },
-    "subtitle": "Every trip your vehicles run, from start to close."
+    "subtitle": "Every trip your vehicles run, from start to close.",
+    "loadFailed": "We couldn't load trips. Please retry."
   },
   "maintenance": {
     "workOrders": {
@@ -155,6 +158,20 @@
       "activity-created": "Trip created",
       "activity-closed": "Trip closed",
       "activity-reopened": "Trip reopened"
+    },
+    "field": {
+      "activityTypeId": "trip type",
+      "activityNumber": "trip number",
+      "activityTypeCode": "trip type",
+      "activityId": "trip"
+    },
+    "code": {
+      "module": {
+        "ACTIVITIES": "Trips"
+      },
+      "categoryKind": {
+        "ACTIVITY_TYPE": "Trip type"
+      }
     }
   },
   "vehicle": {
@@ -171,7 +188,8 @@
       "noMoney": "No entries linked to this trip yet.",
       "noOwnMoney": "You have not recorded any entry on this trip.",
       "noBranchMoney": "No entry from your branches on this trip yet.",
-      "openFull": "Open the full trip"
+      "openFull": "Open the full trip",
+      "loadFailed": "We couldn't load the trips."
     },
     "history": {
       "filters": {
@@ -235,9 +253,31 @@
     },
     "record-journey-sheet": {
       "short": "Trip"
+    },
+    "create-activity": {
+      "label": "Create a trip",
+      "submit": "Create trip"
+    },
+    "plan-trip": {
+      "label": "Plan a trip",
+      "submit": "Plan trip"
+    },
+    "cancel-planned-trip": {
+      "label": "Cancel the trip",
+      "submit": "Cancel trip",
+      "dismiss": "Keep trip"
+    },
+    "start-planned-trip": {
+      "label": "Start the trip",
+      "submit": "Start trip"
     }
   },
+  "errors": {
+    "DRIVER_INELIGIBLE": "This person cannot drive this trip: they are no longer active, or their usual job is not driver."
+  },
   "warnings": {
-    "VEHICLE_DOUBLE_BOOKED": "This vehicle is already booked on another trip at the same time."
+    "VEHICLE_DOUBLE_BOOKED": "This vehicle is already booked on another trip at the same time.",
+    "DRIVER_DOUBLE_BOOKED": "This driver is already booked on another trip at the same time.",
+    "TRIP_STARTED_AFTER_CANCELLATION": "This trip had been cancelled, but it was started offline. It is running again."
   }
 }

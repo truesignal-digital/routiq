@@ -96,7 +96,8 @@
         "ownOnly": "Seules les écritures que vous avez saisies sur ce voyage.",
         "branchOnly": "Seules les écritures de vos agences sur ce voyage."
       },
-      "closedAt": "Clôturé le {date}"
+      "closedAt": "Clôturé le {date}",
+      "loadFailed": "Impossible de charger ce voyage."
     },
     "actions": {
       "reasonPlaceholder": "Pourquoi rouvrir ce voyage ?",
@@ -118,7 +119,8 @@
         "attributeLabel": "Imputer à ce voyage",
         "rowAttribute": "Imputer la ligne {position} à ce voyage",
         "attributeHint": "Décochez si la somme revient à l'engin et non au voyage : une réparation reste hors de la fiche."
-      }
+      },
+      "activityTypesFailed": "Impossible de charger les types de voyage."
     },
     "subtitle": "Chaque voyage de vos véhicules, du départ à la clôture.",
     "status": {
@@ -129,7 +131,8 @@
     "state": {
       "closed": "Clôturé",
       "closedWithGaps": "{count, plural, one {Clôturé, # manque} other {Clôturé, # manques}}"
-    }
+    },
+    "loadFailed": "Impossible de charger les voyages. Veuillez réessayer."
   },
   "maintenance": {
     "workOrders": {
@@ -167,6 +170,20 @@
       "activity-created": "Voyage créé",
       "activity-closed": "Voyage clôturé",
       "activity-reopened": "Voyage rouvert"
+    },
+    "field": {
+      "activityTypeId": "type de voyage",
+      "activityNumber": "numéro de voyage",
+      "activityTypeCode": "type de voyage",
+      "activityId": "voyage"
+    },
+    "code": {
+      "module": {
+        "ACTIVITIES": "Voyages"
+      },
+      "categoryKind": {
+        "ACTIVITY_TYPE": "Type de voyage"
+      }
     }
   },
   "vehicle": {
@@ -184,7 +201,8 @@
       "noOwnMoney": "Vous n'avez saisi aucune écriture sur ce voyage.",
       "noBranchMoney": "Aucune écriture de vos agences sur ce voyage pour l'instant.",
       "openFull": "Ouvrir le voyage complet",
-      "gapsNote": "Clôturé avec {count, plural, one {# manque} other {# manques}}. Les rapports montrent les manques ; ils ne les comblent jamais."
+      "gapsNote": "Clôturé avec {count, plural, one {# manque} other {# manques}}. Les rapports montrent les manques ; ils ne les comblent jamais.",
+      "loadFailed": "Impossible de charger les voyages."
     },
     "history": {
       "filters": {
@@ -248,9 +266,31 @@
     },
     "record-journey-sheet": {
       "short": "Voyage"
+    },
+    "create-activity": {
+      "label": "Créer un voyage",
+      "submit": "Créer le voyage"
+    },
+    "plan-trip": {
+      "label": "Planifier un voyage",
+      "submit": "Planifier le voyage"
+    },
+    "cancel-planned-trip": {
+      "label": "Annuler le voyage",
+      "submit": "Annuler le voyage",
+      "dismiss": "Garder le voyage"
+    },
+    "start-planned-trip": {
+      "label": "Démarrer le voyage",
+      "submit": "Démarrer le voyage"
     }
   },
+  "errors": {
+    "DRIVER_INELIGIBLE": "Cette personne ne peut pas conduire ce voyage : elle n'est plus active, ou son poste habituel n'est pas chauffeur."
+  },
   "warnings": {
-    "VEHICLE_DOUBLE_BOOKED": "Ce véhicule est déjà prévu sur un autre voyage au même moment."
+    "VEHICLE_DOUBLE_BOOKED": "Ce véhicule est déjà prévu sur un autre voyage au même moment.",
+    "DRIVER_DOUBLE_BOOKED": "Ce chauffeur est déjà prévu sur un autre voyage au même moment.",
+    "TRIP_STARTED_AFTER_CANCELLATION": "Ce voyage avait été annulé, mais il a été démarré hors connexion. Il est de nouveau en cours."
   }
 }

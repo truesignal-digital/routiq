@@ -98,7 +98,8 @@
         "ownOnly": "Seules les écritures que vous avez saisies sur ce trajet.",
         "branchOnly": "Seules les écritures de vos agences sur ce trajet."
       },
-      "closedAt": "Clôturé le {date}"
+      "closedAt": "Clôturé le {date}",
+      "loadFailed": "Impossible de charger ce trajet."
     },
     "actions": {
       "reasonPlaceholder": "Pourquoi rouvrir ce trajet ?",
@@ -120,7 +121,8 @@
         "attributeLabel": "Imputer à ce trajet",
         "rowAttribute": "Imputer la ligne {position} à ce trajet",
         "attributeHint": "Décochez si la somme revient à l'engin et non au trajet : une réparation reste hors de la fiche."
-      }
+      },
+      "activityTypesFailed": "Impossible de charger les types de trajet."
     },
     "subtitle": "Chaque trajet de vos camions, du départ à la clôture.",
     "status": {
@@ -131,7 +133,8 @@
     "state": {
       "closed": "Clôturé",
       "closedWithGaps": "{count, plural, one {Clôturé, # manque} other {Clôturé, # manques}}"
-    }
+    },
+    "loadFailed": "Impossible de charger les trajets. Veuillez réessayer."
   },
   "maintenance": {
     "workOrders": {
@@ -169,6 +172,20 @@
       "activity-created": "Trajet créé",
       "activity-closed": "Trajet clôturé",
       "activity-reopened": "Trajet rouvert"
+    },
+    "field": {
+      "activityTypeId": "type de trajet",
+      "activityNumber": "numéro de trajet",
+      "activityTypeCode": "type de trajet",
+      "activityId": "trajet"
+    },
+    "code": {
+      "module": {
+        "ACTIVITIES": "Trajets"
+      },
+      "categoryKind": {
+        "ACTIVITY_TYPE": "Type de trajet"
+      }
     }
   },
   "vehicle": {
@@ -189,7 +206,8 @@
       "noOwnMoney": "Vous n'avez saisi aucune écriture sur ce trajet.",
       "noBranchMoney": "Aucune écriture de vos agences sur ce trajet pour l'instant.",
       "openFull": "Ouvrir le trajet complet",
-      "gapsNote": "Clôturé avec {count, plural, one {# manque} other {# manques}}. Les rapports montrent les manques ; ils ne les comblent jamais."
+      "gapsNote": "Clôturé avec {count, plural, one {# manque} other {# manques}}. Les rapports montrent les manques ; ils ne les comblent jamais.",
+      "loadFailed": "Impossible de charger les trajets."
     },
     "locked": {
       "notGrounded": "Le camion n'est pas immobilisé."
@@ -256,9 +274,31 @@
     },
     "record-journey-sheet": {
       "short": "Trajet"
+    },
+    "create-activity": {
+      "label": "Créer un trajet",
+      "submit": "Créer le trajet"
+    },
+    "plan-trip": {
+      "label": "Planifier un trajet",
+      "submit": "Planifier le trajet"
+    },
+    "cancel-planned-trip": {
+      "label": "Annuler le trajet",
+      "submit": "Annuler le trajet",
+      "dismiss": "Garder le trajet"
+    },
+    "start-planned-trip": {
+      "label": "Démarrer le trajet",
+      "submit": "Démarrer le trajet"
     }
   },
+  "errors": {
+    "DRIVER_INELIGIBLE": "Cette personne ne peut pas conduire ce trajet : elle n'est plus active, ou son poste habituel n'est pas chauffeur."
+  },
   "warnings": {
-    "VEHICLE_DOUBLE_BOOKED": "Ce camion est déjà prévu sur un autre trajet au même moment."
+    "VEHICLE_DOUBLE_BOOKED": "Ce camion est déjà prévu sur un autre trajet au même moment.",
+    "DRIVER_DOUBLE_BOOKED": "Ce chauffeur est déjà prévu sur un autre trajet au même moment.",
+    "TRIP_STARTED_AFTER_CANCELLATION": "Ce trajet avait été annulé, mais il a été démarré hors connexion. Il est de nouveau en cours."
   }
 }

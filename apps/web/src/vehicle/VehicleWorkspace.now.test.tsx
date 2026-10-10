@@ -106,8 +106,8 @@ describe("Direction's notes in the To do (#98)", () => {
     const title = await within(card).findByRole("button", { name: BODY });
     const row = title.closest("li");
     expect(row?.className).toContain("bg-info/10");
-    expect(within(row!).getByRole("img", { name: "Note from Direction" })).toBeTruthy();
-    expect(within(row!).getByText(/^Note from Direction · Émilienne · /)).toBeTruthy();
+    expect(within(row!).getByRole("img", { name: "Note from the Director" })).toBeTruthy();
+    expect(within(row!).getByText(/^Note from the Director · Émilienne · /)).toBeTruthy();
 
     const user = userEvent.setup();
     await user.click(within(row!).getByRole("button", { name: "Mark as seen" }));
@@ -128,6 +128,28 @@ describe("Direction's notes in the To do (#98)", () => {
     expect(await within(card).findByText(EMPTY)).toBeTruthy();
     expect(within(card).queryByRole("button", { name: "Mark as seen" })).toBeNull();
     expect(within(card).getByText("The team")).toBeTruthy();
+  });
+});
+
+describe("entries waiting on someone else (#542)", () => {
+  it("names the Director above Finance's band, and a colleague on Finance's own entry", async () => {
+    await openVehicle(`/assets/${ASSET_ID}`, {
+      role: "FINANCE",
+      attention: [
+        attention("ENTRY_AWAITING_REVIEW", { params: { directionDecides: true, approver: "DIRECTION_APPROVES" } }),
+        attention("ENTRY_AWAITING_REVIEW", {
+          makerPrincipalIds: [ME_ID],
+          subject: { entityType: "financial_entry", id: OTHER_ID, number: "DLA-2026-00007", rowVersion: 1 },
+          params: { approver: "FINANCE_PEER_APPROVES" },
+        }),
+      ],
+    });
+    const card = await todoCard();
+    const user = userEvent.setup();
+    await user.click(await within(card).findByRole("button", { name: /^Waiting on others/ }));
+    expect(within(card).getByText("The Director")).toBeTruthy();
+    expect(within(card).getByText("Another Finance member or the Director")).toBeTruthy();
+    expect(within(card).queryByText("Finance")).toBeNull();
   });
 });
 

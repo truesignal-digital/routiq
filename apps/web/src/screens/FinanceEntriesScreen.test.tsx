@@ -747,6 +747,14 @@ describe("Money page (#314)", () => {
     expect(screen.getByRole("button", { name: "finance.money.tiles.waiting" })).toBeTruthy();
   });
 
+  it("tells a driver the page holds their expenses, not every expense and revenue (#619)", () => {
+    vi.mocked(entriesScope).mockReturnValue("OWN_ENTRIES");
+    render(<FinanceEntriesScreen />);
+
+    expect(screen.getByText("finance.money.lead.own.both")).toBeTruthy();
+    expect(screen.queryByText("finance.money.lead.both")).toBeNull();
+  });
+
   it("filters the list from a tile, and clears it from the same tile", async () => {
     const user = userEvent.setup();
     render(<FinanceEntriesScreen />);

@@ -66,8 +66,21 @@ describe("command notifications", () => {
       title: "Entry recorded and posted",
       description:
         "The month of this date is locked, so the entry was posted in the current month. It keeps its own date.\n" +
-        "Missing evidence: this category requires supporting documentation or a photo.",
+        "Attach the receipt when you have it.",
     });
+  });
+
+  // #543: the success toast read like a failure ("Missing evidence: …"). A
+  // missing receipt is a reminder, not a problem, in either language.
+  it("words a missing receipt on the success toast as a reminder", async () => {
+    for (const lng of ["en", "fr"] as const) {
+      await i18n.changeLanguage(lng);
+      mocks.add.mockClear();
+      notifyCommandSuccess("finance", "posted", ["EVIDENCE_MISSING"]);
+      const { description } = mocks.add.mock.calls[0]![0] as { description: string };
+      expect(description, lng).not.toMatch(/missing|manquant|exige|requires/i);
+    }
+    await i18n.changeLanguage("en");
   });
 
   it("falls back to the shared warnings catalog for a code no domain words itself", () => {
