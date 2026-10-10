@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 689540,
+    "ceiling": 687376,
     "raises": [
       {
         "date": "2026-10-06",
@@ -203,8 +203,14 @@
       {
         "date": "2026-10-10",
         "from": 686158,
-        "to": 689540,
-        "reason": "#569 link-person-login: People screen login column and forms, plus their fr/en strings"
+        "to": 687197,
+        "reason": "#589 #542 trip-noun overlays and approver strings in the catalogs"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 687197,
+        "to": 687376,
+        "reason": "Driver views (#584, #619): a driver's entry crumb under their truck and the driver lead on the Money page, in fr and en"
       }
     ]
   },
@@ -262,7 +268,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 259911,
+    "ceiling": 259326,
     "raises": [
       {
         "date": "2026-10-06",
@@ -453,8 +459,8 @@
       {
         "date": "2026-10-10",
         "from": 259125,
-        "to": 259911,
-        "reason": "#569 link-person-login: fr/en strings for the Login column, link/change/unlink login forms and history labels (catalogs load up front until #602)"
+        "to": 259326,
+        "reason": "#589 #542 trip-noun overlays and approver strings in the catalogs"
       }
     ]
   }

@@ -37,6 +37,7 @@ import {
 import {
   countPendingOutsideBranch,
   directionDecidesEntries,
+  entryApprovers,
   pendingApprovalConditions,
 } from "./approvals-queue.js";
 import {
@@ -730,6 +731,25 @@ export function registerFinanceReadRoutes(
             .where(eq(financialPostings.financialEntryId, entryId))
             .orderBy(asc(financialPostings.lineNo));
 
+          // A new cost on a completed order is a late invoice (#82); the form asks why up front (#613).
+          const lineWorkOrderIds = [
+            ...new Set(postingsRows.flatMap((row) => (row.workOrderId === null ? [] : [row.workOrderId]))),
+          ];
+          const [completedWorkOrder] =
+            lineWorkOrderIds.length === 0
+              ? []
+              : await tx
+                  .select({ id: workOrders.id })
+                  .from(workOrders)
+                  .where(
+                    and(
+                      eq(workOrders.workspaceId, auth.workspaceId),
+                      inArray(workOrders.id, lineWorkOrderIds),
+                      eq(workOrders.status, "COMPLETED"),
+                    ),
+                  )
+                  .limit(1);
+
           let reversedByEntryId: string | null = null;
           const [reversedByEntry] = await tx
             .select({ id: financialEntries.id })
@@ -768,10 +788,13 @@ export function registerFinanceReadRoutes(
           const evidenceFiles = await entryEvidenceFiles(tx, auth.workspaceId, entry);
           const recorders = await commandActors(tx, auth.workspaceId, [entry.createdByCommandId]);
           const [directionDecides = false] = await directionDecidesEntries(tx, auth, [entry]);
+          const [approver = null] = await entryApprovers(tx, auth.workspaceId, [entry]);
 
           return {
             entry,
             directionDecides,
+            approver,
+            lateWorkOrderCost: completedWorkOrder !== undefined,
             category,
             periodCode,
             postings: postingsRows,
@@ -796,6 +819,8 @@ export function registerFinanceReadRoutes(
           evidenceFiles,
           recordedBy,
           directionDecides,
+          approver,
+          lateWorkOrderCost,
         } = result;
 
         const mappedPostings = postings.map((p) => ({
@@ -858,6 +883,8 @@ export function registerFinanceReadRoutes(
           links: toEntryLinks(entry),
           evidenceFiles,
           directionDecides,
+          approver,
+          lateWorkOrderCost,
         };
 
         return financialEntryDetail.parse(response);

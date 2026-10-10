@@ -89,7 +89,7 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
     await page.waitForURL(/\/finance\/(approvals|entries)/, { timeout: 10_000 });
     await quiet();
     await shot("money-count-opens-waiting", {
-      caption: `The Money count opens the expenses waiting for approval: ${counts.moneyWaiting}`,
+      caption: `The Money count opens the entries waiting for approval: ${counts.moneyWaiting}`,
     });
 
     const me = (await apiGet("/v1/me")).body as { principalId?: string };

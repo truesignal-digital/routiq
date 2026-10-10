@@ -360,8 +360,9 @@ describe("finance period command routing", () => {
     await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 
     await chooseRowAction(user, 0, "Lock period");
+    // #595: an entry dated in an earlier, still-open month still posts there.
     expect(screen.getByRole("alertdialog", { name: "Lock period" }).textContent).toContain(
-      "Entries already posted in this month can no longer change, and nothing can be posted until it is reopened.",
+      "Entries already posted in this month can no longer change, and entries dated this month can't post until it is reopened.",
     );
   });
 
@@ -396,7 +397,7 @@ describe("finance period command routing", () => {
 
       await chooseRowAction(user, 0, "Lock period");
       expect(screen.getByRole("alertdialog", { name: "Lock period" }).textContent).toContain(
-        "nothing can be posted until it is reopened",
+        "entries dated this month can't post until it is reopened",
       );
     } finally {
       vi.useRealTimers();
