@@ -484,8 +484,8 @@
         }
       },
       "tiles": {
-        "out": "Sorties en {month}",
-        "in": "Entrées en {month}",
+        "out": "Dépenses en {month}",
+        "in": "Recettes en {month}",
         "waiting": "En attente de votre approbation",
         "waitingHint": "{amount} · la plus ancienne {age}",
         "missing": "Justificatif manquant",
@@ -493,8 +493,8 @@
       },
       "lens": {
         "waiting": "En attente d’approbation",
-        "out": "Sorties du mois",
-        "in": "Entrées du mois",
+        "out": "Dépenses du mois",
+        "in": "Recettes du mois",
         "missing": "Justificatif manquant",
         "clear": "Retirer le filtre : {name}"
       }
@@ -702,7 +702,11 @@
     "notRecorded": "Non renseigné",
     "add": "Ajouter",
     "readFailed": "Chargement impossible",
-    "howCalculated": "Mode de calcul"
+    "howCalculated": "Mode de calcul",
+    "profit": "Bénéfice",
+    "loss": "Perte",
+    "profitAmount": "Bénéfice {amount}",
+    "lossAmount": "Perte {amount}"
   },
   "dataTable": {
     "rowCount": "{count, plural, one {# ligne chargée} other {# lignes chargées}}",
@@ -830,7 +834,6 @@
       "overview": {
         "started": "Départ",
         "ended": "Arrivée",
-        "net": "Résultat",
         "postedOnly": "lignes comptabilisées seulement",
         "legs": "Étapes"
       },
@@ -867,10 +870,9 @@
         "passengers": "Passagers"
       },
       "moneySummary": {
-        "net": "Résultat",
         "postedOnly": "comptabilisé seulement",
         "pending": "En attente d'approbation",
-        "pendingHint": "Les lignes en attente sont listées mais restent hors du résultat.",
+        "pendingHint": "Les lignes en attente sont listées mais restent hors du bénéfice.",
         "ownOnly": "Seules les écritures que vous avez saisies sur cette activité.",
         "branchOnly": "Seules les écritures de vos agences sur cette activité."
       }
@@ -991,7 +993,7 @@
       "clientReferenceLabel": "Réf. client (facultatif)",
       "clientReferencePlaceholder": "N° de bon ou de commande",
       "descriptionLabel": "Observations (facultatif)",
-      "descriptionPlaceholder": "Ce que la fiche note en marge",
+      "descriptionPlaceholder": "Ce que la fiche indique d'autre",
       "primaryAssetLabel": "Engin principal",
       "chooseAsset": "Choisir un engin",
       "startedAtLabel": "Départ",
@@ -2500,7 +2502,7 @@
       "forTrip": "pour l'activité {number}",
       "forWorkOrder": "pour l'ordre de travail {ref}",
       "ofEntry": "sur une écriture de {amount}",
-      "lifetime": "Depuis l'enregistrement, toutes écritures comptabilisées : recettes {revenue} · dépenses {expenses} · net {net}. Montants saisis, ni trésorerie ni bénéfice."
+      "lifetime": "Depuis l'enregistrement, toutes écritures comptabilisées : Recettes {revenue} · Dépenses {expenses} · {result}. Montants saisis dans ROUTIQ : ni trésorerie, ni impôts, ni remboursements de prêt."
     },
     "layers": {
       "DIRECT": "Direct",

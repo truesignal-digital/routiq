@@ -59,6 +59,41 @@ export function formatMoney(
   return normalizeMoneySpacing(formatted).replace("-", MINUS);
 }
 
+export type ProfitOrLoss = {
+  kind: "profit" | "loss";
+  /** "Profit" / "Loss": the word, for a tile or row label. */
+  label: string;
+  /** The amount without a sign; the word carries it. */
+  amount: string;
+  /** "Loss 86 000 FCFA": word and amount together, for a sentence. */
+  text: string;
+};
+
+/**
+ * Revenue minus expenses in words: a balance below zero is a Loss, never a
+ * negative Profit (CONTEXT.md, Profit). Zero reads as a profit of zero.
+ */
+export function profitOrLoss(
+  minor: number,
+  options: { currency?: string; locale?: string } = {},
+): ProfitOrLoss {
+  const kind = minor < 0 ? "loss" : "profit";
+  const { currency = "XAF", locale } = options;
+  const amount = formatMoney(Math.abs(minor), {
+    currency,
+    sign: { context: "record" },
+    ...(locale === undefined ? {} : { locale }),
+  });
+  const t = (key: string, values?: Record<string, string>) =>
+    i18n.t(key, { ...values, ...(locale === undefined ? {} : { lng: locale }) });
+  return {
+    kind,
+    label: t(`common.${kind}`),
+    amount,
+    text: t(`common.${kind}Amount`, { amount }),
+  };
+}
+
 const plainSpaces = (value: string) => value.replace(/[\u00a0\u202f]/g, " ");
 
 /**
