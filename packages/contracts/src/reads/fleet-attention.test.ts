@@ -32,6 +32,23 @@ describe("fleet To do and Coming up", () => {
     expect(ROLES.filter((role) => todoWaitsOn("PERIOD_OPEN", role))).toEqual(["DIRECTOR", "FINANCE"]);
   });
 
+  it("send fuel per km only to the roles that read vehicle money (#668)", () => {
+    expect(ROLES.filter((role) => todoWaitsOn("FUEL_PER_KM_HIGH", role))).toEqual(["DIRECTOR", "ADMIN", "FINANCE"]);
+    const row = {
+      code: "FUEL_PER_KM_HIGH",
+      severity: "WARNING",
+      link: { kind: "asset", id, number: "VH007" },
+      asset: { id, assetCode: "VH007" },
+      branchId: id,
+      since: "2026-10-01T00:00:00.000Z",
+      params: { amountMinor: 360, currency: "XAF", medianMinor: 290, percentAbove: 24 },
+    };
+    const parsed = todoResponse.parse({ businessDate: "2026-10-10", scope, rows: [row], totalCount: 1 });
+    expect(parsed.rows[0]?.params).toEqual(row.params);
+    const zero = { ...row, params: { ...row.params, percentAbove: 0 } };
+    expect(todoResponse.safeParse({ businessDate: "2026-10-10", scope, rows: [zero], totalCount: 1 }).success).toBe(false);
+  });
+
   it("say the Ambient Branch was ignored, and nothing else", () => {
     const body = { businessDate: "2026-10-10", scope, rows: [], totalCount: 0 };
     expect(todoResponse.parse(body)).toEqual(body);
