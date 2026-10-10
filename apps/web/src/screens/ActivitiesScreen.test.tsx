@@ -252,7 +252,8 @@ describe("ActivitiesScreen", () => {
     const current = new Date();
     const rangeFrom = new Date(current.getFullYear(), current.getMonth(), 1);
     const rangeTo = new Date(current.getFullYear(), current.getMonth(), 2);
-    const fullDate = new Intl.DateTimeFormat("en-US", { dateStyle: "full" });
+    // The calendar reads each day out day first: "Thursday, 1 October 2026" (#712).
+    const fullDate = new Intl.DateTimeFormat("en-GB", { dateStyle: "full" });
     const isoDate = (date: Date) =>
       [
         String(date.getFullYear()).padStart(4, "0"),

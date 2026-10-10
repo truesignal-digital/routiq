@@ -64,7 +64,7 @@ function buildColumns(
       header: t("finance.entries.detail.date"),
       enableSorting: true,
       meta: { phone: "meta", label: t("finance.entries.detail.date") },
-      cell: ({ row }) => formatDate(row.original.economicDate),
+      cell: ({ row }) => formatDate(row.original.economicDate, undefined, "short"),
     },
     postedAt: {
       accessorKey: "postedAt",
@@ -73,7 +73,7 @@ function buildColumns(
       // Off the phone row: it is the read's default order, not something an
       // operator scans a phone for.
       meta: { phone: "hidden", label: t("finance.entries.detail.postingDate") },
-      cell: ({ row }) => formatDate(row.original.postedAt),
+      cell: ({ row }) => formatDate(row.original.postedAt, undefined, "short"),
     },
     category: {
       id: "category",

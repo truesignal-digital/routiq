@@ -96,7 +96,7 @@ describe("Maintenance › Overview (#665)", () => {
 
   it("opens each tile's tab already filtered", async () => {
     renderWith(SUMMARY);
-    await screen.findByText("VH003 · since 10/1/26");
+    await screen.findByText("VH003 · since 1 October 2026");
     expect(linkOf("New problems")).toBe("/maintenance/problems?status=OPEN");
     expect(linkOf("Off the road")).toBe("/assets/list?availability=GROUNDED");
     expect(linkOf("Work orders open")).toBe("/maintenance/work-orders?only=open");
@@ -106,7 +106,7 @@ describe("Maintenance › Overview (#665)", () => {
 
   it("drops the repair cost tile for a role the server withholds it from", async () => {
     renderWith({ ...SUMMARY, repairCost: null });
-    await screen.findByText("VH003 · since 10/1/26");
+    await screen.findByText("VH003 · since 1 October 2026");
     expect(screen.queryByRole("link", { name: "Repair cost" })).toBeNull();
   });
 
@@ -123,7 +123,7 @@ describe("Maintenance › Overview (#665)", () => {
 
   it("shows no revenue and no profit: repair cost comes from work orders only", async () => {
     renderWith(SUMMARY);
-    await screen.findByText("VH003 · since 10/1/26");
+    await screen.findByText("VH003 · since 1 October 2026");
     expect(screen.queryByText(/revenue|profit/i)).toBeNull();
   });
 
@@ -145,7 +145,7 @@ describe("Maintenance › Overview (#665)", () => {
     const region = await screen.findByRole("region", { name: "Summary" });
     expect(region.textContent).toContain("2 problems are open, 1 of them safety-critical.");
     expect(region.textContent).toContain("1 vehicle is off the road.");
-    expect(region.textContent).toContain("VH003 was grounded on October 7 and is still off the road.");
+    expect(region.textContent).toContain("VH003 was grounded on 7 October and is still off the road.");
   });
 
   it("draws days off the road per month, the current month partial and said so (#668)", async () => {
@@ -158,7 +158,7 @@ describe("Maintenance › Overview (#665)", () => {
 
   it("leaves the chart out while Maintenance is off", async () => {
     const { container } = renderWith(SUMMARY, { ...testUsage(), offRoadByMonth: null });
-    await screen.findByText("VH003 · since 10/1/26");
+    await screen.findByText("VH003 · since 1 October 2026");
     await vi.waitFor(() => expect(container.querySelector("[data-slot=days-off-road]")).toBeNull());
   });
 });

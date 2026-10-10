@@ -232,9 +232,9 @@ describe("Dashboard › Overview", () => {
     renderTab(<DashboardOverviewTab />);
     const region = screen.getByRole("region", { name: "Summary" });
     const text = region.textContent?.replace(/\s/g, " ") ?? "";
-    expect(text).toContain("Start of the month summary · Sunday, November 1");
-    expect(text).toContain("In October: a profit of FCFA 6,900,000 on FCFA 9,560,000 revenue, FCFA 460,000 better than September.");
-    expect(text).toContain("Revenue rose by FCFA 660,000.");
+    expect(text).toContain("Start of the month summary · Sunday 1 November");
+    expect(text).toContain("In October: a profit of 6 900 000 FCFA on 9 560 000 FCFA revenue, 460 000 FCFA better than September.");
+    expect(text).toContain("Revenue rose by 660 000 FCFA.");
     expect(text).toContain("Expenses are 26% above September.");
     expect(text).toContain("Ahead of September");
     // Above the tiles, with what it counted inside it.

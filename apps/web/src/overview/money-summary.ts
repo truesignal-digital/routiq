@@ -1,14 +1,12 @@
 import type { FinanceOverviewResponse, MoneySummary } from "@routiq/contracts";
 import type { useTranslation } from "react-i18next";
-import { formatMoney, formatPercent, localizedLabel } from "@/lib/format.js";
+import { formatMoney, formatMonth, formatPercent, localizedLabel } from "@/lib/format.js";
 
 type Translate = ReturnType<typeof useTranslation>["t"];
 
 /** "October": the month alone, as a sentence names it. */
 export function monthName(isoDate: string, language: string | undefined): string {
-  return new Intl.DateTimeFormat(language, { month: "long", timeZone: "UTC" }).format(
-    new Date(`${isoDate.slice(0, 10)}T00:00:00Z`),
-  );
+  return formatMonth(isoDate.slice(0, 10), language, { year: false });
 }
 
 export interface MoneySummaryText {

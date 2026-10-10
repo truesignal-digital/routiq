@@ -39,11 +39,11 @@ describe("FleetBoard", () => {
   it("names every cell, links each vehicle and reads out the cell under the pointer", () => {
     render(<FleetBoard rows={rows} days={days} />);
     expect(screen.getAllByRole("img")).toHaveLength(60);
-    const cell = screen.getByRole("img", { name: "VH003 · Oct 9 · Grounded" });
+    const cell = screen.getByRole("img", { name: "VH003 · 9 Oct · Grounded" });
     expect(screen.getByRole("link", { name: "VH003" }).getAttribute("href")).toBe("/assets/a3");
     expect(screen.getByText("Today")).toBeTruthy();
     fireEvent.pointerEnter(cell);
-    expect(screen.getByText("VH003 · Oct 9 · Grounded", { selector: "[data-slot=fleet-board-pointed]" })).toBeTruthy();
+    expect(screen.getByText("VH003 · 9 Oct · Grounded", { selector: "[data-slot=fleet-board-pointed]" })).toBeTruthy();
     expect(screen.getAllByText("Not recorded").length).toBeGreaterThan(0);
   });
 

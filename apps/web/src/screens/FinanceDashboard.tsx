@@ -26,7 +26,7 @@ import { SummaryStatusBadge } from "@/overview/SummaryStatusBadge.js";
 import { useFleetUsage } from "@/overview/useFleetUsage.js";
 import { useMoneyOverview } from "@/overview/useMoneyOverview.js";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { formatMoney, formatPercent, localizedLabel, profitOrLoss } from "@/lib/format.js";
+import { currencyUnit, formatMoney, formatPercent, localizedLabel, profitOrLoss } from "@/lib/format.js";
 import { contributes } from "@/modules/manifest.js";
 import { useAmbientBranchId } from "@/shell/branch-context.js";
 import { windowLabel } from "@/overview/window-label.js";
@@ -154,7 +154,7 @@ export function DashboardOverviewTab() {
                 : t(mode === "profit" ? "dashboard.bridge.description" : "dashboard.categories.description", {
                     comparison: windows.comparisonShort,
                     period: windows.periodShort,
-                    currency: overview.currency,
+                    currency: currencyUnit(overview.currency),
                   })}
             </CardDescription>
           </CardHeader>
@@ -247,7 +247,7 @@ export function DashboardOverviewTab() {
         <Card data-slot="dashboard-months">
           <CardHeader>
             <CardTitle>{t(`dashboard.months.title.${mode}`)}</CardTitle>
-            <CardDescription>{t(`dashboard.months.description.${mode}`, { currency: overview?.currency ?? "XAF" })}</CardDescription>
+            <CardDescription>{t(`dashboard.months.description.${mode}`, { currency: currencyUnit(overview?.currency) })}</CardDescription>
             <CardAction>
               <CardLink to="/finance">{t("dashboard.months.open")}</CardLink>
             </CardAction>
@@ -266,7 +266,7 @@ export function DashboardOverviewTab() {
             <CardDescription>
               {windows === undefined || overview === undefined
                 ? null
-                : t(`dashboard.branches.description.${mode}`, { period: windows.periodShort, currency: overview.currency })}
+                : t(`dashboard.branches.description.${mode}`, { period: windows.periodShort, currency: currencyUnit(overview.currency) })}
             </CardDescription>
             <CardAction>
               <CardLink to="/profit-by-branch" range={range}>
@@ -653,7 +653,7 @@ export function DashboardBranchesTab() {
           <CardDescription>
             {windows === undefined || overview === undefined
               ? null
-              : t(`dashboard.branches.description.${mode}`, { period: windows.periodShort, currency: overview.currency })}
+              : t(`dashboard.branches.description.${mode}`, { period: windows.periodShort, currency: currencyUnit(overview.currency) })}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">

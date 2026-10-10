@@ -10,7 +10,7 @@ import { WeekColumns } from "@/components/overview/week-columns.js";
 import { ErrorState } from "@/components/page";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDate, formatMoney, formatPercent, moneyAmountParts } from "@/lib/format.js";
+import { currencyUnit, formatDate, formatDayMonth, formatMoney, formatPercent } from "@/lib/format.js";
 import { PAGE_USAGE_RANGE, pointsChange, useFleetUsage, wholeShare } from "@/overview/useFleetUsage.js";
 import { windowLabel } from "@/overview/window-label.js";
 import { useActivitySummary } from "./useActivities.js";
@@ -20,9 +20,7 @@ type Translate = ReturnType<typeof useTranslation>["t"];
 const LIST = "/activities/list";
 
 function shortDay(iso: string, language: string | undefined): string {
-  return new Intl.DateTimeFormat(language, { month: "short", day: "numeric", timeZone: "UTC" }).format(
-    new Date(`${iso}T00:00:00Z`),
-  );
+  return formatDayMonth(iso, language, { month: "short" });
 }
 
 /**
@@ -260,7 +258,7 @@ function RoutesCard({
       <CardHeader>
         <CardTitle>{t("activities.overview.routes.title")}</CardTitle>
         <CardDescription>
-          {t("activities.overview.routes.question", { period: windowLabel(usage.period, usage.range, language), currency: moneyAmountParts(null, { currency, locale: language }).symbol })}
+          {t("activities.overview.routes.question", { period: windowLabel(usage.period, usage.range, language), currency: currencyUnit(currency) })}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">

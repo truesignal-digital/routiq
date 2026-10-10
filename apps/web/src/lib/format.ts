@@ -22,6 +22,7 @@ export type MoneySign =
 type FormatMoneyOptions = {
   currency?: string | null;
   sign?: MoneySign;
+  /** Accepted for symmetry with the other formatters; money reads the same in every language. */
   locale?: string | null;
 };
 
@@ -31,32 +32,66 @@ type LocalizedLabels = {
 };
 
 const MINUS = "\u2212";
+/** Between digit groups and before the unit: an amount never wraps (#695). */
+const NBSP = "\u00a0";
 
-function normalizeMoneySpacing(value: string): string {
-  return value.replace(/\u202f/g, " ");
+/**
+ * The unit written after an amount: "FCFA" for XAF, as people write it in
+ * Cameroon, in both languages (#712). Another currency keeps its own symbol.
+ */
+export function currencyUnit(currency: string | null | undefined = "XAF"): string {
+  if (currency == null || currency === "XAF") return "FCFA";
+  return (
+    new Intl.NumberFormat("en-GB", { style: "currency", currency, currencyDisplay: "narrowSymbol" })
+      .formatToParts(0)
+      .find((part) => part.type === "currency")?.value ?? currency
+  );
 }
 
+/** Whole units grouped by three with non-breaking spaces: "450 000". */
+function groupDigits(whole: number): string {
+  return String(Math.round(Math.abs(whole))).replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
+}
+
+/**
+ * "450 000 FCFA", "−86 000 FCFA", "+86 000 FCFA": one way in fr-CM and en
+ * (#712). Digits grouped by three, the unit after, all joined by non-breaking
+ * spaces. XAF has exponent 0, so the minor units are the amount; every
+ * currency here is shown in whole units.
+ */
 export function formatMoney(
   minor: number | null | undefined,
   options: FormatMoneyOptions | null = {},
 ): string {
   if (minor == null || options == null) return "";
 
-  const { currency = "XAF", sign, locale = i18n.resolvedLanguage } = options;
+  const { currency = "XAF", sign } = options;
   if (currency == null) return "";
 
   const value =
     sign?.context === "ledger" ? (sign.direction === "REVENUE" ? minor : -minor) : minor;
-  const formatted = new Intl.NumberFormat(locale ?? undefined, {
-    style: "currency",
-    currency,
-    // XAF has exponent 0; every currency here is shown in whole units.
-    maximumFractionDigits: 0,
-    signDisplay: sign === undefined ? "negative" : sign.context === "record" ? "never" : "exceptZero",
-  }).format(value);
+  const whole = Math.round(value);
+  const prefix =
+    sign?.context === "record" || whole === 0
+      ? ""
+      : whole < 0
+        ? MINUS
+        : sign === undefined
+          ? ""
+          : "+";
+  return `${prefix}${groupDigits(whole)}${NBSP}${currencyUnit(currency)}`;
+}
 
-  // One minus sign in every language: Intl gives a hyphen in English.
-  return normalizeMoneySpacing(formatted).replace("-", MINUS);
+/**
+ * `formatMoney` split for a tile: the signed figure ("−2 850 000", grouped by
+ * non-breaking spaces) and the unit shown small after it.
+ */
+export function moneyFigure(
+  minor: number,
+  options: { currency?: string } = {},
+): { figure: string; unit: string } {
+  const whole = Math.round(minor);
+  return { figure: `${whole < 0 ? MINUS : ""}${groupDigits(whole)}`, unit: currencyUnit(options.currency ?? "XAF") };
 }
 
 export type ProfitOrLoss = {
@@ -98,33 +133,17 @@ const plainSpaces = (value: string) => value.replace(/[\u00a0\u202f]/g, " ");
 
 /**
  * A whole amount laid out the way `formatMoney` shows it, taken apart: the
- * grouped figure and the currency symbol, and which comes first. An amount
- * input uses it to look exactly like the figure it edits.
+ * grouped figure (plain spaces, for an input) and the unit, and which comes
+ * first. An amount input uses it to look exactly like the figure it edits.
  */
 export function moneyAmountParts(
   minor: number | null,
   options: { currency?: string; locale?: string | undefined } = {},
 ): { amount: string; symbol: string; symbolFirst: boolean } {
-  const currency = options.currency ?? "XAF";
-  const parts = new Intl.NumberFormat(options.locale ?? i18n.resolvedLanguage, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).formatToParts(minor ?? 0);
-  const symbolAt = parts.findIndex((part) => part.type === "currency");
-  const integerAt = parts.findIndex((part) => part.type === "integer");
   return {
-    amount:
-      minor === null
-        ? ""
-        : plainSpaces(
-            parts
-              .filter((part) => part.type === "integer" || part.type === "group")
-              .map((part) => part.value)
-              .join(""),
-          ),
-    symbol: parts[symbolAt]?.value ?? currency,
-    symbolFirst: symbolAt !== -1 && symbolAt < integerAt,
+    amount: minor === null ? "" : plainSpaces(groupDigits(minor)),
+    symbol: currencyUnit(options.currency ?? "XAF"),
+    symbolFirst: false,
   };
 }
 
@@ -177,18 +196,128 @@ function toDate(value: string | Date | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-/** Calendar dates retain their day; timestamps use the viewer's time zone. */
-export function formatDate(iso: string | null | undefined, locale?: string): string {
-  if (iso == null) return "";
+/**
+ * The calendar each app language writes dates in: day first, 24-hour clock.
+ * English is British English here ("29 July 2026"), never the US order (#712).
+ */
+export function dateLocale(language?: string | null): string {
+  const resolved = language ?? i18n.resolvedLanguage ?? "fr-CM";
+  if (resolved.startsWith("en")) return "en-GB";
+  if (resolved.startsWith("fr")) return "fr-FR";
+  return resolved;
+}
 
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
-  return new Intl.DateTimeFormat(locale ?? i18n.resolvedLanguage, {
-    dateStyle: "short",
-    // ISO date-only strings parse at UTC midnight, but are not instants to shift.
-    ...(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? { timeZone: "UTC" } : {}),
-  }).format(date);
+/** A calendar date keeps its day (read in UTC); a timestamp reads on the viewer's clock. */
+function dateAndZone(value: string | Date | null | undefined): { date: Date; zone: { timeZone?: "UTC" } } | null {
+  const date = toDate(value);
+  if (date === null) return null;
+  return { date, zone: typeof value === "string" && DATE_ONLY.test(value) ? { timeZone: "UTC" } : {} };
+}
+
+export type MonthStyle = "long" | "short";
+
+/**
+ * "29 July 2026" / "29 juillet 2026"; with `month: "short"`, "29 Jul 2026" /
+ * "29 juil. 2026" for a dense table. Never a two-digit year.
+ */
+export function formatDate(
+  value: string | Date | null | undefined,
+  locale?: string,
+  month: MonthStyle = "long",
+): string {
+  const parsed = dateAndZone(value);
+  if (parsed === null) return "";
+  return new Intl.DateTimeFormat(dateLocale(locale), {
+    day: "numeric",
+    month,
+    year: "numeric",
+    ...parsed.zone,
+  }).format(parsed.date);
+}
+
+/** "07:00": the time of day on a 24-hour clock, in both languages. */
+export function formatTime(value: string | Date | null | undefined, locale?: string): string {
+  const date = toDate(value);
+  if (date === null) return "";
+  return new Intl.DateTimeFormat(dateLocale(locale), { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(date);
+}
+
+/** "29 July 2026, 07:00"; with `month: "short"`, "29 Jul 2026, 07:00". */
+export function formatDateTime(
+  value: string | Date | null | undefined,
+  locale?: string,
+  month: MonthStyle = "long",
+): string {
+  const date = toDate(value);
+  if (date === null) return "";
+  return `${formatDate(date, locale, month)}, ${formatTime(date, locale)}`;
+}
+
+/**
+ * A day without its year, for a chart label or a sentence about this week:
+ * "5 Oct", "5 October", "Monday 5 October" (`weekday`).
+ */
+export function formatDayMonth(
+  value: string | Date | null | undefined,
+  locale?: string,
+  options: { month?: MonthStyle; weekday?: boolean } = {},
+): string {
+  const parsed = dateAndZone(value);
+  if (parsed === null) return "";
+  return new Intl.DateTimeFormat(dateLocale(locale), {
+    ...(options.weekday === true ? { weekday: "long" as const } : {}),
+    day: "numeric",
+    month: options.month ?? "long",
+    ...parsed.zone,
+  }).format(parsed.date);
+}
+
+/**
+ * Two calendar dates as one span: "1–10 October" (`days`), or whole months
+ * "July – September 2026" (`months`).
+ */
+export function formatDateRange(
+  from: string,
+  to: string,
+  locale?: string,
+  options: { unit: "days" | "months"; month?: MonthStyle } = { unit: "days" },
+): string {
+  const start = toDate(`${from.slice(0, 10)}T00:00:00Z`);
+  const end = toDate(`${to.slice(0, 10)}T00:00:00Z`);
+  if (start === null || end === null) return "";
+  const month = options.month ?? "long";
+  return new Intl.DateTimeFormat(
+    dateLocale(locale),
+    options.unit === "days"
+      ? { day: "numeric", month, timeZone: "UTC" }
+      : { month, year: "numeric", timeZone: "UTC" },
+  ).formatRange(start, end);
+}
+
+/** "Wednesday 29 July 2026": a calendar day read out in full, for a screen reader. */
+export function formatDateFull(value: string | Date | null | undefined, locale?: string): string {
+  const parsed = dateAndZone(value);
+  if (parsed === null) return "";
+  return new Intl.DateTimeFormat(dateLocale(locale), {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    ...parsed.zone,
+  }).format(parsed.date);
+}
+
+/** "W", "Wed", "Wednesday": a weekday on its own, for a calendar's column headings. */
+export function formatWeekday(value: Date, locale?: string, style: "narrow" | "short" | "long" = "long"): string {
+  return new Intl.DateTimeFormat(dateLocale(locale), { weekday: style }).format(value);
+}
+
+/** "29/07/2026": the numeric day/month/year a date input shows and reads, in both languages. */
+export function formatDateInput(iso: string | null | undefined): string {
+  const match = iso == null ? null : /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  return match === null ? "" : `${match[3]}/${match[2]}/${match[1]}`;
 }
 
 /** A whole percent as the reader's language writes it: "11%", "11 %". */
@@ -212,27 +341,36 @@ export function formatCompact(value: number, locale?: string): string {
   );
 }
 
-/** "septembre 2026" for the period "2026-09": a posting month in words. */
-export function formatMonth(periodCode: string | null | undefined, locale?: string): string {
-  if (periodCode == null || !/^\d{4}-\d{2}$/.test(periodCode)) return periodCode ?? "";
-  return new Intl.DateTimeFormat(locale ?? i18n.resolvedLanguage, {
-    month: "long",
-    year: "numeric",
+/**
+ * A month in words: "septembre 2026" for the period "2026-09" or any date in
+ * it; `month: "short"` gives "sept. 2026"; `year: false` the month alone.
+ */
+export function formatMonth(
+  value: string | null | undefined,
+  locale?: string,
+  options: { month?: MonthStyle; year?: boolean } = {},
+): string {
+  if (value == null) return "";
+  const period = /^(\d{4}-\d{2})(?:-\d{2})?$/.exec(value)?.[1];
+  if (period === undefined) {
+    // A timestamp: its month on the viewer's clock.
+    const date = toDate(value);
+    if (date === null) return value;
+    return new Intl.DateTimeFormat(dateLocale(locale), {
+      month: options.month ?? "long",
+      ...(options.year === false ? {} : { year: "numeric" as const }),
+    }).format(date);
+  }
+  return new Intl.DateTimeFormat(dateLocale(locale), {
+    month: options.month ?? "long",
+    ...(options.year === false ? {} : { year: "numeric" as const }),
     timeZone: "UTC",
-  }).format(new Date(`${periodCode}-15T00:00:00Z`));
+  }).format(new Date(`${period}-15T00:00:00Z`));
 }
 
-/** "31 juillet 2026" — the heading a day's worth of history sits under. */
-export function formatDayLong(
-  value: string | Date | null | undefined,
-  locale?: string,
-): string {
-  const date = toDate(value);
-  if (date === null) return "";
-
-  return new Intl.DateTimeFormat(locale ?? i18n.resolvedLanguage, {
-    dateStyle: "long",
-  }).format(date);
+/** "31 juillet 2026": the heading a day's worth of history sits under. */
+export function formatDayLong(value: string | Date | null | undefined, locale?: string): string {
+  return formatDate(value, locale);
 }
 
 /**
@@ -247,18 +385,6 @@ export function localDayKey(value: string | Date | null | undefined): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${date.getFullYear()}-${month}-${day}`;
-}
-
-export function formatDateTime(iso: string | null | undefined, locale?: string): string {
-  if (iso == null) return "";
-
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-
-  return new Intl.DateTimeFormat(locale ?? i18n.resolvedLanguage, {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(date);
 }
 
 const RELATIVE_UNITS: ReadonlyArray<readonly [Intl.RelativeTimeFormatUnit, number]> = [

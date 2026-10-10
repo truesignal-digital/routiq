@@ -7,6 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { formatDate } from "@/lib/format.js"
 
 export interface DateRangePickerProps {
   fromValue?: string | undefined
@@ -38,11 +39,7 @@ function DateRangePicker({
   onToChange,
 }: DateRangePickerProps) {
   const { t, i18n } = useTranslation()
-  const locale = (i18n.resolvedLanguage ?? i18n.language).startsWith("fr")
-    ? "fr"
-    : "en"
-  const intlLocale = locale === "fr" ? "fr-FR" : "en-US"
-  const formatter = new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium" })
+  const language = i18n.resolvedLanguage ?? i18n.language
   const from = parseIsoDate(fromValue)
   const to = parseIsoDate(toValue)
   const selected: CalendarDateRange = {
@@ -54,7 +51,7 @@ function DateRangePicker({
 
   function displayValue(value: string | undefined) {
     const date = parseIsoDate(value)
-    return date === undefined ? "" : formatter.format(date)
+    return date === undefined ? "" : formatDate(date, language, "short")
   }
 
   function changeRange(range: CalendarDateRange | undefined) {

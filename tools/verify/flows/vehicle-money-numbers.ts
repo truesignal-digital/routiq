@@ -70,7 +70,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   const categories = page.locator('[data-slot="card"]').filter({ hasText: t("Dépenses par catégorie", "Expenses by category") });
   await categories.waitFor();
   await shot("october-negative", {
-    caption: `October nets −85,000 after cancelling ${repair.entryNumber}: no share is shown`,
+    caption: `October nets −85 000 FCFA after cancelling ${repair.entryNumber}: no share is shown`,
     highlight: categories,
   });
   const share = (await categories.textContent()) ?? "";

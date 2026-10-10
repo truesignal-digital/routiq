@@ -48,13 +48,13 @@ describe("the Details card's edit mode", () => {
     expect(field("Chassis number").value).toBe("WDB9634031L123456");
     expect(field("Axle count").value).toBe("3");
     expect(field("Body type").value).toBe("Tautliner");
-    expect(screen.getByRole("button", { name: "Acquisition date" }).textContent).toContain("Mar 1, 2024");
+    expect(screen.getByRole("button", { name: "Acquisition date" }).textContent).toContain("1 Mar 2024");
     // Fleet code, class and the whole "Right now" column stay text.
     expect(screen.queryByRole("textbox", { name: "Fleet code" })).toBeNull();
     expect(screen.queryByRole("textbox", { name: "Class" })).toBeNull();
     expect(screen.getByText("VH003", { selector: "span.font-medium" })).toBeTruthy();
     expect(screen.getByText("Changed through its own actions")).toBeTruthy();
-    expect(screen.getByText("Sali since 8/1/26")).toBeTruthy();
+    expect(screen.getByText("Sali since 1 August 2026")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Edit details" })).toBeNull();
 
     await user.type(field("Plate"), " X");
@@ -196,8 +196,8 @@ describe("the Details card's edit mode", () => {
 
     for (let step = 0; step < 4; step += 1) await user.click(previousYear);
     await user.click(previousMonth);
-    await user.click(calendar.getByRole("button", { name: "Thursday, February 15, 2024" }));
-    expect(trigger.textContent).toContain("Feb 15, 2024");
+    await user.click(calendar.getByRole("button", { name: "Thursday, 15 February 2024" }));
+    expect(trigger.textContent).toContain("15 Feb 2024");
     await user.click(save);
     await waitFor(() => expect(recorded.commands).toHaveLength(1));
     expect(recorded.commands[0]?.body.payload).toEqual({ assetId: ASSET_ID, acquisitionDate: "2024-02-15" });
@@ -218,8 +218,8 @@ describe("the Details card's edit mode", () => {
       const calendar = within(await screen.findByRole("dialog"));
       await user.click(calendar.getByRole("button", { name: "Next month" }));
       const day = (name: string) => calendar.getByRole("button", { name, hidden: true }) as HTMLButtonElement;
-      expect(day("Thursday, October 1, 2026").disabled).toBe(false);
-      expect(day("Friday, October 2, 2026").disabled).toBe(true);
+      expect(day("Thursday, 1 October 2026").disabled).toBe(false);
+      expect(day("Friday, 2 October 2026").disabled).toBe(true);
     } finally {
       vi.useRealTimers();
     }
@@ -294,13 +294,13 @@ describe("the Details card's edit mode", () => {
   it("shows the amount the same way in the card and in the field", async () => {
     await openVehicle(DETAILS, { role: "ADMIN" });
     const user = userEvent.setup();
-    expect(await screen.findByText("3/1/24 · FCFA 45,000,000")).toBeTruthy();
+    expect(await screen.findByText("1 March 2024 · 45 000 000 FCFA")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Edit details" }));
     const amount = await screen.findByRole("textbox", { name: "Acquisition amount" });
-    expect((amount as HTMLInputElement).value).toBe("45,000,000");
+    expect((amount as HTMLInputElement).value).toBe("45 000 000");
     expect(amount.parentElement?.textContent).toContain("FCFA");
-    // The symbol leads in English, as in the card.
-    expect(amount.previousElementSibling?.textContent).toBe("FCFA");
+    // FCFA follows the amount in English too, as in the card (#712).
+    expect(amount.nextElementSibling?.textContent).toBe("FCFA");
   });
 });
 
@@ -393,7 +393,7 @@ describe("History", () => {
     expect(await screen.findByText("Details edited")).toBeTruthy();
     const detail = screen.getByText(/Plate: LT 123 AB → LT 132 AB/);
     const text = detail.textContent?.replace(/[\u00a0\u202f]/g, " ");
-    expect(text).toContain("Acquisition amount: Not recorded → FCFA 45,000,000");
+    expect(text).toContain("Acquisition amount: Not recorded → 45 000 000 FCFA");
     expect(text).toContain("Axle count: 3 → 4");
     expect(screen.getByText("Boris")).toBeTruthy();
   });

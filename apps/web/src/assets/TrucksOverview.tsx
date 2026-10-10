@@ -13,7 +13,7 @@ import { ErrorState } from "@/components/page";
 import { StatusBadge } from "@/components/status-badge.js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDate, formatPercent, localizedLabel, profitOrLoss } from "@/lib/format.js";
+import { formatDate, formatDateRange, formatPercent, localizedLabel, profitOrLoss } from "@/lib/format.js";
 import { contributes } from "@/modules/manifest.js";
 import {
   FLEET_DOCUMENT_WINDOW_DAYS,
@@ -459,10 +459,7 @@ function ProfitByTruckCard({ overview, isPending }: { overview: FinanceOverviewR
   const period =
     overview === undefined
       ? undefined
-      : new Intl.DateTimeFormat(i18n.resolvedLanguage, { month: "long", day: "numeric", timeZone: "UTC" }).formatRange(
-          new Date(`${overview.period.from}T00:00:00Z`),
-          new Date(`${overview.period.to}T00:00:00Z`),
-        );
+      : formatDateRange(overview.period.from, overview.period.to, i18n.resolvedLanguage, { unit: "days" });
   return (
     <Card data-slot="profit-by-truck">
       <CardHeader>

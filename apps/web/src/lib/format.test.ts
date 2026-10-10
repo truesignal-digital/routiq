@@ -1,10 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
+  currencyUnit,
   formatPercent,
   formatMoney,
   formatDate,
+  formatDateFull,
+  formatDateInput,
+  formatDateRange,
   formatDateTime,
   formatDayLong,
+  formatDayMonth,
+  formatMonth,
+  formatTime,
+  formatWeekday,
   localDayKey,
   localizedLabel,
   notRecorded,
@@ -14,83 +22,87 @@ import { i18n } from "../i18n/index.js";
 
 describe("format", () => {
   describe("formatMoney", () => {
-    const plain = (value: string) => value.replace(/[\u00a0\u202f]/g, " ");
+    // Shown here with "_" for the non-breaking space, so a test reads like the screen.
+    const shown = (value: string) => value.replace(/ /g, "_");
     const en = (minor: number, sign?: Parameters<typeof formatMoney>[1]) =>
-      plain(formatMoney(minor, { locale: "en", ...sign }));
+      shown(formatMoney(minor, { locale: "en", ...sign }));
     const fr = (minor: number, sign?: Parameters<typeof formatMoney>[1]) =>
-      plain(formatMoney(minor, { locale: "fr-CM", ...sign }));
+      shown(formatMoney(minor, { locale: "fr-CM", ...sign }));
 
-    it("formats XAF with exponent 0 (no division)", () => {
-      expect(fr(150_000)).toBe("150 000 FCFA");
-      expect(en(150_000)).toBe("FCFA 150,000");
+    it("writes 450 000 FCFA in both languages: XAF has exponent 0, never divided (#712)", () => {
+      expect(fr(450_000)).toBe("450_000_FCFA");
+      expect(en(450_000)).toBe("450_000_FCFA");
+      expect(en(150)).toBe("150_FCFA");
+      expect(en(1_234_567_890)).toBe("1_234_567_890_FCFA");
+    });
+
+    it("joins digits and unit with non-breaking spaces only, so an amount never wraps (#695)", () => {
+      const result = formatMoney(2_850_000, { locale: "en" });
+      expect(result).toBe("2 850 000 FCFA");
+      expect(result).not.toMatch(/[  ,]/);
     });
 
     describe("the sign rule", () => {
       it("signs a ledger line from its direction: revenue +, expense −", () => {
         const expense = { sign: { context: "ledger", direction: "EXPENSE" } } as const;
         const revenue = { sign: { context: "ledger", direction: "REVENUE" } } as const;
-        expect(en(86_000, expense)).toBe("−FCFA 86,000");
-        expect(fr(86_000, expense)).toBe("−86 000 FCFA");
-        expect(en(86_000, revenue)).toBe("+FCFA 86,000");
-        expect(fr(86_000, revenue)).toBe("+86 000 FCFA");
+        expect(en(86_000, expense)).toBe("−86_000_FCFA");
+        expect(fr(86_000, expense)).toBe("−86_000_FCFA");
+        expect(en(86_000, revenue)).toBe("+86_000_FCFA");
+        expect(fr(86_000, revenue)).toBe("+86_000_FCFA");
       });
 
       it("flips a reversal, whose stored amount is negative", () => {
-        expect(en(-86_000, { sign: { context: "ledger", direction: "EXPENSE" } })).toBe("+FCFA 86,000");
-        expect(en(-86_000, { sign: { context: "ledger", direction: "REVENUE" } })).toBe("−FCFA 86,000");
+        expect(en(-86_000, { sign: { context: "ledger", direction: "EXPENSE" } })).toBe("+86_000_FCFA");
+        expect(en(-86_000, { sign: { context: "ledger", direction: "REVENUE" } })).toBe("−86_000_FCFA");
       });
 
       it("signs a net by its own value, and leaves zero bare", () => {
-        expect(en(-171_000, { sign: { context: "net" } })).toBe("−FCFA 171,000");
-        expect(fr(2_850_000, { sign: { context: "net" } })).toBe("+2 850 000 FCFA");
-        expect(en(0, { sign: { context: "net" } })).toBe("FCFA 0");
+        expect(en(-171_000, { sign: { context: "net" } })).toBe("−171_000_FCFA");
+        expect(fr(2_850_000, { sign: { context: "net" } })).toBe("+2_850_000_FCFA");
+        expect(en(0, { sign: { context: "net" } })).toBe("0_FCFA");
       });
 
       it("never signs a record's own amount, a reversal's included", () => {
-        expect(en(86_000, { sign: { context: "record" } })).toBe("FCFA 86,000");
-        expect(fr(-86_000, { sign: { context: "record" } })).toBe("86 000 FCFA");
+        expect(en(86_000, { sign: { context: "record" } })).toBe("86_000_FCFA");
+        expect(fr(-86_000, { sign: { context: "record" } })).toBe("86_000_FCFA");
       });
 
-      it("signs only a negative amount when no sign is asked for", () => {
-        expect(en(86_000)).toBe("FCFA 86,000");
-        expect(en(-86_000)).toBe("−FCFA 86,000");
-        expect(fr(-86_000)).toBe("−86 000 FCFA");
-        expect(en(0)).toBe("FCFA 0");
+      it("signs only a negative amount when no sign is asked for, with a true minus", () => {
+        expect(en(86_000)).toBe("86_000_FCFA");
+        expect(en(-86_000)).toBe("−86_000_FCFA");
+        expect(fr(-86_000)).toBe("−86_000_FCFA");
+        expect(en(0)).toBe("0_FCFA");
+        expect(en(-86_000)).not.toContain("-");
       });
     });
 
     describe("profitOrLoss", () => {
-      const plainText = (minor: number, locale: string) => {
+      const shownText = (minor: number, locale: string) => {
         const result = profitOrLoss(minor, { locale });
-        return { ...result, amount: plain(result.amount), text: plain(result.text) };
+        return { ...result, amount: shown(result.amount), text: shown(result.text) };
       };
 
       it("says Loss for a balance below zero, never a negative profit", () => {
-        expect(plainText(-86_000, "en")).toEqual({
+        expect(shownText(-86_000, "en")).toEqual({
           kind: "loss",
           label: "Loss",
-          amount: "FCFA 86,000",
-          text: "Loss FCFA 86,000",
+          amount: "86_000_FCFA",
+          text: "Loss 86_000_FCFA",
         });
-        expect(plainText(-86_000, "fr-CM")).toEqual({
+        expect(shownText(-86_000, "fr-CM")).toEqual({
           kind: "loss",
           label: "Perte",
-          amount: "86 000 FCFA",
-          text: "Perte 86 000 FCFA",
+          amount: "86_000_FCFA",
+          text: "Perte 86_000_FCFA",
         });
       });
 
       it("says Profit at zero and above, without a sign", () => {
-        expect(plainText(2_850_000, "fr-CM").text).toBe("Bénéfice 2 850 000 FCFA");
-        expect(plainText(2_850_000, "en").text).toBe("Profit FCFA 2,850,000");
-        expect(plainText(0, "en")).toMatchObject({ kind: "profit", label: "Profit", amount: "FCFA 0" });
+        expect(shownText(2_850_000, "fr-CM").text).toBe("Bénéfice 2_850_000_FCFA");
+        expect(shownText(2_850_000, "en").text).toBe("Profit 2_850_000_FCFA");
+        expect(shownText(0, "en")).toMatchObject({ kind: "profit", label: "Profit", amount: "0_FCFA" });
       });
-    });
-
-    it("normalizes U+202F to regular space", () => {
-      const result = formatMoney(150000, { currency: "XAF", locale: "fr-CM" });
-      expect(result).not.toContain("\u202f");
-      expect(result).toMatch(/\s/);
     });
 
     it("returns empty string for null/undefined", () => {
@@ -102,93 +114,99 @@ describe("format", () => {
       expect(formatMoney(100, null)).toBe("");
     });
 
-    it("defaults locale to the active language", async () => {
+    it("reads the same whatever the active language", async () => {
       await i18n.changeLanguage("en");
-      expect(plain(formatMoney(1_234_567))).toBe("FCFA 1,234,567");
+      expect(shown(formatMoney(1_234_567))).toBe("1_234_567_FCFA");
       await i18n.changeLanguage("fr-CM");
-      expect(plain(formatMoney(1_234_567))).toBe("1 234 567 FCFA");
+      expect(shown(formatMoney(1_234_567))).toBe("1_234_567_FCFA");
     });
 
-    it("handles other currencies", () => {
-      expect(formatMoney(100, { currency: "EUR", locale: "fr-CM" })).toContain("€");
+    it("writes another currency's own symbol after the amount", () => {
+      expect(shown(formatMoney(100, { currency: "EUR", locale: "fr-CM" }))).toBe("100_€");
+      expect(currencyUnit("XAF")).toBe("FCFA");
     });
   });
 
   describe("formatDate", () => {
-    it("formats valid ISO date", () => {
-      const result = formatDate("2026-07-26");
-      expect(result).toBeTruthy();
-      expect(result).not.toBe("");
+    it("writes 29 July 2026 / 29 juillet 2026, day first in English too (#712)", () => {
+      expect(formatDate("2026-07-29", "en")).toBe("29 July 2026");
+      expect(formatDate("2026-07-29", "en-US")).toBe("29 July 2026");
+      expect(formatDate("2026-07-29", "fr-CM")).toBe("29 juillet 2026");
     });
 
-    it("returns empty string for null", () => {
+    it("allows the short month for a dense table, never a two-digit year", () => {
+      expect(formatDate("2026-07-29", "en", "short")).toBe("29 Jul 2026");
+      expect(formatDate("2026-07-29", "fr-CM", "short")).toBe("29 juil. 2026");
+    });
+
+    it("returns empty string for null, undefined or nonsense", () => {
       expect(formatDate(null)).toBe("");
-    });
-
-    it("returns empty string for undefined", () => {
       expect(formatDate(undefined)).toBe("");
-    });
-
-    it("returns empty string for invalid date", () => {
       expect(formatDate("invalid")).toBe("");
     });
 
-    it("uses dateStyle: short", () => {
-      const result = formatDate("2026-07-26");
-      expect(result.length).toBeLessThan(20);
-    });
-
-    it("respects explicit locale", () => {
-      const frResult = formatDate("2026-07-26", "fr-CM");
-      const enResult = formatDate("2026-07-26", "en-US");
-      expect(frResult).toBeTruthy();
-      expect(enResult).toBeTruthy();
-    });
-
-    it("defaults to i18n.resolvedLanguage", () => {
-      const result = formatDate("2026-07-26");
-      expect(result).toBeTruthy();
+    it("follows the active language", async () => {
+      await i18n.changeLanguage("en");
+      expect(formatDate("2026-07-29")).toBe("29 July 2026");
+      await i18n.changeLanguage("fr-CM");
+      expect(formatDate("2026-07-29")).toBe("29 juillet 2026");
     });
   });
 
-  describe("formatDateTime", () => {
-    it("formats valid ISO datetime", () => {
-      const result = formatDateTime("2026-07-26T14:30:00Z");
-      expect(result).toBeTruthy();
-      expect(result).not.toBe("");
+  describe("formatDateTime and formatTime", () => {
+    beforeEach(() => {
+      vi.stubEnv("TZ", "UTC");
     });
 
-    it("returns empty string for null", () => {
+    it("writes 29 July 2026, 07:00 on a 24-hour clock in both languages", () => {
+      expect(formatDateTime("2026-07-29T07:00:00Z", "en")).toBe("29 July 2026, 07:00");
+      expect(formatDateTime("2026-07-29T19:05:00Z", "fr-CM")).toBe("29 juillet 2026, 19:05");
+      expect(formatDateTime("2026-07-29T19:05:00Z", "en", "short")).toBe("29 Jul 2026, 19:05");
+      expect(formatTime("2026-07-29T19:05:00Z", "en")).toBe("19:05");
+    });
+
+    it("returns empty string for null, undefined or nonsense", () => {
       expect(formatDateTime(null)).toBe("");
-    });
-
-    it("returns empty string for undefined", () => {
       expect(formatDateTime(undefined)).toBe("");
-    });
-
-    it("returns empty string for invalid datetime", () => {
       expect(formatDateTime("invalid")).toBe("");
+      expect(formatTime("invalid")).toBe("");
+    });
+  });
+
+  describe("days, ranges and months", () => {
+    it("writes a day without its year day first: 5 Oct, Monday 5 October", () => {
+      expect(formatDayMonth("2026-10-05", "en", { month: "short" })).toBe("5 Oct");
+      expect(formatDayMonth("2026-10-05", "en", { weekday: true })).toBe("Monday 5 October");
+      expect(formatDayMonth("2026-10-05", "fr-CM", { weekday: true })).toBe("lundi 5 octobre");
     });
 
-    it("includes both date and time", () => {
-      const result = formatDateTime("2026-07-26T14:30:00Z");
-      expect(result.length).toBeGreaterThan(
-        formatDate("2026-07-26")?.length ?? 0
-      );
+    it("writes a span of days or of whole months", () => {
+      expect(formatDateRange("2026-10-01", "2026-10-10", "en", { unit: "days" })).toBe("1–10 October");
+      expect(formatDateRange("2026-07-01", "2026-09-30", "en", { unit: "months" })).toBe("July\u2009–\u2009September 2026");
     });
 
-    it("respects explicit locale", () => {
-      const frResult = formatDateTime("2026-07-26T14:30:00Z", "fr-CM");
-      const enResult = formatDateTime("2026-07-26T14:30:00Z", "en-US");
-      expect(frResult).toBeTruthy();
-      expect(enResult).toBeTruthy();
+    it("writes a month with or without its year", () => {
+      expect(formatMonth("2026-09", "en")).toBe("September 2026");
+      expect(formatMonth("2026-09", "fr-CM")).toBe("septembre 2026");
+      expect(formatMonth("2026-09-15", "en", { month: "short", year: false })).toBe("Sept");
+    });
+
+    it("gives a date input dd/mm/yyyy in both languages", () => {
+      expect(formatDateInput("2026-07-29")).toBe("29/07/2026");
+      expect(formatDateInput("2026-07-29T14:30")).toBe("29/07/2026");
+      expect(formatDateInput("")).toBe("");
+    });
+
+    it("reads a calendar day out in full for a screen reader", () => {
+      expect(formatDateFull("2026-07-29", "en")).toBe("Wednesday, 29 July 2026");
+      expect(formatWeekday(new Date(2026, 6, 29), "fr-CM", "short")).toBe("mer.");
     });
   });
 
   describe("formatDayLong", () => {
-    it("spells the month out for a day heading", () => {
+    it("spells the month out for a day heading, day first", () => {
       expect(formatDayLong("2026-07-31T12:00:00Z", "fr-CM")).toBe("31 juillet 2026");
-      expect(formatDayLong("2026-07-31T12:00:00Z", "en-US")).toBe("July 31, 2026");
+      expect(formatDayLong("2026-07-31T12:00:00Z", "en-US")).toBe("31 July 2026");
     });
 
     it("accepts a Date as readily as an ISO string", () => {
@@ -200,12 +218,6 @@ describe("format", () => {
       expect(formatDayLong(null)).toBe("");
       expect(formatDayLong(undefined)).toBe("");
       expect(formatDayLong("invalid")).toBe("");
-    });
-
-    it("says more than the short form", () => {
-      expect(formatDayLong("2026-07-31T12:00:00Z", "fr-CM").length).toBeGreaterThan(
-        formatDate("2026-07-31T12:00:00Z", "fr-CM").length
-      );
     });
   });
 

@@ -2073,8 +2073,8 @@
     }
   },
   "dateField": {
-    "placeholderDate": "mm/dd/yyyy",
-    "placeholderDateTime": "mm/dd/yyyy hh:mm",
+    "placeholderDate": "dd/mm/yyyy",
+    "placeholderDateTime": "dd/mm/yyyy hh:mm",
     "openCalendar": "Open calendar",
     "today": "Today",
     "yesterday": "Yesterday",

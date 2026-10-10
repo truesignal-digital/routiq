@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { NotRecorded } from "@/components/not-recorded";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { formatPercent, notRecorded } from "@/lib/format.js";
+import { formatDayMonth, formatPercent, notRecorded } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
 import { ChartViewToggle } from "./chart-view-toggle.js";
 
@@ -41,9 +41,7 @@ function statusWord(status: DailyStatus, t: Translate): string {
 }
 
 function shortDay(iso: string, language: string | undefined): string {
-  return new Intl.DateTimeFormat(language, { month: "short", day: "numeric", timeZone: "UTC" }).format(
-    new Date(`${iso}T00:00:00Z`),
-  );
+  return formatDayMonth(iso, language, { month: "short" });
 }
 
 interface Tally {
