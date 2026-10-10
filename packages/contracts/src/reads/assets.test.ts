@@ -41,16 +41,17 @@ describe("asset list contract", () => {
 });
 
 describe("asset summary contract", () => {
-  const summary = { total: 6, inService: 2, attention: 3 };
+  const summary = { total: 6, inService: 2, canDrive: 1, attention: 3 };
 
-  it("accepts the three fleet buckets", () => {
+  it("accepts the fleet buckets", () => {
     expect(assetSummary.parse(summary)).toEqual(summary);
   });
 
   it("accepts an empty fleet", () => {
-    expect(assetSummary.parse({ total: 0, inService: 0, attention: 0 })).toEqual({
+    expect(assetSummary.parse({ total: 0, inService: 0, canDrive: 0, attention: 0 })).toEqual({
       total: 0,
       inService: 0,
+      canDrive: 0,
       attention: 0,
     });
   });
@@ -64,6 +65,7 @@ describe("asset summary contract", () => {
 
   it("rejects a bucket left out — a missing tile must not read as zero", () => {
     expect(assetSummary.safeParse({ total: 6, inService: 2 }).success).toBe(false);
+    expect(assetSummary.safeParse({ total: 6, inService: 2, attention: 3 }).success).toBe(false);
   });
 
   it("groups the same statuses the ATTENTION filter selects", () => {

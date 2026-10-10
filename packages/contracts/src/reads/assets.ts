@@ -62,6 +62,8 @@ export const assetListResponse = listResponse(assetListItem);
 export const assetSummary = z.object({
   total: z.number().int().nonnegative(),
   inService: z.number().int().nonnegative(),
+  /** Of `inService`, those not grounded: the vehicles that can drive today (the Dashboard tile). */
+  canDrive: z.number().int().nonnegative(),
   attention: z.number().int().nonnegative(),
 });
 

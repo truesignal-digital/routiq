@@ -83,7 +83,7 @@ const WORK_ORDER = {
 
 /** Canned bodies by path prefix, longest first so `/v1/assets/summary` wins over `/v1/assets`. */
 const BODIES: [string, unknown][] = [
-  ["/v1/assets/summary", { total: 3, inService: 2, attention: 1 }],
+  ["/v1/assets/summary", { total: 3, inService: 2, canDrive: 2, attention: 1 }],
   ["/v1/reference/asset-registration", { assetClasses: [], branches: [] }],
   ["/v1/activities/summary", {
     week: { from: "2026-10-05", to: "2026-10-11" },
