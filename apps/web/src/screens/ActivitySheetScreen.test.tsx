@@ -400,14 +400,16 @@ describe("activity sheet capture", () => {
 
   describe("a driver's money lines (#532)", () => {
     it("titles the money card by who may add revenue (#594)", async () => {
+      // The So far column also has an "Expenses" line, so look at section headings only.
+      const sectionTitle = (name: string) => ({ level: 2, name });
       renderScreen();
-      expect(await screen.findByText("Expenses")).toBeTruthy();
-      expect(screen.queryByText("Revenue and expenses")).toBeNull();
+      expect(await screen.findByRole("heading", sectionTitle("Expenses"))).toBeTruthy();
+      expect(screen.queryByRole("heading", sectionTitle("Revenue and expenses"))).toBeNull();
       cleanup();
 
       renderScreen(manager);
-      expect(await screen.findByText("Revenue and expenses")).toBeTruthy();
-      expect(screen.queryByText("Expenses")).toBeNull();
+      expect(await screen.findByRole("heading", sectionTitle("Revenue and expenses"))).toBeTruthy();
+      expect(screen.queryByRole("heading", sectionTitle("Expenses"))).toBeNull();
     });
 
     it("opens a driver's journey with no revenue line, and offers expenses only", async () => {
