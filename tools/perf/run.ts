@@ -7,8 +7,12 @@ import { slotPorts } from "../verify/slot.js";
 import type { SlotState } from "../verify/stack.js";
 import { median, type Measured, type Run } from "./perf.js";
 
-/** The screens a run opens after sign-in, in order. `:asset` becomes the first vehicle in the list. */
-export const SCREENS = ["/assets", "/assets/:asset", "/activities", "/finance/entries", "/finance/approvals", "/maintenance", "/my-settings"] as const;
+/**
+ * The screens a run opens after sign-in, in order. `:asset` becomes the first
+ * vehicle in the list. Only screens the router renders: a redirect reports its
+ * journey under the screen it lands on, so the opened path gets no ready time.
+ */
+export const SCREENS = ["/assets", "/assets/:asset", "/activities", "/finance/entries", "/maintenance", "/my-settings"] as const;
 
 /** How long a run stays on Home after sign-in before opening the next screen. */
 export const HOME_DWELL_MS = 3_000;
@@ -17,6 +21,15 @@ export const PROFILE = `phone: CPU ${PHONE_PROFILE.cpuSlowdown}x, ${PHONE_PROFIL
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 export const template = (route: string) => route.replace(UUID, ":id");
+
+/** The route template a screen's metrics are named after, as the app's route journey names it. */
+const screenTemplate = (screen: string) => template(screen.replace(":asset", "00000000-0000-0000-0000-000000000000"));
+
+/** Every metric a run can produce. A ceiling outside this list can never be measured and fails each run as GONE. */
+export function measurableMetrics(): string[] {
+  const screens = ["/", ...SCREENS.map(screenTemplate)];
+  return ["login.js_bytes", "login.lcp_ms", "login.usable_ms", "api.p95_ms", ...screens.flatMap((screen) => [`${screen}.requests`, `${screen}.ready_ms`])];
+}
 
 interface OneRun {
   /** metric → value for this run */
@@ -122,7 +135,7 @@ async function measureOnceUnbounded(state: SlotState, db: pg.Client, assetId: st
         window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
       }, route);
       await settle(page, () => inflight, () => lastActivity);
-      values[`${template(screen.replace(":asset", "00000000-0000-0000-0000-000000000000"))}.requests`] = apiRequests - before;
+      values[`${screenTemplate(screen)}.requests`] = apiRequests - before;
     }
 
     // Close the tab like a user so the app sends its last telemetry batch (vitals, journeys).
