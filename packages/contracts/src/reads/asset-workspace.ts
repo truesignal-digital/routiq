@@ -169,6 +169,14 @@ export const ATTENTION_CODES = [
    * acknowledge-note.
    */
   "DIRECTION_NOTE",
+  /**
+   * The vehicle is on this trip and on another unfinished one whose booked
+   * window overlaps (ADR-0012 §4, #577). One item per trip the caller may
+   * read, so both trips show; `tripNumbers` names the others the caller may
+   * read. WARNING: one of them is probably over and needs closing. Leaves
+   * once either trip is closed. Only with ACTIVITIES on.
+   */
+  "VEHICLE_DOUBLE_BOOKED",
 ] as const;
 export const attentionCode = z.enum(ATTENTION_CODES);
 
@@ -182,6 +190,7 @@ export const ATTENTION_SUBJECT_TYPES = [
   "document",
   "financial_entry",
   "note",
+  "activity",
 ] as const;
 
 /** How many days ahead an expiry becomes DOCUMENT_EXPIRING. */
@@ -241,6 +250,8 @@ export const assetAttentionItem = z.object({
        * rule as `directionDecides` on the approvals queue and entry detail.
        */
       directionDecides: z.boolean(),
+      /** VEHICLE_DOUBLE_BOOKED: the other unfinished trips on the vehicle, by number. */
+      tripNumbers: z.array(z.string()),
     })
     .partial(),
 });

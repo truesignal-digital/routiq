@@ -232,6 +232,13 @@
       "change-custodian": {
         "description": "La personne qui conduit habituellement le véhicule. Chaque trajet peut avoir un autre chauffeur."
       }
+    },
+    "attention": {
+      "VEHICLE_DOUBLE_BOOKED": {
+        "title": "Le trajet {ref} chevauche un autre trajet ouvert",
+        "detail": "Ce camion est aussi sur {numbers}. Clôturez le trajet terminé.",
+        "detailUnnamed": "Ce camion est aussi sur un autre trajet ouvert. Clôturez celui qui est terminé."
+      }
     }
   },
   "commands": {
@@ -250,5 +257,8 @@
     "record-journey-sheet": {
       "short": "Trajet"
     }
+  },
+  "warnings": {
+    "VEHICLE_DOUBLE_BOOKED": "Ce camion est déjà prévu sur un autre trajet au même moment."
   }
 }

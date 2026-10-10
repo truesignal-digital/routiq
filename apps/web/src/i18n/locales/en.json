@@ -2410,6 +2410,11 @@
         "title": "{description}",
         "detail": "Note from Direction · {name} · {when}",
         "badge": "Note from Direction"
+      },
+      "VEHICLE_DOUBLE_BOOKED": {
+        "title": "Activity {ref} overlaps another open activity",
+        "detail": "This vehicle is also on {numbers}. Close the one that has ended.",
+        "detailUnnamed": "This vehicle is also on another open activity. Close the one that has ended."
       }
     },
     "maintenance": {

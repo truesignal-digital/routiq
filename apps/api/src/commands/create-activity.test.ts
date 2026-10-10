@@ -4,7 +4,7 @@ import {
   createActivityPayload,
   registerPersonCommand,
 } from "@routiq/contracts";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { z } from "zod";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -98,7 +98,7 @@ describe("create-activity.v1", () => {
 
   async function post(
     payload: ActivityPayload,
-    opts: { token?: string; idempotencyKey?: string } = {},
+    opts: { token?: string; idempotencyKey?: string; origin?: "HUMAN_UI" | "OFFLINE_SYNC" } = {},
   ) {
     return ctx.app.inject({
       method: "POST",
@@ -110,7 +110,7 @@ describe("create-activity.v1", () => {
         envelope: {
           commandId: randomUUID(),
           idempotencyKey: opts.idempotencyKey ?? `idem-${randomUUID()}`,
-          origin: "HUMAN_UI",
+          origin: opts.origin ?? "HUMAN_UI",
         },
         payload,
       }),
@@ -253,5 +253,71 @@ describe("create-activity.v1", () => {
   it("lets a field clerk record a job without an approval round trip", async () => {
     const response = await post(build(), { token: clerkToken });
     expect(response.statusCode).toBe(200);
+  });
+
+  /**
+   * #577, ADR-0012 §4: a vehicle already on another unfinished trip may start
+   * a second one. The start is a fact; it is accepted and warns, naming the
+   * other trip, so someone closes the stale one.
+   */
+  describe("on a vehicle already on another unfinished trip", () => {
+    const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
+
+    for (const origin of ["HUMAN_UI", "OFFLINE_SYNC"] as const) {
+      it(`${origin}: starts the second trip and warns VEHICLE_DOUBLE_BOOKED with the other trip`, async () => {
+        const truck = await seedAsset(ctx.app, managerToken);
+        const stale = build({ primaryAssetId: truck, startedAt: minutesAgo(180) });
+        const staleReply = await post(stale, { origin });
+        expect(staleReply.statusCode).toBe(200);
+        expect(staleReply.json().warnings).toEqual([]);
+
+        const second = build({ primaryAssetId: truck, startedAt: minutesAgo(60) });
+        const reply = await post(second, { origin });
+        expect(reply.statusCode, reply.body).toBe(200);
+        expect(reply.json()).toMatchObject({
+          recordId: second.activityId,
+          recordStatus: "OPEN",
+          warnings: ["VEHICLE_DOUBLE_BOOKED"],
+          warningMetadata: { VEHICLE_DOUBLE_BOOKED: { tripIds: [stale.activityId] } },
+        });
+
+        // Both trips are recorded and still open: nothing is closed for the user.
+        const rows = await ctx.db
+          .select({ id: activities.id, status: activities.status })
+          .from(activities)
+          .where(and(eq(activities.workspaceId, workspaceId), inArray(activities.id, [stale.activityId, second.activityId])));
+        expect(rows.map((row) => row.status)).toEqual(["OPEN", "OPEN"]);
+      });
+    }
+
+    it("does not warn once the other trip is closed, or for another vehicle", async () => {
+      const truck = await seedAsset(ctx.app, managerToken);
+      const done = build({ primaryAssetId: truck, startedAt: minutesAgo(240) });
+      await post(done);
+      const close = await ctx.app.inject({
+        method: "POST",
+        url: "/v1/commands/close-activity",
+        headers: { authorization: `Bearer ${managerToken}` },
+        payload: {
+          version: 1,
+          envelope: {
+            commandId: randomUUID(),
+            idempotencyKey: `idem-${randomUUID()}`,
+            origin: "HUMAN_UI",
+            expectedVersion: 1,
+          },
+          payload: { activityId: done.activityId, endedAt: minutesAgo(200) },
+        },
+      });
+      expect(close.statusCode, close.body).toBe(200);
+
+      const next = await post(build({ primaryAssetId: truck, startedAt: minutesAgo(30) }));
+      expect(next.json().warnings).toEqual([]);
+      expect(next.json()).not.toHaveProperty("warningMetadata");
+
+      const other = await seedAsset(ctx.app, managerToken);
+      const elsewhere = await post(build({ primaryAssetId: other, startedAt: minutesAgo(30) }));
+      expect(elsewhere.json().warnings).toEqual([]);
+    });
   });
 });

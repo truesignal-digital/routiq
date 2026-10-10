@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n/index.js";
+import { applyPresetVocabulary } from "../i18n/preset-overlay.js";
 import { notifyCommandError, notifyCommandSuccess, notifyInfo } from "./notify.js";
 
 const mocks = vi.hoisted(() => ({
@@ -76,6 +77,27 @@ describe("command notifications", () => {
       type: "success",
       title: "Asset returned to service",
       description: "Vehicle released, but the problem that grounded it is still open.",
+    });
+  });
+
+  it("says a vehicle is on another trip in the preset's words (#577)", () => {
+    notifyCommandSuccess("activities", "sheetRecorded", ["VEHICLE_DOUBLE_BOOKED"]);
+    applyPresetVocabulary(i18n, "TRUCKING");
+    try {
+      notifyCommandSuccess("activities", "sheetRecorded", ["VEHICLE_DOUBLE_BOOKED"]);
+    } finally {
+      applyPresetVocabulary(i18n, undefined);
+    }
+
+    expect(mocks.add).toHaveBeenNthCalledWith(1, {
+      type: "success",
+      title: "Sheet recorded",
+      description: "This vehicle is already booked on another activity at the same time.",
+    });
+    expect(mocks.add).toHaveBeenNthCalledWith(2, {
+      type: "success",
+      title: "Sheet recorded",
+      description: "This truck is already booked on another trip at the same time.",
     });
   });
 

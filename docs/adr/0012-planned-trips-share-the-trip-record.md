@@ -182,6 +182,13 @@ come back on the command result. The planning read (section 7)
 recomputes them on every read, so the board marks a conflict until someone
 resolves it. Nothing about a conflict is stored.
 
+A start counts as a booking for the vehicle (#577): `create-activity` and
+`start-planned-trip`, live or replayed offline, return `VEHICLE_DOUBLE_BOOKED`
+with `tripIds` when the started trip's vehicle is on another PLANNED or OPEN
+trip whose window overlaps, and the start still commits. While two OPEN trips
+hold the same vehicle, the vehicle's attention read lists each one as
+`VEHICLE_DOUBLE_BOOKED`, recomputed like the board, until one is closed.
+
 Double-booking is a warning because two short local trips in one day are
 normal, and the dispatcher knows things the system does not (warn, don't
 block). Grounding is a warning because a truck grounded today may be released

@@ -1,5 +1,6 @@
 import {
   TRIP_CONFLICT_CODES,
+  type CommandWarningCode,
   type CommandWarningMetadata,
   type TripConflictCode,
 } from "@routiq/contracts";
@@ -91,6 +92,8 @@ export interface TripConflicts {
   codes: TripConflictCode[];
   /** The other trips behind each double booking, by trip number. */
   tripIds: CommandWarningMetadata;
+  /** The other trips holding one of this trip's vehicles, the same list as VEHICLE_DOUBLE_BOOKED's. */
+  vehicleTripIds: string[];
 }
 
 /**
@@ -166,7 +169,26 @@ export async function tripConflicts(
     result.set(row.id, {
       codes: TRIP_CONFLICT_CODES.filter((code) => found[code]),
       tripIds: tripIdsByCode,
+      vehicleTripIds: row.vehicleTripIds,
     });
   }
   return result;
+}
+
+/**
+ * The warning a live or replayed start returns when its vehicle is already on
+ * another PLANNED or OPEN trip whose window overlaps (ADR-0012 §4, #577):
+ * VEHICLE_DOUBLE_BOOKED with the other trips' ids. A start is a fact, so it is
+ * never refused for this. Run after the trip is OPEN with its segment, so the
+ * window and the vehicle are the started ones.
+ */
+export async function startedTripDoubleBooking(
+  tx: TenantTx,
+  scope: { workspaceId: string; timezone: string },
+  tripId: string,
+): Promise<{ warnings: CommandWarningCode[]; warningMetadata?: CommandWarningMetadata }> {
+  const conflicts = (await tripConflicts(tx, { ...scope, maintenanceOn: false }, [tripId])).get(tripId);
+  const tripIds = conflicts?.vehicleTripIds ?? [];
+  if (tripIds.length === 0) return { warnings: [] };
+  return { warnings: ["VEHICLE_DOUBLE_BOOKED"], warningMetadata: { VEHICLE_DOUBLE_BOOKED: { tripIds } } };
 }

@@ -2410,6 +2410,11 @@
         "title": "{description}",
         "detail": "Note de la Direction · {name} · {when}",
         "badge": "Note de la Direction"
+      },
+      "VEHICLE_DOUBLE_BOOKED": {
+        "title": "L'activité {ref} chevauche une autre activité ouverte",
+        "detail": "Ce véhicule est aussi sur {numbers}. Clôturez celle qui est terminée.",
+        "detailUnnamed": "Ce véhicule est aussi sur une autre activité ouverte. Clôturez celle qui est terminée."
       }
     },
     "maintenance": {

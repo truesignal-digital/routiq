@@ -25,6 +25,7 @@ import {
 import { currentBusinessDate } from "../reads/business-date.js";
 import { workspaceTimezone } from "../reads/workspace-day.js";
 import { nextActivityNumber } from "./numbering.js";
+import { startedTripDoubleBooking } from "./trip-conflicts.js";
 import { validateCustomValues } from "./templates.js";
 
 type CreateActivityPayload = z.infer<typeof createActivityPayload>;
@@ -114,11 +115,12 @@ const createActivity: CommandDefinition<CreateActivityPayload> = {
     }
 
     const startedAt = new Date(payload.startedAt);
+    const timezone = await workspaceTimezone(tx, ctx.workspaceId);
     const activityNumber = await nextActivityNumber(
       tx,
       ctx,
       branch,
-      currentBusinessDate(startedAt, await workspaceTimezone(tx, ctx.workspaceId)),
+      currentBusinessDate(startedAt, timezone),
     );
 
     await tx.insert(activities).values({
@@ -243,7 +245,21 @@ const createActivity: CommandDefinition<CreateActivityPayload> = {
       ],
     });
 
-    return { recordId: payload.activityId, rowVersion: 1, recordStatus: "OPEN", warnings };
+    // The vehicle may already be on another unfinished trip: accepted, and said (#577).
+    const doubleBooking = await startedTripDoubleBooking(
+      tx,
+      { workspaceId: ctx.workspaceId, timezone },
+      payload.activityId,
+    );
+    return {
+      recordId: payload.activityId,
+      rowVersion: 1,
+      recordStatus: "OPEN",
+      warnings: [...warnings, ...doubleBooking.warnings],
+      ...(doubleBooking.warningMetadata === undefined
+        ? {}
+        : { warningMetadata: doubleBooking.warningMetadata }),
+    };
   },
 };
 

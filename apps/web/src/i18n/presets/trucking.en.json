@@ -219,6 +219,13 @@
       "change-custodian": {
         "description": "The person who regularly drives the vehicle. Each trip can still name another driver."
       }
+    },
+    "attention": {
+      "VEHICLE_DOUBLE_BOOKED": {
+        "title": "Trip {ref} overlaps another open trip",
+        "detail": "This truck is also on {numbers}. Close whichever trip has ended.",
+        "detailUnnamed": "This truck is also on another open trip. Close the one that has ended."
+      }
     }
   },
   "commands": {
@@ -237,5 +244,8 @@
     "record-journey-sheet": {
       "short": "Trip"
     }
+  },
+  "warnings": {
+    "VEHICLE_DOUBLE_BOOKED": "This truck is already booked on another trip at the same time."
   }
 }
