@@ -217,32 +217,34 @@ function appLanguage(locale?: string | null): AppLanguage {
 
 export type MonthStyle = "long" | "short";
 
+const words = (list: string) => list.split(" ");
+
 const MONTHS: Record<AppLanguage, Record<MonthStyle, readonly string[]>> = {
   en: {
-    long: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-    short: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"],
+    long: words("January February March April May June July August September October November December"),
+    short: words("Jan Feb Mar Apr May Jun Jul Aug Sept Oct Nov Dec"),
   },
   fr: {
-    long: ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"],
-    short: ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."],
+    long: words("janvier février mars avril mai juin juillet août septembre octobre novembre décembre"),
+    short: words("janv. févr. mars avr. mai juin juil. août sept. oct. nov. déc."),
   },
 };
 
 /** Indexed by `Date.getDay()`: Sunday first. */
 const WEEKDAYS: Record<AppLanguage, Record<"long" | "short" | "narrow", readonly string[]>> = {
   en: {
-    long: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-    short: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-    narrow: ["S", "M", "T", "W", "T", "F", "S"],
+    long: words("Sunday Monday Tuesday Wednesday Thursday Friday Saturday"),
+    short: words("Sun Mon Tue Wed Thu Fri Sat"),
+    narrow: words("S M T W T F S"),
   },
   fr: {
-    long: ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"],
-    short: ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."],
-    narrow: ["D", "L", "M", "M", "J", "V", "S"],
+    long: words("dimanche lundi mardi mercredi jeudi vendredi samedi"),
+    short: words("dim. lun. mar. mer. jeu. ven. sam."),
+    narrow: words("D L M M J V S"),
   },
 };
 
-const RANGE_DASH = " – ";
+const RANGE_DASH = "\u2009–\u2009";
 
 type DayParts = { year: number; month: number; day: number; weekday: number };
 
