@@ -37,7 +37,7 @@ The owner or general manager. Sees everything, approves anything, runs the setti
 Runs the daily work of their branches: trucks, trips, work orders, people. In the org chart this is the Chef d'agence. Changes Company settings together with the Director.
 
 - Lands on the **Dashboard**.
-- Registers trucks, records trips, approves work orders, releases trucks to service.
+- Registers trucks, records trips, runs work orders, releases trucks to service. With the demo rules a new work order opens already **Approved**, so there is no work order approval step to test.
 - Adds people and gives app access to Drivers, Technicians and Cashiers.
 - Does **not** approve money entries. Has no **Branches** or **Accounting months** row.
 

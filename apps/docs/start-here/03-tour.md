@@ -56,7 +56,7 @@ A money entry, a trip and a truck each have a page built the same way:
 
 - **One header**: the record's number or code, a status badge, and one line of facts. The actions sit top right.
 - **A status block** under the header that says where the record stands and holds the decision. On a waiting entry it holds **Reject entry** and **Approve entry**. On a trip closed with gaps it lists what is missing.
-- **Tabs**: **Overview** first and **History** last.
+- **Tabs**: **Overview** first and **History** last. A truck has the most: **Overview** · **Maintenance** · **Money** · **Trips** · **Documents** · **Details** · **History** (fewer for roles that may not see money or documents).
 - **Titled sections** on Overview (for an entry: **What**, **Who and how much**, **Proof**).
 - **A context column** on the right: the amount or money box, linked records, and the latest history with **All history**.
 

@@ -11,7 +11,7 @@ flowchart LR
   A[Administrator<br/>registers a truck] --> B[Driver<br/>records a sheet]
   B --> C[Driver<br/>reports a problem]
   C --> D[Technician<br/>work order]
-  D --> E[Administrator<br/>approves, releases]
+  D --> E[Administrator<br/>releases to service]
   B --> F[Cashier<br/>records expenses]
   F --> G[Finance<br/>approves or rejects]
   G --> H[Director<br/>approves above the band]
@@ -28,8 +28,8 @@ Each step names the lesson that shows the screens in detail.
 2. **Administrator (`boris`) — a new truck.** Register a truck in Douala and put it in service. → [Register a truck](/daily-work/trucks/02-register-a-truck), [The truck page](/daily-work/trucks/03-truck-page)
 3. **Driver (`sali`) — a trip.** Record the paper trip sheet for that truck: route, km, fuel and other expenses. → [Record a sheet](/daily-work/trips/02-record-a-sheet), [Expenses and revenue](/daily-work/trips/03-expenses-and-revenue)
 4. **Driver (`sali`) — a problem on the road.** Report a problem on the truck. Mark it safety-critical if the truck must not drive. → [Report a problem](/daily-work/maintenance/02-report-a-problem)
-5. **Technician (`herve`) — the repair.** Open a work order from the problem, add the cost, complete the work. → [Work orders](/daily-work/maintenance/03-work-orders)
-6. **Administrator (`boris`) — back on the road.** Approve the work order and release the truck to service. → [Work orders](/daily-work/maintenance/03-work-orders)
+5. **Technician (`herve`) — the repair.** Open a work order from the problem (it opens **Approved**), complete the work with its cost. → [Work orders](/daily-work/maintenance/03-work-orders)
+6. **Administrator (`boris`) — back on the road.** Release the truck to service. There is no work order approval step: with the demo rules a new work order opens already **Approved**. → [Work orders](/daily-work/maintenance/03-work-orders)
 7. **Cashier (`clarisse`) — the counter.** Record a few expenses with receipts: one small (posts at once), one above 100 000 FCFA (waits for review). → [Entries and recording](/daily-work/money/02-entries-and-recording)
 8. **Finance (`nadege`) — decisions.** Open **Money → To approve**. Approve one entry, reject one with a reason. → [Approve and reject](/daily-work/money/03-approve-and-reject)
 9. **Director (`emilienne`) — the large one.** Approve the entry above 1 000 000 FCFA that only the Director may decide. → [Approve and reject](/daily-work/money/03-approve-and-reject)

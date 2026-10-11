@@ -38,7 +38,7 @@ Follow the [Company flow](/start-here/04-company-flow) story. At each step, also
 
 1. Sign in as `herve`. Follow [Work orders](/daily-work/maintenance/03-work-orders).
 2. Boundary: Hervé lands on Maintenance and never sees revenue, profit or loss on any page.
-3. Sign in as `boris`. Approve the work order and release the truck to service.
+3. Sign in as `boris`. Release the truck to service. There is no approve step: the work order opened **Approved**. Boundary: the person who completed the work can never release the truck.
 
 ### 5. Cashier — the counter
 

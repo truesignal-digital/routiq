@@ -102,13 +102,21 @@ One revenue or one expense. Its status:
 - **Rejected** — refused with a reason. Counts nowhere.
 - **Cancelled** — a posted entry undone with a reason (**Cancel entry**). The original stays visible; it can be recorded again.
 
+### Cancellation (Cancel entry, Record again)
+
+How a posted entry is corrected. **Cancel entry** asks for a reason (for example *Wrong details* or *Entered twice*). The original keeps its figures and reads **Cancelled**; a mirror entry with the opposite amount takes it out of the totals. With *Wrong details*, **Record again** opens the form filled in from the cancelled entry.
+
+### Missing receipt
+
+A posted or waiting entry with no receipt photo or file attached. Counted on Money's Overview and listed in **To do** until someone attaches one.
+
 ### Approval bands
 
 Who decides an entry, by amount. In the demo: up to **100 000 FCFA** posts directly; up to **1 000 000 FCFA** Finance decides; above that the Director decides. Nobody decides their own entry; the Director's own entries post at any amount. Set in [Company settings](/company/company-settings).
 
-### Accounting month
+### Accounting month (Accounting months)
 
-A calendar month of the books. Finance or the Director locks it when it is final. A locked month takes no new entries.
+A calendar month of the books, listed on **Accounting months**. Finance or the Director locks it with **Lock period** when it is final: its posted entries can no longer change, and a late entry dated in it posts in the current month and keeps its date. Only the Director can **Reopen period**, with a reason.
 
 ---
 
@@ -122,13 +130,37 @@ A truck in service and not grounded. Counted out of the fleet that is not sold, 
 
 A truck that must not drive. A safety-critical problem grounds it the moment it is reported. Only **release to service** ends it; finishing the repair does not.
 
+### Off the road
+
+Plain words for a grounded truck, used in summaries and To do (*VH003 off the road since 8 October 2026*). The Maintenance Overview counts these trucks in its **Off the road** tile.
+
+### Safety-critical
+
+A problem that makes the truck unsafe to drive. Ticking it when reporting, or **Mark as safety-critical** afterwards, grounds the truck at once. Taking the mark off does not release the truck.
+
+### Release to service
+
+The decision that ends a grounding and makes the truck **Available** again. Only the Administrator or the Director may release, and never the person who completed the work. Until then a repaired truck reads **Waiting for release**.
+
+### Available
+
+The green truck badge: in service, not grounded, free to drive.
+
+### Commission
+
+Putting a registered truck into service (**Commission**). From then on its status reads **In service** and its operating history starts counting.
+
 ### In service
 
 The truck's life status (Registered, In service, then sold, retired or written off). In service is not the same as can drive: a grounded truck is still in service.
 
-### Problem and work order
+### Problem
 
-A **problem** is something reported wrong with a truck. A **work order** is the repair job that fixes one or more problems, with its expected and actual cost.
+Something reported wrong with a truck (**Report a problem**), with a category and a description. It ends as **Resolved** (fixed) or **Dismissed** (a mistake, a duplicate, nothing found), or it goes into a work order.
+
+### Work order
+
+The repair job for a truck, usually from one problem, with an **Expected cost** and, once the work is completed, an **Actual cost**. With the demo rules a new work order opens already **Approved**. The Technician completes it with **Complete work**; its cost becomes a money entry that follows the approval bands.
 
 ### Visite technique and Carte grise
 
