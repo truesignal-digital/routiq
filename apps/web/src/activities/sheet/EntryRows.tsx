@@ -131,7 +131,7 @@ const EntryRow = memo(function EntryRow({
           control={control}
           name={`entries.${index}.categoryCode`}
           render={({ field }) => (
-            <FormItem>
+            <FormItem data-field={`entries.${index}.categoryCode`}>
               <FormLabel className="text-xs text-muted-foreground">
                 {t("activities.record.entries.categoryLabel")}
               </FormLabel>
@@ -167,7 +167,7 @@ const EntryRow = memo(function EntryRow({
           control={control}
           name={`entries.${index}.amount`}
           render={({ field }) => (
-            <FormItem>
+            <FormItem data-field={`entries.${index}.amount`}>
               <FormLabel className="text-xs text-muted-foreground">
                 {t("activities.record.entries.amountLabel")}
               </FormLabel>

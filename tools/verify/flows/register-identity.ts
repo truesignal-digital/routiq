@@ -86,7 +86,11 @@ const flow: DriveScript = async (ctx) => {
   await shot("duplicate-plate-refused", {
     caption: "The server refuses a plate another truck carries, and the form says so on the plate field",
     ...(await outline(
-      page.getByText(t("Un autre véhicule a déjà cette immatriculation.", "Another vehicle already has this plate.")).first(),
+      // The field's own message: the refusal banner above the sections says it too (#663).
+      page
+        .locator("[data-slot=form-item]")
+        .getByText(t("Un autre véhicule a déjà cette immatriculation.", "Another vehicle already has this plate."))
+        .first(),
       page.getByRole("row", { name: new RegExp(`PL-${suffix}`) }),
     )),
   });
