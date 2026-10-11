@@ -53,7 +53,20 @@
         "title": "Bénéfice par camion"
       },
       "tiles": {
-        "idle": "Sans trajet depuis {days} jours ou plus"
+        "idle": "Sans trajet depuis {days} jours ou plus",
+        "onTheRoadInfo": "Jours-camion en trajet ÷ jours-camion renseignés, {days} derniers jours. Les jours que personne ne pouvait renseigner sont exclus."
+      },
+      "km": {
+        "all": "Ce mois-ci, les km sont connus pour chaque camion ({count, number}).",
+        "some": "Ce mois-ci, les km sont connus pour {known, number} camions sur {total, number} : {missing, plural, one {# trajet n’a} other {# trajets n’ont}} pas de km."
+      },
+      "board": {
+        "question": "Qu'a fait chaque camion, jour par jour ? {days} derniers jours.",
+        "basis": {
+          "all": "Statut tiré des trajets, des ordres de travail et des immobilisations.",
+          "noMaintenance": "Statut tiré des trajets. Les ordres de travail et les immobilisations ne sont pas comptés : la Maintenance est désactivée."
+        },
+        "empty": "Aucun camion à afficher."
       },
       "summary": {
         "sentence": "{total, plural, =0 {Aucun camion dans la flotte pour l’instant.} one {Peut rouler aujourd’hui : {canDrive, number} camion sur #.} other {Peuvent rouler aujourd’hui : {canDrive, number} camions sur #.}}"
@@ -85,6 +98,19 @@
     "overview": {
       "counted": {
         "openTrips": "{count, plural, one {# trajet est encore ouvert} other {# trajets sont encore ouverts}} : leur argent peut encore arriver."
+      },
+      "fuel": {
+        "title": "Carburant par km et par camion",
+        "question": "Un camion dépense-t-il plus de carburant qu'il ne devrait ? {period}, {currency} par km. Ligne = médiane de la flotte.",
+        "questionShort": "Un camion dépense-t-il plus de carburant qu'il ne devrait ?",
+        "more": "{count, plural, one {# camion de plus} other {# camions de plus}}",
+        "notCounted": {
+          "kmUnknown": "Non comptés : {count, plural, one {# camion dont les km ne sont pas connus} other {# camions dont les km ne sont pas connus}}.",
+          "noKm": "Non comptés : {count, plural, one {# camion sans km sur la période} other {# camions sans km sur la période}}.",
+          "noFuel": "Non comptés : {count, plural, one {# camion sans carburant enregistré} other {# camions sans carburant enregistré}}."
+        },
+        "empty": "Aucun camion n'a à la fois des km et du carburant enregistrés sur la période.",
+        "open": "Voir tous les camions"
       }
     }
   },
@@ -163,6 +189,9 @@
       "weeks": {
         "title": "Trajets par semaine"
       },
+      "routes": {
+        "withoutRoute": "{count, plural, one {# trajet clôturé n'a} other {# trajets clôturés n'ont}} aucune étape, donc aucun itinéraire."
+      },
       "summary": {
         "sentence": "{started, plural, =0 {Aucun trajet n’a encore commencé cette semaine.} one {# trajet a commencé cette semaine ; {closed, number} clôturé.} other {# trajets ont commencé cette semaine ; {closed, number} clôturés.}}",
         "open": "{open, plural, =0 {Rien n’est encore ouvert.} one {# trajet est encore ouvert.} other {# trajets sont encore ouverts.}}",
@@ -199,6 +228,11 @@
       }
     },
     "overview": {
+      "offRoad": {
+        "question": "Les réparations immobilisent-elles les camions plus longtemps ? Jours-camion à l'atelier ou immobilisés.",
+        "column": "{month} : {days, plural, one {# jour-camion} other {# jours-camion}} à l'arrêt",
+        "columnPartial": "{month} (en cours) : {days, plural, one {# jour-camion} other {# jours-camion}} à l'arrêt"
+      },
       "summary": {
         "grounded": "{grounded, plural, =0 {Aucun camion n’est à l’arrêt.} one {# camion est à l’arrêt.} other {# camions sont à l’arrêt.}}"
       }
@@ -388,8 +422,9 @@
     "tiles": {
       "vehicleCosts": "Coûts des camions",
       "canDrive": "Camions disponibles",
-      "allCanDrive": "Tous les camions en service peuvent rouler",
-      "noneInService": "Aucun camion en service"
+      "allCanDrive": "Tous les camions de la flotte peuvent rouler",
+      "noneInFleet": "Aucun camion dans la flotte pour l’instant",
+      "costPerKmInfo": "Dépenses enregistrées sur les camions ÷ leurs km, sur {count, plural, one {le # camion} other {les # camions}} dont les km et les dépenses sont connus."
     },
     "branches": {
       "title": {
@@ -408,9 +443,28 @@
         "vehicles": "Camions",
         "profit": "Bénéfice des camions"
       }
+    },
+    "todo": {
+      "rows": {
+        "FUEL_PER_KM_HIGH": {
+          "action": "Ouvrir le camion"
+        }
+      }
     }
   },
   "overview": {
+    "fleetBoard": {
+      "status": {
+        "ON_TRIP": "En trajet",
+        "AVAILABLE": "Disponible, sans trajet"
+      },
+      "columns": {
+        "vehicle": "Camion"
+      }
+    },
+    "usage": {
+      "kmKnown": "Km connus pour {known, number} sur {total, plural, one {# camion} other {# camions}}"
+    },
     "summary": {
       "change": {
         "groundedMany": "{count, plural, one {# camion a été immobilisé ces 7 derniers jours et est toujours à l’arrêt : {codes}.} other {# camions ont été immobilisés ces 7 derniers jours et sont toujours à l’arrêt : {codes}.}}"

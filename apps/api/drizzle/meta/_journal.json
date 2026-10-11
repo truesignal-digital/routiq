@@ -358,6 +358,13 @@
       "when": 1791671447466,
       "tag": "0050_company_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1791674211880,
+      "tag": "0051_admins_company_settings",
+      "breakpoints": true
     }
   ]
 }

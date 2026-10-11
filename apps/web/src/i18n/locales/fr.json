@@ -383,7 +383,13 @@
         "idle": "Sans sortie depuis {days} jours ou plus",
         "idleNone": "Tous ont travaillé",
         "idleNever": "{code} · jamais",
-        "idleFirst": "{code} · {days, plural, one {# jour} other {# jours}}"
+        "idleFirst": "{code} · {days, plural, one {# jour} other {# jours}}",
+        "onTheRoad": "Sur la route, {days} derniers jours",
+        "onTheRoadChange": "{arrow} {points, plural, one {# pt} other {# pts}} vs les {days} jours d'avant",
+        "onTheRoadSame": "Comme les {days} jours d'avant",
+        "onTheRoadNotRecorded": "{count, plural, one {# jour non renseigné} other {# jours non renseignés}}",
+        "onTheRoadChangeNotRecorded": "{change} · {count, plural, one {# jour non renseigné} other {# jours non renseignés}}",
+        "onTheRoadInfo": "Jours-véhicule en activité ÷ jours-véhicule renseignés, {days} derniers jours. Les jours que personne ne pouvait renseigner sont exclus."
       },
       "due": {
         "title": "Documents et entretiens à venir",
@@ -407,6 +413,23 @@
         "more": "{count, plural, one {# autre véhicule dans Argent} other {# autres véhicules dans Argent}}",
         "basis": "Recettes moins dépenses enregistrées sur le véhicule",
         "openMoney": "Ouvrir Argent"
+      },
+      "km": {
+        "all": "Ce mois-ci, les km sont connus pour chaque véhicule ({count, number}).",
+        "some": "Ce mois-ci, les km sont connus pour {known, number} véhicules sur {total, number} : {missing, plural, one {# activité n’a} other {# activités n’ont}} pas de km."
+      },
+      "board": {
+        "title": "Tableau de la flotte",
+        "question": "Qu'a fait chaque véhicule, jour par jour ? {days} derniers jours.",
+        "basis": {
+          "all": "Statut tiré des activités, des ordres de travail et des immobilisations.",
+          "noMaintenance": "Statut tiré des activités. Les ordres de travail et les immobilisations ne sont pas comptés : la Maintenance est désactivée.",
+          "noTrips": "Statut tiré des ordres de travail et des immobilisations seulement ; les autres jours ne sont pas renseignés.",
+          "none": "Aucun jour ne peut être renseigné tant que ces modules sont désactivés."
+        },
+        "open": "Ouvrir la liste",
+        "loadFailed": "Impossible de charger le tableau de la flotte.",
+        "empty": "Aucun véhicule à afficher."
       },
       "summary": {
         "sentence": "{total, plural, =0 {Aucun véhicule dans la flotte pour l’instant.} one {Peut rouler aujourd’hui : {canDrive, number} véhicule sur #.} other {Peuvent rouler aujourd’hui : {canDrive, number} véhicules sur #.}}",
@@ -853,6 +876,24 @@
         "none": "Aucune écriture",
         "earlier": "Avant, non clôturés : {months}",
         "earlierMany": "{count} mois précédents non clôturés"
+      },
+      "fuel": {
+        "title": "Carburant par km et par véhicule",
+        "question": "Un véhicule dépense-t-il plus de carburant qu'il ne devrait ? {period}, {currency} par km. Ligne = médiane de la flotte.",
+        "questionShort": "Un véhicule dépense-t-il plus de carburant qu'il ne devrait ?",
+        "median": "Médiane de la flotte {amount}",
+        "above": "Au-dessus de la médiane de la flotte",
+        "detailAbove": "{percent} au-dessus de la médiane · {tally}",
+        "valueHeader": "Carburant par km",
+        "more": "{count, plural, one {# véhicule de plus} other {# véhicules de plus}}",
+        "basis": "Dépenses de carburant ÷ km des étapes ou du compteur.",
+        "notCounted": {
+          "kmUnknown": "Non comptés : {count, plural, one {# véhicule dont les km ne sont pas connus} other {# véhicules dont les km ne sont pas connus}}.",
+          "noKm": "Non comptés : {count, plural, one {# véhicule sans km sur la période} other {# véhicules sans km sur la période}}.",
+          "noFuel": "Non comptés : {count, plural, one {# véhicule sans carburant enregistré} other {# véhicules sans carburant enregistré}}."
+        },
+        "empty": "Aucun véhicule n'a à la fois des km et du carburant enregistrés sur la période.",
+        "open": "Voir tous les véhicules"
       }
     }
   },
@@ -1335,7 +1376,13 @@
         "missingData": "Clôture avec données manquantes",
         "missingFuelKm": "{fuel, number} sans carburant · {km, number} sans km",
         "missingKm": "{km, number} sans km",
-        "missingDataInfo": "Clôture avec une exception enregistrée. Le carburant et les km sont vérifiés à chaque clôture."
+        "missingDataInfo": "Clôture avec une exception enregistrée. Le carburant et les km sont vérifiés à chaque clôture.",
+        "emptyKm": "Km à vide",
+        "emptyKmChange": "{arrow} {points, plural, one {# pt} other {# pts}} vs {period}",
+        "emptyKmSame": "Comme {period}",
+        "emptyKmUnknown": "{km, number} km sans charge non comptés",
+        "emptyKmChangeUnknown": "{change} · {km, number} km sans charge non comptés",
+        "emptyKmInfo": "Km des étapes à vide ÷ km des étapes dont la charge est saisie, {period}. Les km sans charge saisie sont exclus."
       },
       "weeks": {
         "title": "Activités par semaine",
@@ -1357,6 +1404,21 @@
         "noFuelDetail": "Ajoutez le carburant pour que les coûts soient complets.",
         "noKm": "{count, number} clôtures sans km",
         "noKmDetail": "Ajoutez les km pour que les distances soient complètes."
+      },
+      "routes": {
+        "title": "Recettes par km et par itinéraire",
+        "question": "Quels itinéraires rapportent le plus ? {period}, {currency} par km.",
+        "route": "{from} – {to}",
+        "detailWithoutKm": "{tally} · {without}",
+        "labelHeader": "Itinéraire",
+        "valueHeader": "Recettes par km",
+        "basis": "Les km incluent les retours à vide.",
+        "noKm": "Non comptés, sans km saisis : {routes}.",
+        "noRevenue": "Non comptés, sans recettes enregistrées : {routes}.",
+        "otherRoutes": "{count, plural, one {# autre itinéraire n'est pas affiché} other {# autres itinéraires ne sont pas affichés}}.",
+        "withoutRoute": "{count, plural, one {# activité clôturée n'a} other {# activités clôturées n'ont}} aucune étape, donc aucun itinéraire.",
+        "empty": "Aucun itinéraire n'a de km et de recettes sur la période.",
+        "more": "{count, plural, one {# itinéraire de plus} other {# itinéraires de plus}}"
       },
       "summary": {
         "sentence": "{started, plural, =0 {Aucune activité n’a encore commencé cette semaine.} one {# activité a commencé cette semaine ; {closed, number} clôturée.} other {# activités ont commencé cette semaine ; {closed, number} clôturées.}}",
@@ -1571,6 +1633,18 @@
         "open": "Ouvrir",
         "waitingApproval": "{count, plural, one {# ordre de travail attend l'approbation} other {# ordres de travail attendent l'approbation}}",
         "waitingCompletion": "{count, plural, one {# ordre de travail attend la validation} other {# ordres de travail attendent la validation}}"
+      },
+      "offRoad": {
+        "title": "Jours à l'arrêt par mois",
+        "question": "Les réparations immobilisent-elles les véhicules plus longtemps ? Jours-véhicule à l'atelier ou immobilisés.",
+        "column": "{month} : {days, plural, one {# jour-véhicule} other {# jours-véhicule}} à l'arrêt",
+        "columnPartial": "{month} (en cours) : {days, plural, one {# jour-véhicule} other {# jours-véhicule}} à l'arrêt",
+        "monthPartial": "{month} (en cours)",
+        "partial": "Mois en cours partiel : {month}, {days, plural, one {# jour} other {# jours}}.",
+        "open": "Ouvrir les ordres de travail",
+        "monthHeader": "Mois",
+        "valueHeader": "Jours à l'arrêt",
+        "loadFailed": "Impossible de charger les jours à l'arrêt."
       },
       "summary": {
         "sentence": "{open, plural, =0 {Aucun problème ouvert.} one {# problème est ouvert.} other {# problèmes sont ouverts.}}",
@@ -3182,7 +3256,7 @@
   },
   "settings": {
     "title": "Paramètres de l'entreprise",
-    "description": "Des règles qui s'appliquent à toute l'entreprise. Seule la Direction peut les modifier.",
+    "description": "Des règles qui s'appliquent à toute l'entreprise. Seuls la Direction et les Administrateurs peuvent les modifier.",
     "retry": "Réessayer",
     "summary": {
       "title": "Résumé du tableau de bord",
@@ -3260,10 +3334,13 @@
       "companyCosts": "Frais généraux",
       "canDrive": "Véhicules disponibles",
       "canDriveValue": "{count} sur {total}",
-      "offTheRoad": "{count, plural, one {# en service est immobilisé} other {# en service sont immobilisés}}",
-      "allCanDrive": "Tous les véhicules en service peuvent rouler",
+      "cannotDrive": "{count, plural, one {# ne peut pas rouler aujourd’hui} other {# ne peuvent pas rouler aujourd’hui}}",
+      "allCanDrive": "Tous les véhicules de la flotte peuvent rouler",
       "profitHint": "{change} · {share} des recettes",
-      "noneInService": "Aucun véhicule en service"
+      "noneInFleet": "Aucun véhicule dans la flotte pour l’instant",
+      "costPerKm": "Coût par km",
+      "perKmUnit": "{unit}/km",
+      "costPerKmInfo": "Dépenses enregistrées sur les véhicules ÷ leurs km, sur {count, plural, one {le # véhicule} other {les # véhicules}} dont les km et les dépenses sont connus."
     },
     "counted": {
       "profitMeans": "Bénéfice = recettes − dépenses enregistrées dans ROUTIQ ; les impôts et les remboursements d’emprunt n’y sont pas.",
@@ -3334,6 +3411,11 @@
           "title": "{month} est encore ouvert",
           "detail": "{submitted, plural, =0 {Rien n’attend d’approbation} one {# écriture attend une approbation} other {# écritures attendent une approbation}} · {missing, plural, =0 {tous les justificatifs sont là} one {# justificatif manquant} other {# justificatifs manquants}}",
           "action": "Clôturer le mois"
+        },
+        "FUEL_PER_KM_HIGH": {
+          "title": "{asset} dépense {percent} de plus en carburant par km que la flotte",
+          "detail": "{amount} par km · médiane de la flotte {median}",
+          "action": "Ouvrir le véhicule"
         }
       }
     },
@@ -3435,6 +3517,26 @@
     }
   },
   "overview": {
+    "fleetBoard": {
+      "status": {
+        "ON_TRIP": "En activité",
+        "AVAILABLE": "Disponible, sans activité",
+        "WORKSHOP": "À l'atelier",
+        "GROUNDED": "Immobilisé"
+      },
+      "cell": "{vehicle} · {date} · {status}",
+      "today": "Aujourd'hui",
+      "hint": "Pointez un jour pour le lire.",
+      "todayTitle": "Statut du jour",
+      "tripDays": "{count, plural, one {# jour} other {# jours}} sur la route ces {days} derniers jours",
+      "columns": {
+        "vehicle": "Véhicule",
+        "onTheRoad": "Sur la route"
+      }
+    },
+    "usage": {
+      "kmKnown": "Km connus pour {known, number} sur {total, plural, one {# véhicule} other {# véhicules}}"
+    },
     "summary": {
       "label": "Résumé",
       "show": "Afficher le résumé",

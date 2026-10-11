@@ -48,7 +48,7 @@ describe("each role's sidebar (#312)", () => {
     },
     ADMIN: {
       daily: ["home", "assets", "activities", "maintenance", "finances"],
-      company: ["persons", "users"],
+      company: ["persons", "users", "companySettings"],
     },
     FINANCE: { daily: ["home", "assets", "activities", "finances"], company: ["persons", "accountingMonths"] },
     CASHIER: { daily: ["home", "assets", "finances"] },

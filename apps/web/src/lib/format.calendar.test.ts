@@ -7,35 +7,35 @@ afterEach(() => vi.unstubAllEnvs());
 it("keeps a financial calendar date on September 4 for a Chicago viewer", () => {
   vi.stubEnv("TZ", "America/Chicago");
   expect(new Intl.DateTimeFormat().resolvedOptions().timeZone).toBe("America/Chicago");
-  expect(formatDate("2026-09-04", "fr-CM")).toBe("04/09/2026");
+  expect(formatDate("2026-09-04", "fr-CM")).toBe("4 septembre 2026");
 });
 
 const calendarDates = [
-  { iso: "2026-09-04", fr: "04/09/2026", en: "9/4/26" },
-  { iso: "2026-01-01", fr: "01/01/2026", en: "1/1/26" },
-  { iso: "2026-03-01", fr: "01/03/2026", en: "3/1/26" },
-  { iso: "2024-02-29", fr: "29/02/2024", en: "2/29/24" },
-  { iso: "2026-03-08", fr: "08/03/2026", en: "3/8/26" },
-  { iso: "2026-11-01", fr: "01/11/2026", en: "11/1/26" },
+  { iso: "2026-09-04", fr: "4 septembre 2026", en: "4 September 2026" },
+  { iso: "2026-01-01", fr: "1 janvier 2026", en: "1 January 2026" },
+  { iso: "2026-03-01", fr: "1 mars 2026", en: "1 March 2026" },
+  { iso: "2024-02-29", fr: "29 février 2024", en: "29 February 2024" },
+  { iso: "2026-03-08", fr: "8 mars 2026", en: "8 March 2026" },
+  { iso: "2026-11-01", fr: "1 novembre 2026", en: "1 November 2026" },
 ];
 
 for (const viewer of [
   {
     zone: "Africa/Douala",
-    dateFr: "01/01/2026", dateEn: "1/1/26",
-    timeFr: "01/01/2026 01:30", timeEn: "1/1/26, 1:30 AM",
+    dateFr: "1 janvier 2026", dateEn: "1 January 2026",
+    timeFr: "1 janvier 2026, 01:30", timeEn: "1 January 2026, 01:30",
     day: "2026-01-01", longFr: "1 janvier 2026",
   },
   {
     zone: "UTC",
-    dateFr: "01/01/2026", dateEn: "1/1/26",
-    timeFr: "01/01/2026 00:30", timeEn: "1/1/26, 12:30 AM",
+    dateFr: "1 janvier 2026", dateEn: "1 January 2026",
+    timeFr: "1 janvier 2026, 00:30", timeEn: "1 January 2026, 00:30",
     day: "2026-01-01", longFr: "1 janvier 2026",
   },
   {
     zone: "America/Chicago",
-    dateFr: "31/12/2025", dateEn: "12/31/25",
-    timeFr: "31/12/2025 18:30", timeEn: "12/31/25, 6:30 PM",
+    dateFr: "31 décembre 2025", dateEn: "31 December 2025",
+    timeFr: "31 décembre 2025, 18:30", timeEn: "31 December 2025, 18:30",
     day: "2025-12-31", longFr: "31 décembre 2025",
   },
 ]) {

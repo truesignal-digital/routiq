@@ -180,6 +180,19 @@ export function canReadDocuments(role: Role): boolean {
   return (DOCUMENT_READER_ROLES as readonly Role[]).includes(role);
 }
 
+/**
+ * Who changes the company settings: the approval thresholds and the Dashboard
+ * summary schedule (owner decision 2026-10-10, ADR-0013, #711). Each setting
+ * is one rule for the whole workspace, so an Administrator scoped to one
+ * branch still changes the company's rule, never a branch copy. Branches,
+ * categories and reopening a period stay Direction's.
+ */
+export const COMPANY_SETTINGS_ROLES = ["DIRECTOR", "ADMIN"] as const satisfies readonly Role[];
+
+export function canManageCompanySettings(role: Role | undefined): boolean {
+  return role !== undefined && (COMPANY_SETTINGS_ROLES as readonly Role[]).includes(role);
+}
+
 /** Who may open member administration at all. */
 export const MEMBER_ADMIN_ROLES = ["DIRECTOR", "ADMIN"] as const satisfies readonly Role[];
 

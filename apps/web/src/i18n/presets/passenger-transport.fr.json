@@ -53,7 +53,17 @@
     },
     "overview": {
       "tiles": {
-        "idle": "Sans voyage depuis {days} jours ou plus"
+        "idle": "Sans voyage depuis {days} jours ou plus",
+        "onTheRoadInfo": "Jours-véhicule en voyage ÷ jours-véhicule renseignés, {days} derniers jours. Les jours que personne ne pouvait renseigner sont exclus."
+      },
+      "km": {
+        "some": "Ce mois-ci, les km sont connus pour {known, number} véhicules sur {total, number} : {missing, plural, one {# voyage n’a} other {# voyages n’ont}} pas de km."
+      },
+      "board": {
+        "basis": {
+          "all": "Statut tiré des voyages, des ordres de travail et des immobilisations.",
+          "noMaintenance": "Statut tiré des voyages. Les ordres de travail et les immobilisations ne sont pas comptés : la Maintenance est désactivée."
+        }
       }
     }
   },
@@ -154,6 +164,9 @@
     "overview": {
       "weeks": {
         "title": "Voyages par semaine"
+      },
+      "routes": {
+        "withoutRoute": "{count, plural, one {# voyage clôturé n'a} other {# voyages clôturés n'ont}} aucune étape, donc aucun itinéraire."
       },
       "summary": {
         "sentence": "{started, plural, =0 {Aucun voyage n’a encore commencé cette semaine.} one {# voyage a commencé cette semaine ; {closed, number} clôturé.} other {# voyages ont commencé cette semaine ; {closed, number} clôturés.}}",
@@ -342,6 +355,12 @@
     }
   },
   "overview": {
+    "fleetBoard": {
+      "status": {
+        "ON_TRIP": "En voyage",
+        "AVAILABLE": "Disponible, sans voyage"
+      }
+    },
     "summary": {
       "money": {
         "notEnoughTrips": "{window, select, lastMonth {En {month}, {total, plural, one {seul {closed, number} voyage sur # a été clôturé} other {seuls {closed, number} voyages sur # ont été clôturés}} : trop tôt pour donner un bénéfice.} other {À ce jour en {month}, {total, plural, one {seul {closed, number} voyage sur # est clôturé} other {seuls {closed, number} voyages sur # sont clôturés}} : trop tôt pour donner un bénéfice.}}"

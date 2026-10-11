@@ -57,6 +57,8 @@ Rules across archetypes:
 ## Visual rules carried over from the brand pass (`feat/brand-identity` DESIGN.md)
 
 - Figures (money, counts, references) use `tabular-nums` in the sans face, never monospace. [DS-1]
+- Money is written **450 000 FCFA** in both languages: whole units, digits grouped by three with a non-breaking space, FCFA after the amount, never "FCFA 450,000" or "XAF". A negative amount is "−86 000 FCFA"; a loss is "Loss 86 000 FCFA" / "Perte 86 000 FCFA". Everything goes through `formatMoney` in `apps/web/src/lib/format.ts` (decision 9, #712). [H16]
+- Dates are written **29 July 2026** / **29 juillet 2026**; with a time, "29 July 2026, 07:00" (24-hour). A dense table may use the short month ("29 Jul 2026" / "29 juil. 2026"). Never the US order or a two-digit year. Date inputs show and read dd/mm/yyyy. Everything goes through the date formatters in `lib/format.ts` (#712). [H20]
 - No colour literals in components; semantic tokens only. [DS-2]
 - The logo is drawn only by the brand component (R with map-pin counter and road stem; letter `currentColor`, pin brand blue). [DS-3]
 - Labels and badges in sentence case; no uppercase eyebrows or shouting badges. [DS-4]

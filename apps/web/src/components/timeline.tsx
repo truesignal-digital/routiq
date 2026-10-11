@@ -2,7 +2,7 @@ import type { HistoryActor, HistoryItem } from "@routiq/contracts";
 import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { formatDateTime, formatDayLong, localDayKey } from "@/lib/format.js";
+import { formatDateTime, formatDayLong, formatTime, localDayKey } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
 /** i18next reads "." as a key separator, hence the dashes. */
@@ -140,9 +140,7 @@ function TimelineRow({
   const { t } = useTranslation();
   const time = withDate
     ? formatDateTime(event.occurredAt, locale)
-    : new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(
-        new Date(event.occurredAt),
-      );
+    : formatTime(event.occurredAt, locale);
 
   return (
     <li className="group/event relative flex gap-3 pb-5 last:pb-0" data-testid="timeline-event">

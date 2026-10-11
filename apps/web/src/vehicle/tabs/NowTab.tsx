@@ -7,7 +7,7 @@ import { RecordText } from "@/components/record-number";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDateTime, formatMoney } from "@/lib/format.js";
+import { formatDateTime, formatMoney, formatMonth } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
 import { attentionText } from "../attentionText.js";
 import { useVehicle } from "../context.js";
@@ -281,9 +281,7 @@ function WaitingRow({ todo }: { todo: Todo }) {
 }
 
 export function periodLabel(periodCode: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(
-    new Date(`${periodCode}-15T00:00:00Z`),
-  );
+  return formatMonth(periodCode, locale);
 }
 
 function MonthCard() {

@@ -239,7 +239,7 @@ export function useIssueColumns(): DataTableColumn<IssueListItem>[] {
         meta: { phone: "meta", label: t("maintenance.issues.columns.reportedAt") },
         cell: ({ row }) => (
           <span className="tabular-nums whitespace-nowrap">
-            {formatDate(row.original.reportedAt, locale)}
+            {formatDate(row.original.reportedAt, locale, "short")}
           </span>
         ),
       },

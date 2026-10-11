@@ -83,8 +83,8 @@ function overrideText(t: TFunction, override: ApprovalRuleOverride, currency: st
 /**
  * Company settings → Approvals (#354): the money chain's two bands, what each
  * role's own entries meet, the branch and category exceptions the bands leave
- * alone, and the last change. Direction changes the bands here; the change
- * reaches members as the rules notice (#422).
+ * alone, and the last change. The Director or an Administrator changes the
+ * bands here (#711); the change reaches members as the rules notice (#422).
  */
 export function ApprovalSettings({ client = commandClient }: { client?: CommandClient }) {
   const { t } = useTranslation();

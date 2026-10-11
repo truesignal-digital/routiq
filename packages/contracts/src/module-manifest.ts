@@ -72,6 +72,7 @@ export const MODULE_MANIFESTS: readonly ModuleManifest[] = [
       "/v1/assets/:assetId/history",
       "/v1/assets/overview",
       "/v1/assets/summary",
+      "/v1/assets/usage",
     ],
     roles: ALL_ROLES,
     whenOff: /* @__PURE__ */ offState("No fleet list and no vehicle pages; records made on vehicles stay where other modules show them."),

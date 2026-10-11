@@ -14,20 +14,18 @@ import {
   type OverviewRange,
   type SummaryTemplate,
 } from "@routiq/contracts";
-import { and, eq, gte, inArray, isNotNull, lt, lte, ne, notInArray, or, sql, type SQL } from "drizzle-orm";
+import { and, eq, gte, inArray, lt, lte, ne, notInArray, or, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { AuthContext } from "../auth/types.js";
 import type { Db } from "../db/client.js";
 import {
   activities,
-  activityAssetSegments,
   assets,
   branches,
   categories,
   financialEntries,
   financialPostings,
-  movementLegs,
   workspaces,
 } from "../db/schema.js";
 import type { TenantTx } from "../db/tenant.js";
@@ -40,6 +38,7 @@ import { readableEntrySql } from "./money-scope.js";
 import { loadOverviewNotice } from "./overview-notice.js";
 import { invalidRequest } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
+import { tripKm } from "./trip-km.js";
 import { readableTripSql } from "./trip-scope.js";
 import { dayStartSql, workspaceTimezone } from "./workspace-day.js";
 
@@ -116,6 +115,79 @@ export function overviewSeriesMonths(today: string): string[] {
 const within = (window: DateWindow): SQL =>
   and(gte(financialEntries.economicDate, window.from), lte(financialEntries.economicDate, window.to))!;
 
+const entryJoin = and(
+  eq(financialEntries.workspaceId, financialPostings.workspaceId),
+  eq(financialEntries.id, financialPostings.financialEntryId),
+);
+
+/**
+ * The lines every money figure counts: the entries list's own scope (branch,
+ * then money scope), then the requested branch inside it, never instead of
+ * it; `posted` adds the ledger statuses and the workspace currency.
+ */
+export function postedLineConditions(
+  auth: AuthContext,
+  branchId: string | undefined,
+  currency: string,
+): { readable: SQL[]; posted: SQL[] } {
+  const readable: SQL[] = [
+    readableEntrySql(auth),
+    ...(branchId === undefined ? [] : [eq(financialEntries.branchId, branchId)]),
+  ];
+  return {
+    readable,
+    posted: [...readable, inArray(financialEntries.status, [...ledgerEntryStatuses]), eq(financialEntries.currency, currency)],
+  };
+}
+
+/** A vehicle's posted expenses in one window, and the part in the FUEL category. */
+export interface VehicleExpense {
+  expense: bigint;
+  fuel: bigint;
+}
+
+/**
+ * Each vehicle's posted expenses in `window`, from the same lines as the
+ * Overview's vehicle rows (`postedLineConditions`), so a cost per km divides
+ * exactly the expenses the money Overview shows for the vehicle.
+ */
+export async function vehicleExpenses(
+  tx: TenantTx,
+  auth: AuthContext,
+  branchId: string | undefined,
+  currency: string,
+  window: DateWindow,
+): Promise<Map<string, VehicleExpense>> {
+  const { posted } = postedLineConditions(auth, branchId, currency);
+  const isFuel = sql<boolean>`${categories.code} = 'FUEL'`;
+  const rows = await tx
+    .select({
+      assetId: financialPostings.assetId,
+      fuel: isFuel,
+      amountMinor: sql<string>`sum(${financialPostings.amountMinor})::text`,
+    })
+    .from(financialPostings)
+    .innerJoin(financialEntries, entryJoin)
+    .innerJoin(
+      categories,
+      and(eq(categories.workspaceId, financialPostings.workspaceId), eq(categories.id, financialPostings.categoryId)),
+    )
+    .where(
+      and(...posted, eq(financialEntries.direction, "EXPENSE"), within(window), sql`${financialPostings.assetId} is not null`),
+    )
+    .groupBy(sql`1`, sql`2`);
+  const byVehicle = new Map<string, VehicleExpense>();
+  for (const row of rows) {
+    if (row.assetId === null) continue;
+    const sums = byVehicle.get(row.assetId) ?? { expense: 0n, fuel: 0n };
+    const amount = BigInt(row.amountMinor);
+    sums.expense += amount;
+    if (row.fuel) sums.fuel += amount;
+    byVehicle.set(row.assetId, sums);
+  }
+  return byVehicle;
+}
+
 /** Lifecycle states after which a vehicle takes no new records (§4.1); listed only if it has money. */
 const DISPOSED = ["SOLD", "RETIRED", "WRITTEN_OFF"] as const;
 
@@ -152,21 +224,7 @@ async function loadOverview(
   const tripsOn = modules.has("ACTIVITIES");
   const vehiclesOn = withProfit && modules.has("ASSETS");
 
-  // The entries list's own scope (branch, then money scope), then the
-  // requested branch inside it, never instead of it.
-  const readable: SQL[] = [
-    readableEntrySql(auth),
-    ...(branchId === undefined ? [] : [eq(financialEntries.branchId, branchId)]),
-  ];
-  const posted: SQL[] = [
-    ...readable,
-    inArray(financialEntries.status, [...ledgerEntryStatuses]),
-    eq(financialEntries.currency, currency),
-  ];
-  const entryJoin = and(
-    eq(financialEntries.workspaceId, financialPostings.workspaceId),
-    eq(financialEntries.id, financialPostings.financialEntryId),
-  );
+  const { readable, posted } = postedLineConditions(auth, branchId, currency);
 
   // Postings, not entry amounts: they carry the vehicle and sum to their entry
   // (§3.4), so the vehicle split and the totals are the same lines.
@@ -529,8 +587,8 @@ interface TripFacts {
 /**
  * Trips closed in the period (by the workspace's day) and trips open now,
  * scoped like the trips list. A trip counts for each vehicle that carried it,
- * PRIMARY or SUBSTITUTE; a leg's km go to the vehicle of its segment, or to the
- * trip's first carrier when the leg names none.
+ * PRIMARY or SUBSTITUTE, with its km by TRIP_KM_RULE (`tripKm`): the legs it
+ * ran, else its odometer readings.
  */
 async function loadTrips(
   tx: TenantTx,
@@ -543,51 +601,11 @@ async function loadTrips(
   const closedInPeriod = closedTripsSql(scope, period, timezone);
   const counts = await countTrips(tx, auth, branchId, period, timezone);
 
-  const carrierRows = await tx
-    .selectDistinct({ tripId: activities.id, assetId: activityAssetSegments.assetId })
-    .from(activities)
-    .innerJoin(
-      activityAssetSegments,
-      and(
-        eq(activityAssetSegments.workspaceId, activities.workspaceId),
-        eq(activityAssetSegments.activityId, activities.id),
-      ),
-    )
-    .where(and(closedInPeriod, inArray(activityAssetSegments.role, ["PRIMARY", "SUBSTITUTE"])));
-
-  const firstCarrier = sql<string | null>`(
-    select ${activityAssetSegments.assetId} from ${activityAssetSegments}
-    where ${activityAssetSegments.workspaceId} = ${activities.workspaceId}
-      and ${activityAssetSegments.activityId} = ${activities.id}
-      and ${activityAssetSegments.role} = 'PRIMARY'
-    order by ${activityAssetSegments.startedAt}
-    limit 1
-  )`;
-  const legRows = await tx
-    .select({
-      tripId: activities.id,
-      assetId: sql<string | null>`coalesce((
-        select ${activityAssetSegments.assetId} from ${activityAssetSegments}
-        where ${activityAssetSegments.workspaceId} = ${movementLegs.workspaceId}
-          and ${activityAssetSegments.id} = ${movementLegs.segmentId}
-      ), ${firstCarrier})`,
-      km: sql<number>`sum(${movementLegs.distanceKm})::int`,
-    })
-    .from(movementLegs)
-    .innerJoin(
-      activities,
-      and(eq(activities.workspaceId, movementLegs.workspaceId), eq(activities.id, movementLegs.activityId)),
-    )
-    .where(and(closedInPeriod, isNotNull(movementLegs.distanceKm)))
-    .groupBy(sql`1`, sql`2`);
-  const kmByTripVehicle = new Map(legRows.map((row) => [`${row.tripId}:${row.assetId}`, row.km]));
-
   const byVehicle: TripFacts["byVehicle"] = new Map();
-  for (const { tripId, assetId } of carrierRows) {
+  for (const { assetId, km } of (await tripKm(tx, auth.workspaceId, closedInPeriod)).carried) {
     const facts = byVehicle.get(assetId) ?? { trips: 0, km: null, withoutKm: 0 };
     facts.trips += 1;
-    const km = kmByTripVehicle.get(`${tripId}:${assetId}`);
-    if (km === undefined) facts.withoutKm += 1;
+    if (km === null) facts.withoutKm += 1;
     else facts.km = (facts.km ?? 0) + km;
     byVehicle.set(assetId, facts);
   }

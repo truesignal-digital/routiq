@@ -109,8 +109,11 @@ function serveFinanceReadFixtures() {
 const languages = [
   {
     locale: "fr-CM",
-    date: "01/01/2026",
-    chicagoPostingDate: "31/12/2025",
+    date: "1 janvier 2026",
+    chicagoPostingDate: "31 décembre 2025",
+    // The ledger is a dense table: the short month (#712).
+    tableDate: "1 janv. 2026",
+    chicagoTablePostingDate: "31 déc. 2025",
     economicLabel: "Date comptable",
     postingLabel: "Date de comptabilisation",
     fullScreen: "Ouvrir en plein écran",
@@ -119,8 +122,10 @@ const languages = [
   },
   {
     locale: "en",
-    date: "1/1/26",
-    chicagoPostingDate: "12/31/25",
+    date: "1 January 2026",
+    chicagoPostingDate: "31 December 2025",
+    tableDate: "1 Jan 2026",
+    chicagoTablePostingDate: "31 Dec 2025",
     economicLabel: "Economic date",
     postingLabel: "Posting date",
     fullScreen: "Open full screen",
@@ -134,6 +139,7 @@ const viewers = languages.flatMap((language) =>
     ...language,
     zone,
     postingDate: zone === "America/Chicago" ? language.chicagoPostingDate : language.date,
+    tablePostingDate: zone === "America/Chicago" ? language.chicagoTablePostingDate : language.tableDate,
   })),
 );
 
@@ -167,8 +173,8 @@ it.each(viewers)("preserves financial dates through list, drawer, detail and fil
   const postingColumn = headers.indexOf(
     screen.getByRole("columnheader", { name: viewer.postingLabel }),
   );
-  expect(cells[economicColumn]?.textContent).toBe(viewer.date);
-  expect(cells[postingColumn]?.textContent).toBe(viewer.postingDate);
+  expect(cells[economicColumn]?.textContent).toBe(viewer.tableDate);
+  expect(cells[postingColumn]?.textContent).toBe(viewer.tablePostingDate);
 
   await user.type(screen.getByPlaceholderText(viewer.periodPlaceholder), "2026-01");
   await waitFor(() => {

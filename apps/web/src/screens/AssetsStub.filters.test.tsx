@@ -50,7 +50,7 @@ function item(assetCode: string, manufacturer: string) {
   };
 }
 
-const SUMMARY = { total: 6, inService: 4, canDrive: 4, attention: 2 };
+const SUMMARY = { total: 6, inService: 4, attention: 2 };
 
 const REFERENCE = {
   assetClasses: [{ code: "BUS", labelFr: "Autobus", labelEn: "Bus" }],

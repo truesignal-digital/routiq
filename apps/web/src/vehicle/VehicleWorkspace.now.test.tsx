@@ -199,7 +199,7 @@ describe("a repair whose invoice is still to come (#82)", () => {
     });
     const card = await todoCard();
     expect(
-      await within(card).findByText(/^Brake repair · declared FCFA\s50,000, recorded FCFA\s0/),
+      await within(card).findByText(/^Brake repair · declared 50\s000\sFCFA, recorded 0\sFCFA/),
     ).toBeTruthy();
   });
 });

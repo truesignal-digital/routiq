@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n/index.js";
 import { sessionStore } from "../auth/store.js";
+import { testUsage } from "../overview/test-usage.js";
 import { MaintenanceOverview } from "./MaintenanceOverview.js";
 
 vi.mock("@tanstack/react-router", () => ({
@@ -59,12 +60,14 @@ const ISSUES = {
   nextCursor: null,
 };
 
-function renderWith(summary: unknown) {
+function renderWith(summary: unknown, usage: unknown = testUsage()) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (url: RequestInfo | URL) =>
-      new Response(JSON.stringify(String(url).startsWith("/v1/issues") ? ISSUES : summary), { status: 200 }),
-    ),
+    vi.fn(async (url: RequestInfo | URL) => {
+      const href = String(url);
+      const body = href.startsWith("/v1/issues") ? ISSUES : href.startsWith("/v1/assets/usage") ? usage : summary;
+      return new Response(JSON.stringify(body), { status: 200 });
+    }),
   );
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
@@ -93,7 +96,7 @@ describe("Maintenance › Overview (#665)", () => {
 
   it("opens each tile's tab already filtered", async () => {
     renderWith(SUMMARY);
-    await screen.findByText("VH003 · since 10/1/26");
+    await screen.findByText("VH003 · since 1 October 2026");
     expect(linkOf("New problems")).toBe("/maintenance/problems?status=OPEN");
     expect(linkOf("Off the road")).toBe("/assets/list?availability=GROUNDED");
     expect(linkOf("Work orders open")).toBe("/maintenance/work-orders?only=open");
@@ -103,7 +106,7 @@ describe("Maintenance › Overview (#665)", () => {
 
   it("drops the repair cost tile for a role the server withholds it from", async () => {
     renderWith({ ...SUMMARY, repairCost: null });
-    await screen.findByText("VH003 · since 10/1/26");
+    await screen.findByText("VH003 · since 1 October 2026");
     expect(screen.queryByRole("link", { name: "Repair cost" })).toBeNull();
   });
 
@@ -120,8 +123,22 @@ describe("Maintenance › Overview (#665)", () => {
 
   it("shows no revenue and no profit: repair cost comes from work orders only", async () => {
     renderWith(SUMMARY);
-    await screen.findByText("VH003 · since 10/1/26");
+    await screen.findByText("VH003 · since 1 October 2026");
     expect(screen.queryByText(/revenue|profit/i)).toBeNull();
+  });
+
+  it("draws days off the road per month, the current month partial and said so (#668)", async () => {
+    const { container } = renderWith(SUMMARY);
+    await vi.waitFor(() => expect(container.querySelectorAll("[data-slot=month-column]")).toHaveLength(12));
+    expect(screen.getByRole("img", { name: "October (so far): 12 vehicle-days off the road" })).toBeTruthy();
+    expect(screen.getByText("October is partial (9 days).")).toBeTruthy();
+    expect(linkOf("Open Work orders")).toBe("/maintenance/work-orders");
+  });
+
+  it("leaves the chart out while Maintenance is off", async () => {
+    const { container } = renderWith(SUMMARY, { ...testUsage(), offRoadByMonth: null });
+    await screen.findByText("VH003 · since 1 October 2026");
+    await vi.waitFor(() => expect(container.querySelector("[data-slot=days-off-road]")).toBeNull());
   });
 
   it("puts the summary notice over the tiles, with a grounding as the big change (#667)", async () => {
@@ -142,6 +159,6 @@ describe("Maintenance › Overview (#665)", () => {
     const region = await screen.findByRole("region", { name: "Summary" });
     expect(region.textContent).toContain("2 problems are open, 1 of them safety-critical.");
     expect(region.textContent).toContain("1 vehicle is off the road.");
-    expect(region.textContent).toContain("VH003 was grounded on October 7 and is still off the road.");
+    expect(region.textContent).toContain("VH003 was grounded on 7 October and is still off the road.");
   });
 });

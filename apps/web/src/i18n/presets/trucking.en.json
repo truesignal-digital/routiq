@@ -53,7 +53,20 @@
         "title": "Profit by truck"
       },
       "tiles": {
-        "idle": "No trip for {days}+ days"
+        "idle": "No trip for {days}+ days",
+        "onTheRoadInfo": "Truck-days on a trip ÷ truck-days recorded, last {days} days. Days nobody could record are left out."
+      },
+      "km": {
+        "all": "This month, km are known for every truck ({count, number}).",
+        "some": "This month, km are known for {known, number} of {total, number} trucks: {missing, plural, one {# trip has} other {# trips have}} no km."
+      },
+      "board": {
+        "question": "What did each truck do, day by day? Last {days} days.",
+        "basis": {
+          "all": "Status from trips, work orders and grounding.",
+          "noMaintenance": "Status from trips. Work orders and grounding are not counted: Maintenance is off."
+        },
+        "empty": "No truck to show."
       },
       "summary": {
         "sentence": "{total, plural, =0 {No truck is in the fleet yet.} one {Can drive today: {canDrive, number} of # truck.} other {Can drive today: {canDrive, number} of # trucks.}}"
@@ -85,6 +98,19 @@
     "overview": {
       "counted": {
         "openTrips": "{count, plural, one {# trip is still open} other {# trips are still open}}: their money may still come."
+      },
+      "fuel": {
+        "title": "Fuel per km by truck",
+        "question": "Is any truck spending more on fuel than it should? {period}, {currency} per km. Line = fleet median.",
+        "questionShort": "Is any truck spending more on fuel than it should?",
+        "more": "{count, plural, one {# more truck} other {# more trucks}}",
+        "notCounted": {
+          "kmUnknown": "Not counted: {count, plural, one {# truck whose km are not known} other {# trucks whose km are not known}}.",
+          "noKm": "Not counted: {count, plural, one {# truck with no km in this period} other {# trucks with no km in this period}}.",
+          "noFuel": "Not counted: {count, plural, one {# truck with no fuel recorded} other {# trucks with no fuel recorded}}."
+        },
+        "empty": "No truck has both km and fuel recorded in this period.",
+        "open": "See all trucks"
       }
     }
   },
@@ -151,6 +177,9 @@
       "weeks": {
         "title": "Trips per week"
       },
+      "routes": {
+        "withoutRoute": "{count, plural, one {# closed trip has} other {# closed trips have}} no leg, so no route."
+      },
       "summary": {
         "sentence": "{started, plural, =0 {No trip has started this week yet.} one {# trip started this week; {closed, number} of them closed.} other {# trips started this week; {closed, number} of them closed.}}",
         "open": "{open, plural, =0 {Nothing is still open.} one {# trip is still open.} other {# trips are still open.}}",
@@ -187,6 +216,11 @@
       }
     },
     "overview": {
+      "offRoad": {
+        "question": "Are repairs keeping trucks off the road longer? Truck-days in the workshop or grounded.",
+        "column": "{month}: {days, plural, one {# truck-day} other {# truck-days}} off the road",
+        "columnPartial": "{month} (so far): {days, plural, one {# truck-day} other {# truck-days}} off the road"
+      },
       "summary": {
         "grounded": "{grounded, plural, =0 {No truck is off the road.} one {# truck is off the road.} other {# trucks are off the road.}}"
       }
@@ -375,8 +409,9 @@
     "tiles": {
       "vehicleCosts": "Truck costs",
       "canDrive": "Trucks that can drive",
-      "allCanDrive": "Every truck in service can drive",
-      "noneInService": "No truck is in service"
+      "allCanDrive": "Every truck in the fleet can drive",
+      "noneInFleet": "No truck is in the fleet yet",
+      "costPerKmInfo": "Expenses recorded on trucks ÷ their km, over the {count, plural, one {# truck} other {# trucks}} whose km and expenses are known."
     },
     "branches": {
       "title": {
@@ -395,9 +430,28 @@
         "vehicles": "Trucks",
         "profit": "Truck profit"
       }
+    },
+    "todo": {
+      "rows": {
+        "FUEL_PER_KM_HIGH": {
+          "action": "Open the truck"
+        }
+      }
     }
   },
   "overview": {
+    "fleetBoard": {
+      "status": {
+        "ON_TRIP": "On a trip",
+        "AVAILABLE": "Available, no trip"
+      },
+      "columns": {
+        "vehicle": "Truck"
+      }
+    },
+    "usage": {
+      "kmKnown": "Km known for {known, number} of {total, plural, one {# truck} other {# trucks}}"
+    },
     "summary": {
       "change": {
         "groundedMany": "{count, plural, one {# truck was grounded in the last 7 days and is still off the road: {codes}.} other {# trucks were grounded in the last 7 days and are still off the road: {codes}.}}"

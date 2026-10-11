@@ -33,6 +33,7 @@ import { decidablePendingEntries } from "./approvals-queue.js";
 import { daysBetween, documentAttentionRows, evidenceStillDueSql, maintenanceItems } from "./asset-attention.js";
 import { addDays, currentBusinessDate } from "./business-date.js";
 import { defineRead } from "./define-read.js";
+import { fuelOutliers } from "./fleet-usage.js";
 import { readableEntrySql } from "./money-scope.js";
 import { invalidRequest } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
@@ -318,6 +319,29 @@ async function periodRows(tx: TenantTx, auth: AuthContext, today: Today): Promis
 }
 
 /**
+ * Vehicles spending more than FUEL_OUTLIER_PERCENT above the fleet median on
+ * fuel per km this month (#668), by the Money Overview's own figures. `since`
+ * is the month's first day, when the month's figures started counting.
+ */
+async function fuelRows(tx: TenantTx, auth: AuthContext, today: Today): Promise<TodoRow[]> {
+  const since = `${today.businessDate.slice(0, 7)}-01T00:00:00.000Z`;
+  return (await fuelOutliers(tx, auth, today.timezone)).map((outlier) => ({
+    code: "FUEL_PER_KM_HIGH",
+    severity: "WARNING",
+    link: { kind: "asset", id: outlier.assetId, number: outlier.assetCode },
+    asset: { id: outlier.assetId, assetCode: outlier.assetCode },
+    branchId: outlier.branchId,
+    since,
+    params: {
+      amountMinor: serializeMinor(outlier.fuelPerKm),
+      currency: outlier.currency,
+      medianMinor: serializeMinor(outlier.median),
+      percentAbove: outlier.percent,
+    },
+  }));
+}
+
+/**
  * Safety, then money (TODO_SAFETY_CODES, then TODO_MONEY_CODES). Safety rows
  * most severe first, then grounded, problems, documents, then oldest first.
  * Money rows in code order (decisions, receipts, the month), largest first.
@@ -353,6 +377,10 @@ async function loadTodo(tx: TenantTx, auth: AuthContext, modules: ReadonlySet<Mo
     if (todoWaitsOn("ENTRIES_AWAITING_APPROVAL", auth.role)) rows.push(...(await approvalRows(tx, auth, today)));
     if (todoWaitsOn("ENTRIES_EVIDENCE_MISSING", auth.role)) rows.push(...(await evidenceRows(tx, auth, today)));
     if (todoWaitsOn("PERIOD_OPEN", auth.role)) rows.push(...(await periodRows(tx, auth, today)));
+    // Km come from trips and belong to vehicles: fuel per km needs both modules.
+    if (modules.has("ACTIVITIES") && modules.has("ASSETS") && todoWaitsOn("FUEL_PER_KM_HIGH", auth.role)) {
+      rows.push(...(await fuelRows(tx, auth, today)));
+    }
   }
   const ranked = rankTodo(rows);
   return {

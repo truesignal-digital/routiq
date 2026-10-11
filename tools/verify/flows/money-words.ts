@@ -43,7 +43,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet, nav }) => 
 
   for (const [number, word, amount, caption] of [
     ["DLA-2026-00001", t("Bénéfice", "Profit"), /2[ ,  ]850[ ,  ]000/, "made money: the tile and the money card say Profit"],
-    ["DLA-2026-00002", t("Perte", "Loss"), /86[ ,  ]000/, "lost money: Loss 86,000, never Profit −86,000"],
+    ["DLA-2026-00002", t("Perte", "Loss"), /86[ ,  ]000/, "lost money: Loss 86 000 FCFA, never Profit −86 000 FCFA"],
   ] as const) {
     const { id } = trip(number);
     await nav(`/activities/${id}`);

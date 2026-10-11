@@ -39,8 +39,8 @@ describeCommandForm("ChangeThresholdsForm", {
     />
   ),
   opened: () => {
-    expect(recording().value).toBe("100,000");
-    expect(ceiling().value).toBe("1,000,000");
+    expect(recording().value).toBe("100 000");
+    expect(ceiling().value).toBe("1 000 000");
     expect(screen.getByText("Change an amount to save.")).toBeTruthy();
   },
   // The form opens on the current bands and sends nothing while they are unchanged.

@@ -109,7 +109,7 @@ const flow: DriveScript = async (ctx) => {
 
   // Monday twice: the first click starts a new range, the second closes it on the same day.
   await page.getByRole("button", { name: `${t("Du", "From")} – ${t("Au", "To")}` }).click();
-  const mondayLabel = new Intl.DateTimeFormat(ctx.lang === "fr" ? "fr-FR" : "en-US", { dateStyle: "full", timeZone: "UTC" }).format(
+  const mondayLabel = new Intl.DateTimeFormat(ctx.lang === "fr" ? "fr-FR" : "en-GB", { dateStyle: "full", timeZone: "UTC" }).format(
     new Date(`${monday}T00:00:00Z`),
   );
   const mondayCell = page.getByRole("dialog").getByRole("button", { name: mondayLabel, exact: true });

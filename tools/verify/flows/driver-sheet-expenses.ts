@@ -56,8 +56,8 @@ const flow: DriveScript = async ({ page, t, lang, nav, shot, quiet, log, apiGet 
   await showStep(vehiclePicker);
   // The preset names the vehicle: a truck, or a vehicle on a passenger line.
   await pick(lang === "fr" ? /^Choisir un (engin|camion|véhicule)/ : /^Choose an? (asset|truck|vehicle)/);
-  await page.getByLabel(t("Départ", "Departure"), { exact: true }).fill(t("07/10/2026 06:00", "10/07/2026 06:00"));
-  await page.getByLabel(t("Arrivée", "Arrival"), { exact: true }).fill(t("07/10/2026 14:30", "10/07/2026 14:30"));
+  await page.getByLabel(t("Départ", "Departure"), { exact: true }).fill("07/10/2026 06:00");
+  await page.getByLabel(t("Arrivée", "Arrival"), { exact: true }).fill("07/10/2026 14:30");
 
   await showStep(money);
   const lines = await money.getByRole("combobox").count();

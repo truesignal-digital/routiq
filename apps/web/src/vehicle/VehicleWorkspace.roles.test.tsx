@@ -271,7 +271,7 @@ describe("the status sentence and the step beside it, per role", () => {
       ],
     });
     const block = (await screen.findByText("Available.")).closest("[role=status]") as HTMLElement;
-    await waitFor(() => expect(block.textContent).toMatch(/Also: Technical inspection expired on 9\/23\/26\./));
+    await waitFor(() => expect(block.textContent).toMatch(/Also: Technical inspection expired on 23 September 2026\./));
     expect(within(block).getByRole("button", { name: "Technical inspection" })).toBeTruthy();
     expect(block.textContent).not.toMatch(/legally/);
   });
