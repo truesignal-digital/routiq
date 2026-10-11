@@ -115,7 +115,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await costs.scrollIntoViewIfNeeded();
   await page.waitForTimeout(600);
   await shot("panel-costs", {
-    caption: "Actual cost counts the 62,000 invoice awaiting review: does the Costs list show it?",
+    caption: "Actual cost counts the 62 000 FCFA invoice awaiting review: does the Costs list show it?",
     highlight: costs.locator("xpath=ancestor::section[1]"),
   });
   const footer = panel.locator("[data-slot='sheet-footer']");

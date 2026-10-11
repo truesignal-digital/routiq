@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 776490,
+    "ceiling": 776559,
     "raises": [
       {
         "date": "2026-10-06",
@@ -295,6 +295,12 @@
         "from": 764827,
         "to": 776490,
         "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop b7d22560)"
+      },
+      {
+        "date": "2026-10-11",
+        "from": 776490,
+        "to": 776559,
+        "reason": "Measured on develop after #701: #712 fixed en/fr month and weekday tables (dates read the same on every ICU version) and #699 one can-drive count, net of the formatters #712 removed"
       }
     ]
   },

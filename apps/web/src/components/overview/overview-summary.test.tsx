@@ -133,7 +133,7 @@ describe("OverviewSummary (#667)", () => {
   it("shows on Monday above the tiles, with what it counted inside, and stays closed after a reload", async () => {
     const { unmount } = render(<Summary notice={MONDAY} />);
     const region = screen.getByRole("region", { name: "Summary" });
-    expect(region.querySelector('[data-slot="overview-summary-when"]')?.textContent).toBe("Monday summary · Monday, October 5");
+    expect(region.querySelector('[data-slot="overview-summary-when"]')?.textContent).toBe("Monday summary · Monday 5 October");
     expect(region.textContent).toContain("Spending on Fuel rose by 420,000 XAF.");
     expect(region.textContent).toContain("Behind September");
     expect(region.querySelector('[data-summary="open"]')?.textContent).toBe("Counted: 84 posted entries.");
@@ -160,7 +160,7 @@ describe("OverviewSummary (#667)", () => {
     rerender(<Summary notice={NEXT_MONDAY} />);
     expect(screen.getByRole("region", { name: "Summary" })).toBeTruthy();
     rerender(<Summary notice={FIRST} />);
-    expect(screen.getByRole("region", { name: "Summary" }).textContent).toContain("Start of the month summary · Sunday, November 1");
+    expect(screen.getByRole("region", { name: "Summary" }).textContent).toContain("Start of the month summary · Sunday 1 November");
   });
 
   it("is each person's own: closing it for one leaves it open for another", async () => {
@@ -175,8 +175,8 @@ describe("OverviewSummary (#667)", () => {
     const changed = { ...FRIDAY, changes: [grounding("G1", "VH003")] };
     const { rerender } = render(<Summary notice={changed} />);
     const region = screen.getByRole("region", { name: "Summary" });
-    expect(region.textContent).toContain("Something changed · Friday, October 9");
-    expect(region.textContent).toContain("VH003 was grounded on October 7 and is still off the road.");
+    expect(region.textContent).toContain("Something changed · Friday 9 October");
+    expect(region.textContent).toContain("VH003 was grounded on 7 October and is still off the road.");
 
     await userEvent.click(screen.getByRole("button", { name: "Close the summary" }));
     rerender(<Summary notice={{ ...changed }} />);

@@ -13,7 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatDate, formatRelativeTime, localizedLabel } from "@/lib/format.js";
+import { formatDate, formatMonth, formatRelativeTime, localizedLabel } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
 import { contributes } from "@/modules/manifest.js";
 import { useWorkOrder } from "@/maintenance/useMaintenance.js";
@@ -41,7 +41,7 @@ function truncate(text: string): string {
 }
 
 function monthYear(iso: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(iso));
+  return formatMonth(iso, locale);
 }
 
 /**

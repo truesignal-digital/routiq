@@ -4,7 +4,7 @@ import { CalendarDays, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMeContext } from "@/auth/me.js";
 import { Button } from "@/components/ui/button";
-import { formatPercent } from "@/lib/format.js";
+import { formatDayMonth, formatPercent } from "@/lib/format.js";
 import { summaryStorageKey, useSummaryNotice } from "./summary-notice.js";
 
 type Translate = ReturnType<typeof useTranslation>["t"];
@@ -37,12 +37,7 @@ export interface OverviewSummaryProps {
 }
 
 function formatDay(iso: string, language: string | undefined, weekday: boolean): string {
-  return new Intl.DateTimeFormat(language, {
-    ...(weekday ? { weekday: "long" as const } : {}),
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${iso.slice(0, 10)}T00:00:00Z`));
+  return formatDayMonth(iso.slice(0, 10), language, { weekday });
 }
 
 /** One sentence per kind of big change, each whole (no stitched phrases). */

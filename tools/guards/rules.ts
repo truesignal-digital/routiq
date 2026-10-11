@@ -586,6 +586,16 @@ export const RULES: readonly Rule[] = [
     ),
   },
   {
+    id: "H20",
+    name: "dates-format-in-one-place",
+    fix: "Format dates through lib/format.ts: formatDate (\"29 July 2026\", month \"short\" in a dense table), formatDateTime, formatTime, formatDayMonth, formatDateRange, formatMonth, formatDateInput. Never a hand-built Intl.DateTimeFormat or toLocale*String, which give the US order in English (#712).",
+    check: linesMatching(
+      /\bnew Intl\.DateTimeFormat\b|\bIntl\.DateTimeFormat\(|\.toLocale(?:Date|Time)?String\(/,
+      // workspace-day.ts reads the workspace's calendar day as numbers (en-CA parts), never shown.
+      (path) => isWebProduction(path) && path !== "apps/web/src/lib/format.ts" && path !== "apps/web/src/lib/workspace-day.ts",
+    ),
+  },
+  {
     id: "H17",
     name: "forms-have-harness-tests",
     fix: "Give the form a sibling <Name>.test.tsx that runs describeCommandForm from apps/web/src/test/form-harness.ts: the six command-form tests (docs/design/consistency/README.md, Recipe: a new form).",

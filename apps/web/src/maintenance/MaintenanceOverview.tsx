@@ -11,7 +11,7 @@ import { ErrorState } from "@/components/page";
 import { StatusBadge } from "@/components/status-badge.js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCount, formatDate, formatRelativeTime } from "@/lib/format.js";
+import { formatCount, formatDate, formatMonth, formatRelativeTime } from "@/lib/format.js";
 import { PAGE_USAGE_RANGE, useFleetUsage } from "@/overview/useFleetUsage.js";
 import { useIssues, useMaintenanceSummary } from "./useMaintenance.js";
 
@@ -102,7 +102,7 @@ export function MaintenanceOverview() {
 }
 
 function shortMonth(periodCode: string, language: string | undefined, month: "short" | "long"): string {
-  return new Intl.DateTimeFormat(language, { month, timeZone: "UTC" }).format(new Date(`${periodCode}-15T00:00:00Z`));
+  return formatMonth(periodCode, language, { month, year: false });
 }
 
 /**

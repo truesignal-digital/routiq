@@ -138,7 +138,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await awaiting.waitFor();
   await page.waitForTimeout(400);
   await shot("awaiting-approval", {
-    caption: `${line.entryNumber} waits for Finance even though a technician's 62,000 would post on an open order`,
+    caption: `${line.entryNumber} waits for Finance even though a technician's 62 000 FCFA would post on an open order`,
     highlight: awaiting,
   });
 

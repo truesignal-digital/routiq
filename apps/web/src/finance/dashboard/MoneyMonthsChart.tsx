@@ -14,11 +14,7 @@ const CONFIG = {
 } satisfies ChartConfig;
 
 function shortMonth(periodCode: string, language: string | undefined): string {
-  const [year, month] = periodCode.split("-").map(Number);
-  if (year === undefined || month === undefined) return periodCode;
-  return new Intl.DateTimeFormat(language, { month: "short", timeZone: "UTC" }).format(
-    new Date(Date.UTC(year, month - 1, 1)),
-  );
+  return formatMonth(periodCode, language, { month: "short", year: false });
 }
 
 /**

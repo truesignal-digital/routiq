@@ -48,7 +48,7 @@ const MONEY = {
 
 const BODIES: [string, unknown][] = [
   ["/v1/assets/overview", OVERVIEW],
-  ["/v1/assets/summary", { total: 12, inService: 11, canDrive: 10, attention: 2 }],
+  ["/v1/assets/summary", { total: 12, inService: 11, attention: 2 }],
   ["/v1/coming-up", {
     businessDate: "2026-10-09",
     windowDays: 30,
@@ -131,7 +131,7 @@ describe("Trucks › Overview (#665)", () => {
     expect(screen.queryByRole("link", { name: "Attention" })).toBeNull();
     expect(linkOf("Documents due ≤ 30 days")).toBe("/assets/documents?expiry=DUE_30");
     expect(linkOf("Idle 5+ days")).toBe("/assets/list?availability=IDLE");
-    expect(await screen.findByText("First: VH005 · 10/15/26")).toBeTruthy();
+    expect(await screen.findByText("First: VH005 · 15 October 2026")).toBeTruthy();
     expect(screen.getByText("VH012 · never")).toBeTruthy();
   });
 
@@ -184,7 +184,7 @@ describe("Trucks › Overview (#665)", () => {
     await waitFor(() => expect(container.querySelectorAll("[data-slot=fleet-board-row]")).toHaveLength(4));
     expect(screen.getByText("Fleet board")).toBeTruthy();
     expect(screen.getByRole("link", { name: "VH007" }).getAttribute("href")).toBe("/assets/a7");
-    expect(screen.getByRole("img", { name: "VH003 · Oct 9 · Grounded" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "VH003 · 9 Oct · Grounded" })).toBeTruthy();
     expect(screen.getByText("Status from activities, work orders and grounding.")).toBeTruthy();
     expect(screen.queryByText(/profit|revenue/i)).toBeNull();
   });

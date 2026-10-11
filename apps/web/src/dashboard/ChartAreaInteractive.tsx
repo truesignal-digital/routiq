@@ -20,7 +20,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/page";
-import { formatDate, formatMoney } from "@/lib/format.js";
+import { formatDate, formatDayMonth, formatMoney } from "@/lib/format.js";
 
 /** Widest first, the way the range reads on the card. */
 export const CHART_RANGES = [90, 30, 7] as const;
@@ -122,7 +122,7 @@ export function ChartAreaInteractive({
                 axisLine={false}
                 tickMargin={8}
                 minTickGap={32}
-                tickFormatter={(value: string) => formatDate(value)}
+                tickFormatter={(value: string) => formatDayMonth(value, undefined, { month: "short" })}
               />
               <ChartTooltip
                 cursor={false}

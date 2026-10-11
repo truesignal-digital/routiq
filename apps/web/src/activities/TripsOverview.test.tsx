@@ -90,7 +90,7 @@ describe("Trips › Overview (#665)", () => {
     const { container } = renderWith(SUMMARY);
     await screen.findByText("5 still open");
     const todo = within(container.querySelector("[data-slot=to-do-list]") as HTMLElement);
-    expect(todo.getByText("Oldest: DLA-2026-00031 on VH006, started 10/6/26")).toBeTruthy();
+    expect(todo.getByText("Oldest: DLA-2026-00031 on VH006, started 6 October 2026")).toBeTruthy();
     expect(todo.getByText("3 closed without fuel")).toBeTruthy();
     expect(todo.getByText("2 closed without km")).toBeTruthy();
     const buttons = todo.getAllByRole("link", { name: "Open the list" }).map((link) => link.getAttribute("href"));
@@ -119,7 +119,7 @@ describe("Trips › Overview (#665)", () => {
     const value = () => container.querySelector("[data-metric=empty-km] [data-slot=metric-value]")?.textContent;
     await vi.waitFor(() => expect(value()).toBe("18%"));
     expect(container.querySelector("[data-metric=empty-km]")?.textContent?.replace(/\s/g, " ")).toContain(
-      "▲ 3 pts vs Sep 1 – 9 · 150 km without a load not counted",
+      "▲ 3 pts vs 1–9 Sept · 150 km without a load not counted",
     );
   });
 

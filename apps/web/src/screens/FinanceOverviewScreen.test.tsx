@@ -251,10 +251,10 @@ describe("Money Overview (#664)", () => {
     renderAs("FINANCE");
 
     const text = (node: HTMLElement | null) => node?.textContent?.replace(/\s/g, " ") ?? "";
-    expect(text(tile("expenses"))).toContain("▲ 11% vs Sep 1 – 9");
-    expect(text(tile("revenue"))).toContain("▲ 7% vs Sep 1 – 9");
+    expect(text(tile("expenses"))).toContain("▲ 11% vs 1–9 Sept");
+    expect(text(tile("revenue"))).toContain("▲ 7% vs 1–9 Sept");
     expect(text(document.querySelector('[data-slot="money-overview-period"]'))).toBe(
-      "October 1 – 9 compared with September 1 – 9",
+      "1–9 October compared with 1–9 September",
     );
     expect(tile("close").textContent).toContain("Open");
     expect(tile("close").textContent).toContain("154 entries");
@@ -274,8 +274,8 @@ describe("Money Overview (#664)", () => {
 
     const card = document.querySelector<HTMLElement>('[data-slot="money-categories"]')!;
     const rows = within(card).getAllByRole("listitem").map((row) => row.textContent?.replace(/\s/g, " "));
-    expect(rows[0]).toMatch(/^Fuel.*3,900,000 vs .*3,480,000$/);
-    expect(rows[1]).toMatch(/^Repairs.*1,200,000 vs .*780,000$/);
+    expect(rows[0]).toMatch(/^Fuel.*3 900 000 FCFA vs .*3 480 000 FCFA$/);
+    expect(rows[1]).toMatch(/^Repairs.*1 200 000 FCFA vs .*780 000 FCFA$/);
   });
 
   it("lists what waits, each with its one button", () => {
@@ -352,7 +352,7 @@ describe("Money Overview (#664)", () => {
     renderAs("FINANCE");
     const region = screen.getByRole("region", { name: "Summary" });
     expect(region.textContent?.replace(/\s/g, " ")).toContain(
-      "So far in October: a profit of FCFA 1,870,000 on FCFA 9,560,000 revenue, FCFA 137,000 worse than September at the same day.",
+      "So far in October: a profit of 1 870 000 FCFA on 9 560 000 FCFA revenue, 137 000 FCFA worse than September at the same day.",
     );
     expect(region.textContent).toContain("Spending on Repairs rose by");
     expect(region.querySelector('[data-slot="money-counted"]')).toBeTruthy();
@@ -369,7 +369,7 @@ describe("Money Overview (#664)", () => {
     renderAs("CASHIER");
     await userEvent.click(screen.getByRole("button", { name: "Show summary" }));
     const text = screen.getByRole("region", { name: "Summary" }).textContent ?? "";
-    expect(text.replace(/\s/g, " ")).toContain("So far in October: FCFA 7,690,000 of expenses, 11% more than September at the same day.");
+    expect(text.replace(/\s/g, " ")).toContain("So far in October: 7 690 000 FCFA of expenses, 11% more than September at the same day.");
     expect(text).not.toMatch(/profit/i);
   });
 });

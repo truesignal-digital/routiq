@@ -26,7 +26,7 @@ describe("To do words", () => {
     };
     const item = todoItem(row, i18n.t.bind(i18n), "en");
     expect(item.title).toBe("VH007 spends 24% more on fuel per km than the fleet");
-    expect(plain(String(item.detail))).toMatch(/^FCFA 360 per km · fleet median FCFA 290$/);
+    expect(plain(String(item.detail))).toMatch(/^360 FCFA per km · fleet median 290 FCFA$/);
     expect(item.action).toEqual({ label: "Open the vehicle", to: "/assets/a7" });
   });
 });

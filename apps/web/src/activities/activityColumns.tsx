@@ -58,7 +58,7 @@ function buildColumns(
       enableSorting: true,
       meta: { phone: "meta", label: t("activities.columns.startedAt") },
       cell: ({ row }) =>
-        row.original.startedAt === null ? <NotRecorded /> : formatDate(row.original.startedAt, locale),
+        row.original.startedAt === null ? <NotRecorded /> : formatDate(row.original.startedAt, locale, "short"),
     },
     endedAt: {
       accessorKey: "endedAt",
@@ -66,7 +66,7 @@ function buildColumns(
       enableSorting: false,
       meta: { phone: "hidden", label: t("activities.columns.endedAt") },
       cell: ({ row }) =>
-        row.original.endedAt === null ? <NotRecorded /> : formatDate(row.original.endedAt, locale),
+        row.original.endedAt === null ? <NotRecorded /> : formatDate(row.original.endedAt, locale, "short"),
     },
     primaryAssetCode: {
       accessorKey: "primaryAssetCode",

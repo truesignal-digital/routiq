@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card.js";
 import { Skeleton } from "@/components/ui/skeleton.js";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip.js";
-import { moneyAmountParts, notRecorded } from "@/lib/format.js";
+import { moneyFigure, notRecorded } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
 /** Neutral states a count; warning marks the bucket that wants someone's attention. */
@@ -92,8 +92,8 @@ export function moneyMetric(
   currency = "XAF",
 ): Pick<MetricTile, "value" | "unit"> {
   if (minor == null) return { value: null };
-  const parts = moneyAmountParts(Math.abs(minor), { currency });
-  return { value: `${minor < 0 ? "\u2212" : ""}${parts.amount}`, unit: parts.symbol };
+  const { figure, unit } = moneyFigure(minor, { currency });
+  return { value: figure, unit };
 }
 
 const TONE_VALUE: Record<MetricTone, string> = {
@@ -224,14 +224,17 @@ function Tile({
                 // that failed has no value to name, so the label says why.
                 <span role="img" aria-label={t("common.readFailed")}>—</span>
               ) : showValue ? (
-                <>
-                  {tile.value}
-                  {tile.unit !== undefined && (
-                    <small className="ms-1 font-sans text-xs font-medium text-muted-foreground">
+                tile.unit === undefined ? (
+                  tile.value
+                ) : (
+                  <>
+                    {/* The figure and its unit each stay whole; on a narrow phone tile the unit drops below (#695). */}
+                    <span className="whitespace-nowrap">{tile.value}</span>{" "}
+                    <small className="whitespace-nowrap font-sans text-xs font-medium text-muted-foreground">
                       {tile.unit}
                     </small>
-                  )}
-                </>
+                  </>
+                )
               ) : tile.withheld === true ? null : (
                 <span className="text-base">{notRecorded()}</span>
               )}

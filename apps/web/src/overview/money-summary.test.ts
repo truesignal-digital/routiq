@@ -48,9 +48,9 @@ describe("moneySummaryText (#667)", () => {
   it("says how profit moved in money, and names the biggest change", () => {
     const text = words({}, "en");
     expect(spaces(text.sentence)).toBe(
-      "So far in October: a profit of FCFA 1,870,000 on FCFA 9,560,000 revenue, FCFA 100,000 worse than September at the same day.",
+      "So far in October: a profit of 1 870 000 FCFA on 9 560 000 FCFA revenue, 100 000 FCFA worse than September at the same day.",
     );
-    expect(spaces(text.details.join(" "))).toBe("Spending on Fuel rose by FCFA 420,000.");
+    expect(spaces(text.details.join(" "))).toBe("Spending on Fuel rose by 420 000 FCFA.");
     expect(text.badge).toEqual({ template: "BEHIND", label: "Behind September" });
     expect(text.expensesUp).toEqual({ window: "soFar", comparisonMonth: "September" });
   });
@@ -69,18 +69,18 @@ describe("moneySummaryText (#667)", () => {
       "en",
     );
     expect(spaces(text.sentence)).toBe(
-      "In September: a loss of FCFA 420,000 on FCFA 9,560,000 revenue, FCFA 480,000 better than August.",
+      "In September: a loss of 420 000 FCFA on 9 560 000 FCFA revenue, 480 000 FCFA better than August.",
     );
-    expect(spaces(text.details.join(" "))).toBe("Revenue rose by FCFA 480,000.");
+    expect(spaces(text.details.join(" "))).toBe("Revenue rose by 480 000 FCFA.");
   });
 
   it("moves expenses in percent, and in money when the change rounds to none", () => {
     const expenses = { measure: "EXPENSES" as const, revenueMinor: null, currentMinor: 7_690_000, comparisonMinor: 6_930_000, changePercent: 11 };
     expect(spaces(words(expenses, "en").sentence)).toBe(
-      "So far in October: FCFA 7,690,000 of expenses, 11% more than September at the same day.",
+      "So far in October: 7 690 000 FCFA of expenses, 11% more than September at the same day.",
     );
     expect(spaces(words({ ...expenses, comparisonMinor: 7_680_000, changePercent: 0, template: "FLAT" }, "en").sentence)).toBe(
-      "So far in October: FCFA 7,690,000 of expenses, about the same as September at the same day.",
+      "So far in October: 7 690 000 FCFA of expenses, about the same as September at the same day.",
     );
     expect(words(expenses, "en").expensesUp).toBeUndefined();
   });
