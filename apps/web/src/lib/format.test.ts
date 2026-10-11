@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   currencyUnit,
   formatCompact,
+  formatCount,
   formatPercent,
   formatMoney,
   formatDate,
@@ -186,6 +187,48 @@ describe("format", () => {
       expect(formatDateRange("2026-07-01", "2026-09-30", "en", { unit: "months" })).toBe("July\u2009–\u2009September 2026");
     });
 
+    it("puts thin spaces round the dash only between two months or years", () => {
+      const days = { unit: "days" } as const;
+      expect(formatDateRange("2026-10-01", "2026-10-10", "fr-CM", days)).toBe("1–10 octobre");
+      expect(formatDateRange("2026-09-01", "2026-09-09", "en", { unit: "days", month: "short" })).toBe("1–9 Sept");
+      expect(formatDateRange("2026-10-04", "2026-10-04", "en", days)).toBe("4 October");
+      expect(formatDateRange("2026-09-28", "2026-10-04", "en", { unit: "days", month: "short" })).toBe("28 Sept\u2009–\u20094 Oct");
+      expect(formatDateRange("2026-09-28", "2026-10-04", "fr-CM", { unit: "days", month: "short" })).toBe(
+        "28 sept.\u2009–\u20094 oct.",
+      );
+      expect(formatDateRange("2026-12-28", "2027-01-04", "en", days)).toBe("28 December 2026\u2009–\u20094 January 2027");
+      expect(formatDateRange("2026-07-01", "2026-09-30", "fr-CM", { unit: "months" })).toBe("juillet\u2009–\u2009septembre 2026");
+      expect(formatDateRange("2026-09-01", "2026-09-30", "en", { unit: "months" })).toBe("September 2026");
+      expect(formatDateRange("2025-11-01", "2026-02-28", "en", { unit: "months" })).toBe(
+        "November 2025\u2009–\u2009February 2026",
+      );
+    });
+
+    it("reads the same on every platform: no date or figure comes from the ICU data behind Intl", () => {
+      // Node, browsers and phones ship different ICU versions; ICU 78 rewrote "1–10 October" as "1 – 10 October".
+      const dateFormat = vi.spyOn(Intl, "DateTimeFormat").mockImplementation(() => {
+        throw new Error("Intl.DateTimeFormat used");
+      });
+      const numberFormat = vi.spyOn(Intl, "NumberFormat").mockImplementation(() => {
+        throw new Error("Intl.NumberFormat used");
+      });
+      try {
+        expect(formatDate("2026-07-29", "en", "short")).toBe("29 Jul 2026");
+        expect(formatDateTime("2026-07-29T07:00:00Z", "fr-CM")).toMatch(/^29 juillet 2026, \d\d:00$/);
+        expect(formatDateFull("2026-07-29", "fr-CM")).toBe("mercredi 29 juillet 2026");
+        expect(formatDateRange("2026-10-01", "2026-10-10", "en")).toBe("1–10 October");
+        expect(formatMonth("2026-09", "fr-CM", { month: "short" })).toBe("sept. 2026");
+        expect(formatWeekday(new Date(2026, 6, 29), "en", "narrow")).toBe("W");
+        expect(formatMoney(450_000, { locale: "fr-CM" })).toBe("450\u00a0000\u00a0FCFA");
+        expect(formatPercent(11, "fr-CM")).toBe("11 %");
+        expect(formatCount(4_800, "en")).toBe("4,800");
+        expect(formatCompact(450_000, "en")).toBe("450K");
+      } finally {
+        dateFormat.mockRestore();
+        numberFormat.mockRestore();
+      }
+    });
+
     it("writes a month with or without its year", () => {
       expect(formatMonth("2026-09", "en")).toBe("September 2026");
       expect(formatMonth("2026-09", "fr-CM")).toBe("septembre 2026");
@@ -195,6 +238,14 @@ describe("format", () => {
     it("writes a chart axis figure short, with a true minus", () => {
       expect(formatCompact(-85_000, "en")).toBe("−85K");
       expect(formatCompact(2_300_000, "en")).toBe("2.3M");
+      expect(formatCompact(450_000, "en")).toBe("450K");
+      expect(formatCompact(3_000_000_000, "en")).toBe("3B");
+      expect(formatCompact(999_950, "en")).toBe("1M");
+      expect(formatCompact(2_500_000, "fr-CM")).toBe("2,5 M");
+      expect(formatCompact(450_000, "fr-CM")).toBe("450 k");
+      expect(formatCompact(3_000_000_000, "fr-CM")).toBe("3 Md");
+      expect(formatCompact(0, "en")).toBe("0");
+      expect(formatCompact(12.5, "en")).toBe("12.5");
     });
 
     it("gives a date input dd/mm/yyyy in both languages", () => {
@@ -331,5 +382,17 @@ describe("formatPercent", () => {
     expect(formatPercent(11, "en")).toBe("11%");
     expect(formatPercent(11, "fr-CM")).toBe("11 %");
     expect(formatPercent(7.4, "en")).toBe("7%");
+    expect(formatPercent(-12.5, "en")).toBe("-13%");
+    expect(formatPercent(1_250, "fr-CM")).toBe("1 250 %");
+  });
+});
+
+describe("formatCount", () => {
+  it("groups a whole count the reader's way, with plain spaces", () => {
+    expect(formatCount(4_800, "en")).toBe("4,800");
+    expect(formatCount(4_800, "fr-CM")).toBe("4 800");
+    expect(formatCount(1_234_567.6, "en")).toBe("1,234,568");
+    expect(formatCount(-4_800, "fr-CM")).toBe("-4 800");
+    expect(formatCount(950, "fr-CM")).toBe("950");
   });
 });
