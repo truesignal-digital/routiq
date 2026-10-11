@@ -150,13 +150,13 @@
       "weeks": {
         "title": "Trips per week"
       },
+      "routes": {
+        "withoutRoute": "{count, plural, one {# closed trip has} other {# closed trips have}} no leg, so no route."
+      },
       "summary": {
         "sentence": "{started, plural, =0 {No trip has started this week yet.} one {# trip started this week; {closed, number} of them closed.} other {# trips started this week; {closed, number} of them closed.}}",
         "open": "{open, plural, =0 {Nothing is still open.} one {# trip is still open.} other {# trips are still open.}}",
         "counted": "{fuelCounted, select, yes {Closed trips missing data: {fuel, number} without fuel and {km, number} without km.} other {Closed trips missing data: {km, number} without km. Fuel is not counted: Money is off.}}"
-      },
-      "routes": {
-        "withoutRoute": "{count, plural, one {# closed trip has} other {# closed trips have}} no leg, so no route."
       }
     }
   },
@@ -339,15 +339,15 @@
     }
   },
   "overview": {
-    "summary": {
-      "money": {
-        "notEnoughTrips": "{window, select, lastMonth {In {month}, only {closed, number} of {total, plural, one {# trip was} other {# trips were}} closed, so it is too early to give a profit.} other {So far in {month}, only {closed, number} of {total, plural, one {# trip is} other {# trips are}} closed, so it is too early to give a profit.}}"
-      }
-    },
     "fleetBoard": {
       "status": {
         "ON_TRIP": "On a trip",
         "AVAILABLE": "Available, no trip"
+      }
+    },
+    "summary": {
+      "money": {
+        "notEnoughTrips": "{window, select, lastMonth {In {month}, only {closed, number} of {total, plural, one {# trip was} other {# trips were}} closed, so it is too early to give a profit.} other {So far in {month}, only {closed, number} of {total, plural, one {# trip is} other {# trips are}} closed, so it is too early to give a profit.}}"
       }
     }
   }

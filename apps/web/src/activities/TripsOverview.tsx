@@ -3,8 +3,8 @@ import type { ActivitySummary, FleetUsageResponse, FleetUsageRoute } from "@rout
 import { Fuel, Gauge, Route } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { MetricStrip, metricTiles, type MetricTile } from "@/components/metric-strip.js";
-import { OverviewSummary } from "@/components/overview/overview-summary.js";
 import { RankedBars } from "@/components/overview/ranked-bars.js";
+import { OverviewSummary } from "@/components/overview/overview-summary.js";
 import { ToDoList, type ToDoItem } from "@/components/overview/to-do-list.js";
 import { WeekColumns } from "@/components/overview/week-columns.js";
 import { ErrorState } from "@/components/page";

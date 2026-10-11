@@ -174,13 +174,13 @@
       "weeks": {
         "title": "Trips per week"
       },
+      "routes": {
+        "withoutRoute": "{count, plural, one {# closed trip has} other {# closed trips have}} no leg, so no route."
+      },
       "summary": {
         "sentence": "{started, plural, =0 {No trip has started this week yet.} one {# trip started this week; {closed, number} of them closed.} other {# trips started this week; {closed, number} of them closed.}}",
         "open": "{open, plural, =0 {Nothing is still open.} one {# trip is still open.} other {# trips are still open.}}",
         "counted": "{fuelCounted, select, yes {Closed trips missing data: {fuel, number} without fuel and {km, number} without km.} other {Closed trips missing data: {km, number} without km. Fuel is not counted: Money is off.}}"
-      },
-      "routes": {
-        "withoutRoute": "{count, plural, one {# closed trip has} other {# closed trips have}} no leg, so no route."
       }
     }
   },
@@ -213,13 +213,13 @@
       }
     },
     "overview": {
-      "summary": {
-        "grounded": "{grounded, plural, =0 {No truck is off the road.} one {# truck is off the road.} other {# trucks are off the road.}}"
-      },
       "offRoad": {
         "question": "Are repairs keeping trucks off the road longer? Truck-days in the workshop or grounded.",
         "column": "{month}: {days, plural, one {# truck-day} other {# truck-days}} off the road",
         "columnPartial": "{month} (so far): {days, plural, one {# truck-day} other {# truck-days}} off the road"
+      },
+      "summary": {
+        "grounded": "{grounded, plural, =0 {No truck is off the road.} one {# truck is off the road.} other {# trucks are off the road.}}"
       }
     }
   },

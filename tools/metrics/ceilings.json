@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 776565,
+    "ceiling": 776559,
     "raises": [
       {
         "date": "2026-10-06",
@@ -293,19 +293,19 @@
       {
         "date": "2026-10-10",
         "from": 764827,
-        "to": 776035,
-        "reason": "The stack this PR sits on beyond develop: #668 km and daily status and #699 one can-drive count (about 11.1 kB, their own raises were counted from #665 + #666 only) and #711 Administrators change company settings (89 B). Measured on the merges alone; the #712 formatters shrink the build slightly"
+        "to": 776490,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop b7d22560)"
       },
       {
         "date": "2026-10-11",
-        "from": 776035,
-        "to": 776565,
-        "reason": "Fixed month and weekday tables for en and fr replace ICU data, so dates and figures read the same on every platform (#712, CI ICU 78 vs 77)"
+        "from": 776490,
+        "to": 776559,
+        "reason": "Measured on develop after #701: #712 fixed en/fr month and weekday tables (dates read the same on every ICU version) and #699 one can-drive count, net of the formatters #712 removed"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 23326,
+    "ceiling": 23330,
     "raises": [
       {
         "date": "2026-10-06",
@@ -382,13 +382,13 @@
       {
         "date": "2026-10-10",
         "from": 23261,
-        "to": 23326,
-        "reason": "Stacking #668 (km and daily status) and #699 (one can-drive count) on the #669 stack: their own raises were counted from #665 + #666 only, so the combined build carries both. Measured on the merge alone (0e44ed07); the #712 formatters on top shrink it slightly"
+        "to": 23330,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop b7d22560)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 283175,
+    "ceiling": 283191,
     "raises": [
       {
         "date": "2026-10-06",
@@ -651,8 +651,8 @@
       {
         "date": "2026-10-10",
         "from": 280366,
-        "to": 283175,
-        "reason": "Stacking #668 (km and daily status) and #699 (one can-drive count) on the #669 stack: their own raises were counted from #665 + #666 only, so the combined build carries both. Measured on the merge alone (0e44ed07); the #712 formatters on top shrink it slightly"
+        "to": 283191,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop b7d22560)"
       }
     ]
   }

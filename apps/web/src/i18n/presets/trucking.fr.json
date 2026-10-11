@@ -186,13 +186,13 @@
       "weeks": {
         "title": "Trajets par semaine"
       },
+      "routes": {
+        "withoutRoute": "{count, plural, one {# trajet clôturé n'a} other {# trajets clôturés n'ont}} aucune étape, donc aucun itinéraire."
+      },
       "summary": {
         "sentence": "{started, plural, =0 {Aucun trajet n’a encore commencé cette semaine.} one {# trajet a commencé cette semaine ; {closed, number} clôturé.} other {# trajets ont commencé cette semaine ; {closed, number} clôturés.}}",
         "open": "{open, plural, =0 {Rien n’est encore ouvert.} one {# trajet est encore ouvert.} other {# trajets sont encore ouverts.}}",
         "counted": "{fuelCounted, select, yes {Trajets clôturés incomplets : {fuel, number} sans carburant et {km, number} sans km.} other {Trajets clôturés incomplets : {km, number} sans km. Le carburant n’est pas compté : Finances est désactivé.}}"
-      },
-      "routes": {
-        "withoutRoute": "{count, plural, one {# trajet clôturé n'a} other {# trajets clôturés n'ont}} aucune étape, donc aucun itinéraire."
       }
     }
   },
@@ -225,13 +225,13 @@
       }
     },
     "overview": {
-      "summary": {
-        "grounded": "{grounded, plural, =0 {Aucun camion n’est à l’arrêt.} one {# camion est à l’arrêt.} other {# camions sont à l’arrêt.}}"
-      },
       "offRoad": {
         "question": "Les réparations immobilisent-elles les camions plus longtemps ? Jours-camion à l'atelier ou immobilisés.",
         "column": "{month} : {days, plural, one {# jour-camion} other {# jours-camion}} à l'arrêt",
         "columnPartial": "{month} (en cours) : {days, plural, one {# jour-camion} other {# jours-camion}} à l'arrêt"
+      },
+      "summary": {
+        "grounded": "{grounded, plural, =0 {Aucun camion n’est à l’arrêt.} one {# camion est à l’arrêt.} other {# camions sont à l’arrêt.}}"
       }
     }
   },

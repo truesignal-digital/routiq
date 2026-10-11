@@ -162,13 +162,13 @@
       "weeks": {
         "title": "Voyages par semaine"
       },
+      "routes": {
+        "withoutRoute": "{count, plural, one {# voyage clôturé n'a} other {# voyages clôturés n'ont}} aucune étape, donc aucun itinéraire."
+      },
       "summary": {
         "sentence": "{started, plural, =0 {Aucun voyage n’a encore commencé cette semaine.} one {# voyage a commencé cette semaine ; {closed, number} clôturé.} other {# voyages ont commencé cette semaine ; {closed, number} clôturés.}}",
         "open": "{open, plural, =0 {Rien n’est encore ouvert.} one {# voyage est encore ouvert.} other {# voyages sont encore ouverts.}}",
         "counted": "{fuelCounted, select, yes {Voyages clôturés incomplets : {fuel, number} sans carburant et {km, number} sans km.} other {Voyages clôturés incomplets : {km, number} sans km. Le carburant n’est pas compté : Finances est désactivé.}}"
-      },
-      "routes": {
-        "withoutRoute": "{count, plural, one {# voyage clôturé n'a} other {# voyages clôturés n'ont}} aucune étape, donc aucun itinéraire."
       }
     }
   },
@@ -352,15 +352,15 @@
     }
   },
   "overview": {
-    "summary": {
-      "money": {
-        "notEnoughTrips": "{window, select, lastMonth {En {month}, {total, plural, one {seul {closed, number} voyage sur # a été clôturé} other {seuls {closed, number} voyages sur # ont été clôturés}} : trop tôt pour donner un bénéfice.} other {À ce jour en {month}, {total, plural, one {seul {closed, number} voyage sur # est clôturé} other {seuls {closed, number} voyages sur # sont clôturés}} : trop tôt pour donner un bénéfice.}}"
-      }
-    },
     "fleetBoard": {
       "status": {
         "ON_TRIP": "En voyage",
         "AVAILABLE": "Disponible, sans voyage"
+      }
+    },
+    "summary": {
+      "money": {
+        "notEnoughTrips": "{window, select, lastMonth {En {month}, {total, plural, one {seul {closed, number} voyage sur # a été clôturé} other {seuls {closed, number} voyages sur # ont été clôturés}} : trop tôt pour donner un bénéfice.} other {À ce jour en {month}, {total, plural, one {seul {closed, number} voyage sur # est clôturé} other {seuls {closed, number} voyages sur # sont clôturés}} : trop tôt pour donner un bénéfice.}}"
       }
     }
   }

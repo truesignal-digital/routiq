@@ -13,8 +13,8 @@ import { useMeContext } from "@/auth/me.js";
 import { FilterChips } from "@/components/filter-chips";
 import { MetricStrip, metricTiles, moneyMetric, type MetricTile } from "@/components/metric-strip.js";
 import { CompareBars } from "@/components/overview/compare-bars.js";
-import { OverviewSummary } from "@/components/overview/overview-summary.js";
 import { RankedBars } from "@/components/overview/ranked-bars.js";
+import { OverviewSummary } from "@/components/overview/overview-summary.js";
 import { ToDoList, type ToDoItem } from "@/components/overview/to-do-list.js";
 import { ErrorState } from "@/components/page";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -88,10 +88,10 @@ function MoneyOverview() {
   const lastMonth = closeMonth(periodsQuery.data?.currentPeriodCode);
   const lastPeriod = periodsQuery.data?.periods.find((period) => period.periodCode === lastMonth);
   const windows = useWindowLabels(overview);
-  const words = overview === undefined ? undefined : moneySummaryText(overview, t, i18n.resolvedLanguage);
   // role-config: fuel per km is vehicle money, read by the ledger roles; the cashier gets none, so never asks.
   const fuelShown = canReadFinance(me?.role, me?.enabledModules);
   const usageQuery = useFleetUsage(range, fuelShown);
+  const words = overview === undefined ? undefined : moneySummaryText(overview, t, i18n.resolvedLanguage);
 
   return (
     <div data-slot="money-overview" className="flex flex-col gap-5">

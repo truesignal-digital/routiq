@@ -127,6 +127,20 @@ describe("Maintenance › Overview (#665)", () => {
     expect(screen.queryByText(/revenue|profit/i)).toBeNull();
   });
 
+  it("draws days off the road per month, the current month partial and said so (#668)", async () => {
+    const { container } = renderWith(SUMMARY);
+    await vi.waitFor(() => expect(container.querySelectorAll("[data-slot=month-column]")).toHaveLength(12));
+    expect(screen.getByRole("img", { name: "October (so far): 12 vehicle-days off the road" })).toBeTruthy();
+    expect(screen.getByText("October is partial (9 days).")).toBeTruthy();
+    expect(linkOf("Open Work orders")).toBe("/maintenance/work-orders");
+  });
+
+  it("leaves the chart out while Maintenance is off", async () => {
+    const { container } = renderWith(SUMMARY, { ...testUsage(), offRoadByMonth: null });
+    await screen.findByText("VH003 · since 1 October 2026");
+    await vi.waitFor(() => expect(container.querySelector("[data-slot=days-off-road]")).toBeNull());
+  });
+
   it("puts the summary notice over the tiles, with a grounding as the big change (#667)", async () => {
     renderWith({
       ...SUMMARY,
@@ -146,19 +160,5 @@ describe("Maintenance › Overview (#665)", () => {
     expect(region.textContent).toContain("2 problems are open, 1 of them safety-critical.");
     expect(region.textContent).toContain("1 vehicle is off the road.");
     expect(region.textContent).toContain("VH003 was grounded on 7 October and is still off the road.");
-  });
-
-  it("draws days off the road per month, the current month partial and said so (#668)", async () => {
-    const { container } = renderWith(SUMMARY);
-    await vi.waitFor(() => expect(container.querySelectorAll("[data-slot=month-column]")).toHaveLength(12));
-    expect(screen.getByRole("img", { name: "October (so far): 12 vehicle-days off the road" })).toBeTruthy();
-    expect(screen.getByText("October is partial (9 days).")).toBeTruthy();
-    expect(linkOf("Open Work orders")).toBe("/maintenance/work-orders");
-  });
-
-  it("leaves the chart out while Maintenance is off", async () => {
-    const { container } = renderWith(SUMMARY, { ...testUsage(), offRoadByMonth: null });
-    await screen.findByText("VH003 · since 1 October 2026");
-    await vi.waitFor(() => expect(container.querySelector("[data-slot=days-off-road]")).toBeNull());
   });
 });

@@ -5,8 +5,8 @@ import { CalendarClock, CalendarX } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMeContext } from "@/auth/me.js";
 import { MetricStrip, metricTiles, type MetricTile } from "@/components/metric-strip.js";
-import { OverviewSummary } from "@/components/overview/overview-summary.js";
 import { FleetBoard } from "@/components/overview/fleet-board.js";
+import { OverviewSummary } from "@/components/overview/overview-summary.js";
 import { ProfitBars } from "@/components/overview/profit-bars.js";
 import { ToDoList, type ToDoItem } from "@/components/overview/to-do-list.js";
 import { ErrorState } from "@/components/page";
@@ -123,8 +123,8 @@ export function TrucksOverview() {
             isError={overviewQuery.isError || summaryQuery.isError}
           />
         )}
+        {usageQuery.data !== undefined && <KmCoverage usage={usageQuery.data} />}
       </OverviewSummary>
-      {usageQuery.data !== undefined && <KmCoverage usage={usageQuery.data} />}
 
       <FleetBoardCard usage={usageQuery.data} isPending={usageQuery.isPending} isError={usageQuery.isError} onRetry={() => void usageQuery.refetch()} />
 

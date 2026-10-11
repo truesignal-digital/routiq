@@ -115,11 +115,12 @@ function overview(view: FinanceOverviewResponse["view"], range: OverviewRange = 
   };
 }
 
-const NOT_DUE: OverviewNotice = { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] };
 const usageState = vi.hoisted(() => ({
   current: undefined as FleetUsageResponse | undefined,
   calls: [] as { range: string; enabled: boolean }[],
 }));
+
+const NOT_DUE: OverviewNotice = { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] };
 
 const state = vi.hoisted(() => ({
   view: "PROFIT" as "PROFIT" | "REVENUE_AND_EXPENSES",
@@ -219,10 +220,10 @@ beforeEach(() => {
   routeSearch.current = {};
   state.view = "PROFIT";
   state.ranges = [];
-  state.notice = NOT_DUE;
-  localStorage.clear();
   usageState.current = testUsage();
   usageState.calls = [];
+  state.notice = NOT_DUE;
+  localStorage.clear();
 });
 
 afterEach(cleanup);
