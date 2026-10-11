@@ -1,68 +1,85 @@
-# Access the public test company
+# Access the test companies
 
-Open [demo.truesignaldigital.com](https://demo.truesignaldigital.com/) in your browser. ROUTIQ asks for three things: the workspace slug, a username, and a six-digit PIN.
+**Goal** — Sign in to a test company as one of its people, and switch the app to English.
+
+Open the app link the team gave you. The public demo is [demo.truesignaldigital.com](https://demo.truesignaldigital.com/). The [October 2026 release](/release-2026-10/) reaches the public demo when it ships; until then it runs on the test build the team gives you.
+
+ROUTIQ asks for three things: the **workspace** (which company), a **username** (which person) and a six-digit **PIN**.
 
 ::: danger Disposable public credentials
-Every credential on this page is public and belongs to a test-only company. There are no real users or production records in these workspaces. Do not reuse these PINs anywhere else. The accounts must be removed or receive private PINs before real-user onboarding.
+Every account on this page is public and belongs to a test-only company. There are no real users or real records in these workspaces. Never reuse these PINs anywhere else. This is the only page of the handbook that prints PINs.
 :::
 
-## Trucking Test
+## Transports Ngwa (trucking)
 
-Use workspace slug **`trucking-test`**. Its branches are Douala (`DLA`) and Bafoussam (`BAF`).
+Workspace: **`transports-ngwa`**. Branches: Douala, Bafoussam and Yaoundé.
 
-| Company job | Username | PIN | Branch access |
-| --- | --- | --- | --- |
-| Owner / Admin | `admin@trucking.test` | `111111` | All branches |
-| Operations Director | `ops@trucking.test` | `121212` | All branches |
-| Douala Branch Manager | `manager.douala@trucking.test` | `131313` | Douala only |
-| Bafoussam Branch Manager | `manager.bafoussam@trucking.test` | `141414` | Bafoussam only |
-| Douala Entry Clerk | `entry@trucking.test` | `222222` | Douala only |
-| Bafoussam Entry Clerk | `entry.bafoussam@trucking.test` | `232323` | Bafoussam only |
-| Douala Maintenance | `maintenance.douala@trucking.test` | `242424` | Douala only |
-| Bafoussam Maintenance | `maintenance.bafoussam@trucking.test` | `252525` | Bafoussam only |
-| Finance Controller | `approver@trucking.test` | `333333` | All branches |
-| Executive | `executive@trucking.test` | `343434` | All branches |
+| Person | Username | PIN | Role | Branches |
+| --- | --- | --- | --- | --- |
+| Émilienne | `emilienne` | `111111` | Director | All |
+| Boris | `boris` | `222222` | Administrator | All |
+| Amadou Bello | `amadou` | `555555` | Administrator | Yaoundé only |
+| Nadège Fotso | `nadege` | `777777` | Finance | All |
+| Clarisse Ewane | `clarisse` | `888888` | Cashier | Douala only |
+| Hervé Mbarga | `herve` | `666666` | Technician | All |
+| Sali | `sali` | `333333` | Driver | All |
+| Patrice | `patrice` | `444444` | Driver | Yaoundé only |
 
-## Passenger Test
+## Littoral Voyages (passenger)
 
-Use workspace slug **`passenger-test`**. Its branches are Yaoundé (`YDE`) and Kribi (`KRI`).
+Workspace: **`littoral-voyages`**. Branches: Douala and Yaoundé.
 
-| Company job | Username | PIN | Branch access |
-| --- | --- | --- | --- |
-| Owner / Admin | `admin@passenger.test` | `444444` | All branches |
-| Operations Director | `ops@passenger.test` | `454545` | All branches |
-| Yaoundé Branch Manager | `manager.yaounde@passenger.test` | `464646` | Yaoundé only |
-| Kribi Branch Manager | `manager.kribi@passenger.test` | `474747` | Kribi only |
-| Yaoundé Entry Clerk | `entry@passenger.test` | `555555` | Yaoundé only |
-| Kribi Entry Clerk | `entry.kribi@passenger.test` | `565656` | Kribi only |
-| Yaoundé Maintenance | `maintenance.yaounde@passenger.test` | `575757` | Yaoundé only |
-| Kribi Maintenance | `maintenance.kribi@passenger.test` | `585858` | Kribi only |
-| Finance Controller | `approver@passenger.test` | `666666` | All branches |
-| Executive | `executive@passenger.test` | `676767` | All branches |
+| Person | Username | PIN | Role | Branches |
+| --- | --- | --- | --- | --- |
+| Josiane Ndongo | `josiane` | `101010` | Director | All |
+| Paul | `paul` | `202020` | Administrator | All |
+| Aline | `aline` | `404040` | Finance | All |
+| Grace | `grace` | `606060` | Cashier | Douala only |
+| Bertrand | `bertrand` | `505050` | Technician | All |
+| Éric Tchoua | `eric` | `303030` | Driver | All |
 
-## Sign in
+## Steps
 
-1. Open the demo URL.
-2. Enter the exact **Workspace**, **Username**, and **PIN** from one row above.
-3. Select **Sign in**.
-4. Confirm that the branch switcher matches the account: an all-branch account offers both branches, while a local account offers only its assigned branch.
+1. Open the app link.
 
-![ROUTIQ login screen with workspace, username, and PIN fields](/login.png)
+> ✅ Expected: the sign-in page. It is in French until you choose English: **Espace de travail** (workspace), **Nom d'utilisateur** (username), **Code PIN** and the button **Se connecter** (sign in).
 
-*The workspace slug selects the test company; the username and PIN select the job inside it.*
+![The sign-in page, in French by default](/start-here/login.png)
 
-ROUTIQ has no email confirmation or two-factor setup in this test environment. Five incorrect PIN attempts temporarily lock a login, so copy the PIN exactly.
+*The sign-in page asks for the workspace, the username and the PIN.*
 
-## Pick the account for the work
+2. Type the workspace, the username and the PIN from one row above. Click **Se connecter**.
 
-Start with **Trucking Test** unless a walkthrough says Passenger Test. Change accounts when the company flow hands work to another person—do not use Admin for every step simply because it has broader access.
+> ✅ Expected: you land on your role's first page. Most roles land on the **Dashboard**. The Technician lands on **Maintenance**. [Accounts and roles](./02-accounts.md) lists where each role lands.
 
-The [account and role reference](./02-accounts.md) explains what each person represents. The [company flow](./04-company-flow.md) shows when to hand work from one account to another.
+3. Click your name at the bottom of the sidebar.
 
-## Use English for the primary run
+> ✅ Expected: a menu with your name, the company name (**Transports Ngwa**), **My settings** and **Sign out**.
 
-The app supports English and French. Run each walkthrough in English first so its labels match this handbook, then repeat terminology checks in French when requested. Change the language under **More → Language**.
+![The menu under your name: My settings and Sign out](/start-here/user-menu.png)
 
-![More screen with English and French language controls](/start-03-more-menu.png)
+4. Click **My settings**. Under **Language**, click **English**.
 
-Next: [Accounts and responsibilities](./02-accounts.md)
+> ✅ Expected: the whole app switches to English at once. The page also offers **Appearance**: **Light**, **Dark** or **Same as phone**. Your language choice stays on this device after you sign out.
+
+![My settings with Language and Appearance](/start-here/my-settings.png)
+
+5. Look at the top right of the header.
+
+> ✅ Expected: an account with all branches sees **All my branches** and can pick one branch. An account with one branch sees that branch's name (for example **Douala** for Clarisse).
+
+## Use English for the main run
+
+Run each lesson in English first, so the labels match this handbook. Then repeat the word checks in French when the team asks for it.
+
+## Try to break it
+
+- **Wrong PIN.** Type a wrong PIN a few times. Expect a clear refusal each time and no hint about which part was wrong. Repeated wrong PINs lock the login for a while, so copy PINs carefully.
+- **Wrong workspace.** Sign in as `emilienne` with workspace `littoral-voyages`. Expect a refusal: usernames belong to one company.
+- **Sign out on a shared phone.** Sign out, press the browser's Back button. Expect the sign-in page, not the last screen you saw.
+
+## Report it
+
+Found something wrong? Use the template in [Reporting bugs](/testing/reporting-bugs).
+
+Next: [Accounts and roles](./02-accounts.md)

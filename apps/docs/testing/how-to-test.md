@@ -1,113 +1,84 @@
-# Run the company test flow
+# How to test
 
-Test ROUTIQ as a chain of work moving through a company. Use the public accounts, sign out at each handoff, and verify that the next person sees exactly the work intended for them.
+**Goal** — Run the whole company story across the six roles, check every boundary between them, and leave the shared workspaces as you found them.
+
+**Log in as** — each role in turn, in the order below. PINs and workspaces are on [Access](/start-here/01-access).
 
 ## Before you start
 
-- Open the [public demo and credential table](/start-here/01-access).
-- Use **Trucking Test** for the primary run; repeat the preset checks in Passenger Test afterward.
-- Pick a short run identifier such as your initials plus the hour (`LB-14`) and add it to asset codes, counterparties, and reasons. The workspaces are shared and are not reset between testers.
-- Use English for the primary run.
-- Keep the partner demo workspace `transports-ngwa` out of this test. Use only `trucking-test` and `passenger-test`.
+- Read [Accounts and roles](/start-here/02-accounts) and the [Tour](/start-here/03-tour).
+- Use **Transports Ngwa** (`transports-ngwa`) for the main run. Repeat the word checks in **Littoral Voyages** (`littoral-voyages`) afterwards.
+- Pick a short run code, such as your initials and the hour (`LB-14`). Put it in every truck code, name, counterparty and reason you type. The workspaces are shared and are not reset between testers.
+- Use English for the main run.
+- Sign out at every handoff. Do not do everything as the Director.
+- Put shared settings back after you change them: approval thresholds, the Dashboard summary schedule.
 
-## Run the handoffs in order
+## The run
 
-### 1. Owner / Admin — verify the company
+Follow the [Company flow](/start-here/04-company-flow) story. At each step, also check the boundaries below.
 
-1. Sign in as Owner / Admin.
-2. Open **More → Branches** and confirm both expected branches are active.
-3. Open **More → Users** and confirm the 10 jobs from the [account reference](/start-here/02-accounts).
-4. Check that the Operations Director, Finance Controller, Executive, and Admin have all branches; every local manager, clerk, and maintenance account has one.
-5. Sign out. Do not create the operating records as Admin.
+### 1. Director — the starting picture
 
-### 2. First Branch Manager — prepare an asset
+1. Sign in as `emilienne`. Read the [Dashboard](/daily-work/dashboard). Write down **Revenue**, **Expenses**, **Profit** and **Trucks that can drive** for **This month**.
+2. Open each module's **Overview**. Click two tiles on each and check the list matches the tile.
 
-1. Sign in as the manager of the first branch: Douala in Trucking or Yaoundé in Passenger.
-2. Follow [Register an asset](/walkthroughs/assets/01-register-asset), using your run identifier in the asset code.
-3. Follow the commissioning portion of [Lifecycle](/walkthroughs/assets/03-lifecycle).
-4. Confirm the branch selector offers only the manager's branch.
-5. Sign out and hand the asset code to the local Entry Clerk.
+### 2. Administrator — the truck
 
-### 3. Entry Clerk — record daily operations
+1. Sign in as `boris`. Follow [Register a truck](/daily-work/trucks/02-register-a-truck) with your run code.
+2. Check [The truck page](/daily-work/trucks/03-truck-page): header, tabs, documents.
+3. Boundary: Boris has no **Branches** and no **Accounting months** in the sidebar, and no way to approve money.
 
-1. Sign in as the clerk for the same branch.
-2. Follow [Create a trip](/walkthroughs/activities/01-create-trip).
-3. Follow [Record costs](/walkthroughs/activities/02-record-costs): create one expense below the threshold and at least one above it.
-4. Confirm the small entry is **Posted** and the larger entry is **Pending**.
-5. Leave the trip open, sign out, and hand its number to Maintenance.
+### 3. Driver — the trip and the problem
 
-### 4. Maintenance — inspect usage and expose the current gap
+1. Sign in as `sali`. Follow [Record a sheet](/daily-work/trips/02-record-a-sheet) on your truck, with fuel and one more expense.
+2. Follow [Report a problem](/daily-work/maintenance/02-report-a-problem) on the same truck.
+3. Boundary: the Driver sees only their own entries, and has no Money or Maintenance row.
 
-1. Sign in as Maintenance for the same branch.
-2. Find the asset or open trip and inspect its readings and operating history.
-3. Confirm the other branch's assets are absent.
-4. Confirm general trip creation, finance recording, approvals, and administration are unavailable.
-5. Look for **Record reading**. The current expected web result is that it is absent even though the server authorizes the command—this is a known UI gap.
-6. Sign out. Return as the Entry Clerk and record the meter reading for this run.
+### 4. Technician and Administrator — the repair
 
-### 5. Entry Clerk and Branch Manager — close and correct
+1. Sign in as `herve`. Follow [Work orders](/daily-work/maintenance/03-work-orders).
+2. Boundary: Hervé lands on Maintenance and never sees revenue, profit or loss on any page.
+3. Sign in as `boris`. Approve the work order and release the truck to service.
 
-1. Return as the Entry Clerk and finish [Close a trip](/walkthroughs/activities/03-close-trip).
-2. Confirm the clerk has no **Reopen** action after closing.
-3. Sign in as the Branch Manager and reopen the trip with a reason.
-4. Check **History** for the clerk's close and manager's reopen as separate events.
-5. Close the trip again and sign out.
+### 5. Cashier — the counter
 
-### 6. Finance Controller — decide and close
+1. Sign in as `clarisse`. Follow [Entries and recording](/daily-work/money/02-entries-and-recording): one expense under 100 000 FCFA, one above.
+2. Boundary: the small one posts at once; the large one waits. Clarisse has no **To approve** tab and sees no profit.
 
-1. Sign in as Finance Controller.
-2. Follow [Approve and reject](/walkthroughs/approvals/01-approve-and-reject).
-3. Check that pending work from both branches is counted even if the header currently views one branch.
-4. Reverse one posted test entry with a reason.
-5. Open **Periods** and test a lock or reopen only on a period whose shared test data you understand.
-6. Sign out.
+### 6. Finance and Director — decisions
 
-### 7. Operations Director and Finance — transfer between branches
+1. Sign in as `nadege`. Follow [Approve and reject](/daily-work/money/03-approve-and-reject).
+2. Boundary: Nadège cannot decide her own entry, nor one above 1 000 000 FCFA.
+3. Sign in as `emilienne` and decide the entry above 1 000 000 FCFA.
+4. As `nadege`, follow [Accounting months](/daily-work/money/04-accounting-months), only on a month whose shared test data you understand.
 
-1. Sign in as Operations Director and find the test asset using **All my branches**.
-2. Attempt to assign it to the second branch. Confirm ROUTIQ answers **Approval required** and leaves the asset in place.
-3. Sign in as Finance Controller and perform the same cross-branch assignment. Confirm it commits.
-4. Sign in as the first Branch Manager and confirm the transferred asset is no longer visible.
-5. Sign in as the second Branch Manager and confirm the asset is now visible there.
-6. Confirm the asset's earlier trip still names the original branch.
+### 7. Company
 
-### 8. Executive — review the result
+1. As `emilienne`, run [People and users](/company/people-and-users) and [Branches](/company/branches) with your run code.
+2. As `boris` and then `amadou`, run [Company settings](/company/company-settings). Put everything back.
 
-1. Sign in as Executive.
-2. Review the dashboard, asset record, and trip across both branches.
-3. Confirm all mutation and administration actions are absent.
-4. If you can cause any state change, report it as a permission defect.
+### 8. Director — the final picture
 
-### 9. Repeat the terminology layer
+1. Sign in as `emilienne`. Open the Dashboard again.
+2. Compare with step 1. Every change must be explained by something you did: the new truck, the approved expenses, the repair. Nothing you rejected may count.
 
-Run the shorter [Passenger overlay](/walkthroughs/passenger-overlay) in `passenger-test`. The company responsibilities and permission handoffs must remain the same while Truck becomes Vehicle and the journey form gains passenger-specific fields.
+### 9. Passenger company
 
-## Test each boundary, not just each screen
+1. Repeat steps 1 and 3 in `littoral-voyages` with `josiane` and `eric`.
+2. Run the word checks in [Passenger company](/presets/passenger-company).
 
-For every happy-path action, try the closest forbidden version:
+### 10. Phone
 
-- Entry Clerk attempts asset registration.
-- Maintenance confirms the known missing meter-reading control and attempts no general operating or finance capture.
-- First-branch staff search for a second-branch asset.
-- Finance attempts to approve its own submission.
-- Executive looks for any write affordance.
-- An all-branch account narrows the header to one branch, then confirms the selector changed the view rather than authorization.
+Repeat steps 1, 3 and 5 on a phone (or a browser window about 390 pixels wide). Check the bottom bar, tiles two per row, one step per section in long forms, and no sideways scrolling.
 
-A server refusal is the expected result of a forbidden command. A hidden button is better UX, but authorization must still hold if a request is sent directly.
+## What to look for everywhere
 
-## Record enough context
+- **Labels.** A label that differs from this handbook is worth a note. A label that is English inside the French app (or the other way round) is a bug.
+- **Formats.** Money **450 000 FCFA**. Losses **Loss 86 000 FCFA**. Dates **29 July 2026**. Date fields **dd/mm/yyyy**.
+- **Numbers that disagree.** A tile and the list behind it must agree. The same count on two pages (for example **Can drive**) must be the same number.
+- **Refusals.** A refusal should say why in plain words. A blank screen, a spinner that never ends, or a code like `FORBIDDEN` is a bug.
+- **Lost work.** A long form should keep what you typed if you leave and come back.
 
-Every finding needs:
+## Report it
 
-- Workspace slug and company job—not only the application role.
-- Branch shown in the header and the account's authorized branch scope.
-- Asset, trip, or entry number carrying your run identifier.
-- Exact steps and exact on-screen text.
-- Browser/device and a screenshot.
-- Expected result and actual result.
-
-See [Reporting bugs](./reporting-bugs.md) for the report format.
-
-## This is not a load test
-
-Do not create hundreds of records, hammer buttons, or try to deny service to the shared demo. Test correctness, handoffs, branch isolation, and ordinary retry behavior. Report routine actions that are visibly slow or crash, but keep the shared environment usable for the next tester.
+Report each finding as [Reporting bugs](/testing/reporting-bugs) describes. One finding per message.

@@ -1,99 +1,59 @@
-# How the test company operates
+# Company flow
 
-The test accounts form one operating company, not ten unrelated personas. Work begins at headquarters, moves through a branch, crosses a finance checkpoint when necessary, and ends in read-only executive review.
+**Goal** — See how one week of work moves through Transports Ngwa, person to person, and where each step lands on the Director's Dashboard.
 
-## Reporting structure
+**Log in as** — the person each step names. Sign out at every handoff. Usernames are below; PINs are on [Access](./01-access.md).
 
-```mermaid
-flowchart TD
-  EX["Executive — read-only oversight"]
-  AD["Owner / Admin — system governance"]
-  OD["Operations Director — all branches"]
-  FC["Finance Controller — all branches"]
-  BM1["Branch Manager A"]
-  BM2["Branch Manager B"]
-  EC1["Entry Clerk A"]
-  EC2["Entry Clerk B"]
-  MT1["Maintenance A"]
-  MT2["Maintenance B"]
-
-  EX --> AD
-  AD --> OD
-  AD --> FC
-  OD --> BM1
-  OD --> BM2
-  BM1 --> EC1
-  BM1 --> MT1
-  BM2 --> EC2
-  BM2 --> MT2
-```
-
-These arrows explain business responsibility. They do not grant permissions. ROUTIQ derives authorization from each account's fixed role and server-side branch scope.
-
-## The operating loop
+## Where work goes
 
 ```mermaid
 flowchart LR
-  A["Admin verifies company setup"] --> B["Branch Manager prepares asset"]
-  B --> C["Entry Clerk records daily work"]
-  C --> D["Maintenance reviews asset usage"]
-  D --> E["Branch Manager handles exception"]
-  E --> F["Finance decides submitted money"]
-  F --> G["Operations moves asset between branches"]
-  G --> H["Second branch continues work"]
-  H --> I["Finance locks period"]
-  I --> J["Executive reviews results"]
+  A[Administrator<br/>registers a truck] --> B[Driver<br/>records a sheet]
+  B --> C[Driver<br/>reports a problem]
+  C --> D[Technician<br/>work order]
+  D --> E[Administrator<br/>approves, releases]
+  B --> F[Cashier<br/>records expenses]
+  F --> G[Finance<br/>approves or rejects]
+  G --> H[Director<br/>approves above the band]
+  G --> I[Finance<br/>closes the month]
+  E --> J[Director<br/>reads the Dashboard]
+  I --> J
 ```
 
-### 1. Admin establishes control
+## The story
 
-Sign in as Owner / Admin. Under **More → Branches**, confirm the two operating branches. Under **More → Users**, confirm that headquarters accounts have all branches and local teams have exactly one.
+Each step names the lesson that shows the screens in detail.
 
-The Admin owns access and configuration, not daily data entry. After setup, sign out and continue as a Branch Manager.
+1. **Director (`emilienne`) — start of the week.** Open the **Dashboard**. Read the summary, the tiles and **To do**. Note the numbers: you will see them move. → [Dashboard](/daily-work/dashboard)
+2. **Administrator (`boris`) — a new truck.** Register a truck in Douala and put it in service. → [Register a truck](/daily-work/trucks/02-register-a-truck), [The truck page](/daily-work/trucks/03-truck-page)
+3. **Driver (`sali`) — a trip.** Record the paper trip sheet for that truck: route, km, fuel and other expenses. → [Record a sheet](/daily-work/trips/02-record-a-sheet), [Expenses and revenue](/daily-work/trips/03-expenses-and-revenue)
+4. **Driver (`sali`) — a problem on the road.** Report a problem on the truck. Mark it safety-critical if the truck must not drive. → [Report a problem](/daily-work/maintenance/02-report-a-problem)
+5. **Technician (`herve`) — the repair.** Open a work order from the problem, add the cost, complete the work. → [Work orders](/daily-work/maintenance/03-work-orders)
+6. **Administrator (`boris`) — back on the road.** Approve the work order and release the truck to service. → [Work orders](/daily-work/maintenance/03-work-orders)
+7. **Cashier (`clarisse`) — the counter.** Record a few expenses with receipts: one small (posts at once), one above 100 000 FCFA (waits for review). → [Entries and recording](/daily-work/money/02-entries-and-recording)
+8. **Finance (`nadege`) — decisions.** Open **Money → To approve**. Approve one entry, reject one with a reason. → [Approve and reject](/daily-work/money/03-approve-and-reject)
+9. **Director (`emilienne`) — the large one.** Approve the entry above 1 000 000 FCFA that only the Director may decide. → [Approve and reject](/daily-work/money/03-approve-and-reject)
+10. **Finance (`nadege`) — close the month.** Lock the last month once nothing waits. → [Accounting months](/daily-work/money/04-accounting-months)
+11. **Director (`emilienne`) — end of the week.** Open the **Dashboard** again. → [Dashboard](/daily-work/dashboard)
 
-### 2. Branch Manager prepares operations
+> ✅ Expected at step 11: the new truck counts in **Trucks that can drive**. The approved expenses moved **Expenses** and **Profit**, and appear in **What changed the profit**. The rejected entry counts nowhere. **To do** no longer lists what you decided. **Profit by truck** shows the new truck with its own revenue, expenses and profit.
 
-The first Branch Manager registers an asset, commissions it, and registers any driver or crew record the branch needs. Use [Register an asset](/walkthroughs/assets/01-register-asset) and [Lifecycle](/walkthroughs/assets/03-lifecycle).
+## Rules the story checks
 
-The resulting asset remains in the manager's branch and is ready for the clerk.
+- **Nobody decides their own entry.** Not even the Director (whose own entries post directly instead).
+- **Bands decide who approves.** Up to 100 000 FCFA posts directly. Up to 1 000 000 FCFA, Finance decides. Above that, the Director. An Administrator can move these bands in [Company settings](/company/company-settings).
+- **Grounded means grounded.** A safety-critical problem grounds the truck at once. Finishing the work does not free it; only **release to service** does.
+- **Warn, don't block.** A trip can close with things missing. It closes with gaps listed, and its profit is marked as not to be trusted until someone fills them.
+- **Records are corrected, not edited.** A posted entry is cancelled with a reason and recorded again. The original stays visible.
 
-### 3. Entry Clerk captures the day
+## Try to break it
 
-The local Entry Clerk creates a trip, records its legs and crew, and adds revenue and expenses. Continue through [Create a trip](/walkthroughs/activities/01-create-trip) and [Record costs](/walkthroughs/activities/02-record-costs).
+- **Skip a handoff.** Do step 8 as `clarisse`. Expect no **To approve** tab and no way to approve.
+- **Release too early.** As `herve`, look for a way to release the truck to service. Expect none: only the Administrator or Director may.
+- **Wrong branch.** As `amadou` (Yaoundé), look for the truck from step 2. Expect nothing.
 
-Amounts at or below the workspace threshold post immediately. Larger amounts are safely saved as **Pending** and handed to Finance.
+## Report it
 
-### 4. Maintenance reviews asset usage
+Use the template in [Reporting bugs](/testing/reporting-bugs). Say which step of the story you were on.
 
-Sign in as Maintenance for the same branch. Open the active trip and inspect its asset and readings. Confirm that assets from the other branch are absent and that general operating and finance actions are unavailable.
-
-The server permits this role to record meter readings, but the current web app does not expose **Record reading** to it. Treat that as a known web gap, not a successful maintenance handoff. Return to the Entry Clerk to record the reading and close the trip until the UI control is separated.
-
-If a closed trip needs correction, the Branch Manager—not the clerk—uses **Reopen** with a reason. See [Close a trip](/walkthroughs/activities/03-close-trip).
-
-### 5. Finance applies four-eyes control
-
-The Finance Controller opens **Finance → Approvals** and decides entries submitted by the branch teams. They can approve, reject with a reason, reverse posted entries, and lock a month. They cannot approve an entry they created themselves.
-
-Run [Approve and reject](/walkthroughs/approvals/01-approve-and-reject) with work from both branches so the all-branch queue has meaning.
-
-### 6. Operations coordinates a branch handoff
-
-The Operations Director can see both branches. They initiate an assignment of the asset to the second branch; because it crosses branches, the attempt requires Finance's approval role. Finance completes the transfer.
-
-Afterward, the first branch team must lose the asset from its scope and the second Branch Manager must gain it. Historical trips remain booked to the branch that created them. The [branch walkthrough](/walkthroughs/branches) tests this boundary explicitly.
-
-### 7. Executive reviews without editing
-
-Sign in as Executive after the operational and finance work is complete. Review company-wide dashboard totals, the asset's new branch, and the recorded trip. Confirm that there is no **New**, **Record**, **Assign**, **Approve**, **Reverse**, or administrative action.
-
-## What must never happen
-
-- A local account sees records belonging only to the other branch.
-- Selecting a branch in the header grants access the account did not already have.
-- A maker approves their own financial entry.
-- A cross-branch transfer silently moves historical trips or financial records.
-- Executive gains any write path, or Maintenance gains a write path beyond its intended meter-reading command.
-- Admin becomes the default actor for a step another job should own.
-
-Next: [Run the company test flow](/testing/how-to-test)
+Next: [What's new in October 2026](/release-2026-10/)

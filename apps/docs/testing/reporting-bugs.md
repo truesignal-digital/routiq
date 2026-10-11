@@ -13,22 +13,23 @@ Copy and paste this template into the team chat. Fill in each field with the exa
 Did: ...
 Expected: ...
 Got: ...
-Workspace: trucking-test | passenger-test
-Account: Owner/Admin | Operations Director | Branch Manager | Entry Clerk | Maintenance | Finance Controller | Executive
+Workspace: transports-ngwa | littoral-voyages
+Account: username and role, e.g. clarisse (Cashier)
+Language: English | French
 Device/browser: ...
 Screenshot: attach
 ```
 
 ### How to fill each field
 
-- **[lesson/page] [step number]** — Name the walkthrough or page you were on, and which step if applicable. Example: `[Register a truck] [step 2]` or `[Approvals queue] [check queue]`.
+- **[lesson/page] [step number]** — Name the lesson or page you were on, and which step if applicable. Example: `[Register a truck] [step 2]` or `[Money → To approve]`. For a finding in the October 2026 release, start with `[October 2026]`.
 
 - **Did:** Describe the exact action you took. Be specific:
-  - ✓ "Clicked the green 'Register truck' button on the Assets page"
+  - ✓ "Clicked the 'Register a truck' button on the Trucks page"
   - ✗ "I tried to add a truck"
   
-  - ✓ "Entered '50000' in the Expense Amount field and clicked Submit"
-  - ✗ "Submitted an expense"
+  - ✓ "On Money → To approve, clicked Approve entry on the 450 000 FCFA repair"
+  - ✗ "Approved something"
 
 - **Expected:** What should have happened.
   - ✓ "A green toast saying 'Truck registered' should appear, and I should see the new truck in the list"
@@ -39,9 +40,11 @@ Screenshot: attach
   - ✓ "A red error banner appeared saying: 'Code must be unique within this workspace'"
   - ✗ "It didn't work"
 
-- **Workspace:** Use the exact slug: `trucking-test` or `passenger-test`. This matters because terminology and data are isolated by workspace.
+- **Workspace:** Use the exact slug: `transports-ngwa` or `littoral-voyages`. Words and data differ by workspace.
 
-- **Account:** The company job you were using, including its branch when local—for example, Douala Entry Clerk or Kribi Branch Manager.
+- **Account:** The username and role you were using, for example `clarisse (Cashier)` or `amadou (Administrator, Yaoundé)`.
+
+- **Language:** English or French. Many label bugs exist in one language only.
 
 - **Device/browser:** The specific device and browser, plus OS if relevant.
   - ✓ "MacBook Pro, Chrome 130, macOS 15.0"
@@ -70,45 +73,50 @@ After your initial report, if you can reproduce it a second time, add a follow-u
 
 ## Examples
 
-### Example 1: Missing toast
+### Example 1: Two counts that disagree
 
 ```
-🐞 [Register a truck] [step 3]
-Did: Entered "ABC123" in the Truck Code field, entered "My Truck" in the Name field, and clicked the Register button.
-Expected: A green toast saying "Truck registered" should appear at the top of the screen.
-Got: No toast appeared. I see the truck in the list immediately without confirmation.
-Workspace: trucking-test
-Account: Douala Entry Clerk
-Device/browser: MacBook Pro, Chrome 129, macOS 15.0
-Screenshot: [screenshot showing the truck list with no toast visible]
+🐞 [October 2026] [Trucks — Overview]
+Did: Opened Trucks. Read the Grounded tile, then opened the Dashboard's To do.
+Expected: The same number of days grounded on both.
+Got: The Grounded tile says "VH003 · 2 days". The Dashboard To do says "Grounded 3 days".
+Workspace: transports-ngwa
+Account: emilienne (Director)
+Language: English
+Device/browser: MacBook Pro, Chrome 130, macOS 15.0
+Screenshot: [both screens]
 Reproduced ✓
 ```
 
-### Example 2: Wrong label
+### Example 2: Wrong word
 
 ```
-🐞 [Assets page]
-Did: Logged in as Douala Entry Clerk to the Trucking Test workspace and opened the Assets page.
-Expected: The navigation item should say "Trucks".
-Got: The navigation item says "Vehicles".
-Workspace: trucking-test
-Account: Douala Entry Clerk
+🐞 [Trucks — Documents tab]
+Did: Signed in to transports-ngwa and opened Trucks → Documents.
+Expected: The first column says "Truck".
+Got: The first column says "Vehicle".
+Workspace: transports-ngwa
+Account: emilienne (Director)
+Language: English
 Device/browser: Pixel 6a, Chrome, Android 14
-Screenshot: [screenshot showing sidebar with "Vehicles" label]
+Screenshot: [the table header]
 ```
 
-### Example 3: Validation bypass
+### Example 3: A role sees too much
 
 ```
-🐞 [Record a trip] [step 5]
-Did: Opened a trip record, left the "Trip Type" field blank, and clicked Save.
-Expected: The form should show "Trip Type is required" and prevent submission.
-Got: The form saved and the trip shows with an empty Trip Type.
-Workspace: passenger-test
-Account: Yaoundé Entry Clerk
+🐞 [Accounts and roles] [Try to break it]
+Did: Signed in as the Cashier and typed /more/users after the app address.
+Expected: A refusal page.
+Got: The Users list with every login.
+Workspace: transports-ngwa
+Account: clarisse (Cashier, Douala)
+Language: English
 Device/browser: iPhone 14, Safari, iOS 18.1
-Screenshot: [screenshot showing trip with empty Trip Type field]
+Screenshot: [the page]
 ```
+
+(Example 3 is made up to show the format. Examples 1 and 2 were seen on the October 2026 test build.)
 
 ---
 

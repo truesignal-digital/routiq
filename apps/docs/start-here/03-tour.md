@@ -1,141 +1,131 @@
 # Tour of the app
 
-After logging in, you'll see the ROUTIQ interface organized around a left sidebar navigation. The app adapts its labels to match your workspace's preset — if you're using TRUCKING, you'll see "Trucks" and "Trips"; in PASSENGER, "Vehicles" and "Voyages".
+**Goal** — Learn the parts every screen shares: the sidebar, the header, the Dashboard, the Overview-first tabs, record pages, long forms and the phone layout. Once you know these, every module reads the same way.
 
-## Login screen
+**Log in as** — the Director (`emilienne`) on a computer, then again on a phone or a narrow window.
 
-![Screenshot: Login screen](/tour-login.png)
+## The sidebar
 
-*Enter the workspace slug, persona username, and PIN before signing in.*
+The sidebar has two groups.
 
-Enter the workspace slug, username, and six-digit PIN from the [public credential table](./01-access.md). There is no email confirmation or two-factor setup in the test environment.
+- **Daily work**: **Dashboard**, **Trucks**, **Trips**, **Maintenance**, **Money**. A red number on a row counts what waits for you there (problems to triage, entries to approve).
+- **Company**: **People**, **Users**, **Branches**, **Accounting months**, **Company settings**.
 
----
+Each role sees fewer rows. [Accounts and roles](./02-accounts.md) lists them.
 
-## Dashboard (home)
+At the bottom is your name, role and branches. Click it for **My settings** and **Sign out**.
 
-![Screenshot: Workspace and nav overview](/tour-nav-overview.png)
+## The header
 
-*The home screen combines the main navigation, branch context, and operational summary.*
+From left to right: the button that folds the sidebar to icons, the breadcrumb (where you are, for example **Dashboard › Money › Entries**), then on the right the branch picker and the light/dark switch.
 
-The Dashboard is your landing page after login. It shows summary cards: trucks (or vehicles) in service, recent trips, and financial summaries. Each card is a quick way to jump into a section. Your branch scope and workspace are visible in the top-right header; a branch selector (if multiple branches are assigned) lets you narrow your view to one location.
+The branch picker shows **All my branches**, or one branch. Picking a branch narrows every page to it. A small notice confirms it, for example *You are viewing: Douala*, and the header gets a thin tinted line.
 
-The left sidebar holds the main navigation:
+![The branch picker open on All my branches, Bafoussam, Douala, Yaoundé](/start-here/branch-switcher.png)
 
-- **Home** — Dashboard overview (always visible)
-- **Assets** (Trucks or Vehicles) — Fleet registration and lifecycle
-- **Activities** (Trips) — Trip records and logs
-- **Finances** — Expense and revenue entries, approvals, period locks
-- **More** — Settings, user management, branches, language (role-dependent)
+![Douala picked: the header shows Douala and the notice You are viewing: Douala](/start-here/branch-picked.png)
 
----
+## The Dashboard
 
-## Assets list (Trucks or Vehicles)
+**Dashboard** is home for the Director, Administrators and Finance. It has four tabs: **Overview**, **To do**, **Profit by truck** and **Profit by branch**. The [Dashboard lesson](/daily-work/dashboard) walks through it.
 
-![Screenshot: Trucks/vehicles list](/tour-assets-list.png)
+## Every module opens on Overview
 
-*The fleet list exposes identity, branch, and lifecycle status at a glance.*
+Trucks, Trips, Maintenance and Money each open on an **Overview** tab, then their work tabs:
 
-Click **Assets** (or **Trucks**/**Vehicles**) in the sidebar. You see a table of all assets in your branch scope, with columns for asset code, status (in service, decommissioned), and recent activity.
+| Page | Tabs |
+| --- | --- |
+| Trucks | **Overview** · **Trucks** · **Documents** |
+| Trips | **Overview** · **Trips** |
+| Maintenance | **Overview** · **Problems** · **Work orders** |
+| Money | **Overview** · **Entries** · **To approve** |
 
-**What an operating manager can do here:**
-- Search by asset code or name
-- Filter by status
-- Click an asset to view its full record and transaction history
-- If you're an ADMIN or OPS_MANAGER, register a new asset
+An Overview reads top to bottom the same way on every page:
 
-Each asset record holds its lifecycle (draft → active → sold/retired), linked expenses, and recent trips.
+1. The page's main button top right (**Record expense**, **Register a truck**, **Record a sheet**, **Create work order**).
+2. A range picker (**This month**, **3 months**, **12 months**) where money is shown, with the comparison period on the right.
+3. The **summary**: one sentence about what changed, with a close button. See [Dashboard](/daily-work/dashboard).
+4. A row of tiles. Each tile opens the list behind it.
+5. Cards that explain the numbers, and a **To do** card.
 
----
+![Money opens on Overview: summary, tiles, Expenses by category and To do](/start-here/overview-first-money.png)
 
-## Activities list (Trips)
+## Record pages
 
-![Screenshot: Trips list](/tour-activities-list.png)
+A money entry, a trip and a truck each have a page built the same way:
 
-*The trips table keeps each recorded sheet and its current status visible.*
+- **One header**: the record's number or code, a status badge, and one line of facts. The actions sit top right.
+- **A status block** under the header that says where the record stands and holds the decision. On a waiting entry it holds **Reject entry** and **Approve entry**. On a trip closed with gaps it lists what is missing.
+- **Tabs**: **Overview** first and **History** last.
+- **Titled sections** on Overview (for an entry: **What**, **Who and how much**, **Proof**).
+- **A context column** on the right: the amount or money box, linked records, and the latest history with **All history**.
 
-Click **Activities** (or **Trips**) in the sidebar. You see a table of all trips, with trip number, assigned truck or vehicle, status, and dates.
+![A money entry waiting for approval: header, status block with the decision, tabs and the context column](/start-here/record-page-entry.png)
 
-**What you can do here:**
-- Search by trip number or asset
-- Filter by trip type or status
-- Click a trip to view details: mileage, fuel consumption, linked expenses, and any missing data flags
-- If you have entry permissions, add or edit trip details
+![A closed trip with gaps: the status block names the five missing things](/start-here/record-page-trip.png)
 
-Trips move from **Open** to **Closed**. A manager can reopen a closed trip with an audited reason. Financial period locking is separate from the trip lifecycle.
+## Long forms
 
----
+**Record a sheet** (Trips) and **Register a truck** (Trucks) are long forms on their own page:
 
-## Approvals queue (Finances)
+- The form is split into titled sections. Each section shows its state: **Done** or **n missing**.
+- A **So far** column on the right adds up what you typed (for a sheet: truck, route, distance, revenue, expenses, profit). Under it, **Still missing** lists what is left; each line takes you to the field.
+- One footer stays at the bottom of the screen. The main button is last on the right (for a sheet: **Record and close**, then **Record sheet**).
 
-![Screenshot: Approvals queue](/tour-approvals-queue.png)
+![Record a sheet: sections on the left, So far and Still missing on the right, the footer at the bottom](/start-here/long-form-sheet.png)
 
-*The approval queue shows pending entries and the context needed for a decision.*
+## On a phone
 
-Click **Finances** in the sidebar, then select **Approvals**. This page is only visible to FINANCE_APPROVER and ADMIN roles.
+Below tablet width the app changes shape:
 
-You see a list of submitted entries waiting for your decision. Each row shows the amount, category, submitter, and submission date.
+- The sidebar becomes a bar at the bottom. For the Director it holds **Dashboard**, **Trucks**, **Money** and **Menu**. **Menu** opens the full sidebar. The bar changes with the role.
+- Tiles sit two per row.
+- On a record page, the decision buttons move to a bar above the bottom bar.
+- A long form shows one section per step (*Step 1 of 7*), with **Next** at the bottom, then a review.
 
-**What you can do here:**
-- Click an entry to view full details
-- Approve it (a submitted entry becomes posted)
-- Reject it (requires a written reason)
-- Reverse an already-approved entry (creates a mirror negative entry, flags the original as REVERSED)
+<div style="display:flex;gap:16px;flex-wrap:wrap">
 
-Entries you submitted yourself appear in the queue but with a notice: "Your submission — another approver must decide." You cannot approve your own work.
+![The Dashboard on a phone, with the bottom bar](/start-here/phone-dashboard.png)
 
----
+![Menu opens the full sidebar](/start-here/phone-menu.png)
 
-## Finances — Entries
+![A waiting entry on a phone: Reject entry and Approve entry above the bottom bar](/start-here/record-page-entry-phone.png)
 
-Click **Finances** > **Entries** to see all expense and revenue records in your scope: posted, submitted, and rejected.
+![Record a sheet on a phone: one section per step](/start-here/long-form-phone-step.png)
 
-Filter by date, category, status, or asset. Click an entry to view details, see the audit trail (who, when, why), and — if applicable — reverse it.
+</div>
 
----
+## Money and dates
 
-## Finances — Periods
+Money is written with a space between thousands and **FCFA** after it: **450 000 FCFA**. A loss is written as a word, never a minus profit: **Loss 86 000 FCFA**. Dates are written **29 July 2026**; tables shorten the month (**29 Jul 2026**). Date fields are typed **dd/mm/yyyy**.
 
-Click **Finances** > **Periods** to view monthly financial periods. Each period starts OPEN and can be locked by a FINANCE_APPROVER or ADMIN.
+## Steps
 
-**Why lock a period?**
-- Once locked, that month's figures are final and approved entries cannot be added.
-- A reopening always requires a reason and is audited.
-- Entries approved after a month is locked "late-post" into the open month and are flagged for review.
+1. As `emilienne`, click each sidebar row in turn.
 
----
+> ✅ Expected: Trucks, Trips, Maintenance and Money each open on **Overview**, with the tabs in the table above. The breadcrumb follows you.
 
-## More menu (Settings)
+2. Pick **Douala** in the branch picker, then go back to **All my branches**.
 
-![Screenshot: Settings and admin menu](/tour-more-menu.png)
+> ✅ Expected: the notice *You are viewing: Douala*, and the lists narrow to Douala. Going back shows all branches again.
 
-*The More screen groups administration, language, theme, and sign-out controls.*
+3. Open **Money → To approve** and click an entry number.
 
-Click **More** (three horizontal lines) in the sidebar.
+> ✅ Expected: the record page with one header, a status block holding **Reject entry** and **Approve entry**, and tabs **Overview** · **Receipt** · **History**. Do not decide it yet: the [approvals lesson](/daily-work/money/03-approve-and-reject) does that.
 
-**Admin-only screens (if you're ADMIN):**
-- **Users** — add, edit, remove users; assign roles and branch scope
-- **Branches** — manage operating locations; deactivate branches (never delete)
-- **Settings** — workspace configuration, approval thresholds, language preference
+4. Narrow the window to phone width (or use a phone).
 
-**User screens (all roles):**
-- **Profile** — your username and workspace
-- **Logout** — sign out
+> ✅ Expected: the bottom bar appears, tiles go two per row, and nothing scrolls sideways.
 
----
+## Try to break it
 
-## Branch scope and switcher
+- **Sideways scroll.** On a phone, open every page you can reach. Any page that scrolls left and right is a bug.
+- **Lost tab.** Open a record's **History** tab, then reload. Expect to stay on History (the tab is in the address).
+- **Two filled buttons.** On any record page, count the dark filled buttons in the header. More than one is a bug.
+- **Page width.** Move between a list, a record and a long form. The content should keep the same width and left edge on every page.
 
-Your user account is assigned to one or more branches (operating locations). The branch switcher in the top header lets you narrow your current view to one branch, or see the whole scope at once. This is a client-side filter — it doesn't change what you're authorized to see, only what's displayed in lists.
+## Report it
 
-The app calls branches "Agences" in French; they're always English "Branches" in code.
+Use the template in [Reporting bugs](/testing/reporting-bugs).
 
----
-
-## Language switching
-
-Click **Settings** > **Language** (or look for a globe icon in the sidebar footer on some versions). Switch between English and French. French labels come from preset overlays — the domain language stays French-first (fr-CM default).
-
----
-
-Next: [How the test company operates](./04-company-flow.md)
+Next: [Company flow](./04-company-flow.md)
