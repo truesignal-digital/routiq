@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   afterAll,
@@ -391,5 +391,54 @@ describe("branch field under the shell's agency", () => {
     await waitFor(() =>
       expect(screen.getByLabelText("Branch").textContent).toContain("Yaoundé"),
     );
+  });
+});
+
+describe("Register a truck in the form page frame (#663)", () => {
+  const footer = () => {
+    const element = document.querySelector<HTMLElement>("[data-slot=form-page-footer]");
+    if (element === null) throw new Error("no footer");
+    return element;
+  };
+  const soFar = () => screen.getByRole("complementary", { name: "So far" });
+
+  it("ends on one footer: Cancel, then the main button, neither stretched", () => {
+    render(<AssetRegisterScreen />);
+
+    const buttons = within(footer()).getAllByRole("button");
+    expect(buttons.map((button) => button.textContent)).toEqual(["Cancel", "Register asset"]);
+    expect(buttons.some((button) => button.className.includes("flex-1"))).toBe(false);
+  });
+
+  it("groups the fields in titled sections that say what is still missing", async () => {
+    const user = userEvent.setup();
+    render(<AssetRegisterScreen />);
+
+    const identity = screen.getByRole("heading", { level: 2, name: "Identity" }).closest("[data-section]") as HTMLElement;
+    // The branch comes from the shell; the code and the class are the clerk's.
+    expect(within(identity).getByText("2 missing")).toBeTruthy();
+    expect(within(footer()).getByText("2 missing")).toBeTruthy();
+
+    await fillRequiredFields(user, "TR-020");
+
+    await waitFor(() => expect(within(identity).getByText("Done")).toBeTruthy());
+    expect(within(footer()).getByText("Nothing missing")).toBeTruthy();
+    expect(within(screen.getByRole("heading", { level: 2, name: "Papers" }).closest("[data-section]") as HTMLElement).getByText("Not started")).toBeTruthy();
+  });
+
+  it("sums up the identity entered so far and links what is still missing", async () => {
+    const user = userEvent.setup();
+    render(<AssetRegisterScreen />);
+
+    expect(screen.getByRole("button", { name: "Go to Asset code" })).toBeTruthy();
+    await user.type(screen.getByLabelText("Asset code"), "TR-021");
+    await user.type(screen.getByLabelText("Make"), "Iveco");
+    await user.type(screen.getByLabelText("Model"), "Stralis");
+
+    expect(within(soFar()).getByText("TR-021")).toBeTruthy();
+    expect(within(soFar()).getByText("Iveco Stralis")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Go to Asset code" })).toBeNull();
+    // Nobody attached the papers: said in words, not left blank.
+    expect(within(soFar()).getAllByText("Not recorded").length).toBeGreaterThan(0);
   });
 });

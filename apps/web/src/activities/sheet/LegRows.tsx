@@ -71,7 +71,7 @@ const LegRow = memo(function LegRow({
           control={control}
           name={`legs.${index}.origin`}
           render={({ field }) => (
-            <FormItem>
+            <FormItem data-field={`legs.${index}.origin`}>
               <FormLabel className="text-xs text-muted-foreground">
                 {t("activities.record.legs.originLabel")}
               </FormLabel>
@@ -91,7 +91,7 @@ const LegRow = memo(function LegRow({
           control={control}
           name={`legs.${index}.destination`}
           render={({ field }) => (
-            <FormItem>
+            <FormItem data-field={`legs.${index}.destination`}>
               <FormLabel className="text-xs text-muted-foreground">
                 {t("activities.record.legs.destinationLabel")}
               </FormLabel>
