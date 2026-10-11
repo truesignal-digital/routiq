@@ -372,7 +372,13 @@
         "idle": "Idle {days}+ days",
         "idleNone": "Every vehicle worked",
         "idleNever": "{code} · never",
-        "idleFirst": "{code} · {days, plural, one {# day} other {# days}}"
+        "idleFirst": "{code} · {days, plural, one {# day} other {# days}}",
+        "onTheRoad": "On the road, last {days} days",
+        "onTheRoadChange": "{arrow} {points, plural, one {# pt} other {# pts}} vs the {days} days before",
+        "onTheRoadSame": "Same as the {days} days before",
+        "onTheRoadNotRecorded": "{count, plural, one {# day not recorded} other {# days not recorded}}",
+        "onTheRoadChangeNotRecorded": "{change} · {count, plural, one {# day not recorded} other {# days not recorded}}",
+        "onTheRoadInfo": "Vehicle-days on an activity ÷ vehicle-days recorded, last {days} days. Days nobody could record are left out."
       },
       "due": {
         "title": "Documents and services due",
@@ -396,6 +402,23 @@
         "more": "{count, plural, one {# more vehicle in Money} other {# more vehicles in Money}}",
         "basis": "Revenue minus expenses recorded on the vehicle",
         "openMoney": "Open Money"
+      },
+      "km": {
+        "all": "This month, km are known for every vehicle ({count, number}).",
+        "some": "This month, km are known for {known, number} of {total, number} vehicles: {missing, plural, one {# activity has} other {# activities have}} no km."
+      },
+      "board": {
+        "title": "Fleet board",
+        "question": "What did each vehicle do, day by day? Last {days} days.",
+        "basis": {
+          "all": "Status from activities, work orders and grounding.",
+          "noMaintenance": "Status from activities. Work orders and grounding are not counted: Maintenance is off.",
+          "noTrips": "Status from work orders and grounding only; every other day is not recorded.",
+          "none": "No day can be recorded while these modules are off."
+        },
+        "open": "Open the list",
+        "loadFailed": "Could not load the fleet board.",
+        "empty": "No vehicle to show."
       },
       "summary": {
         "sentence": "{total, plural, =0 {No vehicle is in the fleet yet.} one {Can drive today: {canDrive, number} of # vehicle.} other {Can drive today: {canDrive, number} of # vehicles.}}",
@@ -825,6 +848,24 @@
         "none": "No entries",
         "earlier": "Earlier, not locked: {months}",
         "earlierMany": "{count} earlier months not locked"
+      },
+      "fuel": {
+        "title": "Fuel per km by vehicle",
+        "question": "Is any vehicle spending more on fuel than it should? {period}, {currency} per km. Line = fleet median.",
+        "questionShort": "Is any vehicle spending more on fuel than it should?",
+        "median": "Fleet median {amount}",
+        "above": "Above the fleet median",
+        "detailAbove": "{percent} above the median · {tally}",
+        "valueHeader": "Fuel per km",
+        "more": "{count, plural, one {# more vehicle} other {# more vehicles}}",
+        "basis": "Fuel expenses ÷ km from legs or the odometer.",
+        "notCounted": {
+          "kmUnknown": "Not counted: {count, plural, one {# vehicle whose km are not known} other {# vehicles whose km are not known}}.",
+          "noKm": "Not counted: {count, plural, one {# vehicle with no km in this period} other {# vehicles with no km in this period}}.",
+          "noFuel": "Not counted: {count, plural, one {# vehicle with no fuel recorded} other {# vehicles with no fuel recorded}}."
+        },
+        "empty": "No vehicle has both km and fuel recorded in this period.",
+        "open": "See all vehicles"
       }
     }
   },
@@ -1296,7 +1337,13 @@
         "missingData": "Closed with missing data",
         "missingFuelKm": "{fuel, number} without fuel · {km, number} without km",
         "missingKm": "{km, number} without km",
-        "missingDataInfo": "Closed with an exception recorded at closing. Fuel and km are checked on every closed one."
+        "missingDataInfo": "Closed with an exception recorded at closing. Fuel and km are checked on every closed one.",
+        "emptyKm": "Km driven empty",
+        "emptyKmChange": "{arrow} {points, plural, one {# pt} other {# pts}} vs {period}",
+        "emptyKmSame": "Same as {period}",
+        "emptyKmUnknown": "{km, number} km without a load not counted",
+        "emptyKmChangeUnknown": "{change} · {km, number} km without a load not counted",
+        "emptyKmInfo": "Km of legs recorded empty ÷ km of legs with a load recorded, {period}. Km whose load nobody recorded are left out."
       },
       "weeks": {
         "title": "Activities per week",
@@ -1318,6 +1365,21 @@
         "noFuelDetail": "Add the fuel so their costs are complete.",
         "noKm": "{count, number} closed without km",
         "noKmDetail": "Add the km so their distances are complete."
+      },
+      "routes": {
+        "title": "Revenue per km by route",
+        "question": "Which routes pay best? {period}, {currency} per km.",
+        "route": "{from} – {to}",
+        "detailWithoutKm": "{tally} · {without}",
+        "labelHeader": "Route",
+        "valueHeader": "Revenue per km",
+        "basis": "Km include empty returns.",
+        "noKm": "Not counted, no km recorded: {routes}.",
+        "noRevenue": "Not counted, no revenue recorded: {routes}.",
+        "otherRoutes": "{count, plural, one {# other route is} other {# other routes are}} not shown.",
+        "withoutRoute": "{count, plural, one {# closed activity has} other {# closed activities have}} no leg, so no route.",
+        "empty": "No route has km and revenue in this period.",
+        "more": "{count, plural, one {# more route} other {# more routes}}"
       },
       "summary": {
         "sentence": "{started, plural, =0 {No activity has started this week yet.} one {# activity started this week; {closed, number} of them closed.} other {# activities started this week; {closed, number} of them closed.}}",
@@ -1532,6 +1594,18 @@
         "open": "Open",
         "waitingApproval": "{count, plural, one {# work order waits for approval} other {# work orders wait for approval}}",
         "waitingCompletion": "{count, plural, one {# work order waits for sign-off} other {# work orders wait for sign-off}}"
+      },
+      "offRoad": {
+        "title": "Days off the road per month",
+        "question": "Are repairs keeping vehicles off the road longer? Vehicle-days in the workshop or grounded.",
+        "column": "{month}: {days, plural, one {# vehicle-day} other {# vehicle-days}} off the road",
+        "columnPartial": "{month} (so far): {days, plural, one {# vehicle-day} other {# vehicle-days}} off the road",
+        "monthPartial": "{month} (so far)",
+        "partial": "{month} is partial ({days, plural, one {# day} other {# days}}).",
+        "open": "Open Work orders",
+        "monthHeader": "Month",
+        "valueHeader": "Days off the road",
+        "loadFailed": "Could not load the days off the road."
       },
       "summary": {
         "sentence": "{open, plural, =0 {No problem is open.} one {# problem is open.} other {# problems are open.}}",
@@ -3224,7 +3298,10 @@
       "offTheRoad": "{count, plural, one {# in service is off the road} other {# in service are off the road}}",
       "allCanDrive": "Every vehicle in service can drive",
       "profitHint": "{change} · {share} of revenue",
-      "noneInService": "No vehicle is in service"
+      "noneInService": "No vehicle is in service",
+      "costPerKm": "Cost per km",
+      "perKmUnit": "{unit}/km",
+      "costPerKmInfo": "Expenses recorded on vehicles ÷ their km, over the {count, plural, one {# vehicle} other {# vehicles}} whose km and expenses are known."
     },
     "counted": {
       "profitMeans": "Profit = revenue − expenses recorded in ROUTIQ; taxes and loan repayments aren't in it.",
@@ -3295,6 +3372,11 @@
           "title": "{month} is still open",
           "detail": "{submitted, plural, =0 {Nothing waits for approval} one {# entry waits for approval} other {# entries wait for approval}} · {missing, plural, =0 {every receipt in} one {# receipt missing} other {# receipts missing}}",
           "action": "Close month"
+        },
+        "FUEL_PER_KM_HIGH": {
+          "title": "{asset} spends {percent} more on fuel per km than the fleet",
+          "detail": "{amount} per km · fleet median {median}",
+          "action": "Open the vehicle"
         }
       }
     },
@@ -3396,6 +3478,26 @@
     }
   },
   "overview": {
+    "fleetBoard": {
+      "status": {
+        "ON_TRIP": "On an activity",
+        "AVAILABLE": "Available, no activity",
+        "WORKSHOP": "In the workshop",
+        "GROUNDED": "Grounded"
+      },
+      "cell": "{vehicle} · {date} · {status}",
+      "today": "Today",
+      "hint": "Point at a day to read it.",
+      "todayTitle": "Today's status",
+      "tripDays": "{count, plural, one {# day} other {# days}} on the road in the last {days}",
+      "columns": {
+        "vehicle": "Vehicle",
+        "onTheRoad": "On the road"
+      }
+    },
+    "usage": {
+      "kmKnown": "Km known for {known, number} of {total, plural, one {# vehicle} other {# vehicles}}"
+    },
     "summary": {
       "label": "Summary",
       "show": "Show summary",

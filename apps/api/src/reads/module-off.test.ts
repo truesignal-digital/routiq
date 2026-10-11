@@ -51,6 +51,13 @@ describe("reads with one module off", () => {
   type History = { items: Array<{ kind: string; amountMinor: number | null }> };
   type Dashboard = { openPeriod: unknown; pendingApprovals: unknown; series: unknown };
   type NavCounts = { moneyWaiting: number | null; maintenanceNew: number | null };
+  type Usage = {
+    km: unknown;
+    trips: unknown;
+    money: unknown;
+    offRoadByMonth: unknown;
+    vehicles: Array<{ days: string[]; money: unknown; period: unknown }>;
+  };
 
   const reads = () => [
     `/v1/assets/${truck}`,
@@ -59,6 +66,7 @@ describe("reads with one module off", () => {
     "/v1/assets",
     "/v1/assets/summary",
     "/v1/assets/overview",
+    "/v1/assets/usage",
     "/v1/dashboard",
     "/v1/nav-counts",
     `/v1/work-orders?assetId=${truck}`,
@@ -175,6 +183,9 @@ describe("reads with one module off", () => {
           series: null,
         });
         expect((await read<NavCounts>("/v1/nav-counts")).moneyWaiting).toBeNull();
+        const usage = await read<Usage>("/v1/assets/usage");
+        expect(usage.money).toBeNull();
+        expect(usage.vehicles.every((vehicle) => vehicle.money === null)).toBe(true);
 
         // The estimate is the workshop's quote (#640): it stays. The actual
         // cost and the lines it sums are Finance's figures (#328).
@@ -216,6 +227,9 @@ describe("reads with one module off", () => {
         expect((await codes()).filter((code) => /^(ISSUE|WORK_ORDER)_/.test(code))).toEqual([]);
         expect(await kinds()).not.toContain("MAINTENANCE");
         expect((await read<NavCounts>("/v1/nav-counts")).maintenanceNew).toBeNull();
+        const usage = await read<Usage>("/v1/assets/usage");
+        expect(usage.offRoadByMonth).toBeNull();
+        expect(usage.vehicles.flatMap((vehicle) => vehicle.days).filter((day) => day === "GROUNDED" || day === "WORKSHOP")).toEqual([]);
       },
     ],
     [
@@ -233,6 +247,9 @@ describe("reads with one module off", () => {
         expect(detail.recentActivities).toEqual([]);
         expect(await kinds()).not.toContain("READINGS");
         expect(await kinds()).not.toContain("TRIPS");
+        const usage = await read<Usage>("/v1/assets/usage");
+        expect(usage).toMatchObject({ km: null, trips: null, money: null });
+        expect(usage.vehicles.every((vehicle) => vehicle.period === null && !vehicle.days.includes("ON_TRIP"))).toBe(true);
       },
     ],
   ];

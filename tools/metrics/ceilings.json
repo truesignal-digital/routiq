@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 764827,
+    "ceiling": 776490,
     "raises": [
       {
         "date": "2026-10-06",
@@ -289,11 +289,17 @@
         "from": 713902,
         "to": 764827,
         "reason": "Summary notice on every Overview (#667) and Dashboard summary setting (#669): notice component, money sentence helper, verdict badge, fr/en words across the catalogs and the five Overview chunks, plus the Company settings section, form and read hook, about 6.9 kB gzip. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666) and module Overviews (#665) until they merge (re-recorded on develop 4dee04a4)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 764827,
+        "to": 776490,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop b7d22560)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 23261,
+    "ceiling": 23330,
     "raises": [
       {
         "date": "2026-10-06",
@@ -366,11 +372,17 @@
         "from": 22832,
         "to": 23261,
         "reason": "Summary notice (#667): its card and closed-line classes, 23 B; counted from develop's ceiling, so it also covers #666's 259 B and #665's overview parts until they merge"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 23261,
+        "to": 23330,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop b7d22560)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 280366,
+    "ceiling": 283191,
     "raises": [
       {
         "date": "2026-10-06",
@@ -629,6 +641,12 @@
         "from": 266200,
         "to": 280366,
         "reason": "Summary notice on every Overview (#667) and Dashboard summary setting (#669): the notice's fr/en ICU sentences (money templates, module Overview sentences, trip-word overlays for both presets), the notice component, the summary setting's fr/en words and the schedule list in contracts, about 2.9 kB gzip. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666, about 7 kB) and module Overviews (#665, about 4.3 kB net of the shared #659/#664/#676 parts) until they merge (re-recorded on develop 4dee04a4)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 280366,
+        "to": 283191,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop b7d22560)"
       }
     ]
   }

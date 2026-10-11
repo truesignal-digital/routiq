@@ -5,7 +5,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCompact, formatMoney, localizedLabel, profitOrLoss } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 import type { BridgeStep } from "./bridge.js";
-import { ChartViewToggle } from "./ChartViewToggle.js";
+import { ChartViewToggle } from "@/components/overview/chart-view-toggle.js";
 
 interface Labelled {
   step: BridgeStep;

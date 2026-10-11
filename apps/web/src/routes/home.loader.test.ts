@@ -48,6 +48,7 @@ describe("Home's loaders (#496, #666)", () => {
       "finance/todo",
       "coming-up/14",
       "assets/summary/{}",
+      "assets/usage/THREE_MONTHS/ALL",
     ]);
     expect(await keysOf(home)).toEqual([]);
   });

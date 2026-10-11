@@ -53,6 +53,14 @@ _Avoid_: lifecycle status, absence of recorded problems, absence of work orders
 A vehicle with an open availability interval. A safety-critical issue opens one the moment it is reported; only a release to service closes it. Resolving the issue or completing the work does not.
 _Avoid_: out of service (a lifecycle word), broken down, unavailable flag
 
+**Known Km** (fr: **Km connus**):
+The km of a vehicle's trips closed in a period, each trip from its legs, else from the odometer readings taken on it, never both added. Known when every one of those trips has km; otherwise the vehicle's km are **not known**, and it is left out of every cost or fuel per km.
+_Avoid_: mileage, estimated km, distance (alone)
+
+**Daily Status** (fr: **État du jour**):
+What a vehicle did on a day, the most serious fact first: grounded, in the workshop (an approved work order), on a trip, available, or not recorded when nothing can tell. Derived on read from grounding, work orders and trips, never stored. "On the road" is the share of recorded days on a trip.
+_Avoid_: availability (the grounded / available fact alone), utilisation
+
 **Attention Item**:
 A fact about one vehicle that needs someone's next step: an issue with no work order, work awaiting authorization or sign-off, a vehicle awaiting release, a document expired or expiring, an entry awaiting review or its paperwork. Derived on read, never stored; it names who may not take the step, not who must.
 _Avoid_: task, alert, notification

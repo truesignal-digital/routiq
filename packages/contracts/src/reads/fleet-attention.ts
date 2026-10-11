@@ -38,6 +38,11 @@ export const TODO_MONEY_CODES = [
   "ENTRIES_EVIDENCE_MISSING",
   /** The latest past month still OPEN, with what stands in the way of closing it. */
   "PERIOD_OPEN",
+  /**
+   * A vehicle spending more than FUEL_OUTLIER_PERCENT above the fleet median on
+   * fuel per km this month (#668): its fuel per km, the median, the percent.
+   */
+  "FUEL_PER_KM_HIGH",
 ] as const;
 
 // Every schema below is built inside a pure call: the web reads these shapes by
@@ -62,6 +67,8 @@ export const TODO_ROLES = {
   ENTRIES_AWAITING_APPROVAL: ["DIRECTOR", "FINANCE"],
   ENTRIES_EVIDENCE_MISSING: ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER"],
   PERIOD_OPEN: ["DIRECTOR", "FINANCE"],
+  /** The roles that read vehicle money (canReadLedger), who see fuel per km. */
+  FUEL_PER_KM_HIGH: ["DIRECTOR", "ADMIN", "FINANCE"],
 } as const satisfies Record<TodoCode, readonly Role[]>;
 
 export function todoWaitsOn(code: TodoCode, role: Role): boolean {
@@ -187,6 +194,10 @@ export const todoRow = /* @__PURE__ */ (() =>
         evidenceMissingCount: z.number().int().nonnegative(),
         /** PERIOD_OPEN: older past months also still open. */
         olderOpenCount: z.number().int().nonnegative(),
+        /** FUEL_PER_KM_HIGH: the vehicle's fuel per km is `amountMinor`; this is the fleet median. */
+        medianMinor: moneyMinor,
+        /** FUEL_PER_KM_HIGH: whole percent above the median. */
+        percentAbove: z.number().int().positive(),
       })
       .partial(),
   }))();

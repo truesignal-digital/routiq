@@ -1,15 +1,18 @@
-import type { IssueListItem, MaintenanceSummary } from "@routiq/contracts";
+import { Link } from "@tanstack/react-router";
+import type { FleetUsageResponse, IssueListItem, MaintenanceSummary } from "@routiq/contracts";
 import { OPEN_WORK_ORDER_STATUSES } from "@routiq/contracts";
 import { CircleAlert, Clock, ShieldAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { MetricStrip, metricTiles, moneyMetric, type MetricTile } from "@/components/metric-strip.js";
+import { MonthColumns } from "@/components/overview/month-columns.js";
 import { OverviewSummary } from "@/components/overview/overview-summary.js";
 import { ToDoList, type ToDoItem } from "@/components/overview/to-do-list.js";
 import { ErrorState } from "@/components/page";
 import { StatusBadge } from "@/components/status-badge.js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDate, formatRelativeTime } from "@/lib/format.js";
+import { formatCount, formatDate, formatRelativeTime } from "@/lib/format.js";
+import { PAGE_USAGE_RANGE, useFleetUsage } from "@/overview/useFleetUsage.js";
 import { useIssues, useMaintenanceSummary } from "./useMaintenance.js";
 
 type Translate = ReturnType<typeof useTranslation>["t"];
@@ -26,6 +29,7 @@ export function MaintenanceOverview() {
   const { t, i18n } = useTranslation();
   const summaryQuery = useMaintenanceSummary();
   const issuesQuery = useIssues({ status: "OPEN" });
+  const usageQuery = useFleetUsage(PAGE_USAGE_RANGE);
   const summary = summaryQuery.data;
   const language = i18n.resolvedLanguage;
   const tiles = metricTiles(maintenanceTiles(summary, t, language));
@@ -70,7 +74,13 @@ export function MaintenanceOverview() {
           <MetricStrip tiles={tiles} isPending={summaryQuery.isPending} isError={summaryQuery.isError} />
         )}
       </OverviewSummary>
-      <Card className="lg:max-w-[calc(50%-0.5rem)]">
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Maintenance off: no day is counted off the road, so the chart goes. */}
+        {(usageQuery.isPending || usageQuery.isError || usageQuery.data?.offRoadByMonth != null) && (
+          <OffRoadCard usage={usageQuery.data} isError={usageQuery.isError} onRetry={() => void usageQuery.refetch()} />
+        )}
+      {/* On a phone people act first: To do comes before the chart. */}
+      <Card className="order-first lg:order-none">
         <CardHeader>
           <CardTitle>{t("maintenance.overview.todo.title")}</CardTitle>
           <CardDescription>{t("maintenance.overview.todo.description")}</CardDescription>
@@ -86,7 +96,78 @@ export function MaintenanceOverview() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
+  );
+}
+
+function shortMonth(periodCode: string, language: string | undefined, month: "short" | "long"): string {
+  return new Intl.DateTimeFormat(language, { month, timeZone: "UTC" }).format(new Date(`${periodCode}-15T00:00:00Z`));
+}
+
+/**
+ * Are repairs keeping vehicles off the road longer? (dashboards.html#maintenance):
+ * vehicle-days in the workshop or grounded, one column per month, the
+ * current month partial and labelled so. No money in it: a technician sees it.
+ */
+function OffRoadCard({
+  usage,
+  isError,
+  onRetry,
+}: {
+  usage: FleetUsageResponse | undefined;
+  isError: boolean;
+  onRetry: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage;
+  const months = usage?.offRoadByMonth ?? null;
+  const partial = months?.find((month) => month.partial);
+  return (
+    <Card data-slot="days-off-road">
+      <CardHeader>
+        <CardTitle>{t("maintenance.overview.offRoad.title")}</CardTitle>
+        <CardDescription>{t("maintenance.overview.offRoad.question")}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {isError ? (
+          <ErrorState message={t("maintenance.overview.offRoad.loadFailed")} retryLabel={t("maintenance.retry")} onRetry={onRetry} />
+        ) : months === null ? (
+          <Skeleton className="h-40 w-full" />
+        ) : (
+          <MonthColumns
+            monthHeader={t("maintenance.overview.offRoad.monthHeader")}
+            valueHeader={t("maintenance.overview.offRoad.valueHeader")}
+            columns={months.map((month) => {
+              const name = shortMonth(month.periodCode, language, "long");
+              const values = { month: name, days: month.days };
+              return {
+                key: month.periodCode,
+                label: shortMonth(month.periodCode, language, "short"),
+                month: month.partial ? t("maintenance.overview.offRoad.monthPartial", { month: name }) : name,
+                value: month.days,
+                valueText: formatCount(month.days, language),
+                description: t(month.partial ? "maintenance.overview.offRoad.columnPartial" : "maintenance.overview.offRoad.column", values),
+                partial: month.partial,
+              };
+            })}
+          />
+        )}
+        <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs text-muted-foreground">
+          {partial !== undefined && usage !== undefined && (
+            <span>
+              {t("maintenance.overview.offRoad.partial", {
+                month: shortMonth(partial.periodCode, language, "long"),
+                days: Number(usage.businessDate.slice(8, 10)),
+              })}
+            </span>
+          )}
+          <Link to="/maintenance/work-orders" className="ms-auto text-sm font-medium text-foreground underline-offset-4 hover:underline">
+            {t("maintenance.overview.offRoad.open")}
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

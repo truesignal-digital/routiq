@@ -7,6 +7,7 @@ import type { AssetOverview, ModuleCode, Role } from "@routiq/contracts";
 import { i18n } from "../i18n/index.js";
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
+import { testUsage } from "../overview/test-usage.js";
 import { TrucksOverview, truckSummaryDetails } from "./TrucksOverview.js";
 
 vi.mock("@tanstack/react-router", () => ({
@@ -65,6 +66,7 @@ const BODIES: [string, unknown][] = [
   }],
   ["/v1/todo", { businessDate: "2026-10-09", scope, rows: [], totalCount: 0 }],
   ["/v1/finance/overview", MONEY],
+  ["/v1/assets/usage", testUsage()],
 ];
 
 let requested: string[] = [];
@@ -125,7 +127,8 @@ describe("Trucks › Overview (#665)", () => {
     await screen.findByText("of 12");
     expect(linkOf("Can drive")).toBe("/assets/list?availability=CAN_DRIVE");
     expect(linkOf("Grounded")).toBe("/assets/list?availability=GROUNDED");
-    expect(linkOf("Attention")).toBe("/assets/list?status=ATTENTION");
+    // Five tiles at most: with every module on, Attention gives its place to "on the road".
+    expect(screen.queryByRole("link", { name: "Attention" })).toBeNull();
     expect(linkOf("Documents due ≤ 30 days")).toBe("/assets/documents?expiry=DUE_30");
     expect(linkOf("Idle 5+ days")).toBe("/assets/list?availability=IDLE");
     expect(await screen.findByText("First: VH005 · 10/15/26")).toBeTruthy();
@@ -162,6 +165,40 @@ describe("Trucks › Overview (#665)", () => {
     expect(screen.queryByRole("link", { name: "Idle 5+ days" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Documents due ≤ 30 days" })).toBeNull();
     expect(requested.some((href) => href.startsWith("/v1/coming-up"))).toBe(false);
+    expect(linkOf("Attention")).toBe("/assets/list?status=ATTENTION");
+  });
+
+  it("tiles the share of recorded days on the road, in points against the 30 days before (#668)", async () => {
+    const { container } = renderAs("ADMIN");
+    await waitFor(() => expect(container.querySelector("[data-metric=on-the-road] [data-slot=metric-value]")?.textContent).toBe("57%"));
+    const tile = container.querySelector("[data-metric=on-the-road]")?.textContent ?? "";
+    expect(tile).toContain("On the road, last 30 days");
+    expect(tile).toContain("▼ 10 pts vs the 30 days before · 10 days not recorded");
+    expect(container.querySelector("[data-slot=km-coverage]")?.textContent).toBe(
+      "This month, km are known for 3 of 4 vehicles: 1 activity has no km.",
+    );
+  });
+
+  it("draws the fleet board for a technician too, each truck linked, with no money in it", async () => {
+    const { container } = renderAs("TECHNICIAN");
+    await waitFor(() => expect(container.querySelectorAll("[data-slot=fleet-board-row]")).toHaveLength(4));
+    expect(screen.getByText("Fleet board")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "VH007" }).getAttribute("href")).toBe("/assets/a7");
+    expect(screen.getByRole("img", { name: "VH003 · Oct 9 · Grounded" })).toBeTruthy();
+    expect(screen.getByText("Status from activities, work orders and grounding.")).toBeTruthy();
+    expect(screen.queryByText(/profit|revenue/i)).toBeNull();
+  });
+
+  it("says the share is not recorded when no day was, never 0 %", async () => {
+    const usage = testUsage();
+    BODIES.splice(BODIES.findIndex(([prefix]) => prefix === "/v1/assets/usage"), 1, [
+      "/v1/assets/usage",
+      { ...usage, onTheRoad: { last: { tripDays: 0, recordedDays: 0, notRecordedDays: 120 }, previous: usage.onTheRoad.previous } },
+    ]);
+    const { container } = renderAs("ADMIN");
+    await waitFor(() => expect(container.querySelector("[data-metric=on-the-road]")?.textContent).toContain("120 days not recorded"));
+    expect(container.querySelector("[data-metric=on-the-road] [data-slot=metric-value]")?.textContent).toBe("Not recorded");
+    BODIES.splice(BODIES.findIndex(([prefix]) => prefix === "/v1/assets/usage"), 1, ["/v1/assets/usage", usage]);
   });
 
   it("opens with the summary notice on a Monday, the fleet in one sentence (#667)", async () => {

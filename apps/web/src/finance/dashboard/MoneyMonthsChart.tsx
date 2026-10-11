@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { formatCompact, formatMoney, formatMonth, profitOrLoss } from "@/lib/format.js";
-import { ChartViewToggle } from "./ChartViewToggle.js";
+import { ChartViewToggle } from "@/components/overview/chart-view-toggle.js";
 import type { DashboardMode } from "./money-view.js";
 
 const CONFIG = {
