@@ -78,7 +78,7 @@ function FleetDocuments() {
         id: "expiresAt",
         header: t("assets.documents.columns.expiresAt"),
         meta: { phone: "value", label: t("assets.documents.columns.expiresAt") },
-        cell: ({ row }) => <span className="tabular-nums">{formatDate(row.original.expiresAt, language)}</span>,
+        cell: ({ row }) => <span className="tabular-nums">{formatDate(row.original.expiresAt, language, "short")}</span>,
       },
       {
         id: "state",

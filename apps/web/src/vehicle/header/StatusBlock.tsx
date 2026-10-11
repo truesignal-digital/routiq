@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { StatusBlock as RecordStatusBlock, type StatusNote, type StatusTone } from "@/components/status-block.js";
 import { Button } from "@/components/ui/button";
-import { formatDate, formatRelativeTime, localizedLabel } from "@/lib/format.js";
+import { formatDate, formatMonth, formatRelativeTime, localizedLabel } from "@/lib/format.js";
 import { contributes } from "@/modules/manifest.js";
 import { useWorkOrder } from "@/maintenance/useMaintenance.js";
 import { useVehicle } from "../context.js";
@@ -40,7 +40,7 @@ function truncate(text: string): string {
 }
 
 function monthYear(iso: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(iso));
+  return formatMonth(iso, locale);
 }
 
 /**

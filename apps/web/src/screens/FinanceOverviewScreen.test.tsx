@@ -3,9 +3,10 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { FinanceOverviewResponse, FinanceSummaryResponse, OverviewNotice, OverviewRange, Role } from "@routiq/contracts";
+import type { FinanceOverviewResponse, FinanceSummaryResponse, FleetUsageResponse, OverviewNotice, OverviewRange, Role } from "@routiq/contracts";
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { i18n } from "../i18n/index.js";
+import { testUsage } from "../overview/test-usage.js";
 
 const navigate = vi.fn();
 const routeSearch = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
@@ -114,12 +115,24 @@ function overview(view: FinanceOverviewResponse["view"], range: OverviewRange = 
   };
 }
 
+const usageState = vi.hoisted(() => ({
+  current: undefined as FleetUsageResponse | undefined,
+  calls: [] as { range: string; enabled: boolean }[],
+}));
+
 const NOT_DUE: OverviewNotice = { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] };
 
 const state = vi.hoisted(() => ({
   view: "PROFIT" as "PROFIT" | "REVENUE_AND_EXPENSES",
   ranges: [] as string[],
   notice: { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] } as OverviewNotice,
+}));
+
+vi.mock("../overview/useFleetUsage.js", () => ({
+  useFleetUsage: (range: OverviewRange, enabled: boolean) => {
+    usageState.calls.push({ range, enabled });
+    return { data: enabled ? usageState.current : undefined, isPending: false, isError: false };
+  },
 }));
 
 vi.mock("../overview/useMoneyOverview.js", () => ({
@@ -207,6 +220,8 @@ beforeEach(() => {
   routeSearch.current = {};
   state.view = "PROFIT";
   state.ranges = [];
+  usageState.current = testUsage();
+  usageState.calls = [];
   state.notice = NOT_DUE;
   localStorage.clear();
 });
@@ -236,10 +251,10 @@ describe("Money Overview (#664)", () => {
     renderAs("FINANCE");
 
     const text = (node: HTMLElement | null) => node?.textContent?.replace(/\s/g, " ") ?? "";
-    expect(text(tile("expenses"))).toContain("▲ 11% vs Sep 1 – 9");
-    expect(text(tile("revenue"))).toContain("▲ 7% vs Sep 1 – 9");
+    expect(text(tile("expenses"))).toContain("▲ 11% vs 1–9 Sept");
+    expect(text(tile("revenue"))).toContain("▲ 7% vs 1–9 Sept");
     expect(text(document.querySelector('[data-slot="money-overview-period"]'))).toBe(
-      "October 1 – 9 compared with September 1 – 9",
+      "1–9 October compared with 1–9 September",
     );
     expect(tile("close").textContent).toContain("Open");
     expect(tile("close").textContent).toContain("154 entries");
@@ -259,8 +274,8 @@ describe("Money Overview (#664)", () => {
 
     const card = document.querySelector<HTMLElement>('[data-slot="money-categories"]')!;
     const rows = within(card).getAllByRole("listitem").map((row) => row.textContent?.replace(/\s/g, " "));
-    expect(rows[0]).toMatch(/^Fuel.*3,900,000 vs .*3,480,000$/);
-    expect(rows[1]).toMatch(/^Repairs.*1,200,000 vs .*780,000$/);
+    expect(rows[0]).toMatch(/^Fuel.*3 900 000 FCFA vs .*3 480 000 FCFA$/);
+    expect(rows[1]).toMatch(/^Repairs.*1 200 000 FCFA vs .*780 000 FCFA$/);
   });
 
   it("lists what waits, each with its one button", () => {
@@ -337,7 +352,7 @@ describe("Money Overview (#664)", () => {
     renderAs("FINANCE");
     const region = screen.getByRole("region", { name: "Summary" });
     expect(region.textContent?.replace(/\s/g, " ")).toContain(
-      "So far in October: a profit of FCFA 1,870,000 on FCFA 9,560,000 revenue, FCFA 137,000 worse than September at the same day.",
+      "So far in October: a profit of 1 870 000 FCFA on 9 560 000 FCFA revenue, 137 000 FCFA worse than September at the same day.",
     );
     expect(region.textContent).toContain("Spending on Repairs rose by");
     expect(region.querySelector('[data-slot="money-counted"]')).toBeTruthy();
@@ -354,7 +369,37 @@ describe("Money Overview (#664)", () => {
     renderAs("CASHIER");
     await userEvent.click(screen.getByRole("button", { name: "Show summary" }));
     const text = screen.getByRole("region", { name: "Summary" }).textContent ?? "";
-    expect(text.replace(/\s/g, " ")).toContain("So far in October: FCFA 7,690,000 of expenses, 11% more than September at the same day.");
+    expect(text.replace(/\s/g, " ")).toContain("So far in October: 7 690 000 FCFA of expenses, 11% more than September at the same day.");
     expect(text).not.toMatch(/profit/i);
+  });
+});
+
+describe("Money Overview › Fuel per km by truck (#668)", () => {
+  const card = () => document.querySelector<HTMLElement>('[data-slot="fuel-per-km-by-truck"]');
+
+  it("ranks fuel per km against the fleet median, flags the outlier and links each truck", () => {
+    renderAs("FINANCE");
+    const found = card();
+    if (found === null) throw new Error("no fuel card");
+    const rows = [...found.querySelectorAll("[data-slot=ranked-bars-row]")];
+    expect(rows.map((row) => row.querySelector("a")?.textContent)).toEqual(["VH007", "VH003", "VH001"]);
+    expect(rows[0]?.hasAttribute("data-flagged")).toBe(true);
+    expect(rows[0]?.textContent).toContain("24% above the median");
+    expect(within(found).getByRole("link", { name: "VH007" }).getAttribute("href")).toBe("/assets/a7");
+    expect(found.textContent?.replace(/\s/g, " ")).toMatch(/Fleet median \S*\s?300/);
+    expect(found.textContent).toContain("Not counted: 1 vehicle whose km are not known.");
+    expect(found.textContent).toContain("Fuel expenses ÷ km from legs or the odometer.");
+  });
+
+  it("reads the page's range", () => {
+    routeSearch.current = { range: "3-months" };
+    renderAs("FINANCE");
+    expect(usageState.calls.at(-1)).toEqual({ range: "THREE_MONTHS", enabled: true });
+  });
+
+  it("leaves the card out for the cashier, who reads no vehicle money, and never asks", () => {
+    renderAs("CASHIER");
+    expect(card()).toBeNull();
+    expect(usageState.calls.every((call) => !call.enabled)).toBe(true);
   });
 });

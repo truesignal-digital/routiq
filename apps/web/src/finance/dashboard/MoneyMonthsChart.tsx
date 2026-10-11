@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { formatCompact, formatMoney, formatMonth, profitOrLoss } from "@/lib/format.js";
-import { ChartViewToggle } from "./ChartViewToggle.js";
+import { ChartViewToggle } from "@/components/overview/chart-view-toggle.js";
 import type { DashboardMode } from "./money-view.js";
 
 const CONFIG = {
@@ -14,11 +14,7 @@ const CONFIG = {
 } satisfies ChartConfig;
 
 function shortMonth(periodCode: string, language: string | undefined): string {
-  const [year, month] = periodCode.split("-").map(Number);
-  if (year === undefined || month === undefined) return periodCode;
-  return new Intl.DateTimeFormat(language, { month: "short", timeZone: "UTC" }).format(
-    new Date(Date.UTC(year, month - 1, 1)),
-  );
+  return formatMonth(periodCode, language, { month: "short", year: false });
 }
 
 /**

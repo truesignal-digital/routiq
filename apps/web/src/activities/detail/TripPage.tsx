@@ -8,7 +8,7 @@ import { NotRecorded } from "@/components/not-recorded.js";
 import { ContextBox, ContextRow, Fact, FactsSection } from "@/components/record-page.js";
 import { StatusBadge } from "@/components/status-badge.js";
 import type { StatusBlockProps } from "@/components/status-block.js";
-import { formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
+import { formatDateTime, formatMoney, localizedLabel, profitOrLoss } from "@/lib/format.js";
 import { postedNetMinor } from "./ActivityMoney.js";
 
 export const TRIP_TABS = ["overview", "legs", "money", "history"] as const;
@@ -221,7 +221,7 @@ export function TripOverview({
 export function TripMoneyBox({ entries, onOpen }: { entries: readonly Entry[]; onOpen: () => void }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
-  const net = postedNetMinor(entries);
+  const result = profitOrLoss(postedNetMinor(entries), { locale });
   const { revenue, expenses, revenueLines } = postedTotals(entries);
   const money = (minor: number) => formatMoney(minor, { locale });
 
@@ -241,8 +241,8 @@ export function TripMoneyBox({ entries, onOpen }: { entries: readonly Entry[]; o
       <dl>
         <ContextRow
           strong
-          label={t("activities.detail.moneySummary.result", { sign: net < 0 ? "loss" : "profit" })}
-          value={money(Math.abs(net))}
+          label={result.label}
+          value={result.amount}
         />
         <ContextRow
           label={t("activities.detail.moneyBox.revenue")}

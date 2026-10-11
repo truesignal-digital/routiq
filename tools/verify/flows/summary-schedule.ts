@@ -1,14 +1,15 @@
 import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
- * Company settings › Dashboard summary (#669). Direction picks when the
- * summary notice shows on every Overview: every Monday and on the 1st (the
+ * Company settings › Dashboard summary (#669). Direction or an Administrator
+ * (#711) picks when the summary notice shows on every Overview: every Monday and on the 1st (the
  * default), Mondays only, the 1st only, or never. Picks "Never: tiles only",
  * checks every Overview read follows it (`notice.schedule`), shows the
  * Dashboard opening on the tiles with "Show summary" still there, then puts
  * the default back. Writes two set-summary-schedule commands.
  * Run: pnpm verify drive flow:summary-schedule --role director --lang en --reel
- *      (and --viewport 390x844); as another role, /more/company shows a denial.
+ *      (and --viewport 390x844, or --role admin); as Finance, the Cashier, the
+ *      Technician or a Driver, /more/company shows a denial.
  */
 const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   type Notice = { schedule: string; scheduledOn: string | null; scheduledToday: string | null; changes: unknown[] };
@@ -71,7 +72,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
 
   const sheet = await choose("Jamais : les indicateurs seulement", "Never: tiles only");
   await shot("settings-form", {
-    caption: "Direction picks one of four schedules for the whole company; the one in force is pinned above",
+    caption: "The Director or an Administrator picks one of four schedules for the whole company; the one in force is pinned above",
     highlight: sheet,
   });
   await sheet.getByRole("button", { name: t("Enregistrer", "Save"), exact: true }).click();

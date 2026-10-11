@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { formatRelativeTime } from "@/lib/format.js";
+import { formatMonth, formatRelativeTime } from "@/lib/format.js";
 import { useVehicle } from "../context.js";
 import { LinkButton, withNodes } from "../parts.js";
 
@@ -47,9 +47,7 @@ export function useFactsLine(): ReactNode[] {
         ? slots["status"] ?? ""
         : t("vehicle.facts.lifecycleSince", {
             ...slots,
-            since: new Intl.DateTimeFormat(locale, { month: "short", year: "numeric" }).format(
-              new Date(asset.commissionedAt),
-            ),
+            since: formatMonth(asset.commissionedAt, locale, { month: "short" }),
           }),
     {
       status: (

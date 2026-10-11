@@ -78,7 +78,7 @@ export function approvalThresholdsKey(workspaceSlug: string | undefined) {
   return ["ws", workspaceSlug, "approval-thresholds"] as const;
 }
 
-/** The money chain's two bands and what each role meets, for Direction (#354). */
+/** The money chain's two bands and what each role meets, for the Director and Administrators (#354, #711). */
 export function useApprovalThresholds() {
   const session = useActiveSession();
   return useQuery({

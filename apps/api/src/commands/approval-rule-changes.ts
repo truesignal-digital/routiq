@@ -28,7 +28,8 @@ const CHAINS_MOVED: Readonly<Record<string, readonly ApprovalChainCommandType[]>
 /**
  * The roles a threshold on these command types moves, and so tells (#422).
  * Direction is left out: its own entries post at any amount, so no band moves
- * them, and the change is Direction's to make.
+ * them. Whoever makes the change, Direction or an Administrator (#711), is not
+ * told about it (`GET /v1/approval-chain`).
  */
 export function rolesMovedBy(commandTypes: readonly string[]): Role[] {
   const chains = commandTypes.flatMap((commandType) => CHAINS_MOVED[commandType] ?? []);

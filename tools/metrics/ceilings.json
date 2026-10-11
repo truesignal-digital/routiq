@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 772320,
+    "ceiling": 783891,
     "raises": [
       {
         "date": "2026-10-06",
@@ -293,13 +293,25 @@
       {
         "date": "2026-10-10",
         "from": 764827,
-        "to": 772320,
-        "reason": "Record pages share one frame (#662): RecordHeader, RecordTabs, FactsSection, ContextColumn and StatusBlock components, the money entry's and the trip's record pages (Overview sections, money box, linked records, latest history), and their fr/en words, about 7.2 kB gzip across lazy chunks plus the catalog; the trip's old overview and assets panel are removed (re-recorded on develop 6cc4a1db)"
+        "to": 776490,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop b7d22560)"
+      },
+      {
+        "date": "2026-10-11",
+        "from": 776490,
+        "to": 776559,
+        "reason": "Measured on develop after #701: #712 fixed en/fr month and weekday tables (dates read the same on every ICU version) and #699 one can-drive count, net of the formatters #712 removed"
+      },
+      {
+        "date": "2026-10-11",
+        "from": 776559,
+        "to": 783891,
+        "reason": "Record pages share one frame (#662): RecordHeader, RecordTabs, FactsSection, ContextColumn and StatusBlock components, the money entry's and the trip's record pages (Overview sections, money box, linked records, latest history), and their fr/en words, about 7.2 kB gzip across lazy chunks plus the catalog; the trip's old overview and assets panel are removed (re-recorded on develop 2946600c)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 23347,
+    "ceiling": 23330,
     "raises": [
       {
         "date": "2026-10-06",
@@ -376,13 +388,13 @@
       {
         "date": "2026-10-10",
         "from": 23261,
-        "to": 23347,
-        "reason": "Record pages share one frame (#662): record header, tabs, facts and context column classes beside the page frame (#658), about 70 B gzip after merging develop's page skeletons (re-recorded on develop 6cc4a1db)"
+        "to": 23330,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop b7d22560)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 281869,
+    "ceiling": 284603,
     "raises": [
       {
         "date": "2026-10-06",
@@ -645,8 +657,14 @@
       {
         "date": "2026-10-10",
         "from": 280366,
-        "to": 281869,
-        "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 6cc4a1db)"
+        "to": 283191,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop b7d22560)"
+      },
+      {
+        "date": "2026-10-11",
+        "from": 283191,
+        "to": 284603,
+        "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 2946600c)"
       }
     ]
   }

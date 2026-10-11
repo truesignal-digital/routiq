@@ -1,5 +1,6 @@
 import {
   APPROVAL_CHAIN_COMMAND_TYPES,
+  COMPANY_SETTINGS_ROLES,
   ROLES,
   type ApprovalThresholdsResponse,
 } from "@routiq/contracts";
@@ -74,7 +75,8 @@ async function lastChange(tx: TenantTx, workspaceId: string) {
 
 /**
  * `GET /v1/approval-thresholds` (#354): the Company settings view of the
- * money chain, Direction's alone like the command that moves it. The chain is
+ * money chain, for the Director and the Administrators like the command that
+ * moves it (#711). The chain is
  * about money entries, so with the Finance module off there is nothing to set.
  */
 export function registerApprovalThresholdsReadRoutes(
@@ -88,7 +90,7 @@ export function registerApprovalThresholdsReadRoutes(
     {
       path: "/v1/approval-thresholds",
       module: "FINANCE",
-      roles: ["DIRECTOR"],
+      roles: COMPANY_SETTINGS_ROLES,
       branchScope: "workspace",
     },
     async ({ auth, read }): Promise<ApprovalThresholdsResponse> =>

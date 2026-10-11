@@ -218,7 +218,7 @@ describe("finance record form", () => {
     await user.type(amount, "125000");
     await user.tab();
     // Grouped the way English reads money, as the rest of the screen shows it.
-    expect((amount as HTMLInputElement).value).toBe("125,000");
+    expect((amount as HTMLInputElement).value).toBe("125 000");
     await user.type(screen.getByLabelText("Counterparty (optional)"), "Fuel Station");
     await user.type(screen.getByLabelText("Description (optional)"), "Diesel");
     await user.type(screen.getByLabelText("Payment reference (optional)"), "R-42");

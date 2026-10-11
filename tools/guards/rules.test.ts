@@ -309,6 +309,21 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "H20",
+    // English screens showed "7/29/26": each screen built its own Intl.DateTimeFormat (#712).
+    bad: [
+      file("apps/web/src/activities/TripsOverview.tsx", 'new Intl.DateTimeFormat(language, { month: "short", day: "numeric" })'),
+      file("apps/web/src/components/ui/calendar.tsx", "const label = day.toLocaleDateString(locale);"),
+      file("apps/web/src/finance/X.tsx", "{new Date(entry.postedAt).toLocaleString()}"),
+    ],
+    good: [
+      file("apps/web/src/lib/format.ts", 'new Intl.DateTimeFormat(dateLocale(locale), { day: "numeric", month })'),
+      file("apps/web/src/lib/workspace-day.ts", 'new Intl.DateTimeFormat("en-CA", { timeZone })'),
+      file("apps/web/src/activities/TripsOverview.tsx", 'formatDayMonth(iso, language, { month: "short" })'),
+      file("apps/api/src/reads/business-date.ts", 'new Intl.DateTimeFormat("en-CA", { timeZone })'),
+    ],
+  },
+  {
     id: "H18",
     // From Maintenance, Report a problem was a centred dialog; from the truck, a panel.
     bad: [

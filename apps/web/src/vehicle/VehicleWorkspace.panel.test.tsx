@@ -241,7 +241,7 @@ describe("the invoice that arrives after the close (#82)", () => {
       ],
     });
     const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
-    expect(within(panel).getByText(/^Cost to come: declared FCFA\s50,000, recorded FCFA\s0\.$/)).toBeTruthy();
+    expect(within(panel).getByText(/^Cost to come: declared 50\s000\sFCFA, recorded 0\sFCFA\.$/)).toBeTruthy();
   });
 
   it("gives Finance no cost to add on it (#414)", async () => {

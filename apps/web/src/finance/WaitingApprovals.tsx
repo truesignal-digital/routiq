@@ -136,7 +136,7 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
         header: t("finance.entries.detail.date"),
         enableSorting: false,
         meta: { phone: "meta", label: t("finance.entries.detail.date") },
-        cell: ({ row }) => formatDate(row.original.economicDate),
+        cell: ({ row }) => formatDate(row.original.economicDate, undefined, "short"),
       },
       {
         accessorKey: "submittedAt",
@@ -145,7 +145,7 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
         // A phone row shows values without headings, so a second bare date
         // there would read as the economic one.
         meta: { phone: "hidden", label: t("finance.approvals.columns.submittedAt") },
-        cell: ({ row }) => formatDate(row.original.submittedAt),
+        cell: ({ row }) => formatDate(row.original.submittedAt, undefined, "short"),
       },
       {
         // The queue spans branches by default, so each row has to say which one

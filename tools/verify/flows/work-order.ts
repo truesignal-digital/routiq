@@ -58,7 +58,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   dialog = page.getByRole("dialog");
   await dialog.getByLabel(t("Compte rendu", "Work summary")).fill("Bracket replaced, mudguard refitted");
   await dialog.getByLabel(t("Combien a coûté la réparation ?", "How much did the repair cost?")).fill("55000");
-  await shot("complete-with-cost", { caption: "Completing asks for the cost: 55,000 XAF" });
+  await shot("complete-with-cost", { caption: "Completing asks for the cost: 55 000 FCFA" });
   await dialog.getByRole("button", { name: t("Terminer les travaux", "Complete work") }).click();
   await page.getByText(new RegExp(`^${t("Travaux terminés", "Work completed")}`)).first().waitFor();
   await quiet();

@@ -35,7 +35,7 @@ import {
   type FinanceEntryColumnId,
 } from "@/finance/entryColumns.js";
 import { useEntries } from "@/finance/useEntries.js";
-import { formatDate } from "@/lib/format.js";
+import { formatDate, formatMonth } from "@/lib/format.js";
 import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 
 const STATUS_OPTIONS = financialEntryFilters.shape.status.unwrap().options;
@@ -431,11 +431,7 @@ function FinanceEntriesContent() {
 function MonthChip({ month, onClear }: { month: string; onClear: () => void }) {
   const { t, i18n } = useTranslation();
   const name = t("finance.entries.filters.economicMonth", {
-    month: new Intl.DateTimeFormat(i18n.resolvedLanguage, {
-      month: "long",
-      year: "numeric",
-      timeZone: "UTC",
-    }).format(new Date(`${month}-01T00:00:00Z`)),
+    month: formatMonth(month, i18n.resolvedLanguage),
   });
   return (
     <Button

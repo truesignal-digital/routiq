@@ -1,4 +1,4 @@
-import { updateApprovalThresholdPayload } from "@routiq/contracts";
+import { COMPANY_SETTINGS_ROLES, updateApprovalThresholdPayload } from "@routiq/contracts";
 import type { z } from "zod";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { approvalRules } from "../db/schema.js";
@@ -82,7 +82,7 @@ const updateApprovalThresholdCommand: CommandDefinition<
   name: "update-approval-threshold",
   version: 1,
   module: "CORE",
-  allowedRoles: ["DIRECTOR"],
+  allowedRoles: COMPANY_SETTINGS_ROLES,
   payloadSchema: updateApprovalThresholdPayload,
   branchAuthorization: { kind: "workspace" },
   async execute(tx, ctx, envelope, payload) {

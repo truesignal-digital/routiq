@@ -5,6 +5,7 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { formatDateFull, formatMonth, formatWeekday } from "@/lib/format.js"
 import { cn } from "@/lib/utils"
 
 export interface CalendarDateRange {
@@ -72,18 +73,12 @@ function Calendar(calendarProps: CalendarProps) {
   })
   const { t, i18n } = useTranslation()
   const french = (i18n.resolvedLanguage ?? i18n.language).startsWith("fr")
-  const intlLocale = french ? "fr-FR" : "en-US"
+  const language = i18n.resolvedLanguage ?? i18n.language
   const weekStartsOn = french ? 1 : 0
-  const monthLabel = new Intl.DateTimeFormat(intlLocale, {
-    month: "long",
-    year: "numeric",
-  }).format(month)
-  const fullDateFormatter = new Intl.DateTimeFormat(intlLocale, {
-    dateStyle: "full",
-  })
-  const weekdayFormatter = new Intl.DateTimeFormat(intlLocale, {
-    weekday: "narrow",
-  })
+  const monthLabel = formatMonth(
+    `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`,
+    language,
+  )
   const firstDayOffset = (month.getDay() - weekStartsOn + 7) % 7
   const firstGridDate = new Date(month.getFullYear(), month.getMonth(), 1 - firstDayOffset)
   const days = Array.from({ length: DAYS_IN_GRID }, (_, index) => {
@@ -96,7 +91,7 @@ function Calendar(calendarProps: CalendarProps) {
   const weekdays = Array.from({ length: 7 }, (_, index) => {
     const sunday = new Date(2024, 0, 7)
     sunday.setDate(sunday.getDate() + weekStartsOn + index)
-    return weekdayFormatter.format(sunday)
+    return formatWeekday(sunday, language, "narrow")
   })
 
   function selectDay(day: Date) {
@@ -209,7 +204,7 @@ function Calendar(calendarProps: CalendarProps) {
             >
               <ButtonPrimitive
                 type="button"
-                aria-label={fullDateFormatter.format(day)}
+                aria-label={formatDateFull(day, language)}
                 aria-pressed={rangeStart || rangeEnd || rangeMiddle}
                 disabled={unavailable}
                 data-range-start={rangeStart || undefined}

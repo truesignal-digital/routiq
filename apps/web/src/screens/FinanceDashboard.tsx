@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { Link, useNavigate, useRouterState, useSearch } from "@tanstack/react-router";
-import type { AssetSummary, FinanceOverviewResponse } from "@routiq/contracts";
+import type { AssetOverview, FinanceOverviewResponse, FleetUsageResponse } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
 import { useMeContext } from "@/auth/me.js";
-import { useAssetSummary } from "@/assets/useAssetSummary.js";
+import { useAssetOverview } from "@/assets/useAssetOverview.js";
 import { FilterChips } from "@/components/filter-chips";
 import { MetricStrip, metricTiles, moneyMetric, type MetricTile } from "@/components/metric-strip.js";
 import { CompareBars } from "@/components/overview/compare-bars.js";
@@ -21,14 +21,16 @@ import { MoneyMonthsChart } from "@/finance/dashboard/MoneyMonthsChart.js";
 import { dashboardMode, vehicleRows, vehiclesAtALoss, type DashboardMode } from "@/finance/dashboard/money-view.js";
 import { ProfitBridge } from "@/finance/dashboard/ProfitBridge.js";
 import { CompanyLinesList, VehicleProfitTable, VehiclesAtALoss } from "@/finance/dashboard/VehicleProfit.js";
+import { useFleetUsage } from "@/overview/useFleetUsage.js";
 import { moneySummaryText } from "@/overview/money-summary.js";
 import { SummaryStatusBadge } from "@/overview/SummaryStatusBadge.js";
 import { useMoneyOverview } from "@/overview/useMoneyOverview.js";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { formatMoney, formatPercent, localizedLabel, profitOrLoss } from "@/lib/format.js";
+import { currencyUnit, formatMoney, formatPercent, localizedLabel, profitOrLoss } from "@/lib/format.js";
 import { contributes } from "@/modules/manifest.js";
 import { useAmbientBranchId } from "@/shell/branch-context.js";
-import { changeHint, windowLabel } from "./FinanceOverviewScreen.js";
+import { windowLabel } from "@/overview/window-label.js";
+import { changeHint } from "./FinanceOverviewScreen.js";
 
 /** Vehicle rows on the Overview's card; the tab lists every one. */
 const OVERVIEW_VEHICLE_ROWS = 5;
@@ -107,7 +109,10 @@ export function DashboardOverviewTab() {
   const windows = useWindows(overview);
   // role-config: the vehicles tile is the Vehicles module's, as on Home.
   const showFleet = contributes("homeCards", "assets", me?.enabledModules);
-  const fleet = useAssetSummary({}, showFleet);
+  // The Trucks Overview's read, so both tiles show one count (#699).
+  const fleet = useAssetOverview(showFleet);
+  // Cost per km for the same range: a fleet figure, read with the fleet (#668).
+  const usage = useFleetUsage(rangeFromParam(range), showFleet);
   const todo = useTodo();
   const rows = overview === undefined ? [] : vehicleRows(overview, branchId);
   const steps = overview === undefined || mode !== "profit" ? undefined : profitBridge(overview);
@@ -132,6 +137,7 @@ export function DashboardOverviewTab() {
           mode={mode}
           fleet={showFleet ? fleet.data : undefined}
           showFleet={showFleet}
+          usage={showFleet ? usage.data : undefined}
           isPending={query.isPending || (showFleet && fleet.isPending)}
           isError={query.isError}
           comparisonShort={windows?.comparisonShort}
@@ -148,7 +154,7 @@ export function DashboardOverviewTab() {
                 : t(mode === "profit" ? "dashboard.bridge.description" : "dashboard.categories.description", {
                     comparison: windows.comparisonShort,
                     period: windows.periodShort,
-                    currency: overview.currency,
+                    currency: currencyUnit(overview.currency),
                   })}
             </CardDescription>
           </CardHeader>
@@ -241,7 +247,7 @@ export function DashboardOverviewTab() {
         <Card data-slot="dashboard-months">
           <CardHeader>
             <CardTitle>{t(`dashboard.months.title.${mode}`)}</CardTitle>
-            <CardDescription>{t(`dashboard.months.description.${mode}`, { currency: overview?.currency ?? "XAF" })}</CardDescription>
+            <CardDescription>{t(`dashboard.months.description.${mode}`, { currency: currencyUnit(overview?.currency) })}</CardDescription>
             <CardAction>
               <CardLink to="/finance">{t("dashboard.months.open")}</CardLink>
             </CardAction>
@@ -260,7 +266,7 @@ export function DashboardOverviewTab() {
             <CardDescription>
               {windows === undefined || overview === undefined
                 ? null
-                : t(`dashboard.branches.description.${mode}`, { period: windows.periodShort, currency: overview.currency })}
+                : t(`dashboard.branches.description.${mode}`, { period: windows.periodShort, currency: currencyUnit(overview.currency) })}
             </CardDescription>
             <CardAction>
               <CardLink to="/profit-by-branch" range={range}>
@@ -310,14 +316,17 @@ function OverviewTiles({
   mode,
   fleet,
   showFleet,
+  usage,
   isPending,
   isError,
   comparisonShort,
 }: {
   overview: FinanceOverviewResponse | undefined;
   mode: DashboardMode;
-  fleet: AssetSummary | undefined;
+  fleet: AssetOverview | undefined;
   showFleet: boolean;
+  /** The km read for the range; its money is null when Trips or Money is off. */
+  usage: FleetUsageResponse | undefined;
   isPending: boolean;
   isError: boolean;
   comparisonShort: string | undefined;
@@ -374,29 +383,62 @@ function OverviewTiles({
       ),
     );
   }
+  if (usage?.money != null) tiles.push(costPerKmTile(usage, usage.money, comparisonShort, t, language));
   if (showFleet) {
-    const grounded = fleet === undefined ? 0 : fleet.inService - fleet.canDrive;
+    const cannotDrive = fleet === undefined ? 0 : fleet.total - fleet.canDrive;
     tiles.push({
       id: "canDrive",
       label: t("dashboard.tiles.canDrive"),
-      value: fleet === undefined ? null : t("dashboard.tiles.canDriveValue", { count: fleet.canDrive, total: fleet.inService }),
+      value: fleet === undefined ? null : t("dashboard.tiles.canDriveValue", { count: fleet.canDrive, total: fleet.total }),
       ...(fleet === undefined
         ? {}
         : {
             hint:
-              fleet.inService === 0
-                ? t("dashboard.tiles.noneInService")
-                : grounded > 0
-                  ? t("dashboard.tiles.offTheRoad", { count: grounded })
+              fleet.total === 0
+                ? t("dashboard.tiles.noneInFleet")
+                : cannotDrive > 0
+                  ? t("dashboard.tiles.cannotDrive", { count: cannotDrive })
                   : t("dashboard.tiles.allCanDrive"),
           }),
-      tone: grounded > 0 ? "warning" : "neutral",
+      tone: cannotDrive > 0 ? "warning" : "neutral",
       link: { to: "/assets" },
     });
   }
   const strip = metricTiles(tiles);
   if (strip === undefined) return null;
   return <MetricStrip tiles={strip} isPending={isPending} isError={isError} />;
+}
+
+/**
+ * Cost per km (dashboards.html#home): expenses ÷ km over the vehicles whose
+ * both are known, against the comparison window (an increase is the bad
+ * way). Without a comparison it says whose km are known instead.
+ */
+function costPerKmTile(
+  usage: FleetUsageResponse,
+  money: NonNullable<FleetUsageResponse["money"]>,
+  comparisonShort: string | undefined,
+  t: Translate,
+  language: string | undefined,
+): MetricTile {
+  const current = money.period.costPerKmMinor;
+  const previous = money.comparison.costPerKmMinor;
+  const amount = moneyMetric(current, money.currency);
+  const known = usage.km?.period;
+  const hint =
+    current !== null && previous !== null && comparisonShort !== undefined
+      ? changeHint(current, previous, comparisonShort, money.currency, t, language)
+      : known === undefined
+        ? undefined
+        : t("overview.usage.kmKnown", { known: known.knownVehicles, total: known.vehicles });
+  return {
+    id: "cost-per-km",
+    label: t("dashboard.tiles.costPerKm"),
+    ...amount,
+    ...(amount.unit === undefined ? {} : { unit: t("dashboard.tiles.perKmUnit", { unit: amount.unit }) }),
+    ...(hint === undefined ? {} : { hint }),
+    info: t("dashboard.tiles.costPerKmInfo", { count: money.period.vehicles }),
+  };
 }
 
 /** "Profit 1 870 000 XAF · ▼ 100 000 vs Sep 1–9 · 20% of revenue"; a loss is called a loss. */
@@ -611,7 +653,7 @@ export function DashboardBranchesTab() {
           <CardDescription>
             {windows === undefined || overview === undefined
               ? null
-              : t(`dashboard.branches.description.${mode}`, { period: windows.periodShort, currency: overview.currency })}
+              : t(`dashboard.branches.description.${mode}`, { period: windows.periodShort, currency: currencyUnit(overview.currency) })}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
