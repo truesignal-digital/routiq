@@ -1,6 +1,6 @@
 # AGENTS.md — ROUTIQ
 
-Rules for every coding agent working in this repository (Codex, Claude Code and others). `CLAUDE.md` imports this file. Before changing anything under `apps/web/`, also read [`apps/web/AGENTS.md`](apps/web/AGENTS.md).
+Rules for every coding agent working in this repository (Claude Code sessions and their sub-agents; Claude models only: Fable orchestrates and reviews, Opus implements). `CLAUDE.md` imports this file. Before changing anything under `apps/web/`, also read [`apps/web/AGENTS.md`](apps/web/AGENTS.md).
 
 ## How trust works here
 
