@@ -1,0 +1,405 @@
+// @vitest-environment jsdom
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { FinanceOverviewResponse, FinanceSummaryResponse, FleetUsageResponse, OverviewNotice, OverviewRange, Role } from "@routiq/contracts";
+import { MeCtx, type MeContext } from "../auth/me.js";
+import { i18n } from "../i18n/index.js";
+import { testUsage } from "../overview/test-usage.js";
+
+const navigate = vi.fn();
+const routeSearch = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
+
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => navigate,
+  useSearch: () => routeSearch.current,
+  Link: ({
+    to,
+    search,
+    children,
+    ...props
+  }: {
+    to: string;
+    search?: Record<string, string | undefined>;
+    children?: ReactNode;
+  }) => {
+    const query = new URLSearchParams(
+      Object.entries(search ?? {}).filter((entry): entry is [string, string] => entry[1] !== undefined),
+    ).toString();
+    return (
+      <a href={query === "" ? to : `${to}?${query}`} {...props}>
+        {children}
+      </a>
+    );
+  },
+}));
+
+const window = (from: string, to: string, revenueMinor: number, expenseMinor: number, profit: boolean) => ({
+  from,
+  to,
+  revenueMinor,
+  expenseMinor,
+  profitMinor: profit ? revenueMinor - expenseMinor : null,
+});
+
+const companyProfit = {
+  vehicleProfitMinor: 0,
+  revenueWithoutVehicleMinor: 0,
+  companyCostsMinor: 0,
+  companyProfitMinor: 0,
+};
+
+function overview(view: FinanceOverviewResponse["view"], range: OverviewRange = "THIS_MONTH"): FinanceOverviewResponse {
+  const profit = view === "PROFIT";
+  const months = range !== "THIS_MONTH";
+  return {
+    currency: "XAF",
+    range,
+    branchId: null,
+    view,
+    period: months
+      ? window("2026-07-01", "2026-09-30", 27_000_000, 21_000_000, profit)
+      : window("2026-10-01", "2026-10-09", 9_560_000, 7_690_000, profit),
+    comparison: months
+      ? window("2026-04-01", "2026-06-30", 25_000_000, 20_000_000, profit)
+      : window("2026-09-01", "2026-09-09", 8_935_000, 6_928_000, profit),
+    series: Array.from({ length: 12 }, (_unused, index) => ({
+      periodCode: `2025-${String(index + 1).padStart(2, "0")}`,
+      revenueMinor: 0,
+      expenseMinor: 0,
+    })),
+    expensesByCategory: [
+      {
+        code: "REPAIRS",
+        labelFr: "Réparations",
+        labelEn: "Repairs",
+        layer: null,
+        period: { expenseMinor: 1_200_000, companyCostMinor: 0 },
+        comparison: { expenseMinor: 780_000, companyCostMinor: 0 },
+      },
+      {
+        code: "FUEL",
+        labelFr: "Carburant",
+        labelEn: "Fuel",
+        layer: null,
+        period: { expenseMinor: 3_900_000, companyCostMinor: 0 },
+        comparison: { expenseMinor: 3_480_000, companyCostMinor: 0 },
+      },
+    ],
+    vehicles: profit ? [] : null,
+    branches: profit ? [] : null,
+    companyProfit: profit ? { period: companyProfit, comparison: companyProfit } : null,
+    counted: { postedEntries: 148, closedTrips: 27 },
+    notCounted: {
+      waitingApproval: { count: 6, amountMinor: 1_140_000 },
+      missingReceipt: { count: 4, amountMinor: 586_000 },
+      openTrips: 5,
+      otherCurrencyEntries: 0,
+    },
+    summary: {
+      template: "BEHIND",
+      measure: profit ? "PROFIT" : "EXPENSES",
+      window: "MONTH_SO_FAR",
+      period: { from: "2026-10-01", to: "2026-10-09" },
+      comparison: { from: "2026-09-01", to: "2026-09-09" },
+      currentMinor: profit ? 1_870_000 : 7_690_000,
+      comparisonMinor: profit ? 2_007_000 : 6_928_000,
+      revenueMinor: profit ? 9_560_000 : null,
+      changePercent: profit ? 7 : 11,
+      reason: { kind: "CATEGORY", category: { code: "REPAIRS", labelFr: "Réparations", labelEn: "Repairs" }, changeMinor: 420_000 },
+      shortOf: null,
+      trips: { closed: 27, open: 5 },
+    },
+    notice: state.notice,
+  };
+}
+
+const usageState = vi.hoisted(() => ({
+  current: undefined as FleetUsageResponse | undefined,
+  calls: [] as { range: string; enabled: boolean }[],
+}));
+
+const NOT_DUE: OverviewNotice = { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] };
+
+const state = vi.hoisted(() => ({
+  view: "PROFIT" as "PROFIT" | "REVENUE_AND_EXPENSES",
+  ranges: [] as string[],
+  notice: { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] } as OverviewNotice,
+}));
+
+vi.mock("../overview/useFleetUsage.js", () => ({
+  useFleetUsage: (range: OverviewRange, enabled: boolean) => {
+    usageState.calls.push({ range, enabled });
+    return { data: enabled ? usageState.current : undefined, isPending: false, isError: false };
+  },
+}));
+
+vi.mock("../overview/useMoneyOverview.js", () => ({
+  useMoneyOverview: (range: OverviewRange) => {
+    state.ranges.push(range);
+    return { data: overview(state.view, range), isPending: false, isError: false, refetch: vi.fn() };
+  },
+}));
+
+const summary: FinanceSummaryResponse = {
+  currency: "XAF",
+  month: "2026-10",
+  unlockedPeriodCodes: ["2026-09"],
+  lastLockedPeriodCode: "2026-08",
+  outMinor: 7_690_000,
+  inMinor: 9_560_000,
+  missingReceipt: { count: 4, oldestEconomicDate: "2026-10-02" },
+  waiting: { count: 6, amountMinor: 1_140_000, oldestSubmittedAt: "2026-10-06T08:00:00.000Z" },
+};
+
+vi.mock("../finance/useFinanceSummary.js", () => ({
+  useFinanceSummary: () => ({ data: summary, isPending: false, isError: false }),
+}));
+
+vi.mock("../finance/usePeriods.js", () => ({
+  usePeriods: () => ({
+    data: {
+      currentPeriodCode: "2026-10",
+      periods: [
+        { periodCode: "2026-10", status: "OPEN", lockedAt: null, entryCount: 40, rowVersion: 1 },
+        { periodCode: "2026-09", status: "OPEN", lockedAt: null, entryCount: 154, rowVersion: 1 },
+      ],
+    },
+    isPending: false,
+    isError: false,
+  }),
+}));
+
+const { closeHint, FinanceOverviewScreen } = await import("./FinanceOverviewScreen.js");
+
+function me(role: Role): MeContext {
+  return {
+    workspaceId: "00000000-0000-4000-8000-000000000001",
+    principalId: "00000000-0000-4000-8000-000000000002",
+    principalType: "HUMAN",
+    membershipId: "00000000-0000-4000-8000-000000000003",
+    displayName: "Sali Ahmadou",
+    workspaceName: "Transports Ngwa",
+    role,
+    branchScope: "ALL",
+    enabledModules: ["CORE", "ASSETS", "ACTIVITIES", "FINANCE"],
+    enabledPresets: ["TRUCKING"],
+    timezone: "Africa/Douala",
+  };
+}
+
+function renderAs(role: Role) {
+  return render(
+    <MeCtx.Provider value={me(role)}>
+      <FinanceOverviewScreen />
+    </MeCtx.Provider>,
+  );
+}
+
+function tiles() {
+  return [...document.querySelectorAll<HTMLElement>('[data-slot="metric-tile"]')];
+}
+
+function tile(id: string): HTMLElement {
+  const found = document.querySelector<HTMLElement>(`[data-metric="${id}"]`);
+  if (found === null) throw new Error(`no tile ${id}`);
+  return found;
+}
+
+beforeAll(async () => {
+  await i18n.changeLanguage("en");
+});
+
+afterAll(async () => {
+  await i18n.changeLanguage("fr-CM");
+});
+
+beforeEach(() => {
+  navigate.mockClear();
+  routeSearch.current = {};
+  state.view = "PROFIT";
+  state.ranges = [];
+  usageState.current = testUsage();
+  usageState.calls = [];
+  state.notice = NOT_DUE;
+  localStorage.clear();
+});
+
+afterEach(cleanup);
+
+describe("Money Overview (#664)", () => {
+  it("shows finance the five tiles, each opening its tab already filtered", () => {
+    renderAs("FINANCE");
+
+    expect(tiles().map((node) => node.querySelector("dt")?.textContent)).toEqual([
+      "Expenses",
+      "Revenue",
+      "To approve",
+      "Missing receipt",
+      "September 2026 close",
+    ]);
+    const href = (id: string) => tile(id).querySelector("a")?.getAttribute("href");
+    expect(href("expenses")).toBe("/finance/entries?status=LEDGER&direction=EXPENSE&economicMonth=2026-10");
+    expect(href("revenue")).toBe("/finance/entries?status=LEDGER&direction=REVENUE&economicMonth=2026-10");
+    expect(href("approve")).toBe("/finance/approve");
+    expect(href("missing")).toBe("/finance/entries?evidence=MISSING");
+    expect(href("close")).toBe("/finance/entries?periodCode=2026-09");
+  });
+
+  it("compares each amount with the same days of last month, arrow and words", () => {
+    renderAs("FINANCE");
+
+    const text = (node: HTMLElement | null) => node?.textContent?.replace(/\s/g, " ") ?? "";
+    expect(text(tile("expenses"))).toContain("▲ 11% vs 1–9 Sept");
+    expect(text(tile("revenue"))).toContain("▲ 7% vs 1–9 Sept");
+    expect(text(document.querySelector('[data-slot="money-overview-period"]'))).toBe(
+      "1–9 October compared with 1–9 September",
+    );
+    expect(tile("close").textContent).toContain("Open");
+    expect(tile("close").textContent).toContain("154 entries");
+  });
+
+  it("names the earlier months still not locked under the close (#526)", () => {
+    expect(closeHint("2026-09", undefined, ["2026-07", "2026-08", "2026-09"], i18n.t.bind(i18n), "en")).toEqual({
+      hint: "Earlier, not locked: July 2026 and August 2026",
+    });
+    expect(
+      closeHint("2026-09", undefined, ["2026-03", "2026-04", "2026-05", "2026-06"], i18n.t.bind(i18n), "en"),
+    ).toEqual({ hint: "4 earlier months not locked" });
+  });
+
+  it("ranks the categories by this period's spending, each with the comparison beside it", () => {
+    renderAs("FINANCE");
+
+    const card = document.querySelector<HTMLElement>('[data-slot="money-categories"]')!;
+    const rows = within(card).getAllByRole("listitem").map((row) => row.textContent?.replace(/\s/g, " "));
+    expect(rows[0]).toMatch(/^Fuel.*3 900 000 FCFA vs .*3 480 000 FCFA$/);
+    expect(rows[1]).toMatch(/^Repairs.*1 200 000 FCFA vs .*780 000 FCFA$/);
+  });
+
+  it("lists what waits, each with its one button", () => {
+    renderAs("FINANCE");
+
+    const todo = document.querySelector<HTMLElement>('[data-slot="to-do-list"]')!;
+    const rows = within(todo).getAllByRole("listitem");
+    expect(rows.map((row) => row.querySelector("p")?.textContent)).toEqual([
+      "6 entries wait for your approval",
+      "4 entries have no receipt",
+      "Close September 2026",
+    ]);
+    expect(rows.map((row) => row.querySelector("a")?.getAttribute("href"))).toEqual([
+      "/finance/approve",
+      "/finance/entries?evidence=MISSING",
+      "/finance/periods",
+    ]);
+  });
+
+  it("says what the figures leave out", () => {
+    renderAs("FINANCE");
+
+    const line = document.querySelector('[data-slot="money-counted"]')?.textContent ?? "";
+    expect(line).toContain("Counted: 148 posted entries.");
+    expect(line).toContain("Not counted: 6 entries in the period wait for approval");
+    expect(line).toContain("4 entries in the period have no receipt.");
+    expect(line).toContain("5 activities are still open");
+  });
+
+  it("gives a cashier revenue and expenses, never profit, and no queue or month close", () => {
+    state.view = "REVENUE_AND_EXPENSES";
+    renderAs("CASHIER");
+
+    expect(tiles().map((node) => node.querySelector("dt")?.textContent)).toEqual([
+      "Expenses",
+      "Revenue",
+      "Missing receipt",
+    ]);
+    const page = document.querySelector('[data-slot="money-overview"]')?.textContent ?? "";
+    expect(page).not.toMatch(/profit|loss/i);
+    expect(page).not.toContain("wait for your approval");
+    expect(page).not.toContain("Close September");
+  });
+
+  it("changes the range from the Overview, keeping it in the address", async () => {
+    const user = userEvent.setup();
+    renderAs("FINANCE");
+
+    await user.click(screen.getByRole("radio", { name: "3 months" }));
+    expect(navigate).toHaveBeenLastCalledWith({ to: "/finance", search: { range: "3-months" } });
+
+    cleanup();
+    routeSearch.current = { range: "3-months" };
+    renderAs("FINANCE");
+    expect(state.ranges.at(-1)).toBe("THREE_MONTHS");
+    expect(screen.getByRole("radio", { name: "3 months" }).getAttribute("aria-checked")).toBe("true");
+    expect(document.querySelector('[data-slot="money-overview-period"]')?.textContent?.replace(/\s/g, " ")).toBe(
+      "July – September 2026 compared with April – June 2026",
+    );
+    // Whole months filter the list by kind; a single month would not match the figure.
+    expect(tile("expenses").querySelector("a")?.getAttribute("href")).toBe(
+      "/finance/entries?status=LEDGER&direction=EXPENSE",
+    );
+  });
+
+  it("sends a driver, who has no Overview, to their entries", () => {
+    renderAs("DRIVER");
+    expect(navigate).toHaveBeenCalledWith({ to: "/finance/entries", replace: true });
+    expect(document.querySelector('[data-slot="money-overview"]')).toBeNull();
+  });
+
+  it("opens on a Monday with the summary notice above the tiles; closed, the counted line sits under them (#667)", async () => {
+    state.notice = { today: "2026-10-05", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: "MONDAY", changes: [] };
+    renderAs("FINANCE");
+    const region = screen.getByRole("region", { name: "Summary" });
+    expect(region.textContent?.replace(/\s/g, " ")).toContain(
+      "So far in October: a profit of 1 870 000 FCFA on 9 560 000 FCFA revenue, 137 000 FCFA worse than September at the same day.",
+    );
+    expect(region.textContent).toContain("Spending on Repairs rose by");
+    expect(region.querySelector('[data-slot="money-counted"]')).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: "Close the summary" }));
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+    const counted = document.querySelector('[data-slot="money-counted"]');
+    expect(counted?.closest('[data-summary="closed"]')).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Show summary" })).toBeTruthy();
+  });
+
+  it("tells the cashier about expenses, never profit", async () => {
+    state.view = "REVENUE_AND_EXPENSES";
+    renderAs("CASHIER");
+    await userEvent.click(screen.getByRole("button", { name: "Show summary" }));
+    const text = screen.getByRole("region", { name: "Summary" }).textContent ?? "";
+    expect(text.replace(/\s/g, " ")).toContain("So far in October: 7 690 000 FCFA of expenses, 11% more than September at the same day.");
+    expect(text).not.toMatch(/profit/i);
+  });
+});
+
+describe("Money Overview › Fuel per km by truck (#668)", () => {
+  const card = () => document.querySelector<HTMLElement>('[data-slot="fuel-per-km-by-truck"]');
+
+  it("ranks fuel per km against the fleet median, flags the outlier and links each truck", () => {
+    renderAs("FINANCE");
+    const found = card();
+    if (found === null) throw new Error("no fuel card");
+    const rows = [...found.querySelectorAll("[data-slot=ranked-bars-row]")];
+    expect(rows.map((row) => row.querySelector("a")?.textContent)).toEqual(["VH007", "VH003", "VH001"]);
+    expect(rows[0]?.hasAttribute("data-flagged")).toBe(true);
+    expect(rows[0]?.textContent).toContain("24% above the median");
+    expect(within(found).getByRole("link", { name: "VH007" }).getAttribute("href")).toBe("/assets/a7");
+    expect(found.textContent?.replace(/\s/g, " ")).toMatch(/Fleet median \S*\s?300/);
+    expect(found.textContent).toContain("Not counted: 1 vehicle whose km are not known.");
+    expect(found.textContent).toContain("Fuel expenses ÷ km from legs or the odometer.");
+  });
+
+  it("reads the page's range", () => {
+    routeSearch.current = { range: "3-months" };
+    renderAs("FINANCE");
+    expect(usageState.calls.at(-1)).toEqual({ range: "THREE_MONTHS", enabled: true });
+  });
+
+  it("leaves the card out for the cashier, who reads no vehicle money, and never asks", () => {
+    renderAs("CASHIER");
+    expect(card()).toBeNull();
+    expect(usageState.calls.every((call) => !call.enabled)).toBe(true);
+  });
+});

@@ -10,6 +10,8 @@ const SECTIONS = visibleSections("DIRECTOR", [...MODULE_CODES]);
 const SECTION_ROOTS = new Set(SECTIONS.map((section) => section.to));
 /** Pages no sidebar section owns: the trail is Home › page. */
 const STANDALONE = new Set(["/my-settings", "/more/persons", "/more/users", "/more/branches"]);
+/** The Dashboard's tabs: Home is their section, so the trail is Home › tab. */
+const HOME_TABS = new Set(["/to-do", "/profit-by-vehicle", "/profit-by-branch"]);
 /** Routes that only redirect never draw a trail. */
 const REDIRECTS = new Set(["/more"]);
 
@@ -50,7 +52,7 @@ describe("every route has a breadcrumb trail", () => {
       return;
     }
 
-    if (STANDALONE.has(path)) {
+    if (STANDALONE.has(path) || HOME_TABS.has(path)) {
       expect(trail.map((crumb) => crumb.to)).toEqual(["/", undefined]);
       return;
     }

@@ -77,7 +77,7 @@ const flow: DriveScript = async ({ page, nav, t, shot, quiet, log, apiGet }) => 
     ...(await visible(page.locator("dl").first())),
   });
 
-  await nav("/assets");
+  await nav("/assets/list");
   await page.getByRole("button", { name: /VH003/ }).first().waitFor();
   await quiet();
   const trucks = await check("trucks");

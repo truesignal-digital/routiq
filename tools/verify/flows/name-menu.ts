@@ -42,7 +42,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
     window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
   });
   await page.waitForURL((url) => url.pathname === "/");
-  await page.getByRole("heading", { level: 1, name: t("Accueil", "Home") }).waitFor();
+  await page.getByRole("heading", { level: 1, name: t("Tableau de bord", "Dashboard") }).waitFor();
   await quiet();
   if (new URL(page.url()).pathname !== "/") throw new Error(`/more landed on ${page.url()}`);
   log("/more redirected to /");

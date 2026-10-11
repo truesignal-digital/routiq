@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { PageContainer, type PageContainerProps } from "@/components/page-container";
+import { PageContainer } from "@/components/page-container";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
@@ -11,9 +11,10 @@ import { Skeleton } from "@/components/ui/skeleton";
  * rows, as DataTable draws them on a phone.
  */
 
-function Frame({ width = "wide", children }: { width?: PageContainerProps["width"]; children: ReactNode }) {
+/** Every page has one width, the page frame (#658), so the skeleton has it too. */
+function Frame({ children }: { children: ReactNode }) {
   return (
-    <PageContainer width={width}>
+    <PageContainer>
       <Busy>{children}</Busy>
     </PageContainer>
   );
@@ -107,16 +108,16 @@ function RecordBody() {
   );
 }
 
-/** An entry on its own page: title, status line, then its fields, at the default width. */
+/** An entry on its own page: title, status line, then its fields. */
 export function RecordSkeleton() {
   return (
-    <Frame width="default">
+    <Frame>
       <RecordBody />
     </Frame>
   );
 }
 
-/** A trip on its own page: the same record, at the wide width its timeline uses. */
+/** A trip on its own page: the same record, with room for its timeline. */
 export function WideRecordSkeleton() {
   return (
     <Frame>

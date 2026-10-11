@@ -11,7 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { formatDate, formatDateTime } from "@/lib/format.js"
+import { formatDateInput } from "@/lib/format.js"
 import { cn } from "@/lib/utils"
 
 type Kind = "date" | "datetime"
@@ -69,54 +69,24 @@ function nowTime() {
   return `${pad(now.getHours())}:${pad(now.getMinutes())}`
 }
 
-function formatTime(time: string, locale: string) {
-  const [hours = 0, minutes = 0] = time.split(":").map(Number)
-  return new Intl.DateTimeFormat(locale, { timeStyle: "short" }).format(
-    new Date(2000, 0, 1, hours, minutes),
-  )
-}
-
-/** The same text `formatDate` / `formatDateTime` show everywhere else in the app. */
-function formatValue(kind: Kind, value: string, locale: string) {
+/** The text the field shows: "29/07/2026", or "29/07/2026 14:30" with a time (#712). */
+function formatValue(kind: Kind, value: string) {
   if (dateFromIso(value) === undefined) return ""
-  if (kind === "date") return formatDate(value.slice(0, 10), locale)
+  if (kind === "date") return formatDateInput(value)
   const time = timeOf(value)
-  return time === undefined ? "" : formatDateTime(`${value.slice(0, 10)}T${time}`, locale)
+  return time === undefined ? "" : `${formatDateInput(value)} ${time}`
 }
 
-/** Where day, month and year sit in the locale's short date: d/m/y in French, m/d/y in English. */
-function fieldOrder(locale: string) {
-  return new Intl.DateTimeFormat(locale, { dateStyle: "short" })
-    .formatToParts(new Date(2000, 0, 2))
-    .flatMap((part) =>
-      part.type === "day" || part.type === "month" || part.type === "year" ? [part.type] : [],
-    )
-}
-
-function shortYearDigits(locale: string) {
-  return new Intl.DateTimeFormat(locale, { dateStyle: "short" })
-    .formatToParts(new Date(2000, 0, 2))
-    .find((part) => part.type === "year")?.value.length
-}
-
-function parseDay(text: string, locale: string) {
+/** Day/month/year in both languages, the year in four digits; an ISO date reads too. */
+function parseDay(text: string) {
   const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(text)
   if (iso !== null) {
     const date = realDate(Number(iso[1]), Number(iso[2]), Number(iso[3]))
     return date === undefined ? undefined : isoDate(date)
   }
-  const numeric = /^(\d{1,4})[/.-](\d{1,2})[/.-](\d{1,4})$/.exec(text)
+  const numeric = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(text)
   if (numeric === null) return undefined
-  const parts: Record<string, number> = {}
-  fieldOrder(locale).forEach((type, index) => {
-    parts[type] = Number(numeric[index + 1])
-  })
-  const { day, month, year } = parts
-  const digits = numeric[fieldOrder(locale).indexOf("year") + 1]?.length
-  if (day === undefined || month === undefined || year === undefined) return undefined
-  // The English short date writes the year as "26", so the text it shows must read back.
-  if (digits !== 4 && !(digits === 2 && shortYearDigits(locale) === 2)) return undefined
-  const date = realDate(digits === 2 ? 2000 + year : year, month, day)
+  const date = realDate(Number(numeric[3]), Number(numeric[2]), Number(numeric[1]))
   return date === undefined ? undefined : isoDate(date)
 }
 
@@ -136,13 +106,13 @@ function parseTime(text: string) {
   return `${pad(hours)}:${pad(minutes)}`
 }
 
-function parseValue(kind: Kind, raw: string, locale: string) {
+function parseValue(kind: Kind, raw: string) {
   const text = plainSpaces(raw).trim()
-  if (kind === "date") return parseDay(text, locale)
+  if (kind === "date") return parseDay(text)
   const iso = /^(\d{4}-\d{1,2}-\d{1,2})[T ](\d{1,2}:\d{2})(?::\d{2}(?:\.\d+)?)?$/.exec(text)
   const split = iso ?? /^(\S+?)(?:,?\s+(?:à\s+|at\s+)?)(\S.*)$/i.exec(text)
   if (split === null) return undefined
-  const day = parseDay(split[1] ?? "", locale)
+  const day = parseDay(split[1] ?? "")
   const time = parseTime((split[2] ?? "").trim())
   return day === undefined || time === undefined ? undefined : `${day}T${time}`
 }
@@ -169,7 +139,7 @@ function DateCalendarField({
   const problemId = useId()
   const timeId = useId()
 
-  const [text, setText] = useState(() => formatValue(kind, value, locale))
+  const [text, setText] = useState(() => formatValue(kind, value))
   const [shown, setShown] = useState({ value, locale })
   const [problem, setProblem] = useState<Problem | null>(null)
   const [open, setOpen] = useState(false)
@@ -177,7 +147,7 @@ function DateCalendarField({
 
   if (shown.value !== value || shown.locale !== locale) {
     setShown({ value, locale })
-    setText(formatValue(kind, value, locale))
+    setText(formatValue(kind, value))
     setProblem(null)
   }
 
@@ -197,7 +167,7 @@ function DateCalendarField({
 
   function choose(next: string) {
     commit(next)
-    setText(formatValue(kind, next, locale))
+    setText(formatValue(kind, next))
     setProblem(null)
   }
 
@@ -210,19 +180,19 @@ function DateCalendarField({
       return
     }
     // A half-typed date is not a value yet; leaving the field decides.
-    const parsed = parseValue(kind, raw, locale)
+    const parsed = parseValue(kind, raw)
     if (parsed !== undefined && rangeProblem(parsed) === null) commit(parsed)
   }
 
   function left() {
     if (text.trim() !== "") {
-      const parsed = parseValue(kind, text, locale)
+      const parsed = parseValue(kind, text)
       const problemFound = parsed === undefined ? "format" : rangeProblem(parsed)
       if (parsed === undefined || problemFound !== null) {
         setProblem(problemFound)
         commit("")
       } else {
-        setText(formatValue(kind, parsed, locale))
+        setText(formatValue(kind, parsed))
       }
     }
     onBlur?.()
@@ -232,7 +202,7 @@ function DateCalendarField({
     const date = isoDate(day)
     choose(kind === "date" ? date : `${date}T${timeOf(value) ?? parseTime(plainSpaces(timeText).trim()) ?? nowTime()}`)
     if (kind === "datetime" && timeText === "") {
-      setTimeText(formatTime(timeOf(value) ?? nowTime(), locale))
+      setTimeText(timeOf(value) ?? nowTime())
     }
     if (closeAfter) setOpen(false)
   }
@@ -252,14 +222,14 @@ function DateCalendarField({
       (maxDay !== undefined && maxDay !== "" && iso > maxDay)
   }
   const selected = dateFromIso(value)
-  const example = formatValue(kind, `${isoDate(today)}T14:30`, locale)
+  const example = formatValue(kind, `${isoDate(today)}T14:30`)
   const problemText =
     problem === "format"
       ? t(kind === "date" ? "dateField.invalidDate" : "dateField.invalidDateTime", { example })
       : problem === "early"
-        ? t("dateField.tooEarly", { min: formatValue(kind, min ?? "", locale) })
+        ? t("dateField.tooEarly", { min: formatValue(kind, min ?? "") })
         : problem === "late"
-          ? t("dateField.tooLate", { max: formatValue(kind, max ?? "", locale) })
+          ? t("dateField.tooLate", { max: formatValue(kind, max ?? "") })
           : null
   const describedBy = [aria["aria-describedby"], problemText === null ? undefined : problemId]
     .filter((part) => part !== undefined && part.trim() !== "")
@@ -289,7 +259,7 @@ function DateCalendarField({
           open={open}
           onOpenChange={(next) => {
             setOpen(next)
-            if (next) setTimeText(timeOf(value) === undefined ? "" : formatTime(timeOf(value) ?? "", locale))
+            if (next) setTimeText(timeOf(value) === undefined ? "" : (timeOf(value) ?? ""))
           }}
         >
           <PopoverTrigger
@@ -340,13 +310,13 @@ function DateCalendarField({
                     id={timeId}
                     inputMode="numeric"
                     autoComplete="off"
-                    placeholder={formatTime("14:30", locale)}
+                    placeholder="14:30"
                     value={timeText}
                     className="min-h-11"
                     onChange={typedTime}
                     onBlur={() => {
                       const time = parseTime(plainSpaces(timeText).trim())
-                      if (time !== undefined) setTimeText(formatTime(time, locale))
+                      if (time !== undefined) setTimeText(time)
                     }}
                   />
                 </div>

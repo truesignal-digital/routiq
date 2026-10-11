@@ -83,7 +83,8 @@ const MATRIX: Readonly<Record<string, Row>> = {
   "relabel-category":                    [x, _, _, _, _, _],
   "deactivate-category":                 [x, _, _, _, _, _],
   "reactivate-category":                 [x, _, _, _, _, _],
-  "update-approval-threshold":           [x, _, _, _, _, _],
+  "update-approval-threshold":           [x, x, _, _, _, _], // company settings: Direction and Administrators (#711)
+  "set-summary-schedule":                [x, x, _, _, _, _],
   "acknowledge-approval-rules":          [x, x, x, x, x, x], // each member their own notice (#422)
   // enable-module, disable-module and set-template-preset are platform scope
   // (ADR-0005): a vendor operator runs them, no tenant role does.

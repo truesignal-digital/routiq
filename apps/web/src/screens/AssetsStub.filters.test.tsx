@@ -8,7 +8,7 @@ import "../i18n/index.js";
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { AssetsStub } from "./AssetsStub.js";
-import { applyNavigate, useTestSearch } from "../test-router.js";
+import { applyNavigate, resetSearch, useTestSearch } from "../test-router.js";
 
 // A real Link needs a router around it; the screen renders bare here.
 vi.mock("@tanstack/react-router", () => ({
@@ -134,6 +134,7 @@ describe("assets explorer server-side filtering", () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    resetSearch();
     sessionStore.logout({ username: "ada", workspaceSlug: "ws-1" });
   });
 
@@ -243,60 +244,38 @@ describe("assets explorer server-side filtering", () => {
     ).toBeDefined();
   });
 
-  describe("metric strip", () => {
-    it("shows the counts the server computed, not the rows on screen", async () => {
-      const { summaryRequested } = stubFetch([
-        { items: [item("AST-001", "Mercedes")], nextCursor: "page-2" },
-      ]);
+  describe("the Overview's filters (#665)", () => {
+    it("starts with its search and filters: the tiles moved to the Overview", async () => {
+      const { summaryRequested } = stubFetch([{ items: [item("AST-001", "Mercedes")], nextCursor: null }]);
       renderScreen();
       await screen.findByText("AST-001");
-
-      const values = await waitFor(() => {
-        const nodes = document.querySelectorAll("[data-slot=metric-value]");
-        expect(nodes).toHaveLength(3);
-        return [...nodes].map((node) => node.textContent);
-      });
-
-      // One row is loaded; the tiles still report the whole fleet.
-      expect(values).toEqual(["6", "4", "2"]);
-      expect(summaryRequested).toHaveLength(1);
+      expect(document.querySelector("[data-slot=metric-strip]")).toBeNull();
+      expect(summaryRequested).toHaveLength(0);
     });
 
-    it("says the Attention count covers grounded vehicles only while MAINTENANCE is on", async () => {
+    it("hands the availability a tile put in the address to the read", async () => {
+      resetSearch({ availability: "GROUNDED" });
+      const { requested } = stubFetch([{ items: [item("AST-001", "Mercedes")], nextCursor: null }]);
+      renderScreen("ADMIN", ["CORE", "ASSETS", "MAINTENANCE"]);
+      await screen.findByText("AST-001");
+      await waitFor(() => expect(lastQuery(requested).get("availability")).toBe("GROUNDED"));
+    });
+
+    it("offers Grounded only while MAINTENANCE is on, and no-trip only while Trips is on", async () => {
       stubFetch([{ items: [item("AST-001", "Mercedes")], nextCursor: null }]);
-      const { unmount } = renderScreen("ADMIN", ["CORE", "ASSETS", "MAINTENANCE"]);
-      expect(
-        await screen.findByText("Immobilisés, en maintenance, retirés ou réformés"),
-      ).toBeDefined();
+      const { unmount } = renderScreen("ADMIN", ["CORE", "ASSETS", "MAINTENANCE", "ACTIVITIES"]);
+      await screen.findByText("AST-001");
+      await userEvent.click(screen.getByRole("combobox", { name: "Disponibilité" }));
+      expect(await screen.findByRole("option", { name: "Immobilisé" })).toBeDefined();
+      expect(screen.getByRole("option", { name: "Sans sortie depuis 5 jours ou plus" })).toBeDefined();
       unmount();
 
       renderScreen("ADMIN", ["CORE", "ASSETS"]);
-      expect(await screen.findByText("En maintenance, retirés ou réformés")).toBeDefined();
-      expect(
-        screen.queryByText("Immobilisés, en maintenance, retirés ou réformés"),
-      ).toBeNull();
-    });
-
-    it("asks the summary to narrow with the table, minus the status bucket", async () => {
-      const { summaryRequested } = stubFetch([
-        { items: [item("AST-001", "Mercedes")], nextCursor: null },
-      ]);
-      renderScreen();
       await screen.findByText("AST-001");
-
-      await userEvent.click(screen.getByRole("combobox", { name: "Statut" }));
-      await userEvent.click(
-        await screen.findByRole("option", { name: "À surveiller" }),
-      );
-      await userEvent.type(
-        screen.getByRole("searchbox", { name: /code, plaque/i }),
-        "scania",
-      );
-
-      await waitFor(() =>
-        expect(lastQuery(summaryRequested).get("search")).toBe("scania"),
-      );
-      expect(lastQuery(summaryRequested).getAll("status")).toEqual([]);
+      await userEvent.click(screen.getByRole("combobox", { name: "Disponibilité" }));
+      expect(await screen.findByRole("option", { name: "Peut rouler" })).toBeDefined();
+      expect(screen.queryByRole("option", { name: "Immobilisé" })).toBeNull();
+      expect(screen.queryByRole("option", { name: "Sans sortie depuis 5 jours ou plus" })).toBeNull();
     });
   });
 

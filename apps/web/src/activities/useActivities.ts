@@ -19,6 +19,8 @@ export async function fetchActivities(
     /** ISO dates; the server reads them as workspace days (#511). */
     from?: string;
     to?: string;
+    /** Closed trips missing fuel or km (#665). */
+    missing?: string;
     sort?: string;
     cursor?: string;
   } = {},
@@ -47,6 +49,8 @@ export interface UseActivitiesParams {
   activityTypeCode?: string;
   from?: string;
   to?: string;
+  /** Closed trips missing fuel or km (#665). */
+  missing?: string;
   /** `field:asc|desc`; the cursor is keyed on it, so a change starts a new query. */
   sort?: string;
 }
@@ -103,6 +107,10 @@ function isActivitySummary(value: unknown): value is ActivitySummary {
     typeof record["thisWeek"] === "number" &&
     typeof record["open"] === "number" &&
     typeof record["incomplete"] === "number" &&
+    typeof record["weekClosed"] === "number" &&
+    typeof record["closedMissing"] === "object" &&
+    record["closedMissing"] !== null &&
+    Array.isArray(record["weeks"]) &&
     (km === null || typeof km === "number")
   );
 }

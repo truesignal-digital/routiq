@@ -309,6 +309,21 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "H20",
+    // English screens showed "7/29/26": each screen built its own Intl.DateTimeFormat (#712).
+    bad: [
+      file("apps/web/src/activities/TripsOverview.tsx", 'new Intl.DateTimeFormat(language, { month: "short", day: "numeric" })'),
+      file("apps/web/src/components/ui/calendar.tsx", "const label = day.toLocaleDateString(locale);"),
+      file("apps/web/src/finance/X.tsx", "{new Date(entry.postedAt).toLocaleString()}"),
+    ],
+    good: [
+      file("apps/web/src/lib/format.ts", 'new Intl.DateTimeFormat(dateLocale(locale), { day: "numeric", month })'),
+      file("apps/web/src/lib/workspace-day.ts", 'new Intl.DateTimeFormat("en-CA", { timeZone })'),
+      file("apps/web/src/activities/TripsOverview.tsx", 'formatDayMonth(iso, language, { month: "short" })'),
+      file("apps/api/src/reads/business-date.ts", 'new Intl.DateTimeFormat("en-CA", { timeZone })'),
+    ],
+  },
+  {
     id: "H18",
     // From Maintenance, Report a problem was a centred dialog; from the truck, a panel.
     bad: [
@@ -380,6 +395,26 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
       file("apps/web/src/branches/CreateBranchDialog.tsx", "field.onChange(event.target.value.toUpperCase())"),
       // The wordmark sets the product name in wide caps; it is the logo, not a label.
       file("apps/web/src/components/brand/routiq-logo.tsx", 'className={cn("tracking-[0.16em] uppercase", className)}'),
+    ],
+  },
+  {
+    id: "DS-5",
+    // #658: money entry, trip and register-a-truck each picked a width (736, 1 120, 544 px at 1920).
+    bad: [
+      file("apps/web/src/screens/AssetRegisterScreen.tsx", '<section className="mx-auto w-full max-w-xl px-4 py-6">'),
+      file("apps/web/src/screens/ActivityDetailScreen.tsx", '<div className="grid gap-4 lg:max-w-[840px]">'),
+      file("apps/web/src/screens/X.tsx", '<p className="mt-2 max-w-lg text-sm text-muted-foreground">{description}</p>'),
+      file("apps/web/src/screens/X.tsx", "<div style={{ maxWidth: 736 }}>"),
+    ],
+    good: [
+      file("apps/web/src/screens/AssetRegisterScreen.tsx", "<PageContainer>"),
+      // The frame and a part's own measure live in components/, not in a screen.
+      file("apps/web/src/components/page-container.tsx", 'className={cn("mx-auto w-full max-w-[1248px] px-4 py-6 sm:px-6", className)}'),
+      file("apps/web/src/components/page.tsx", '{description && <p className="mt-2 max-w-lg text-sm">{description}</p>}'),
+      file("apps/web/src/screens/MaintenanceScreen.test.tsx", 'expect(panel.className).toContain("max-w-[560px]");'),
+      file("apps/web/src/screens/X.tsx", '<div className="min-w-0 flex-1">'),
+      // Sign-in is outside the shell and its frame.
+      file("apps/web/src/screens/LoginScreen.tsx", '<main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col">'),
     ],
   },
   {

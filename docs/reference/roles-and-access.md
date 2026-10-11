@@ -16,7 +16,7 @@ person held before.
 | Role (fr) | Role (en) | Who it is for | Branches |
 |---|---|---|---|
 | **Direction** | Director | Owner, DG, stakeholder. Sees everything, approves anything, runs settings and access. | Always all |
-| **Administrateur** | Administrator | Runs daily operations of their branches: vehicles, trips, work orders, people. In the org chart: the Chef d'agence. | Listed branches or all, usually one |
+| **Administrateur** | Administrator | Runs daily operations of their branches: vehicles, trips, work orders, people. Changes the company settings with Direction (ADR-0013). In the org chart: the Chef d'agence. | Listed branches or all, usually one |
 | **Finance** | Finance | Validates money entries, keeps the books and documents, pays suppliers (planned). | Listed branches or all, usually all |
 | **Caissier** | Cashier | Records money in and out at the counter, with receipts. Approves nothing. | Listed branches or all |
 | **Technicien** | Technician | Workshop: problems, work orders, parts and labour, readings. No books. | Listed branches or all |
@@ -50,10 +50,10 @@ whatever its access says.
   decides above 1 000 000 XAF and may decide anything. No one decides their
   own entry, so a Finance member's own entry goes to Direction (or another
   Finance member). Only Direction's own entries post at any amount (#412).
-  Both bands are tenant data: Direction moves them in the approval settings.
-  When Direction moves a band, everyone else whose own entries it moves sees
-  a notice in the app on their next screen, with their new chain, until they
-  dismiss it. The amount field of the expense and revenue forms states the
+  Both bands are tenant data: Direction or an Administrator moves them in
+  Company settings (ADR-0013, #711). When a band moves, everyone else whose
+  own entries it moves sees a notice in the app on their next screen, naming
+  who changed the rules and with their new chain, until they dismiss it. The amount field of the expense and revenue forms states the
   rule too (#422).
 - **V** view only. **Own** only their own records. **—** no access. For
   trips, a driver's own trips are the ones they recorded, are planned to
@@ -110,7 +110,8 @@ whatever its access says.
 | People | Add a person (driver, hostess, mechanic…) | ✓ | ✓ | — | — | — | — |
 | People | Give, change or remove app access; reset PIN | ✓ every role but Direction | ✓ Chauffeur, Technicien, Caissier only | — | — | — | — |
 | People | Link a person to their login, change or unlink it (#569) | ✓ every role but Direction | ✓ Chauffeur, Technicien, Caissier only, people of their branches | — | — | — | — |
-| Settings | Branches, categories, approval bands | ✓ | — | — | — | — | — |
+| Settings | Branches, categories | ✓ | — | — | — | — | — |
+| Settings | Company settings: approval thresholds, Dashboard summary schedule (#669); the company's rule, whatever the Administrator's branches (ADR-0013, #711) | ✓ | ✓ | — | — | — | — |
 | Settings | Modules and template presets | vendor only (ADR-0005, confirmed 2026-10-08; `pnpm --filter @routiq/api entitlement`, #362) | — | — | — | — | — |
 | Any | Approve something you submitted | — | — | — | — | — | — |
 

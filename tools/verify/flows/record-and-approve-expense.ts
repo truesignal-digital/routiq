@@ -31,7 +31,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await amount.scrollIntoViewIfNeeded();
   await page.waitForTimeout(400);
   await shot("expense-form", {
-    caption: "The cashier records a 150,000 FCFA loading expense, above the 100,000 approval threshold",
+    caption: "The cashier records a 150 000 FCFA loading expense, above the 100 000 FCFA approval threshold",
     highlight: amount,
   });
   await page.getByRole("button", { name: t("Enregistrer la dépense", "Record the expense") }).click();
@@ -69,7 +69,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await page.waitForURL((url) => url.pathname === "/");
   await quiet();
 
-  await nav("/finance/entries?view=waiting");
+  await nav("/finance/approve");
   await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
   const row = itemWith(entry.entryNumber);
   await row.waitFor();

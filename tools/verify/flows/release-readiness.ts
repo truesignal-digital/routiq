@@ -22,6 +22,7 @@ const settle = (ctx: DriveContext) => ctx.page.waitForTimeout(700);
 async function openVh003(ctx: DriveContext): Promise<string> {
   const { page, t, quiet } = ctx;
   await (await openSidebar(page)).getByRole("link", { name: t("Camions", "Trucks") }).click();
+  await page.locator("[data-slot='module-page-tabs']").getByRole("tab", { name: t("Camions", "Trucks") }).click();
   await page.getByRole("button", { name: /VH003/ }).first().click();
   await page.getByRole("heading", { level: 1, name: "VH003" }).waitFor({ timeout: 90_000 });
   await quiet();
@@ -143,13 +144,13 @@ async function approverHint(ctx: DriveContext) {
 
   await amount.fill("1500000");
   const direction = form.getByText(
-    new RegExp(t("^Au-delà de 1.000.000.FCFA, cette saisie attend la Direction\\.$", "^Above FCFA.1,000,000, this entry waits for the Director\\.$")),
+    new RegExp(t("^Au-delà de 1.000.000.FCFA, cette saisie attend la Direction\\.$", "^Above 1.000.000.FCFA, this entry waits for the Director\\.$")),
   );
   await direction.waitFor({ timeout: 5_000 }).catch(() => {
-    throw new Error("at 1,500,000 the hint does not name Direction");
+    throw new Error("at 1 500 000 FCFA the hint does not name Direction");
   });
   await settle(ctx);
-  await shot("hint-amount", { caption: "At 1,500,000 FCFA the hint names Direction, the band that decides it", highlight: direction });
+  await shot("hint-amount", { caption: "At 1 500 000 FCFA the hint names Direction, the band that decides it", highlight: direction });
   // Typed data: closing asks to discard first.
   await form.getByRole("button", { name: t("Annuler", "Cancel"), exact: true }).click();
   await page.getByRole("button", { name: t("Abandonner", "Discard"), exact: true }).click();

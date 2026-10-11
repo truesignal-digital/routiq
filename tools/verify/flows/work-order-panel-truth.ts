@@ -42,6 +42,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   };
 
   await (await openSidebar(page)).getByRole("link", { name: t("Camions", "Trucks") }).click();
+  await page.locator("[data-slot='module-page-tabs']").getByRole("tab", { name: t("Camions", "Trucks") }).click();
   await page.getByRole("button", { name: /VH003/ }).first().click();
   await page.getByRole("heading", { level: 1, name: "VH003" }).waitFor({ timeout: 90_000 });
   await quiet();
@@ -114,7 +115,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await costs.scrollIntoViewIfNeeded();
   await page.waitForTimeout(600);
   await shot("panel-costs", {
-    caption: "Actual cost counts the 62,000 invoice awaiting review: does the Costs list show it?",
+    caption: "Actual cost counts the 62 000 FCFA invoice awaiting review: does the Costs list show it?",
     highlight: costs.locator("xpath=ancestor::section[1]"),
   });
   const footer = panel.locator("[data-slot='sheet-footer']");

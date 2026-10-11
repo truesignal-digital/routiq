@@ -148,9 +148,10 @@ export function PersonsScreen() {
 
 
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader
         title={t("persons.title")}
+        description={t("persons.lead")}
         actions={
           canRegister ? (
             <>
@@ -190,7 +191,6 @@ export function PersonsScreen() {
           ) : undefined
         }
       />
-      <p className="mt-2 max-w-lg text-sm text-muted-foreground">{t("persons.lead")}</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
         <BranchScopeLine

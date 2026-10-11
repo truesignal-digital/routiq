@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   ADMIN_GRANTABLE_ROLES,
   canBookWorkOrderCost,
+  canManageCompanySettings,
+  COMPANY_SETTINGS_ROLES,
   canReadEntries,
   canReadLedger,
   canReadWorkOrderCosts,
@@ -90,5 +92,11 @@ describe("role registry", () => {
 
   it("lets only the workshop and the managers book cost on a work order (#410, #414)", () => {
     expect(ROLES.filter(canBookWorkOrderCost)).toEqual(["DIRECTOR", "ADMIN", "TECHNICIAN"]);
+  });
+
+  it("lets the Director and Administrators change the company settings, and no one else (#711)", () => {
+    expect(ROLES.filter(canManageCompanySettings)).toEqual(["DIRECTOR", "ADMIN"]);
+    expect(COMPANY_SETTINGS_ROLES).toEqual(ROLES.filter(canManageCompanySettings));
+    expect(canManageCompanySettings(undefined)).toBe(false);
   });
 });

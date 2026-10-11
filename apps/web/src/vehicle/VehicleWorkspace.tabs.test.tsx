@@ -87,8 +87,8 @@ describe("which sections a viewer gets", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: "Details" }));
     // The purchase price is money too: the date alone.
-    expect(await screen.findByText("3/1/24")).toBeTruthy();
-    expect(screen.queryByText(/45,000,000/)).toBeNull();
+    expect(await screen.findByText("1 March 2024")).toBeTruthy();
+    expect(screen.queryByText(/45 000 000/)).toBeNull();
     expect(
       recorded.requests.some(({ url }) => url.pathname.startsWith("/v1/finance") || url.pathname.endsWith("/finance")),
     ).toBe(false);
@@ -131,7 +131,7 @@ describe("Details", () => {
     expect(screen.getByRole("heading", { name: "Vehicle" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Specifications" })).toBeTruthy();
     expect(screen.getByText("Chassis number")).toBeTruthy();
-    expect(screen.getByText(/45,000,000/)).toBeTruthy();
+    expect(screen.getByText(/45 000 000/)).toBeTruthy();
     // Identity stays on top; nothing there opens or hides the details any more.
     expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("VH003");
     expect(screen.queryByRole("button", { name: /Details/ })).toBeNull();
@@ -308,7 +308,7 @@ describe("Money", () => {
 
   describe("spending by category's shares", () => {
     const categoryCard = async () =>
-      (await screen.findByText("Spending by category")).closest<HTMLElement>('[data-slot="card"]')!;
+      (await screen.findByText("Expenses by category")).closest<HTMLElement>('[data-slot="card"]')!;
 
     it("gives each category its share of a month that spent", async () => {
       await openVehicle(`/assets/${ASSET_ID}/money?period=2026-09`, { role: "FINANCE" });
@@ -330,7 +330,7 @@ describe("Money", () => {
       });
       const card = await categoryCard();
       expect(within(card).getByText("Repairs")).toBeTruthy();
-      expect(card.textContent).toContain("85,000");
+      expect(card.textContent).toContain("85\u00a0000");
       // It read "-8500000%" before.
       expect(card.textContent).not.toContain("%");
     });
@@ -381,7 +381,10 @@ describe("Money", () => {
     await user.click(screen.getByRole("button", { name: "Previous month" }));
     await screen.findByRole("heading", { name: "Money · July 2026" });
     expect(recorded.history.location.search).toContain("period=2026-07");
-    expect(screen.getByText(/Lifetime, all posted entries since registration/).textContent).toMatch(/2,850,000/);
+    const lifetime = screen.getByText(/Lifetime, all posted entries since registration/).textContent;
+    expect(lifetime).toMatch(/2\s850\s000/);
+    expect(lifetime).toMatch(/Profit 1\s505\s000\sFCFA/);
+    expect(lifetime).not.toMatch(/\bnet\b/i);
   });
 });
 
@@ -404,7 +407,7 @@ describe("one sign rule for DLA-2026-00008 (E2.8)", () => {
   const flat = (text: string | null | undefined) => (text ?? "").replace(/\s/g, " ");
 
   it.each([
-    ["en", "−FCFA 86,000", "FCFA 86,000"],
+    ["en", "−86 000 FCFA", "86 000 FCFA"],
     ["fr-CM", "−86 000 FCFA", "86 000 FCFA"],
   ] as const)("%s: minus on Money and History, unsigned on the entry's own panel", async (locale, signed, unsigned) => {
     await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, {
@@ -446,8 +449,8 @@ describe("one sign rule for DLA-2026-00008 (E2.8)", () => {
     await screen.findByText("DLA-2026-00009");
     const exact = (text: string) => (_: string, element: Element | null) =>
       flat(element?.textContent) === text && element?.children.length === 0;
-    expect(screen.getByText(exact("+FCFA 43,000"))).toBeTruthy();
-    expect(screen.getByText(exact("of a FCFA 86,000 entry"))).toBeTruthy();
+    expect(screen.getByText(exact("+43 000 FCFA"))).toBeTruthy();
+    expect(screen.getByText(exact("of a 86 000 FCFA entry"))).toBeTruthy();
   });
 });
 
@@ -634,7 +637,7 @@ describe("Maintenance and Trips", () => {
     expect(row("Weld the rear mudguard bracket").getByText("Cost to come")).toBeTruthy();
     expect(screen.getAllByText("Cost to come")).toHaveLength(1);
     expect(row("Replace the right rear tyre valve").getByText("No cost")).toBeTruthy();
-    expect(row("Recharge the A/C").getByText(/55,000/)).toBeTruthy();
+    expect(row("Recharge the A/C").getByText(/55 000/)).toBeTruthy();
     expect(screen.queryByText(/FCFA\s0$/)).toBeNull();
   });
 

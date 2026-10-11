@@ -139,6 +139,19 @@ export function canReadLedger(role: Role): boolean {
 }
 
 /**
+ * Who opens the money Overview (`GET /v1/finance/overview`, #660): the ledger
+ * readers with profit, and the cashier with their branch's revenue and
+ * expenses only (dashboards.html, "Who sees what"). Profit follows
+ * `canReadLedger`.
+ */
+export const MONEY_OVERVIEW_READER_ROLES = [
+  "DIRECTOR",
+  "ADMIN",
+  "FINANCE",
+  "CASHIER",
+] as const satisfies readonly Role[];
+
+/**
  * The roles that open the entries list and an entry's detail, each filtered by
  * its scope. The workshop reaches its cost lines through work orders instead.
  */
@@ -165,6 +178,19 @@ export const DOCUMENT_READER_ROLES = [
 
 export function canReadDocuments(role: Role): boolean {
   return (DOCUMENT_READER_ROLES as readonly Role[]).includes(role);
+}
+
+/**
+ * Who changes the company settings: the approval thresholds and the Dashboard
+ * summary schedule (owner decision 2026-10-10, ADR-0013, #711). Each setting
+ * is one rule for the whole workspace, so an Administrator scoped to one
+ * branch still changes the company's rule, never a branch copy. Branches,
+ * categories and reopening a period stay Direction's.
+ */
+export const COMPANY_SETTINGS_ROLES = ["DIRECTOR", "ADMIN"] as const satisfies readonly Role[];
+
+export function canManageCompanySettings(role: Role | undefined): boolean {
+  return role !== undefined && (COMPANY_SETTINGS_ROLES as readonly Role[]).includes(role);
 }
 
 /** Who may open member administration at all. */

@@ -98,13 +98,13 @@ afterEach(() => {
 });
 
 describe("navigation counts (#322)", () => {
-  it("shows Money's waiting approvals as a link into the waiting view, from the server", async () => {
+  it("shows Money's waiting approvals as a link into the To approve tab, from the server", async () => {
     serverSays({ moneyWaiting: 3, maintenanceNew: null });
     await renderSidebar(membership("FINANCE"));
 
     const count = await nav().findByRole("link", { name: "3 entries waiting for your approval" });
     expect(count.textContent).toBe("3");
-    expect(count.getAttribute("href")).toBe("/finance/approvals?branch=all");
+    expect(count.getAttribute("href")).toBe("/finance/approve?branch=all");
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe("/v1/nav-counts");
     expect(document.querySelectorAll("[data-nav-count]")).toHaveLength(1);
@@ -115,7 +115,7 @@ describe("navigation counts (#322)", () => {
     await renderSidebar(membership("TECHNICIAN"));
 
     const count = await nav().findByRole("link", { name: "1 new problem to handle" });
-    expect(count.getAttribute("href")).toBe("/maintenance?tab=issues&issueStatus=OPEN");
+    expect(count.getAttribute("href")).toBe("/maintenance/problems?status=OPEN");
     expect(document.querySelectorAll("[data-nav-count]")).toHaveLength(1);
   });
 
@@ -162,7 +162,7 @@ describe("navigation counts (#322)", () => {
       return found!;
     });
     expect(dot.textContent).toBe("3 entries waiting for your approval");
-    expect(dot.closest("a")?.getAttribute("href")).toBe("/finance/entries");
+    expect(dot.closest("a")?.getAttribute("href")).toBe("/finance");
   });
 
   it("counts in French with ICU plurals", async () => {

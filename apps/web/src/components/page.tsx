@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 export interface PageHeaderProps {
   title: ReactNode;
   actions?: ReactNode;
+  /** One sentence under the title, kept to a readable measure inside the page frame. */
+  description?: ReactNode;
   className?: string;
   titleClassName?: string;
 }
@@ -17,6 +19,7 @@ export interface PageHeaderProps {
 export function PageHeader({
   title,
   actions,
+  description,
   className,
   titleClassName,
 }: PageHeaderProps) {
@@ -28,6 +31,7 @@ export function PageHeader({
         <h1 className={cn("min-w-0 text-2xl font-semibold break-words", titleClassName)}>{title}</h1>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
+      {description && <p className="mt-2 max-w-lg text-sm text-muted-foreground">{description}</p>}
     </header>
   );
 }

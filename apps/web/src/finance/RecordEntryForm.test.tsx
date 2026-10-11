@@ -304,7 +304,7 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
     inPanel(<RecordEntryForm surface="panel" pinnedAssetId={ASSET_ID} onRecorded={vi.fn()} />);
     expect(
       screen.getByText(
-        "Above FCFA 150,000, this entry waits for Finance. Above FCFA 1,000,000, this entry waits for the Director.",
+        "Above 150 000 FCFA, this entry waits for Finance. Above 1 000 000 FCFA, this entry waits for the Director.",
       ),
     ).toBeTruthy();
 
@@ -319,7 +319,7 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
     );
     expect(
       screen.getByText(
-        "Above FCFA 100,000, this entry waits for Finance. Above FCFA 1,000,000, this entry waits for the Director.",
+        "Above 100 000 FCFA, this entry waits for Finance. Above 1 000 000 FCFA, this entry waits for the Director.",
       ),
     ).toBeTruthy();
   });
@@ -332,11 +332,11 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
     const amount = screen.getByLabelText("Amount (FCFA)");
 
     await userEvent.type(amount, "1500000");
-    expect(await screen.findByText("Above FCFA 1,000,000, this entry waits for the Director.")).toBeTruthy();
+    expect(await screen.findByText("Above 1 000 000 FCFA, this entry waits for the Director.")).toBeTruthy();
 
     await userEvent.clear(amount);
     await userEvent.type(amount, "250000");
-    expect(await screen.findByText("Above FCFA 100,000, this entry waits for Finance.")).toBeTruthy();
+    expect(await screen.findByText("Above 100 000 FCFA, this entry waits for Finance.")).toBeTruthy();
 
     await userEvent.clear(amount);
     await userEvent.type(amount, "40000");
@@ -385,7 +385,7 @@ describe("entry decisions on a record panel", () => {
     };
     inPanel(<RejectEntryForm surface="panel" entry={entry} client={recordingClient(posted)} onDismiss={vi.fn()} />);
     expect(description()).toEqual({
-      text: "DLA-2026-00014 · Brake pads · FCFA 180,000. Your reason is shown to Hervé. The entry stays in the history as rejected and never counts in the books.",
+      text: "DLA-2026-00014 · Brake pads · 180 000 FCFA. Your reason is shown to Hervé. The entry stays in the history as rejected and never counts in the books.",
       unbroken: "DLA-2026-00014",
     });
     cleanup();
@@ -394,7 +394,7 @@ describe("entry decisions on a record panel", () => {
     const bare = { ...entry, description: null, recordedBy: { ...entry.recordedBy, displayName: null } };
     inPanel(<RejectEntryForm surface="panel" entry={bare} client={recordingClient(posted)} onDismiss={vi.fn()} />);
     expect(description().text).toBe(
-      "DLA-2026-00014 · Maintenance · FCFA 180,000. Your reason is shown to whoever recorded it. The entry stays in the history as rejected and never counts in the books.",
+      "DLA-2026-00014 · Maintenance · 180 000 FCFA. Your reason is shown to whoever recorded it. The entry stays in the history as rejected and never counts in the books.",
     );
   });
 
@@ -645,7 +645,7 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     expect(amount.value).toMatch(/^45\s?000$/);
     expect(within(panel).getByLabelText("Category").textContent).toContain("Repairs");
     expect(within(panel).getByLabelText("Payment method").textContent).toContain("Mobile Money");
-    expect((within(panel).getByLabelText("Date") as HTMLInputElement).value).toBe("9/12/26");
+    expect((within(panel).getByLabelText("Date") as HTMLInputElement).value).toBe("12/09/2026");
     expect((within(panel).getByLabelText("Description (optional)") as HTMLTextAreaElement).value).toBe(
       "Plaquettes de frein",
     );
@@ -713,7 +713,7 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     expect((within(panel).getByLabelText("Amount (FCFA)") as HTMLInputElement).value).toMatch(/^45\s?000$/);
     expect(within(panel).getByLabelText("Category").textContent).toContain("Repairs");
     expect(within(panel).getByLabelText("Payment method").textContent).toContain("Mobile Money");
-    expect((within(panel).getByLabelText("Date") as HTMLInputElement).value).toBe("9/12/26");
+    expect((within(panel).getByLabelText("Date") as HTMLInputElement).value).toBe("12/09/2026");
     expect((within(panel).getByLabelText("Counterparty (optional)") as HTMLInputElement).value).toBe(
       "Garage Tchinda",
     );

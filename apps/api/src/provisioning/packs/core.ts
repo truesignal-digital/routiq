@@ -1,4 +1,4 @@
-import type { Role } from "@routiq/contracts";
+import { COMPANY_SETTINGS_ROLES, type Role } from "@routiq/contracts";
 import type { approvalRules, categories } from "../../db/schema.js";
 
 type ApprovalRuleDefault = Omit<typeof approvalRules.$inferInsert, "workspaceId">;
@@ -73,12 +73,13 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
       categoryCode: "CROSS_BRANCH",
     },
 
-    // Settings belong to Direction (ADR-0009). Modules and presets are
-    // platform-scope commands a vendor operator runs (ADR-0005), so no tenant
-    // role has a rule for them.
+    // Settings belong to Direction (ADR-0009), except the company settings,
+    // which the Administrators change too (ADR-0013, #711). Modules and
+    // presets are platform-scope commands a vendor operator runs (ADR-0005),
+    // so no tenant role has a rule for them.
+    ...wildcard(["update-approval-threshold", "set-summary-schedule"], COMPANY_SETTINGS_ROLES),
     ...wildcard(
       [
-        "update-approval-threshold",
         "create-category",
         "relabel-category",
         "deactivate-category",
@@ -115,8 +116,9 @@ function defaultApprovalRules(): ApprovalRuleDefault[] {
 
     // Finance decides an entry up to its own band, Direction at any amount.
     // DIRECTOR holds the band too: wherever the band matches it is the more
-    // specific rule, and only the roles on it decide. Direction moves it with
-    // update-approval-threshold ("approve-entry" moves both decisions).
+    // specific rule, and only the roles on it decide. Direction or an
+    // Administrator moves it with update-approval-threshold ("approve-entry"
+    // moves both decisions).
     ...banded(["approve-entry", "reject-entry"], ["FINANCE", "DIRECTOR"], ENTRY_DECISION_BAND),
     ...wildcard(["approve-entry", "reject-entry"], ["DIRECTOR"]),
     ...wildcard(["reverse-entry", "lock-period"], ["FINANCE", "DIRECTOR"]),
@@ -201,6 +203,23 @@ export const corePack: {
       active: true,
       labelFr: "Permis",
       labelEn: "Permit",
+    },
+    // The papers a Cameroonian truck carries (#661); the French names are the
+    // ones people use in English too. Mirrored for existing workspaces by
+    // migration 0049.
+    {
+      kind: "DOCUMENT_TYPE",
+      code: "VISITE_TECHNIQUE",
+      active: true,
+      labelFr: "Visite technique",
+      labelEn: "Visite technique",
+    },
+    {
+      kind: "DOCUMENT_TYPE",
+      code: "CARTE_GRISE",
+      active: true,
+      labelFr: "Carte grise",
+      labelEn: "Carte grise",
     },
     {
       kind: "EXPENSE_CATEGORY",

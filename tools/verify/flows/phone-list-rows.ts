@@ -9,11 +9,11 @@ import type { DriveScript } from "../browser.js";
  */
 const ROUTES = [
   ["/", "Home: recent entries as list rows"],
-  ["/assets", "Trucks: title left, status badge right"],
-  ["/activities", "Trips: number, then type, date and truck on the second line"],
-  ["/maintenance", "Work orders: reference, truck and description, cost and status on the right"],
+  ["/assets/list", "Trucks: title left, status badge right"],
+  ["/activities/list", "Trips: number, then type, date and truck on the second line"],
+  ["/maintenance/work-orders", "Work orders: reference, truck and description, cost and status on the right"],
   ["/finance/entries", "Money: amount right in tabular figures, status under it"],
-  ["/finance/entries?view=waiting", "Waiting for your approval: the same row anatomy, Reject and Approve under the amount"],
+  ["/finance/approve", "Waiting for your approval: the same row anatomy, Reject and Approve under the amount"],
   ["/finance/periods", "Periods: entry count right, status under it"],
   ["/more/persons", "People"],
   ["/more/users", "Users"],

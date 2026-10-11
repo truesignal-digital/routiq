@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 713902,
+    "ceiling": 781435,
     "raises": [
       {
         "date": "2026-10-06",
@@ -283,11 +283,35 @@
         "from": 713353,
         "to": 713902,
         "reason": "Page-type skeletons for each screen route (#498)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 713902,
+        "to": 764827,
+        "reason": "Summary notice on every Overview (#667) and Dashboard summary setting (#669): notice component, money sentence helper, verdict badge, fr/en words across the catalogs and the five Overview chunks, plus the Company settings section, form and read hook, about 6.9 kB gzip. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666) and module Overviews (#665) until they merge (re-recorded on develop 4dee04a4)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 764827,
+        "to": 776490,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop b7d22560)"
+      },
+      {
+        "date": "2026-10-11",
+        "from": 776490,
+        "to": 776559,
+        "reason": "Measured on develop after #701: #712 fixed en/fr month and weekday tables (dates read the same on every ICU version) and #699 one can-drive count, net of the formatters #712 removed"
+      },
+      {
+        "date": "2026-10-11",
+        "from": 776559,
+        "to": 781435,
+        "reason": "#663 FormPage (section cards, So far, Still missing, phone steps and review) plus the sheet's live totals and Register a truck's sections (re-recorded on develop 2946600c)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22832,
+    "ceiling": 23462,
     "raises": [
       {
         "date": "2026-10-06",
@@ -342,11 +366,41 @@
         "from": 22508,
         "to": 22832,
         "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 22941,
+        "reason": "Money module page (#664): five-tile strip and the Overview's two-column grid add Tailwind classes"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 23091,
+        "reason": "Dashboard (#666): the two chart series tokens (blue, orange) and the bridge and branch-bar classes; the rest is #664's 109 B until #680 merges"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 23261,
+        "reason": "Summary notice (#667): its card and closed-line classes, 23 B; counted from develop's ceiling, so it also covers #666's 259 B and #665's overview parts until they merge"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 23261,
+        "to": 23330,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop b7d22560)"
+      },
+      {
+        "date": "2026-10-11",
+        "from": 23330,
+        "to": 23462,
+        "reason": "#663 FormPage: container-query grid for the 760 px form column and 300 px So far column, sticky footer above the phone bottom bar (re-recorded on develop 2946600c)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 266200,
+    "ceiling": 283840,
     "raises": [
       {
         "date": "2026-10-06",
@@ -599,6 +653,24 @@
         "from": 265616,
         "to": 266200,
         "reason": "Page-type skeletons (#498): drawn the moment a screen is pending, so they ship with the router rather than on demand"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 266200,
+        "to": 280366,
+        "reason": "Summary notice on every Overview (#667) and Dashboard summary setting (#669): the notice's fr/en ICU sentences (money templates, module Overview sentences, trip-word overlays for both presets), the notice component, the summary setting's fr/en words and the schedule list in contracts, about 2.9 kB gzip. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666, about 7 kB) and module Overviews (#665, about 4.3 kB net of the shared #659/#664/#676 parts) until they merge (re-recorded on develop 4dee04a4)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 280366,
+        "to": 283191,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop b7d22560)"
+      },
+      {
+        "date": "2026-10-11",
+        "from": 283191,
+        "to": 283840,
+        "reason": "#663 FormPage: the So far, section-state, step and review words in the fr/en catalogs (initial bundle), about 0.6 kB gzip (re-recorded on develop 2946600c)"
       }
     ]
   }

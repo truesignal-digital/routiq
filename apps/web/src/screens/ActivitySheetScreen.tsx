@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { DateTimeField } from "@/components/date-field";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -13,7 +21,7 @@ import { PageContainer } from "@/components/page-container";
 import { PermissionDenied } from "@/components/permission-denied.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormPage, type FormPageSummaryRow } from "@/components/form-page.js";
 import {
   Form,
   FormControl,
@@ -41,7 +49,7 @@ import { useAssetRegistrationReference } from "@/reference/asset-registration.js
 import { ALL_BRANCHES } from "@/shell/branch-context.js";
 import { useFollowShellBranch } from "@/shell/branch-scope.js";
 import { useCategories } from "@/categories/useCategories.js";
-import { localizedLabel } from "@/lib/format.js";
+import { formatMoney, localizedLabel } from "@/lib/format.js";
 import { notifyCommandSuccess } from "@/lib/notify.js";
 import { canRecordActivities, canRecordSheetRevenue } from "@/activities/permissions.js";
 import { usePersons } from "@/activities/usePersons.js";
@@ -74,6 +82,17 @@ import {
   type SheetFormValues,
 } from "@/activities/sheet/form.js";
 import { parseMoneyXaf } from "@/lib/format.js";
+import {
+  missingInRows,
+  missingRequired,
+  sheetSectionStates,
+  sheetTotals,
+  SHEET_SECTION_FIELDS,
+  SHEET_SECTIONS,
+  type SheetRequiredField,
+  type SheetRowGap,
+  type SheetSectionId,
+} from "@/activities/sheet/progress.js";
 
 function isTemplate(value: unknown): value is SheetTemplate {
   return value === "journey" || value === "haulage";
@@ -105,24 +124,23 @@ export function ActivitySheetScreen() {
     );
   }
 
-  return (
-    <PageContainer width="wide">
-      <PageHeader title={label("record-journey-sheet")} />
-      <p className="mt-1 text-sm text-muted-foreground">
-        {t("activities.record.subtitle")}
-      </p>
+  // The form's defaults read the role (a driver's sheet opens with no revenue
+  // line), so it waits for /v1/me instead of opening with a guess.
+  if (me === undefined) {
+    return (
+      <PageContainer>
+        <PageHeader title={label("record-journey-sheet")} description={t("activities.record.subtitle")} />
+      </PageContainer>
+    );
+  }
 
-      {/* The form's defaults read the role (a driver's sheet opens with no
-          revenue line), so it waits for /v1/me instead of opening with a guess. */}
-      {me !== undefined && (
-        <SheetForm
-          initialTemplate={initialTemplate}
-          templates={templates}
-          initialAssetId={typeof search.assetId === "string" ? search.assetId : undefined}
-          canAddRevenue={canRecordSheetRevenue(me.role)}
-        />
-      )}
-    </PageContainer>
+  return (
+    <SheetForm
+      initialTemplate={initialTemplate}
+      templates={templates}
+      initialAssetId={typeof search.assetId === "string" ? search.assetId : undefined}
+      canAddRevenue={canRecordSheetRevenue(me.role)}
+    />
   );
 }
 
@@ -442,492 +460,593 @@ function SheetForm({
     return form.handleSubmit((values) => onSubmit(values, close));
   }
 
-  return (
-    <Form {...form}>
-      <form
-        className="mt-6 flex flex-col gap-4"
-        onSubmit={(event) => void submitSheet(false)(event)}
-      >
-        {/* One preset means one kind of sheet: asking which would be asking a
-            question with a single answer (ADR-0004). */}
-        {templates.length > 1 && (
+  const lead =
+    // One preset means one kind of sheet: asking which would be asking a
+    // question with a single answer (ADR-0004).
+    templates.length > 1 ? (
+      <FormField
+        control={control}
+        name="template"
+        render={({ field }) => (
+          <FormItem>
+            <Tabs
+              value={field.value}
+              onValueChange={(value) => {
+                if (isTemplate(value)) switchTemplate(value);
+              }}
+            >
+              <TabsList
+                className="w-full"
+                aria-label={t("activities.record.templateLegend")}
+              >
+                {templates.map((template) => (
+                  <TabsTrigger key={template} value={template}>
+                    {t(`assets.form.templates.${SHEET_TEMPLATE_PRESET[template]}`)}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </FormItem>
+        )}
+      />
+    ) : undefined;
+
+  const content: Record<SheetSectionId, ReactNode> = {
+    references: (
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField
+          control={control}
+          name="branchCode"
+          render={({ field }) => (
+            <FormItem data-field="branchCode">
+              <FormLabel>{t("activities.record.branchLabel")}</FormLabel>
+              {reference.isError && (
+                <FormDescription role="alert" className="text-destructive">
+                  {t("activities.record.branchesFailed")}
+                </FormDescription>
+              )}
+              <Select
+                value={field.value || null}
+                onValueChange={(value) => field.onChange(value ?? "")}
+                disabled={reference.isPending || reference.isError}
+              >
+                <FormControl>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={t("activities.record.chooseBranch")} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.code} value={branch.code}>
+                      {branch.name} ({branch.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={control}
+          name="activityTypeCode"
+          render={({ field }) => (
+            <FormItem data-field="activityTypeCode">
+              <FormLabel>{t("activities.record.activityTypeLabel")}</FormLabel>
+              {activityTypes.isError && (
+                <FormDescription role="alert" className="text-destructive">
+                  {t("activities.record.activityTypesFailed")}
+                </FormDescription>
+              )}
+              <Select
+                value={field.value || null}
+                onValueChange={(value) => field.onChange(value ?? "")}
+                disabled={activityTypes.isPending || activityTypes.isError}
+              >
+                <FormControl>
+                  <SelectTrigger className="w-full">
+                    <SelectValue
+                      placeholder={t("activities.record.chooseActivityType")}
+                    />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {(activityTypes.data ?? []).map((category) => (
+                    <SelectItem key={category.code} value={category.code}>
+                      {localizedLabel(category)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={control}
+          name="customerName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("activities.record.customerLabel")}</FormLabel>
+              <FormControl>
+                <Input
+                  type="text"
+                  placeholder={t("activities.record.customerPlaceholder")}
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={control}
+          name="clientReference"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("activities.record.clientReferenceLabel")}</FormLabel>
+              <FormControl>
+                <Input
+                  type="text"
+                  placeholder={t("activities.record.clientReferencePlaceholder")}
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={control}
+          name="description"
+          render={({ field }) => (
+            <FormItem className="sm:col-span-2">
+              <FormLabel>{t("activities.record.descriptionLabel")}</FormLabel>
+              <FormControl>
+                <Textarea
+                  className="min-h-20"
+                  placeholder={t("activities.record.descriptionPlaceholder")}
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+    ),
+    vehicle: (
+      <div className="flex flex-col gap-4">
+        <div className="grid gap-4 sm:grid-cols-3">
           <FormField
             control={control}
-            name="template"
+            name="primaryAssetId"
             render={({ field }) => (
-              <FormItem>
-                <Tabs
-                  value={field.value}
-                  onValueChange={(value) => {
-                    if (isTemplate(value)) switchTemplate(value);
-                  }}
+              <FormItem data-field="primaryAssetId">
+                <FormLabel>{t("activities.record.primaryAssetLabel")}</FormLabel>
+                <Select
+                  value={field.value || null}
+                  onValueChange={(value) => field.onChange(value ?? "")}
+                  disabled={assetOptions.length === 0}
                 >
-                  <TabsList
-                    className="w-full"
-                    aria-label={t("activities.record.templateLegend")}
-                  >
-                    {templates.map((template) => (
-                      <TabsTrigger key={template} value={template}>
-                        {t(`assets.form.templates.${SHEET_TEMPLATE_PRESET[template]}`)}
-                      </TabsTrigger>
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={t("activities.record.chooseAsset")} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {assetOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
                     ))}
-                  </TabsList>
-                </Tabs>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
               </FormItem>
             )}
           />
-        )}
 
-        {errorCode && <ErrorBanner code={errorCode} />}
+          <FormField
+            control={control}
+            name="startedAt"
+            render={({ field }) => (
+              <FormItem data-field="startedAt">
+                <FormLabel>{t("activities.record.startedAtLabel")}</FormLabel>
+                <FormControl>
+                  <DateTimeField {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("activities.record.sections.references")}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <FormField
-              control={control}
-              name="branchCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("activities.record.branchLabel")}</FormLabel>
-                  {reference.isError && (
-                    <FormDescription role="alert" className="text-destructive">
-                      {t("activities.record.branchesFailed")}
-                    </FormDescription>
-                  )}
-                  <Select
-                    value={field.value || null}
-                    onValueChange={(value) => field.onChange(value ?? "")}
-                    disabled={reference.isPending || reference.isError}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder={t("activities.record.chooseBranch")} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {branches.map((branch) => (
-                        <SelectItem key={branch.code} value={branch.code}>
-                          {branch.name} ({branch.code})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FormField
+            control={control}
+            name="endedAt"
+            render={({ field }) => (
+              <FormItem data-field="endedAt">
+                <FormLabel>{t("activities.record.endedAtLabel")}</FormLabel>
+                <FormControl>
+                  <DateTimeField {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
-            <FormField
-              control={control}
-              name="activityTypeCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("activities.record.activityTypeLabel")}</FormLabel>
-                  {activityTypes.isError && (
-                    <FormDescription role="alert" className="text-destructive">
-                      {t("activities.record.activityTypesFailed")}
-                    </FormDescription>
-                  )}
-                  <Select
-                    value={field.value || null}
-                    onValueChange={(value) => field.onChange(value ?? "")}
-                    disabled={activityTypes.isPending || activityTypes.isError}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue
-                          placeholder={t("activities.record.chooseActivityType")}
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {(activityTypes.data ?? []).map((category) => (
-                        <SelectItem key={category.code} value={category.code}>
-                          {localizedLabel(category)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={control}
-              name="customerName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("activities.record.customerLabel")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="text"
-                      placeholder={t("activities.record.customerPlaceholder")}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={control}
-              name="clientReference"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("activities.record.clientReferenceLabel")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="text"
-                      placeholder={t("activities.record.clientReferencePlaceholder")}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={control}
-              name="description"
-              render={({ field }) => (
-                <FormItem className="sm:col-span-2">
-                  <FormLabel>{t("activities.record.descriptionLabel")}</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      className="min-h-20"
-                      placeholder={t("activities.record.descriptionPlaceholder")}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("activities.record.sections.vehicle")}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <FormField
-                control={control}
-                name="primaryAssetId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("activities.record.primaryAssetLabel")}</FormLabel>
-                    <Select
-                      value={field.value || null}
-                      onValueChange={(value) => field.onChange(value ?? "")}
-                      disabled={assetOptions.length === 0}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder={t("activities.record.chooseAsset")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {assetOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={control}
-                name="startedAt"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("activities.record.startedAtLabel")}</FormLabel>
-                    <FormControl>
-                      <DateTimeField {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={control}
-                name="endedAt"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("activities.record.endedAtLabel")}</FormLabel>
-                    <FormControl>
-                      <DateTimeField {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        {showReadings ? (
+          <div className="flex flex-col gap-3 rounded-lg bg-muted/40 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-muted-foreground">
+                {t("activities.record.readings.legend")}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="desktop-sm"
+                onClick={() => setShowReadings(false)}
+              >
+                {t("activities.record.readings.hide")}
+              </Button>
             </div>
 
-            {showReadings ? (
-              <div className="flex flex-col gap-3 rounded-lg bg-muted/40 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {t("activities.record.readings.legend")}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="desktop-sm"
-                    onClick={() => setShowReadings(false)}
-                  >
-                    {t("activities.record.readings.hide")}
-                  </Button>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <ReadingField control={control} which="startReading" />
-                  <ReadingField control={control} which="endReading" />
-                </div>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                className="self-start"
-                onClick={() => setShowReadings(true)}
-              >
-                <Gauge className="size-4" aria-hidden />
-                {t("activities.record.readings.add")}
-              </Button>
-            )}
-
-            {showSegments ? (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {template === "haulage"
-                      ? t("activities.record.segments.trailerLegend")
-                      : t("activities.record.segments.legend")}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="desktop-sm"
-                    onClick={() => setShowSegments(false)}
-                  >
-                    {t("activities.record.segments.hide")}
-                  </Button>
-                </div>
-
-                {segments.fields.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    {t("activities.record.segments.empty")}
-                  </p>
-                )}
-
-                {segments.fields.map((field, index) => (
-                  <SegmentRow
-                    key={field.id}
-                    control={control}
-                    index={index}
-                    assetOptions={assetOptions}
-                    onRemove={removeSegment}
-                  />
-                ))}
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="self-start"
-                  onClick={() => segments.append(newSegmentRow())}
-                >
-                  <Plus className="size-4" aria-hidden />
-                  {t("activities.record.segments.add")}
-                </Button>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                className="self-start"
-                onClick={() => {
-                  setShowSegments(true);
-                  if (segments.fields.length === 0) segments.append(newSegmentRow());
-                }}
-              >
-                <Truck className="size-4" aria-hidden />
-                {t("activities.record.segments.add")}
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("activities.record.sections.crew")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CrewRows
-              control={control}
-              branchCode={branchCode}
-              branchId={sheetBranchId}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("activities.record.sections.legs")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <LegRows control={control} template={template} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {template === "journey"
-                ? t("activities.record.sections.flavourJourney")
-                : t("activities.record.sections.flavourHaulage")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            {template === "journey" ? (
-              <>
-                <FormField
-                  control={control}
-                  name="seatsSold"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("activities.record.journey.seatsSoldLabel")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          placeholder={t("activities.record.journey.seatsPlaceholder")}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={control}
-                  name="seatsAvailable"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        {t("activities.record.journey.seatsAvailableLabel")}
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          placeholder={t("activities.record.journey.seatsPlaceholder")}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
-            ) : (
-              <>
-                <FormField
-                  control={control}
-                  name="cargoDescription"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        {t("activities.record.haulage.cargoDescriptionLabel")}
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          placeholder={t(
-                            "activities.record.haulage.cargoDescriptionPlaceholder",
-                          )}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={control}
-                  name="cargoWeightKg"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("activities.record.haulage.cargoWeightLabel")}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          placeholder={t("activities.record.haulage.cargoWeightPlaceholder")}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {t(canAddRevenue ? "activities.record.sections.money" : "activities.record.sections.moneyCosts")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <EntryRows
-              control={control}
-              assetOptions={assetOptions}
-              personOptions={personOptions}
-              canAddRevenue={canAddRevenue}
-            />
-          </CardContent>
-        </Card>
-
-        <div className="sticky bottom-0 -mx-4 mt-2 flex flex-col items-stretch gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:flex-row sm:items-center sm:justify-end">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ReadingField control={control} which="startReading" />
+              <ReadingField control={control} which="endReading" />
+            </div>
+          </div>
+        ) : (
           <Button
             type="button"
             variant="outline"
-            className="w-full sm:w-auto"
-            disabled={form.formState.isSubmitting}
-            onClick={() => void submitSheet(true)()}
+            className="self-start"
+            onClick={() => setShowReadings(true)}
           >
-            {label(
-              { command: "record-journey-sheet", intent: "close" },
-              form.formState.isSubmitting && closing ? "submitting" : "submit",
+            <Gauge className="size-4" aria-hidden />
+            {t("activities.record.readings.add")}
+          </Button>
+        )}
+
+        {showSegments ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-muted-foreground">
+                {template === "haulage"
+                  ? t("activities.record.segments.trailerLegend")
+                  : t("activities.record.segments.legend")}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="desktop-sm"
+                onClick={() => setShowSegments(false)}
+              >
+                {t("activities.record.segments.hide")}
+              </Button>
+            </div>
+
+            {segments.fields.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                {t("activities.record.segments.empty")}
+              </p>
             )}
-          </Button>
+
+            {segments.fields.map((field, index) => (
+              <SegmentRow
+                key={field.id}
+                control={control}
+                index={index}
+                assetOptions={assetOptions}
+                onRemove={removeSegment}
+              />
+            ))}
+
+            <Button
+              type="button"
+              variant="outline"
+              className="self-start"
+              onClick={() => segments.append(newSegmentRow())}
+            >
+              <Plus className="size-4" aria-hidden />
+              {t("activities.record.segments.add")}
+            </Button>
+          </div>
+        ) : (
           <Button
-            type="submit"
-            className="w-full sm:w-auto"
-            disabled={form.formState.isSubmitting}
+            type="button"
+            variant="outline"
+            className="self-start"
+            onClick={() => {
+              setShowSegments(true);
+              if (segments.fields.length === 0) segments.append(newSegmentRow());
+            }}
           >
-            {form.formState.isSubmitting && !closing
-              ? label("record-journey-sheet", "submitting")
-              : label("record-journey-sheet", "submit")}
+            <Truck className="size-4" aria-hidden />
+            {t("activities.record.segments.add")}
           </Button>
-        </div>
-      </form>
+        )}
+      </div>
+    ),
+    crew: <CrewRows control={control} branchCode={branchCode} branchId={sheetBranchId} />,
+    legs: <LegRows control={control} template={template} />,
+    flavour: (
+      <div className="grid gap-4 sm:grid-cols-2">
+        {template === "journey" ? (
+          <>
+            <FormField
+              control={control}
+              name="seatsSold"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("activities.record.journey.seatsSoldLabel")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder={t("activities.record.journey.seatsPlaceholder")}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="seatsAvailable"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    {t("activities.record.journey.seatsAvailableLabel")}
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder={t("activities.record.journey.seatsPlaceholder")}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        ) : (
+          <>
+            <FormField
+              control={control}
+              name="cargoDescription"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    {t("activities.record.haulage.cargoDescriptionLabel")}
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      placeholder={t(
+                        "activities.record.haulage.cargoDescriptionPlaceholder",
+                      )}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="cargoWeightKg"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("activities.record.haulage.cargoWeightLabel")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder={t("activities.record.haulage.cargoWeightPlaceholder")}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
+      </div>
+    ),
+    money: (
+      <EntryRows
+        control={control}
+        assetOptions={assetOptions}
+        personOptions={personOptions}
+        canAddRevenue={canAddRevenue}
+      />
+    ),
+  };
+
+  const titles: Record<SheetSectionId, string> = {
+    references: t("activities.record.sections.references"),
+    vehicle: t("activities.record.sections.vehicle"),
+    crew: t("activities.record.sections.crew"),
+    legs: t("activities.record.sections.legs"),
+    flavour:
+      template === "journey"
+        ? t("activities.record.sections.flavourJourney")
+        : t("activities.record.sections.flavourHaulage"),
+    money: t(canAddRevenue ? "activities.record.sections.money" : "activities.record.sections.moneyCosts"),
+  };
+
+  const submitting = form.formState.isSubmitting;
+
+  return (
+    <Form {...form}>
+      <SheetPage
+        control={control}
+        getValues={getValues}
+        canAddRevenue={canAddRevenue}
+        assetOptions={assetOptions}
+        titles={titles}
+        content={content}
+        lead={lead}
+        banner={errorCode ? <ErrorBanner code={errorCode} /> : undefined}
+        onSubmit={(event) => void submitSheet(false)(event)}
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={submitting}
+              onClick={() => void submitSheet(true)()}
+            >
+              {label(
+                { command: "record-journey-sheet", intent: "close" },
+                submitting && closing ? "submitting" : "submit",
+              )}
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting && !closing
+                ? label("record-journey-sheet", "submitting")
+                : label("record-journey-sheet", "submit")}
+            </Button>
+          </>
+        }
+      />
     </Form>
+  );
+}
+
+/**
+ * The frame around the sheet: watches every field so "So far", the section
+ * states and the footer's count follow the clerk's typing. The sections'
+ * fields come in as elements made by `SheetForm`, so a keystroke re-renders
+ * this summary, not the fields.
+ */
+function SheetPage({
+  control,
+  getValues,
+  canAddRevenue,
+  assetOptions,
+  titles,
+  content,
+  lead,
+  banner,
+  onSubmit,
+  actions,
+}: {
+  control: ReturnType<typeof useForm<SheetFormValues>>["control"];
+  getValues: ReturnType<typeof useForm<SheetFormValues>>["getValues"];
+  canAddRevenue: boolean;
+  assetOptions: readonly Option[];
+  titles: Record<SheetSectionId, string>;
+  content: Record<SheetSectionId, ReactNode>;
+  lead: ReactNode;
+  banner: ReactNode;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  actions: ReactNode;
+}) {
+  const { t } = useTranslation();
+  const label = useCommandLabel();
+  useWatch({ control });
+  const values = getValues();
+
+  const states = sheetSectionStates(values);
+  const sections = SHEET_SECTIONS.map((id) => ({
+    id,
+    title: titles[id],
+    state: states[id],
+    fields: SHEET_SECTION_FIELDS[id],
+    children: content[id],
+  }));
+
+  const requiredLabel: Record<SheetRequiredField, string> = {
+    branchCode: t("activities.record.branchLabel"),
+    activityTypeCode: t("activities.record.activityTypeLabel"),
+    primaryAssetId: t("activities.record.primaryAssetLabel"),
+    startedAt: t("activities.record.startedAtLabel"),
+    endedAt: t("activities.record.endedAtLabel"),
+  };
+  const gapLabel: Record<SheetRowGap["kind"], string> = {
+    origin: "activities.record.legs.rowOrigin",
+    destination: "activities.record.legs.rowDestination",
+    category: "activities.record.entries.rowCategory",
+    amount: "activities.record.entries.rowAmount",
+  };
+  const missing = [
+    ...missingRequired(values).map((field) => ({ field, label: requiredLabel[field] })),
+    ...missingInRows(values).map((gap) => ({
+      field: gap.field,
+      label: t(gapLabel[gap.kind], { position: gap.position }),
+    })),
+  ];
+
+  const totals = sheetTotals(values);
+  const summary: FormPageSummaryRow[] = [
+    {
+      label: t("activities.record.soFar.asset"),
+      value: assetOptions.find((option) => option.value === values.primaryAssetId)?.label,
+      field: "primaryAssetId",
+    },
+    {
+      label: t("activities.record.soFar.route"),
+      value:
+        totals.from !== undefined && totals.to !== undefined
+          ? t("activities.record.soFar.routeValue", { from: totals.from, to: totals.to })
+          : undefined,
+      field: "legs",
+    },
+    {
+      label: t("activities.record.soFar.distance"),
+      value:
+        totals.distanceKm === undefined
+          ? undefined
+          : t("activities.record.soFar.distanceValue", { km: totals.distanceKm }),
+      field: "legs",
+    },
+  ];
+  // role-config: a driver records expenses only and sees no trip profit (#532).
+  if (canAddRevenue) {
+    summary.push({
+      label: t("activities.record.soFar.revenue"),
+      value: totals.revenue === undefined ? undefined : formatMoney(totals.revenue),
+      field: "entries",
+    });
+  }
+  summary.push({
+    label: t("activities.record.soFar.expenses"),
+    value: totals.expenses === undefined ? undefined : formatMoney(totals.expenses),
+    field: "entries",
+  });
+  if (canAddRevenue) {
+    // Profit needs revenue; with none recorded it is not a loss, it is unknown.
+    const profit = totals.revenue === undefined ? undefined : totals.revenue - (totals.expenses ?? 0);
+    summary.push({
+      label: t(profit !== undefined && profit < 0 ? "activities.record.soFar.loss" : "activities.record.soFar.profit"),
+      value: profit === undefined ? undefined : formatMoney(Math.abs(profit)),
+      total: true,
+    });
+  }
+
+  return (
+    <FormPage
+      title={label("record-journey-sheet")}
+      description={t("activities.record.subtitle")}
+      onSubmit={onSubmit}
+      lead={lead}
+      banner={banner}
+      sections={sections}
+      summary={summary}
+      missing={missing}
+      actions={actions}
+    />
   );
 }
 

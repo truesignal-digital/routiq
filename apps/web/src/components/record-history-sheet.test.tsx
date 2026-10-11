@@ -402,7 +402,7 @@ describe("record history days", () => {
     const headings = screen.getAllByRole("heading", { level: 3 });
     expect(headings).toHaveLength(2);
     expect(headings[0]?.textContent).toBe("Today");
-    expect(headings[1]?.textContent).toMatch(/January 1[45], 2026/);
+    expect(headings[1]?.textContent).toMatch(/^1[45] January 2026$/);
   });
 
   it("keeps a run of same-day events under a single heading", async () => {
@@ -484,8 +484,8 @@ describe("record history diff", () => {
 
     expect(screen.getByText("Fuel")).toBeTruthy();
     expect(screen.getByText("Douala")).toBeTruthy();
-    expect(screen.getByText("1 line, FCFA 30,000")).toBeTruthy();
-    expect(screen.getByText("2 lines, FCFA 45,000")).toBeTruthy();
+    expect(screen.getByText("1 line, 30 000 FCFA")).toBeTruthy();
+    expect(screen.getByText("2 lines, 45 000 FCFA")).toBeTruthy();
   });
 
   it("says a change it cannot show is not available, rather than hiding it or inventing a value", async () => {
@@ -541,7 +541,7 @@ describe("record history diff", () => {
     await expandRow();
 
     // XAF has exponent 0 — 125 000 minor units is 125 000 francs.
-    expect(screen.getByText("FCFA 125,000")).toBeTruthy();
+    expect(screen.getByText("125 000 FCFA")).toBeTruthy();
   });
 
   it("leaves a non-money number alone however large it looks", async () => {

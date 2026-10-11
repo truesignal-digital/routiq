@@ -586,6 +586,16 @@ export const RULES: readonly Rule[] = [
     ),
   },
   {
+    id: "H20",
+    name: "dates-format-in-one-place",
+    fix: "Format dates through lib/format.ts: formatDate (\"29 July 2026\", month \"short\" in a dense table), formatDateTime, formatTime, formatDayMonth, formatDateRange, formatMonth, formatDateInput. Never a hand-built Intl.DateTimeFormat or toLocale*String, which give the US order in English (#712).",
+    check: linesMatching(
+      /\bnew Intl\.DateTimeFormat\b|\bIntl\.DateTimeFormat\(|\.toLocale(?:Date|Time)?String\(/,
+      // workspace-day.ts reads the workspace's calendar day as numbers (en-CA parts), never shown.
+      (path) => isWebProduction(path) && path !== "apps/web/src/lib/format.ts" && path !== "apps/web/src/lib/workspace-day.ts",
+    ),
+  },
+  {
     id: "H17",
     name: "forms-have-harness-tests",
     fix: "Give the form a sibling <Name>.test.tsx that runs describeCommandForm from apps/web/src/test/form-harness.ts: the six command-form tests (docs/design/consistency/README.md, Recipe: a new form).",
@@ -636,6 +646,19 @@ export const RULES: readonly Rule[] = [
     name: "labels-sentence-case",
     fix: "Write labels, eyebrows and badges in sentence case in the catalog and render them as written; no `uppercase` class or text-transform (apps/web/DESIGN.md). A code the user types in capitals is capitalised in the value, not by CSS.",
     check: linesMatching(/\buppercase\b|\bsmall-caps\b/, isWebStyled),
+  },
+  {
+    id: "DS-5",
+    name: "page-width-from-frame",
+    fix: "A screen takes its width from the page frame, PageContainer (components/page-container.tsx): one width for every page, so moving between pages never makes the content jump (#658, docs/design/consistency/fullpages.html#frame). Drop the max-w-* class; a measure that belongs to a part (PageHeader's description, a form column) lives in that component under components/.",
+    check: linesMatching(
+      /(?<![\w-])max-w-|\bmaxWidth\s*:/,
+      // The sign-in page sits outside the app shell, so it has no page frame to take a width from.
+      (path) =>
+        isWebProduction(path) &&
+        path.startsWith("apps/web/src/screens/") &&
+        path !== "apps/web/src/screens/LoginScreen.tsx",
+    ),
   },
   {
     id: "J1",

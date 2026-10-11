@@ -323,6 +323,91 @@
       "dependencies": []
     },
     {
+      "name": "module-page",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/module-page.tsx",
+          "type": "registry:file",
+          "target": "components/module-page.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "page",
+        "page-container",
+        "tabs"
+      ],
+      "dependencies": [
+        "@tanstack/react-router"
+      ]
+    },
+    {
+      "name": "overview",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/overview/compare-bars.tsx",
+          "type": "registry:file",
+          "target": "components/overview/compare-bars.tsx"
+        },
+        {
+          "path": "src/components/overview/to-do-list.tsx",
+          "type": "registry:file",
+          "target": "components/overview/to-do-list.tsx"
+        },
+        {
+          "path": "src/components/overview/profit-bars.tsx",
+          "type": "registry:file",
+          "target": "components/overview/profit-bars.tsx"
+        },
+        {
+          "path": "src/components/overview/week-columns.tsx",
+          "type": "registry:file",
+          "target": "components/overview/week-columns.tsx"
+        },
+        {
+          "path": "src/components/overview/chart-view-toggle.tsx",
+          "type": "registry:file",
+          "target": "components/overview/chart-view-toggle.tsx"
+        },
+        {
+          "path": "src/components/overview/fleet-board.tsx",
+          "type": "registry:file",
+          "target": "components/overview/fleet-board.tsx"
+        },
+        {
+          "path": "src/components/overview/ranked-bars.tsx",
+          "type": "registry:file",
+          "target": "components/overview/ranked-bars.tsx"
+        },
+        {
+          "path": "src/components/overview/month-columns.tsx",
+          "type": "registry:file",
+          "target": "components/overview/month-columns.tsx"
+        },
+        {
+          "path": "src/components/overview/overview-summary.tsx",
+          "type": "registry:file",
+          "target": "components/overview/overview-summary.tsx"
+        },
+        {
+          "path": "src/components/overview/summary-notice.ts",
+          "type": "registry:file",
+          "target": "components/overview/summary-notice.ts"
+        }
+      ],
+      "registryDependencies": [
+        "button",
+        "data-table",
+        "not-recorded"
+      ],
+      "dependencies": [
+        "@tanstack/react-router",
+        "lucide-react",
+        "react-i18next"
+      ]
+    },
+    {
       "name": "utils",
       "type": "registry:lib",
       "files": [
@@ -714,6 +799,31 @@
         "utils"
       ],
       "dependencies": ["@tanstack/react-router", "lucide-react", "react-i18next"]
+    },
+    {
+      "name": "form-page",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/form-page.tsx",
+          "type": "registry:file",
+          "target": "components/form-page.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "page",
+        "page-container",
+        "status-badge",
+        "not-recorded",
+        "button",
+        "card",
+        "utils"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "react-hook-form",
+        "react-i18next"
+      ]
     },
     {
       "name": "not-recorded",

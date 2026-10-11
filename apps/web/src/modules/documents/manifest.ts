@@ -2,7 +2,8 @@ import type { WebModuleManifest } from "../manifest.js";
 
 /**
  * Documents: a vehicle's papers and their expiry (contract: `MODULE_MANIFESTS`
- * in `@routiq/contracts`). It has no page of its own; it lives on the vehicle.
+ * in `@routiq/contracts`). It has no page of its own: it lives on the vehicle,
+ * and adds the fleet's Documents tab to the Trucks page.
  */
 export const documentsManifest: WebModuleManifest = {
   code: "DOCUMENTS",
@@ -16,4 +17,5 @@ export const documentsManifest: WebModuleManifest = {
   recordPanels: ["document"],
   historyKinds: ["DOCUMENTS"],
   fields: [],
+  pageTabs: ["assets.documents"],
 };
