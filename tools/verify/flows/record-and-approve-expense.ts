@@ -94,9 +94,11 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await shot("approved", { caption: `Approved: ${entry.entryNumber} leaves the queue` });
 
   await nav(`/finance/entries/${entry.id}`);
-  await page.getByRole("heading", { level: 1, name: t("Détail de l'écriture", "Entry detail") }).waitFor();
-  await page.getByRole("button", { name: t("Historique", "History"), exact: true }).click();
-  const sheet = page.getByRole("dialog");
+  // The record page is titled with the entry's own number (#662).
+  await page.getByRole("heading", { level: 1, name: entry.entryNumber }).waitFor();
+// History is the record page's last tab (#662).
+  await page.getByRole("tab", { name: t("Historique", "History"), exact: true }).click();
+  const sheet = page.getByRole("region", { name: t("Historique du dossier", "Record history") });
   await sheet.getByRole("listitem").first().waitFor();
   await quiet();
   await shot("history", {

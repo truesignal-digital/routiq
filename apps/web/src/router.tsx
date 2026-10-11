@@ -536,6 +536,10 @@ const activityRecordRoute = createRoute({
 const activityDetailRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/activities/$activityId",
+  // `tab` is the record page's open tab (#662); Overview has none.
+  validateSearch: z.object({
+    tab: z.enum(["legs", "money", "history"]).optional().catch(undefined),
+  }),
   pendingComponent: WideRecordSkeleton,
   component: ActivityDetailScreen,
 });
@@ -586,7 +590,11 @@ const financeEntryDetailRoute = createRoute({
   path: "/finance/entries/$entryId",
   // The entries list's ⋯ menu sends an operator straight into the reversal
   // dialog rather than carrying a second copy of it.
-  validateSearch: z.object({ reverse: z.boolean().optional() }),
+  // `tab` is the record page's open tab (#662); Overview has none.
+  validateSearch: z.object({
+    reverse: z.boolean().optional(),
+    tab: z.enum(["receipt", "history"]).optional().catch(undefined),
+  }),
   pendingComponent: RecordSkeleton,
   component: FinanceEntryDetailScreen,
 });

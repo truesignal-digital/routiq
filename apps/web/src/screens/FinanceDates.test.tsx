@@ -117,7 +117,7 @@ const languages = [
     economicLabel: "Date comptable",
     postingLabel: "Date de comptabilisation",
     fullScreen: "Ouvrir en plein écran",
-    detailHeading: "Détail de l'écriture",
+    detailHeading: "FIN-001",
     periodPlaceholder: "Période (AAAA-MM)",
   },
   {
@@ -129,7 +129,7 @@ const languages = [
     economicLabel: "Economic date",
     postingLabel: "Posting date",
     fullScreen: "Open full screen",
-    detailHeading: "Entry detail",
+    detailHeading: "FIN-001",
     periodPlaceholder: "Period (YYYY-MM)",
   },
 ];

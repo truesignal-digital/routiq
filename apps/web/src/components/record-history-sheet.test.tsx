@@ -108,9 +108,10 @@ async function openSheet() {
   await userEvent.click(screen.getByRole("button", { name: "History" }));
 }
 
+/** Whether the trail was asked for: a closed sheet does not even mount the read. */
 function lastEnabled(): boolean {
   const call = mocks.useHistory.mock.calls.at(-1);
-  return (call?.[2] as { enabled: boolean }).enabled;
+  return call === undefined ? false : (call[2] as { enabled: boolean }).enabled;
 }
 
 beforeAll(async () => {

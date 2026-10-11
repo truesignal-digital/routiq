@@ -92,7 +92,8 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet, expectRefu
 
   // The entry's full page.
   await page.goto(new URL(`/finance/entries/${second.id}`, page.url()).toString());
-  await page.getByRole("heading", { level: 1, name: t("Détail de l'écriture", "Entry detail") }).waitFor();
+  // The record page is titled with the entry's own number (#662).
+  await page.getByRole("heading", { level: 1, name: second.entryNumber }).waitFor();
   await quiet();
   await page.getByRole("main").getByRole("button", { name: cancel, exact: true }).click();
   await cancelForWrongDetails(second, "page");

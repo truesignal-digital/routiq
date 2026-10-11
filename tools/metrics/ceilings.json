@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 781435,
+    "ceiling": 788742,
     "raises": [
       {
         "date": "2026-10-06",
@@ -307,6 +307,12 @@
         "from": 776559,
         "to": 781435,
         "reason": "#663 FormPage (section cards, So far, Still missing, phone steps and review) plus the sheet's live totals and Register a truck's sections (re-recorded on develop 2946600c)"
+      },
+      {
+        "date": "2026-10-11",
+        "from": 781435,
+        "to": 788742,
+        "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
       }
     ]
   },
@@ -400,7 +406,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 283840,
+    "ceiling": 285204,
     "raises": [
       {
         "date": "2026-10-06",
@@ -671,6 +677,12 @@
         "from": 283191,
         "to": 283840,
         "reason": "#663 FormPage: the So far, section-state, step and review words in the fr/en catalogs (initial bundle), about 0.6 kB gzip (re-recorded on develop 2946600c)"
+      },
+      {
+        "date": "2026-10-11",
+        "from": 283840,
+        "to": 285204,
+        "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
       }
     ]
   }

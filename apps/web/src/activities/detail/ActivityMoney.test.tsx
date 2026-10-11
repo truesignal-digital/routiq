@@ -162,6 +162,7 @@ describe("activity money card", () => {
 
     expect(screen.getByRole("link", { name: /FIN-2026-0001/ })).toBeDefined();
     expect(screen.queryByText("Profit")).toBeNull();
+    expect(screen.queryByText("Loss")).toBeNull();
     expect(screen.getByText("Only the entries you recorded on this activity.")).toBeDefined();
   });
 

@@ -1,9 +1,13 @@
 import { useTranslation } from "react-i18next";
 import { LayoutGrid, Truck } from "lucide-react";
+import { RecordHeader } from "@/components/record-page.js";
 import { Button } from "@/components/ui/button";
+import { OtherBranchNotice } from "@/shell/BranchScopeNotices.js";
 import { actionDef, headerActions } from "../actions.js";
 import { useVehicle } from "../context.js";
-import { Sep, useStepLabel } from "../parts.js";
+import { useStepLabel } from "../parts.js";
+import { VehicleStatusBadge } from "../VehicleStatusBadge.js";
+import { useFactsLine } from "./FactsLine.js";
 
 /** "Mercedes-Benz Actros" — make and model, or nothing to repeat after the code. */
 export function makeAndModel(asset: { manufacturer: string | null; model: string | null }): string {
@@ -20,46 +24,44 @@ export function Plate({ plate }: { plate: string | null }) {
   );
 }
 
-/** Code, name, plate and home branch on one line; the role's own buttons beside them. */
-export function IdentityStrip() {
+/**
+ * The truck's record header (#662): code and make as the title, its status
+ * badge beside it, plate, home and the quiet facts on one line, the role's own
+ * buttons top right. The same `RecordHeader` as the money entry and the trip.
+ */
+export function VehicleHeader() {
   const { t } = useTranslation();
   const { asset } = useVehicle();
   const name = makeAndModel(asset);
-  const home = t("vehicle.header.home", { branch: asset.branch.name });
+  const facts = useFactsLine();
 
   return (
-    <div className="flex items-center gap-3">
-      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted text-foreground/80">
-        <Truck className="size-[18px]" aria-hidden />
-      </span>
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-x-2.5">
-          <h1 className="text-base leading-snug font-semibold tracking-tight md:truncate md:text-lg">
-            <span className="tabular-nums">{asset.assetCode}</span>
-            {name !== "" && (
-              <>
-                <span aria-hidden className="mx-1.5 font-normal text-muted-foreground/60">
-                  ·
-                </span>
-                {name}
-              </>
-            )}
-          </h1>
-          <span className="hidden shrink-0 items-center gap-2.5 text-sm text-muted-foreground md:inline-flex">
-            <Sep />
-            <Plate plate={asset.registrationNumber} />
-            <Sep />
-            <span>{home}</span>
-          </span>
-        </div>
-        <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground md:hidden">
-          <Plate plate={asset.registrationNumber} />
-          <Sep />
-          <span>{home}</span>
-        </p>
-      </div>
-      <HeaderActions />
-    </div>
+    <RecordHeader
+      name={asset.assetCode}
+      icon={<Truck aria-hidden />}
+      title={
+        <>
+          <span className="tabular-nums">{asset.assetCode}</span>
+          {name !== "" && (
+            <>
+              <span aria-hidden className="mx-1.5 font-normal text-muted-foreground/60">
+                ·
+              </span>
+              {name}
+            </>
+          )}
+        </>
+      }
+      status={<VehicleStatusBadge />}
+      facts={[
+        <Plate key="plate" plate={asset.registrationNumber} />,
+        t("vehicle.header.home", { branch: asset.branch.name }),
+        ...facts,
+      ]}
+      actions={<HeaderActions />}
+    >
+      <OtherBranchNotice branchCode={asset.branch.code} />
+    </RecordHeader>
   );
 }
 
