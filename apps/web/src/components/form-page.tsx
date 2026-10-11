@@ -17,6 +17,7 @@ import { StatusBadge, type StatusBadgeTone } from "@/components/status-badge.js"
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatTime } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
 
 /** How far a section got: its required fields still empty, and whether anything in it was entered. */
@@ -126,7 +127,7 @@ export function FormPage({
   draftSavedAt,
   actions,
 }: FormPageProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const stepping = useIsMobile();
   const formRef = useRef<HTMLFormElement>(null);
   const [step, setStep] = useState(0);
@@ -198,10 +199,7 @@ export function FormPage({
     onSubmit(event);
   }
 
-  const time =
-    draftSavedAt === undefined
-      ? undefined
-      : new Intl.DateTimeFormat(i18n.resolvedLanguage, { hour: "2-digit", minute: "2-digit", hour12: false }).format(draftSavedAt);
+  const time = draftSavedAt === undefined ? undefined : formatTime(draftSavedAt);
   const missingText =
     missing.length > 0 ? t("form.page.missing", { count: missing.length }) : t("form.page.nothingMissing");
   const hint = time === undefined ? missingText : t("form.page.hintWithDraft", { missing: missingText, time });

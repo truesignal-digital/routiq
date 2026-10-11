@@ -6,7 +6,7 @@ import type { DriveContext, DriveScript } from "../browser.js";
  * FormPage. On a wide screen: a 760 px column of section cards, each with its
  * state, a "So far" column that sums up what was typed and links what is still
  * missing, and one sticky footer with the hint on the left and the main button
- * last. Records a sheet (450,000 revenue, 86,000 fuel → profit 364,000) and
+ * last. Records a sheet (450 000 revenue, 86 000 fuel → profit 364 000) and
  * registers a truck, each cross-checked on the API. On a phone: one step per
  * section, then a review with "So far" and the buttons.
  * Mutates the slot (one trip, one truck); reset with `pnpm verify up --reseed`.
@@ -35,8 +35,8 @@ async function fillSheet(ctx: DriveContext, next?: () => Promise<void>) {
   await pick(ctx, form, t("Choisir un type", "Choose a type"));
   await next?.();
   await pick(ctx, form, lang === "fr" ? /^Choisir un (engin|camion|véhicule)/ : /^Choose an? (asset|truck|vehicle)/, /VH001/);
-  await page.getByLabel(t("Départ", "Departure"), { exact: true }).fill(t("21/07/2026 07:00", "07/21/2026 07:00"));
-  await page.getByLabel(t("Arrivée", "Arrival"), { exact: true }).fill(t("21/07/2026 13:15", "07/21/2026 13:15"));
+  await page.getByLabel(t("Départ", "Departure"), { exact: true }).fill("21/07/2026 07:00");
+  await page.getByLabel(t("Arrivée", "Arrival"), { exact: true }).fill("21/07/2026 13:15");
 }
 
 async function chooseCategory({ page, t }: DriveContext, money: Locator, position: number, category: string) {
@@ -110,7 +110,7 @@ async function desktop(ctx: DriveContext) {
   if (buttons.at(-1) !== t("Enregistrer la fiche", "Record sheet")) wrong.push(`last footer button is ${buttons.at(-1)}`);
   await context.scrollIntoViewIfNeeded();
   await shot("sheet-so-far", {
-    caption: "So far reads VH001, Douala → Bafoussam, 295 km, revenue 450,000, expenses 86,000 and profit 364,000; nothing is missing",
+    caption: "So far reads VH001, Douala → Bafoussam, 295 km, revenue 450 000, expenses 86 000 and profit 364 000; nothing is missing",
     highlight: context,
   });
   await shot("sheet-footer", {
@@ -217,7 +217,7 @@ async function phone(ctx: DriveContext) {
   const buttons = await footer.getByRole("button").allTextContents();
   if (buttons.at(-1) !== t("Enregistrer la fiche", "Record sheet")) wrong.push(`the review's last button is ${buttons.at(-1)}`);
   await shot("phone-review", {
-    caption: "The last step is a review: So far with profit 364,000, each section's state with Change, and Record sheet last",
+    caption: "The last step is a review: So far with profit 364 000, each section's state with Change, and Record sheet last",
     highlight: review,
   });
   await footer.getByRole("button", { name: t("Enregistrer la fiche", "Record sheet"), exact: true }).click();
