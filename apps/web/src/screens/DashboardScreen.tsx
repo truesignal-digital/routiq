@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { FileText } from "lucide-react";
+import { Link, Navigate, Outlet, useChildMatches, useNavigate, useSearch } from "@tanstack/react-router";
+import { FileText, House } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { DashboardResponse } from "@routiq/contracts";
 import { DataTable } from "@/components/data-table";
@@ -15,21 +15,34 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useMeContext } from "@/auth/me.js";
+import { ModulePage, type ModulePageTab } from "@/components/module-page.js";
 import { ChartAreaInteractive, type ChartRange } from "@/dashboard/ChartAreaInteractive.js";
-import { useDashboard } from "@/dashboard/useDashboard.js";
+import { HOME_RANGE_DAYS, useDashboard } from "@/dashboard/useDashboard.js";
 import {
   canOpenEntriesList,
+  showsDashboardOverview,
   visibleDashboardCards,
+  visibleHomePanels,
   type DashboardCardKey,
 } from "@/dashboard/cards.js";
-import { canReadFinance } from "@/finance/permissions.js";
 import {
   useFinanceEntryColumns,
   type FinanceEntryColumnId,
 } from "@/finance/entryColumns.js";
 import { useEntries } from "@/finance/useEntries.js";
+import {
+  activeDashboardTab,
+  DASHBOARD_TAB_PATH,
+  DASHBOARD_TABS,
+  dashboardTabSearch,
+  type DashboardRangeParam,
+  type DashboardTab,
+} from "@/dashboard/tabs.js";
+import { useTodo } from "@/dashboard/useFleetAttention.js";
+import { roleLanding } from "@/shell/landing.js";
+import { visibleSectionGroups } from "@/shell/sections.js";
 
-const DEFAULT_RANGE: ChartRange = 90;
+const DEFAULT_RANGE: ChartRange = HOME_RANGE_DAYS;
 
 /** Module-level so the column memo in `useFinanceEntryColumns` holds. */
 const RECENT_COLUMNS: readonly FinanceEntryColumnId[] = [
@@ -40,20 +53,90 @@ const RECENT_COLUMNS: readonly FinanceEntryColumnId[] = [
   "amount",
 ];
 
+/**
+ * Home. The ledger readers open it on the Dashboard (#666): Overview, To do,
+ * Profit by vehicle and Profit by branch, each a child route. Everyone else
+ * keeps Home's tiles and panels, and a tab's address sends them back to it.
+ */
 export function DashboardScreen() {
+  const me = useMeContext();
+  // The technician opens on the Maintenance Overview (#665).
+  const landing = roleLanding(me?.role, me?.enabledModules);
+  if (landing !== "/") return <Navigate to={landing} replace />;
+  return <Home />;
+}
+
+function Home() {
+  const { t } = useTranslation();
+  const me = useMeContext();
+  const tabPath = useTabPath();
+  if (me === undefined) return <LoadingState label={t("home.loading")} />;
+  // role-config: who gets the Overview is `showsDashboardOverview` (dashboards.html, "Who sees what").
+  if (showsDashboardOverview(me.role, me.enabledModules)) return <DashboardPage />;
+  if (tabPath !== "/") return <Navigate to="/" replace />;
+  return <HomeWithoutOverview />;
+}
+
+/**
+ * The Dashboard's header and tab bar over the tab's own route. The range the
+ * money tabs share rides along in each tab's address; To do counts the whole
+ * Branch Scope today, whatever the range, and its tab shows how many wait.
+ */
+/**
+ * The tab route rendered under Home. Read from the matched child, not the
+ * address: while a link out of Home loads, the address has already moved on
+ * and this page is still the one on screen.
+ */
+function useTabPath(): string {
+  return useChildMatches({ select: (matches) => matches[0]?.pathname ?? "/" });
+}
+
+function DashboardPage() {
+  const { t } = useTranslation();
+  const pathname = useTabPath();
+  const search: { range?: DashboardRangeParam | undefined } = useSearch({ strict: false });
+  const todo = useTodo().data;
+  const tabs: ModulePageTab<DashboardTab>[] = DASHBOARD_TABS.map((tab) => ({
+    key: tab,
+    label: t(`dashboard.tabs.${tab}`),
+    to: DASHBOARD_TAB_PATH[tab],
+    search: dashboardTabSearch(search.range),
+    ...(tab === "todo" && todo !== undefined
+      ? { count: todo.totalCount, countLabel: t("dashboard.tabs.todoCount", { count: todo.totalCount }) }
+      : {}),
+  }));
+  return (
+    <ModulePage
+      title={t("home.title")}
+      description={t("dashboard.description")}
+      tabsLabel={t("dashboard.tabs.label")}
+      tabs={tabs}
+      active={activeDashboardTab(pathname)}
+    >
+      <Outlet />
+    </ModulePage>
+  );
+}
+
+/** Home for the roles without the Dashboard's Overview: the cashier, the workshop, the driver. */
+export function HomeWithoutOverview() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const me = useMeContext();
   const [range, setRange] = useState<ChartRange>(DEFAULT_RANGE);
 
   const dashboard = useDashboard(range);
-  // role-config: the chart sums the books (ledger readers); recent entries
-  // are whatever slice the read returns this role (#264).
-  const showChart = canReadFinance(me?.role, me?.enabledModules);
-  const showEntries = canOpenEntriesList(me?.role, me?.enabledModules);
+  const panels = visibleHomePanels(me?.role, me?.enabledModules);
+  const showChart = panels.includes("moneyChart");
+  const showEntries = panels.includes("recentEntries");
+
+  if (me !== undefined && panels.length === 0 && visibleDashboardCards(me.role, me.enabledModules).length === 0) {
+    const groups = visibleSectionGroups(me.role, me.enabledModules);
+    return <EmptyHome hasCompanyPages={groups.some(({ key }) => key === "company")} />;
+  }
 
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader title={t("home.title")} />
 
       {dashboard.isError && (
@@ -93,6 +176,24 @@ export function DashboardScreen() {
           />
         )}
       </div>
+    </PageContainer>
+  );
+}
+
+/**
+ * Every card and panel on Home belongs to a module, and the assets card has no
+ * role gate: a Home with none means the modules behind it are off (#622).
+ */
+function EmptyHome({ hasCompanyPages }: { hasCompanyPages: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <PageContainer>
+      <PageHeader title={t("home.title")} />
+      <EmptyState
+        className="mt-6"
+        icon={<House className="size-7" aria-hidden />}
+        message={t(hasCompanyPages ? "home.empty.modulesOffCompanyPages" : "home.empty.modulesOff")}
+      />
     </PageContainer>
   );
 }
@@ -140,15 +241,18 @@ function homeTile(
   const base = { id: key, label: t(`home.cards.${key}.title`) };
 
   if (key === "pendingApprovals") {
-    const link = { to: "/finance/approvals" };
+    const link = { to: "/finance/approve" };
+    if (data === undefined) return { ...base, link, value: null };
     // Null only when the API withholds finance from this caller; the tile is
     // gated to approvers, so this is the brief window before /v1/me agrees.
-    if (data === undefined || data.pendingApprovals === null) {
+    // Withheld is not unrecorded, so the value is left out.
+    if (data.pendingApprovals === null) {
       return {
         ...base,
         link,
         value: null,
-        ...(data === undefined ? {} : { hint: t("home.cards.financeUnavailable") }),
+        withheld: true,
+        hint: t("home.cards.financeUnavailable"),
       };
     }
     const { count, outsideBranchCount } = data.pendingApprovals;
@@ -165,7 +269,7 @@ function homeTile(
         : {
             secondary: {
               label: t("home.cards.pendingApprovals.outsideBranch", { count: outsideBranchCount }),
-              to: "/finance/approvals",
+              to: "/finance/approve",
               search: { branch: "all" },
             },
           }),
@@ -194,8 +298,8 @@ function homeTile(
       }
     : {};
   if (data === undefined) return { ...base, ...link, value: null };
-  // No open period means nothing has been posted yet: a dash, never a zero,
-  // because a zero would claim the period balanced (§3.4).
+  // No open period means nothing has been posted yet: said in words, never a
+  // zero, because a zero would claim the period balanced (§3.4).
   if (openPeriod == null) {
     return { ...base, ...link, value: null, hint: t("home.cards.noOpenPeriod") };
   }

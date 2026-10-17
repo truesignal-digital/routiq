@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import type { SortingState, VisibilityState } from "@tanstack/react-table";
 import {
   ArrowLeftRight,
@@ -7,11 +7,10 @@ import {
   FileText,
   Maximize2,
   PlayCircle,
-  Plus,
   Search,
   Truck,
 } from "lucide-react";
-import type { AssetListItem } from "@routiq/contracts";
+import type { AssetAvailabilityFilter, AssetListItem } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
 import {
@@ -21,10 +20,7 @@ import {
   type DataTableFilterValues,
   type DataTableRowAction,
 } from "@/components/data-table";
-import { MetricStrip, type MetricTiles } from "@/components/metric-strip.js";
-import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
-import { PageContainer } from "@/components/page-container";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
+import { EmptyState, ErrorState, LoadingState } from "@/components/page";
 import { useMeContext } from "@/auth/me.js";
 import {
   AssetActionDialog,
@@ -34,10 +30,10 @@ import {
 } from "@/assets/AssetActions.js";
 import { useAssetColumns, type AssetColumnId } from "@/assets/assetColumns.js";
 import { assetFilterQuery, isAssetFilter } from "@/assets/display.js";
-import { canManageAssets, canViewAssets } from "@/assets/permissions.js";
-import { useAssetRegistrationReference } from "@/assets/reference.js";
+import { canManageAssets } from "@/assets/permissions.js";
+import { contributes } from "@/modules/manifest.js";
+import { useAssetRegistrationReference } from "@/reference/asset-registration.js";
 import { useAssets } from "@/assets/useAssets.js";
-import { useAssetSummary } from "@/assets/useAssetSummary.js";
 import { localizedLabel } from "@/lib/format.js";
 import { toSortParam } from "@/lib/sort-param.js";
 import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
@@ -59,40 +55,66 @@ const PRIMARY_COLUMN = { columnId: "assetCode" } as const;
 /** The status choices, minus ALL: the select's own reset item is ALL. */
 const STATUS_OPTIONS = ["IN_SERVICE", "ATTENTION"] as const;
 
+/**
+ * The Overview's availability tiles (#665), each a filter here. A rule owned
+ * by a module that is off is not offered: the server would match nothing.
+ */
+const AVAILABILITY_MODULE_FIELD = {
+  CAN_DRIVE: undefined,
+  GROUNDED: "assets.attentionGrounding",
+  IDLE: "vehicle.lastTrip",
+} as const satisfies Record<AssetAvailabilityFilter, string | undefined>;
+const AVAILABILITY_OPTIONS = Object.keys(AVAILABILITY_MODULE_FIELD) as AssetAvailabilityFilter[];
+
+/**
+ * Trucks › Trucks (#665): the fleet list, starting with its search and
+ * filters. The tiles that sat above it moved into the Overview, and each
+ * opens this list already filtered through the URL.
+ */
 export function AssetsStub() {
   const { t, i18n } = useTranslation();
   const label = useCommandLabel();
   const navigate = useNavigate();
   const me = useMeContext();
-  const canView = canViewAssets(me?.enabledModules);
+  // The shell opens this page only while Assets is on (`ModulePageGate`).
   const canManage = canManageAssets(me?.role, me?.enabledModules);
-  const documentsEnabled = me?.enabledModules.includes("DOCUMENTS") ?? false;
-  // Grounding is a MAINTENANCE fact; the server counts it only while the
-  // module is on, so the hint says which set the number covers.
-  const groundingCounted = me?.enabledModules.includes("MAINTENANCE") ?? false;
+  // The row's Documents entry opens the vehicle's Documents tab, so it goes with the tab.
+  const documentsEnabled = contributes("vehicleTabs", "documents", me?.enabledModules);
 
-  // The status bucket lives in the URL, where the tiles put it (#302); the
-  // other toolbar filters stay local to the visit.
-  const urlSearch = useSearch({ from: "/app/assets" });
+  const enabledModules = me?.enabledModules;
+  const availabilityOptions = useMemo(
+    () =>
+      AVAILABILITY_OPTIONS.filter((option) => {
+        const field = AVAILABILITY_MODULE_FIELD[option];
+        return field === undefined || contributes("fields", field, enabledModules);
+      }),
+    [enabledModules],
+  );
+
+  // The status and availability buckets live in the URL, where the Overview's
+  // tiles put them (#302); the other toolbar filters stay local to the visit.
+  const urlSearch = useSearch({ from: "/app/assets/list" });
   const [localFilters, setLocalFilters] = useState<DataTableFilterValues>({});
   const filterValues = useMemo<DataTableFilterValues>(
     () => ({
       ...localFilters,
       ...(urlSearch.status === undefined ? {} : { status: urlSearch.status }),
+      ...(urlSearch.availability === undefined ? {} : { availability: urlSearch.availability }),
     }),
-    [localFilters, urlSearch.status],
+    [localFilters, urlSearch.status, urlSearch.availability],
   );
-  const setStatus = (status: string | undefined) =>
-    void navigate({
-      to: "/assets",
-      replace: true,
-      search: { status: STATUS_OPTIONS.find((option) => option === status) },
-    });
   const setFilterValues = (values: DataTableFilterValues) => {
-    const { status, ...rest } = values;
+    const { status, availability, ...rest } = values;
     setLocalFilters(rest);
-    if ((status ?? "") !== (urlSearch.status ?? "")) {
-      setStatus(status === "" ? undefined : status);
+    if ((status ?? "") !== (urlSearch.status ?? "") || (availability ?? "") !== (urlSearch.availability ?? "")) {
+      void navigate({
+        to: "/assets/list",
+        replace: true,
+        search: {
+          status: STATUS_OPTIONS.find((option) => option === status),
+          availability: AVAILABILITY_OPTIONS.find((option) => option === availability),
+        },
+      });
     }
   };
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -112,25 +134,17 @@ export function AssetsStub() {
   const statusQuery = assetFilterQuery(
     isAssetFilter(statusChoice) ? statusChoice : "ALL",
   );
+  const availability = AVAILABILITY_OPTIONS.find((option) => option === filterValues["availability"]);
 
-  // Everything but the lifecycle bucket: the tiles count inside the same
-  // narrowing the table shows, and a status filter would make each bucket
-  // count itself. The branch is not in here — `useAssets` and `useAssetSummary`
-  // are branch-scoped reads, so the shell's agency reaches both by itself.
-  const scope = useMemo(
-    () => ({
-      ...(search === "" ? {} : { search }),
-      ...(category === "" ? {} : { category }),
-    }),
-    [search, category],
-  );
-
+  // The branch is not in here — `useAssets` is a branch-scoped read, so the
+  // shell's agency reaches it by itself.
   const assetsQuery = useAssets({
-    ...scope,
+    ...(search === "" ? {} : { search }),
+    ...(category === "" ? {} : { category }),
     ...statusQuery,
+    ...(availability === undefined ? {} : { availability }),
     ...(sort === undefined ? {} : { sort }),
   });
-  const summaryQuery = useAssetSummary(scope);
 
   const assets = assetsQuery.data?.pages.flatMap((page) => page.items) ?? [];
   // Toolbar filters only. The shell's agency is the other way a list can come
@@ -153,6 +167,15 @@ export function AssetsStub() {
           label: t(`assets.filters.${value}`),
         })),
       },
+      {
+        columnId: "availability",
+        type: "select",
+        placeholder: t("assets.filters.availability"),
+        options: availabilityOptions.map((value) => ({
+          value,
+          label: t(`assets.filters.availabilityOptions.${value}`),
+        })),
+      },
       // No branch filter: the header switcher is the one place branch scope is
       // set, so a second control here could only contradict it.
       {
@@ -165,80 +188,12 @@ export function AssetsStub() {
         })),
       },
     ],
-    [t, i18n.language, reference.data],
+    [t, i18n.language, reference.data, availabilityOptions],
   );
 
-  const tiles = useMemo<MetricTiles>(() => {
-    const counts = summaryQuery.data;
-    return [
-      {
-        label: t("assets.metrics.total"),
-        value: counts === undefined ? null : String(counts.total),
-        selected: urlSearch.status === undefined,
-        onSelect: () => setStatus(undefined),
-      },
-      {
-        label: t("assets.metrics.inService"),
-        value: counts === undefined ? null : String(counts.inService),
-        selected: urlSearch.status === "IN_SERVICE",
-        onSelect: () =>
-          setStatus(urlSearch.status === "IN_SERVICE" ? undefined : "IN_SERVICE"),
-      },
-      {
-        label: t("assets.metrics.attention"),
-        value: counts === undefined ? null : String(counts.attention),
-        tone: "warning",
-        selected: urlSearch.status === "ATTENTION",
-        onSelect: () =>
-          setStatus(urlSearch.status === "ATTENTION" ? undefined : "ATTENTION"),
-        hint: t(
-          groundingCounted
-            ? "assets.metrics.attentionHint"
-            : "assets.metrics.attentionHintNoGrounding",
-        ),
-      },
-    ];
-  }, [summaryQuery.data, t, groundingCounted, urlSearch.status]);
-
-  if (me !== undefined && !canView) {
-    return (
-      <PermissionDenied
-        width="wide"
-        title={t("assets.title")}
-        icon={<Truck className="size-7" aria-hidden />}
-        code={deniedCode(me.enabledModules.includes("ASSETS"))}
-      />
-    );
-  }
-
   return (
-    <PageContainer width="wide">
-      <PageHeader
-        title={t("assets.title")}
-        actions={
-          canManage ? (
-            <Link
-              to="/assets/new"
-              className="hidden min-h-11 shrink-0 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 sm:inline-flex"
-            >
-              <Plus className="size-4" aria-hidden />
-              {label("register-asset")}
-            </Link>
-          ) : undefined
-        }
-      />
-      <p className="mt-2 max-w-lg text-sm text-muted-foreground">
-        {t("assets.subtitle")}
-      </p>
-
-      <MetricStrip
-        className="mt-6"
-        tiles={tiles}
-        isPending={summaryQuery.isPending}
-        isError={summaryQuery.isError}
-      />
-
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <BranchScopeLine
           count={assetsQuery.isPending ? undefined : assets.length}
           hasMore={assetsQuery.hasNextPage ?? false}
@@ -278,6 +233,7 @@ export function AssetsStub() {
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}
             sorting={sorting}
+            defaultSorting={DEFAULT_SORTING}
             onSortingChange={setSorting}
             primaryColumn={PRIMARY_COLUMN}
             rowActions={(asset) => {
@@ -399,15 +355,6 @@ export function AssetsStub() {
         />
       )}
 
-      {canManage && (
-        <Link
-          to="/assets/new"
-          aria-label={label("register-asset")}
-          className="fixed right-4 bottom-[calc(var(--bottom-bar,0px)+1rem)] z-20 flex size-14 items-center justify-center rounded-full bg-signal text-signal-foreground shadow-lg transition active:scale-95 sm:hidden"
-        >
-          <Plus className="size-6" aria-hidden />
-        </Link>
-      )}
-    </PageContainer>
+    </>
   );
 }

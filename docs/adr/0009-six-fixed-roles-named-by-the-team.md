@@ -1,5 +1,9 @@
 # Six fixed roles, named in the team's words
 
+> **Amended in part (2026-10-10, #711, ADR-0013).** The company settings (the
+> approval thresholds and the Dashboard summary schedule) belong to Direction
+> and the Administrateur. Branches, categories and presets stay as below.
+
 ROUTIQ has exactly six roles: **Direction**, **Administrateur**, **Finance**,
 **Caissier**, **Technicien** and **Chauffeur**. They replace the six built
 roles (ADMIN, OPS_MANAGER, FIELD_SUBMITTER, MAINTENANCE, FINANCE_APPROVER,

@@ -11,6 +11,7 @@ import { createSession } from "../auth/local.js";
 import type { Db } from "../db/client.js";
 import { approvalRules, branches, sourceArtifacts } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 
@@ -784,6 +785,8 @@ describe("work order and signalement reads", () => {
       expect(
         [...body.costLines!, ...body.pendingCostLines!].map((line) => line.description),
       ).not.toContain("Facture refusée");
+      // An all-branch reader sees every line: nothing sits elsewhere.
+      expect(body.otherBranchesCostMinor).toBe(0);
     });
 
     it("drops the lines booked in a branch the reader cannot see", async () => {
@@ -793,6 +796,16 @@ describe("work order and signalement reads", () => {
       );
       expect(scoped.costLines).toHaveLength(3);
       expect(scoped.pendingCostLines).toHaveLength(1);
+    });
+
+    it("sums the lines in other branches into one figure, so the list still adds up (#643)", async () => {
+      const full = workOrderDetail.parse((await detail(costOrderId)).json());
+      const scoped = workOrderDetail.parse((await detail(costOrderId, doualaToken)).json());
+      const total = (body: typeof full) =>
+        [...body.costLines!, ...body.pendingCostLines!].reduce((sum, line) => sum + line.amountMinor, 0);
+      // The Yaoundé kit, as an amount only: no description, number or date.
+      expect(scoped.otherBranchesCostMinor).toBe(12_000);
+      expect(total(scoped) + scoped.otherBranchesCostMinor!).toBe(total(full));
     });
   });
 
@@ -820,7 +833,7 @@ describe("work order and signalement reads", () => {
         expect(open.statusCode, url).not.toBe(403);
       }
 
-      await command(gatedToken, "disable-module", { moduleCode: "MAINTENANCE" });
+      await setModule(db, seeded.workspace.id, "MAINTENANCE", false);
 
       for (const url of ["/v1/work-orders", "/v1/issues", `/v1/work-orders/${randomUUID()}`]) {
         const response = await ctx.app.inject({
@@ -1002,7 +1015,7 @@ describe("work order makers and the issue detail read", () => {
 
     const gated = await seedWorkspace(ctx.db);
     const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
-    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "MAINTENANCE" });
+    await setModule(ctx.db, gated.workspace.id, "MAINTENANCE", false);
     const refused = await api.get(gatedAdmin.token, `/v1/issues/${randomUUID()}`);
     expect(refused.status).toBe(403);
     expect(refused.body).toEqual({

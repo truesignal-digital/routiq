@@ -134,7 +134,7 @@ interface MemberAdministrator {
  * scoped to Bafoussam cannot touch a member who also works in Douala, nor hand
  * out "all branches".
  */
-function assertMayManage(
+export function assertMayManage(
   actor: MemberAdministrator,
   member: { role: Role; branchScope: MemberBranchScope },
 ): void {
@@ -206,7 +206,7 @@ async function resolveBranchScope(
   return { allBranches: false, branchIds: [...branchScope] };
 }
 
-function branchScopeOf(membership: MembershipRow): MemberBranchScope {
+export function branchScopeOf(membership: MembershipRow): MemberBranchScope {
   return membership.allBranches ? "ALL" : membership.branchIds;
 }
 

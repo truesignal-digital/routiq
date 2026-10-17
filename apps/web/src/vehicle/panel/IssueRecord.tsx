@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { formatDateTime } from "@/lib/format.js";
+import { formatDateTime, notRecorded } from "@/lib/format.js";
 import { useIssueCategoryLabel } from "@/maintenance/issue-category.js";
 import {
   CreateWorkOrderForm,
@@ -11,7 +11,8 @@ import { IssueStatusBadge } from "@/maintenance/IssueStatusBadge.js";
 import { Chronologie } from "@/maintenance/WorkOrderSheet.js";
 import { useVehicle, type PanelForm } from "../context.js";
 import { groundingFacts, isActiveWorkOrder, issueSteps } from "../flow.js";
-import { recordReference } from "../model.js";
+import { RecordNumber } from "@/components/record-number";
+import { recordNumberText } from "@/lib/record-number.js";
 import { DetailHeader, DetailSection, FactList, LinkButton, Note, SafetyMark } from "../parts.js";
 import { useIssue } from "../useVehicle.js";
 import { PanelFooter, PanelLoading, PanelMissing, RecordFileRow, useFormHost } from "./shared.js";
@@ -21,13 +22,12 @@ const TITLE_MAX = 120;
 
 export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefined }) {
   const { t, i18n } = useTranslation();
-  const { asset, viewer, panel, gates, pinnedLabel } = useVehicle();
-  const query = useIssue(id, gates.maintenance);
+  const { asset, viewer, panel, pinnedLabel } = useVehicle();
+  const query = useIssue(id);
   const categoryLabel = useIssueCategoryLabel();
-  const host = useFormHost(t("vehicle.panel.issueTitle", { ref: recordReference(id) }));
+  const host = useFormHost(t("vehicle.panel.issueTitle", { ref: recordNumberText(t, "issue", query.data?.number) }));
   const locale = i18n.language;
 
-  if (!gates.maintenance) return <PanelMissing />;
   if (query.isPending) return <PanelLoading />;
   if (query.isError || query.data === undefined) return <PanelMissing onRetry={() => void query.refetch()} />;
   const issue = query.data;
@@ -81,7 +81,7 @@ export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefi
   return (
     <>
       <DetailHeader
-        eyebrow={t("vehicle.panel.issueEyebrow", { ref: recordReference(issue.id) })}
+        eyebrow={t("vehicle.panel.issueEyebrow", { ref: recordNumberText(t, "issue", issue.number) })}
         title={title}
         meta={
           <>
@@ -94,7 +94,7 @@ export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefi
         {title !== issue.description && <p className="text-sm">{issue.description}</p>}
         <FactList
           rows={[
-            [t("vehicle.panel.category"), category ?? t("vehicle.details.notRecorded")],
+            [t("vehicle.panel.category"), category ?? notRecorded()],
             [
               t("vehicle.panel.reported"),
               t("vehicle.panel.atBy", { date: formatDateTime(issue.reportedAt, locale), name: reportedBy }),
@@ -108,7 +108,7 @@ export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefi
                 <span className="flex flex-wrap gap-x-2">
                   {issue.workOrders.map((wo) => (
                     <LinkButton key={wo.id} onClick={() => panel.openRecord({ kind: "work_order", id: wo.id })}>
-                      {recordReference(wo.id)}
+                      <RecordNumber>{recordNumberText(t, "work_order", wo.number)}</RecordNumber>
                     </LinkButton>
                   ))}
                 </span>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, FileText, Image as ImageIcon, Upload, X } from "lucide-react";
+import { Camera, Check, FileText, Image as ImageIcon, Upload, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { downscaleImage, uploadArtifact } from "../../artifacts/upload.js";
 import { sessionStore } from "../../auth/store.js";
@@ -24,7 +24,9 @@ export interface FileUploadProps {
   /** Lets an owning form prevent submission until every active upload settles. */
   onUploadingChange?: (uploading: boolean) => void;
   /** Passed directly to the native picker, including `image/*` for mobile capture. */
-  accept?: string;
+  accept?: string | undefined;
+  /** Camera first: the main button opens a phone's camera, with choosing a file under it. */
+  camera?: boolean | undefined;
   className?: string;
   uploadImpl?: typeof uploadArtifact;
 }
@@ -33,11 +35,13 @@ export function FileUpload({
   onChange,
   onUploadingChange,
   accept,
+  camera = false,
   className,
   uploadImpl = uploadArtifact,
 }: FileUploadProps) {
   const { t, i18n } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const previewUrlsRef = useRef(new Set<string>());
   const onChangeRef = useRef(onChange);
   const onUploadingChangeRef = useRef(onUploadingChange);
@@ -160,6 +164,21 @@ export function FileUpload({
           event.currentTarget.value = "";
         }}
       />
+      {camera && (
+        <input
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden
+          onChange={(event) => {
+            if (event.currentTarget.files !== null) addFiles(event.currentTarget.files);
+            event.currentTarget.value = "";
+          }}
+        />
+      )}
       <button
         type="button"
         className={cn(
@@ -168,7 +187,7 @@ export function FileUpload({
             ? "border-primary bg-primary/10 text-primary"
             : "border-border bg-muted/30 text-muted-foreground hover:border-primary/60 hover:bg-primary/[0.04]",
         )}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => (camera ? cameraRef : inputRef).current?.click()}
         onDragEnter={(event) => {
           event.preventDefault();
           setDragging(true);
@@ -186,10 +205,21 @@ export function FileUpload({
         }}
       >
         <span className="grid size-9 place-items-center rounded-full bg-primary/10 text-primary transition-transform group-hover:-translate-y-0.5">
-          <Upload className="size-4" aria-hidden />
+          {camera ? <Camera className="size-4" aria-hidden /> : <Upload className="size-4" aria-hidden />}
         </span>
-        <span className="text-sm font-medium text-foreground">{t("fileUpload.dropzone")}</span>
+        <span className="text-sm font-medium text-foreground">
+          {t(camera ? "fileUpload.takePhoto" : "fileUpload.dropzone")}
+        </span>
       </button>
+      {camera && (
+        <button
+          type="button"
+          className="min-h-11 self-start rounded-md px-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
+          onClick={() => inputRef.current?.click()}
+        >
+          {t("fileUpload.chooseFile")}
+        </button>
+      )}
 
       {files.map((item) => (
         <div

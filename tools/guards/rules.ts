@@ -1,4 +1,5 @@
 import { migrationIntegrity, migrationsBehindBase } from "./migrations.js";
+import { moduleBoundaryViolations } from "./module-boundaries.js";
 import { isTestFile, matchFile, matchLines, type SourceFile, type Violation } from "./scan.js";
 import { unsafeSqlConstruction } from "./sql.js";
 
@@ -89,6 +90,12 @@ const APPEND_ONLY_WRITERS: readonly { path: string; table: string; op: "update" 
     why: "links a superseded reading to the one that corrects it (superseded_by_id, supersede_reason)",
   },
   {
+    path: "apps/api/src/commands/person-login.ts",
+    table: "personLogins",
+    op: "update",
+    why: "ends a person's open login link when it is relinked or unlinked (ended_at, ended_by_command_id; #569)",
+  },
+  {
     path: "apps/api/src/commands/entry-decisions.ts",
     table: "financialPostings",
     op: "update",
@@ -112,6 +119,23 @@ const APPEND_ONLY_WRITERS: readonly { path: string; table: string; op: "update" 
     op: "delete",
     why: "seed-demo --reset wipes the demo workspace as the database owner, never as routiq_app",
   },
+];
+
+/**
+ * The record pages and the parts they are built from (#662): the money entry,
+ * the trip and the truck. A new record page joins this list.
+ */
+const RECORD_PAGES: readonly string[] = [
+  "apps/web/src/screens/FinanceEntryDetailScreen.tsx",
+  "apps/web/src/screens/ActivityDetailScreen.tsx",
+  "apps/web/src/finance/EntryPage.tsx",
+  "apps/web/src/activities/detail/",
+  "apps/web/src/vehicle/VehicleWorkspaceScreen.tsx",
+  "apps/web/src/vehicle/header/",
+  "apps/web/src/vehicle/tabs/",
+  "apps/web/src/components/record-page.tsx",
+  "apps/web/src/components/status-block.tsx",
+  "apps/web/src/components/record-history-sheet.tsx",
 ];
 
 /**
@@ -288,6 +312,23 @@ function catalogKeys(file: SourceFile): { path: string; line: number; text: stri
   });
 }
 
+const isWorkflow = (path: string) => /^\.github\/workflows\/[^/]+\.ya?ml$/.test(path);
+
+/**
+ * CI's image pulls, off Docker Hub's anonymous rate limit (#603): every
+ * `image:` names its registry, and a workflow that runs the test suites tells
+ * testcontainers to pull through the mirror.
+ */
+function dockerHubPulls(files: readonly SourceFile[]): Violation[] {
+  return files.filter((file) => isWorkflow(file.path)).flatMap((file) => {
+    // A first path segment with a dot or a port is a registry host; anything else resolves to Docker Hub.
+    const bareImages = matchLines(file, /^\s*image:\s*["']?(?![\w.-]+[.:][\w.-]*\/)[\w.-]+(\/[\w.-]+)*(:[\w.-]+)?["']?\s*$/);
+    const mirrored = /^\s*TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX:\s*\S/m.test(file.content);
+    const testSteps = mirrored ? [] : matchLines(file, /\bpnpm\b.*\btest\b/);
+    return [...bareImages, ...testSteps];
+  });
+}
+
 export const RULES: readonly Rule[] = [
   {
     id: "A2",
@@ -450,6 +491,18 @@ export const RULES: readonly Rule[] = [
     check: linesMatching(/\b(setQueryData|onMutate)\b/, isWebProduction),
   },
   {
+    id: "C1",
+    name: "ci-images-off-docker-hub",
+    fix: "Anonymous Docker Hub pulls are rate-limited and failed every CI run for hours (#603). Pull through the mirror: `image: mirror.gcr.io/library/postgres:17` (or another registry host), and set `TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX: mirror.gcr.io` in the env of a workflow that runs the tests.",
+    check: dockerHubPulls,
+  },
+  {
+    id: "C2",
+    name: "no-define-in-web-build",
+    fix: "A value compiled in through Vite `define` (commit, date, build id) renames the chunk it lands in and every chunk importing it, so the JS size totals move with each commit (#598). Put it in index.html instead, as the `routiq-version` meta tag in apps/web/vite.config.ts does, and read it at run time.",
+    check: linesMatching(/^\s*define\s*:/, (path) => /^apps\/[^/]+\/vite\.config\.[cm]?[jt]s$/.test(path)),
+  },
+  {
     id: "H6",
     name: "toast-through-notify",
     fix: "Use notifyCommandSuccess / notifyCommandError from lib/notify.ts.",
@@ -511,6 +564,23 @@ export const RULES: readonly Rule[] = [
     ),
   },
   {
+    id: "H19",
+    name: "no-bare-dash",
+    fix: 'A missing value is said in words: notRecorded() from lib/format.ts, or <NotRecorded /> (components/not-recorded.tsx) with onAdd when the viewer may fill it (#306). A value the viewer may not read is left out. Never a bare "—". The one exception is MetricStrip\'s failed-read state.',
+    check: (files) => {
+      const scoped = files.filter(
+        (file) => isWebProduction(file.path) && file.path !== "apps/web/src/components/metric-strip.tsx",
+      );
+      return [
+        // "—" as a whole string literal.
+        ...linesMatching(/(["'`])\u2014\1/, () => true)(scoped),
+        // "—" as the whole text of a JSX element, or alone on a line as JSX
+        // text: Prettier puts it there once the element wraps.
+        ...scoped.flatMap((file) => matchFile(file, />\s*\u2014\s*<|^[ \t]*\u2014[ \t]*$/m)),
+      ];
+    },
+  },
+  {
     id: "H15",
     name: "submit-labels-in-commands",
     fix: "A form's button names its command: put it at commands.<command-name>.submit and render it through CommandForm's `command` prop (apps/web/src/commands/labels.ts).",
@@ -530,6 +600,16 @@ export const RULES: readonly Rule[] = [
     check: linesMatching(
       /\bnew Intl\.NumberFormat\b|\bsignDisplay\b|\bformatXAF\b/,
       (path) => isWebProduction(path) && path !== "apps/web/src/lib/format.ts",
+    ),
+  },
+  {
+    id: "H20",
+    name: "dates-format-in-one-place",
+    fix: "Format dates through lib/format.ts: formatDate (\"29 July 2026\", month \"short\" in a dense table), formatDateTime, formatTime, formatDayMonth, formatDateRange, formatMonth, formatDateInput. Never a hand-built Intl.DateTimeFormat or toLocale*String, which give the US order in English (#712).",
+    check: linesMatching(
+      /\bnew Intl\.DateTimeFormat\b|\bIntl\.DateTimeFormat\(|\.toLocale(?:Date|Time)?String\(/,
+      // workspace-day.ts reads the workspace's calendar day as numbers (en-CA parts), never shown.
+      (path) => isWebProduction(path) && path !== "apps/web/src/lib/format.ts" && path !== "apps/web/src/lib/workspace-day.ts",
     ),
   },
   {
@@ -585,6 +665,28 @@ export const RULES: readonly Rule[] = [
     check: linesMatching(/\buppercase\b|\bsmall-caps\b/, isWebStyled),
   },
   {
+    id: "DS-5",
+    name: "page-width-from-frame",
+    fix: "A screen takes its width from the page frame, PageContainer (components/page-container.tsx): one width for every page, so moving between pages never makes the content jump (#658, docs/design/consistency/fullpages.html#frame). Drop the max-w-* class; a measure that belongs to a part (PageHeader's description, a form column) lives in that component under components/.",
+    check: linesMatching(
+      /(?<![\w-])max-w-|\bmaxWidth\s*:/,
+      // The sign-in page sits outside the app shell, so it has no page frame to take a width from.
+      (path) =>
+        isWebProduction(path) &&
+        path.startsWith("apps/web/src/screens/") &&
+        path !== "apps/web/src/screens/LoginScreen.tsx",
+    ),
+  },
+  {
+    id: "DS-6",
+    name: "no-full-width-button-on-record",
+    fix: "A record page keeps its actions in the header (top right) and the decision in the status block, and on a phone in the bottom action bar (components/record-page.tsx, components/status-block.tsx; #662, docs/design/consistency/fullpages.html). Drop the w-full button under the content; move the action there.",
+    check: (files) =>
+      files
+        .filter((file) => isWebProduction(file.path) && RECORD_PAGES.some((root) => file.path.startsWith(root)))
+        .flatMap((file) => matchFile(file, /<Button\b(?:=>|[^<>])*?\bw-full\b/)),
+  },
+  {
     id: "J1",
     name: "no-any",
     fix: "Type it: use the contract's types, unknown plus a guard, or a generic.",
@@ -617,6 +719,15 @@ export const RULES: readonly Rule[] = [
         .flatMap((file) => matchLines(file, /\d{4}_\w+\.sql|drizzle\/\$\{/).slice(0, 1)),
   },
   {
+    id: "D1",
+    name: "workspace-day-one-helper",
+    fix: "Get the workspace time zone from workspaceTimezone() in apps/api/src/reads/workspace-day.ts, then pass it to currentBusinessDate() or currentPeriodCode(). \"The workspace's day\" has drifted between copies before (#511, #555, #560; #580).",
+    check: linesMatching(
+      /\bworkspaces\.timezone\b/,
+      (path) => isApiProduction(path) && path !== "apps/api/src/reads/workspace-day.ts" && path !== "apps/api/src/db/schema.ts",
+    ),
+  },
+  {
     id: "P1",
     name: "no-prototype-routes",
     fix: "Prototypes stay on their own branch; production routes never mount them.",
@@ -633,6 +744,12 @@ export const RULES: readonly Rule[] = [
     name: "flow-shots-captioned",
     fix: 'Give the shot a caption: shot("label", { caption: "One English sentence: what this frame proves" }), and a highlight locator where something changed. Reels show the caption under the frame; without it a reviewer sees only the label.',
     check: linesMatching(/\bshot\(\s*(["'`])[^"'`]*\1\s*\)/, (path) => path.startsWith("tools/verify/flows/") && path.endsWith(".ts")),
+  },
+  {
+    id: "B1",
+    name: "module-boundaries",
+    fix: "Core never imports a module, and a module imports another only when its web manifest lists it in `uses` (AGENTS.md, Core vs modules; #330). Give core a slot the module fills through its manifest (apps/web/src/modules/manifest.ts), move a helper every module shares into core, or wire the module in at the composition entry (apps/web/src/modules/index.ts, router.tsx). Which paths are core, module or composition: tools/guards/module-boundaries.ts.",
+    check: moduleBoundaryViolations,
   },
   {
     id: "S1",

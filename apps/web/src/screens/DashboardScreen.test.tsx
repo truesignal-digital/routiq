@@ -37,7 +37,7 @@ vi.mock("../auth/store.js", () => ({
   useActiveSession: () => session,
 }));
 
-const { DashboardScreen } = await import("./DashboardScreen.js");
+const { DashboardScreen, HomeWithoutOverview } = await import("./DashboardScreen.js");
 
 const FLAT_SERIES = Array.from({ length: 7 }, (_, index) => ({
   date: `2026-07-2${index}`,
@@ -171,17 +171,22 @@ function membership(role: Role, enabledModules: ModuleCode[]): MeContext {
     branchScope: "ALL",
     enabledModules,
     enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+    timezone: "Africa/Douala",
   };
 }
 
 const ENTRY_DETAIL_PATH = "/finance/entries/$entryId";
 
+/**
+ * Home's tiles and panels, as the roles without the Dashboard's Overview get
+ * them. The Overview roles' page is covered under "Dashboard by role" below.
+ */
 async function renderHome(me: MeContext) {
   const rootRoute = createRootRoute();
   const homeRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/",
-    component: DashboardScreen,
+    component: HomeWithoutOverview,
   });
   const otherRoutes = ["/assets", "/finance/entries", "/finance/approvals"].map((path) =>
     createRoute({
@@ -290,11 +295,19 @@ describe("DashboardScreen — KPI cards", () => {
     expect(kpiValue("pendingApprovals")).toBe("—");
   });
 
-  it("reports an em dash, never a zero, when no period is open yet", async () => {
+  it("leaves withheld finance out rather than calling it not recorded", async () => {
+    installFetch({ dashboard: { ...dashboard, pendingApprovals: null } });
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
+
+    await waitFor(() => expect(screen.getByText("Not available for your role")).toBeTruthy());
+    expect(kpiValue("pendingApprovals")).toBe("");
+  });
+
+  it("says not recorded, never a zero, when no period is open yet", async () => {
     installFetch({ dashboard: { ...dashboard, openPeriod: null } });
     await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
-    await waitFor(() => expect(kpiValue("openPeriodExpense")).toBe("—"));
+    await waitFor(() => expect(kpiValue("openPeriodExpense")).toBe("Not recorded"));
     expect(screen.getAllByText("No open period yet").length).toBe(2);
   });
 
@@ -313,13 +326,13 @@ describe("DashboardScreen — KPI cards", () => {
     });
     // Landing on the queue as preset would re-apply the very narrowing this
     // line is counting around, so it carries the widening with it.
-    expect(overflow.getAttribute("href")).toBe("/finance/approvals?branch=all");
+    expect(overflow.getAttribute("href")).toBe("/finance/approve?branch=all");
     // The card itself still lands preset.
     expect(
       screen
         .getByRole("link", { name: "Pending approvals" })
         .getAttribute("href"),
-    ).toBe("/finance/approvals");
+    ).toBe("/finance/approve");
   });
 
   it("says nothing about other branches when the count is the whole queue", async () => {
@@ -374,6 +387,36 @@ describe("DashboardScreen — gating", () => {
 
     await waitFor(() => expect(kpiKeys().length).toBe(3));
     expect(kpiKeys()).not.toContain("pendingApprovals");
+  });
+
+  it("says why Home is empty when every module is off, and what the company keeps (#622)", async () => {
+    installFetch();
+    await renderHome(membership("DIRECTOR", ["CORE"]));
+
+    expect(
+      await screen.findByText(
+        "Home has nothing to show: the modules that fill it are switched off for your company. The Company pages in the menu still work.",
+      ),
+    ).toBeTruthy();
+    expect(kpiKeys()).toEqual([]);
+    expect(screen.queryByText("Expense and revenue")).toBeNull();
+  });
+
+  it("points no one at Company pages they do not have (#622)", async () => {
+    installFetch();
+    await renderHome(membership("DRIVER", ["CORE"]));
+
+    expect(
+      await screen.findByText("Home has nothing to show: the modules that fill it are switched off for your company."),
+    ).toBeTruthy();
+  });
+
+  it("shows no empty state while Home has a card", async () => {
+    installFetch();
+    await renderHome(membership("DIRECTOR", ["CORE", "ASSETS"]));
+
+    await waitFor(() => expect(kpiKeys()).toEqual(["assets"]));
+    expect(screen.queryByText(/Home has nothing to show/)).toBeNull();
   });
 
   it("lets the Administrateur trace totals and recent entries", async () => {
@@ -473,11 +516,118 @@ describe("DashboardScreen — i18n", () => {
     installFetch();
     await renderHome(membership("DIRECTOR", ["CORE", "ASSETS", "FINANCE"]));
 
-    expect(await screen.findByRole("heading", { name: "Accueil" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Tableau de bord" })).toBeTruthy();
     expect(screen.getByText("Approbations en attente")).toBeTruthy();
     expect(screen.getByText("Dépenses et recettes")).toBeTruthy();
     expect(screen.getByText("Écritures récentes")).toBeTruthy();
     expect(screen.getByRole("tab", { name: "30 jours" })).toBeTruthy();
     expect(screen.queryByText("Pending approvals")).toBeNull();
+  });
+});
+
+/** The real DashboardScreen over stub tab routes: who gets the Dashboard's tabs. */
+async function renderDashboard(me: MeContext, path = "/") {
+  const rootRoute = createRootRoute();
+  const layout = createRoute({ getParentRoute: () => rootRoute, id: "home", component: DashboardScreen });
+  const tabs = ["/", "/to-do", "/profit-by-vehicle", "/profit-by-branch"].map((tabPath) =>
+    createRoute({
+      getParentRoute: () => layout,
+      path: tabPath,
+      component: () => <div data-testid="dashboard-tab">{tabPath}</div>,
+    }),
+  );
+  const elsewhere = ["/assets", "/finance/entries", "/finance/approvals"].map((other) =>
+    createRoute({ getParentRoute: () => rootRoute, path: other, component: () => <div>{other}</div> }),
+  );
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([layout.addChildren(tabs), ...elsewhere]),
+    history: createMemoryHistory({ initialEntries: [path] }),
+  });
+  render(
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MeCtx.Provider value={me}>
+          <RouterProvider router={router} />
+        </MeCtx.Provider>
+      </QueryClientProvider>
+    </I18nextProvider>,
+  );
+  return router;
+}
+
+function installDashboardFetch() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      requested.push(url);
+      if (url.startsWith("/v1/todo")) {
+        return jsonResponse(
+          { businessDate: "2026-10-09", scope: { ambientBranch: "IGNORED", branchIds: "ALL" }, rows: [], totalCount: 5 },
+          200,
+        );
+      }
+      if (url.startsWith("/v1/dashboard")) return jsonResponse(dashboard, 200);
+      if (url.startsWith("/v1/finance/entries")) return jsonResponse(entries, 200);
+      throw new Error(`unexpected request: ${url}`);
+    }),
+  );
+}
+
+describe("Dashboard by role (#666)", () => {
+  const MODULES: ModuleCode[] = ["CORE", "ASSETS", "FINANCE"];
+
+  it.each(["DIRECTOR", "ADMIN", "FINANCE"] as const)(
+    "opens %s on the Dashboard: Overview, To do, Profit by vehicle, Profit by branch",
+    async (role) => {
+      installDashboardFetch();
+      await renderDashboard(membership(role, MODULES));
+      expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeTruthy();
+      const nav = screen.getByRole("navigation", { name: "Dashboard sections" });
+      expect(within(nav).getAllByRole("tab").map((tab) => tab.textContent?.replace(/\d+.*$/, ""))).toEqual([
+        "Overview",
+        "To do",
+        "Profit by vehicle",
+        "Profit by branch",
+      ]);
+      expect(screen.getByTestId("dashboard-tab").textContent).toBe("/");
+      // Home's own tiles and panels make way for the Overview.
+      expect(screen.queryByText("Recent entries")).toBeNull();
+    },
+  );
+
+  it("counts what waits on the To do tab, and keeps the range from tab to tab", async () => {
+    installDashboardFetch();
+    await renderDashboard(membership("DIRECTOR", MODULES), "/profit-by-vehicle?range=3-months");
+    const nav = await screen.findByRole("navigation", { name: "Dashboard sections" });
+    const todo = await within(nav).findByRole("tab", { name: /To do/ });
+    await waitFor(() => expect(todo.textContent).toContain("5"));
+    expect(todo.getAttribute("href")).toBe("/to-do?range=3-months");
+    expect(within(nav).getByRole("tab", { name: "Profit by branch" }).getAttribute("href")).toBe(
+      "/profit-by-branch?range=3-months",
+    );
+    expect(within(nav).getByRole("tab", { name: "Profit by vehicle" }).getAttribute("aria-selected")).toBe("true");
+  });
+
+  it.each(["CASHIER", "TECHNICIAN", "DRIVER"] as const)("keeps %s on Home without the Overview", async (role) => {
+    installDashboardFetch();
+    await renderDashboard(membership(role, MODULES));
+    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "Dashboard sections" })).toBeNull();
+    expect(screen.queryByTestId("dashboard-tab")).toBeNull();
+    expect(requested.some((url) => url.startsWith("/v1/finance/overview"))).toBe(false);
+  });
+
+  it("sends a role without the Overview from a tab's address back to Home", async () => {
+    installDashboardFetch();
+    const router = await renderDashboard(membership("CASHIER", MODULES), "/profit-by-branch");
+    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
+  });
+
+  it("keeps the Dashboard's tabs away from everyone when Money is off", async () => {
+    installDashboardFetch();
+    await renderDashboard(membership("DIRECTOR", ["CORE", "ASSETS"]));
+    await screen.findByRole("heading", { name: "Dashboard" });
+    expect(screen.queryByRole("navigation", { name: "Dashboard sections" })).toBeNull();
   });
 });

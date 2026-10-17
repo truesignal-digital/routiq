@@ -11,12 +11,13 @@ export interface MoneyInputProps {
   onBlur?: () => void;
   name?: string;
   ref?: React.Ref<HTMLInputElement>;
-  placeholder?: string;
-  className?: string;
-  disabled?: boolean;
+  placeholder?: string | undefined;
+  className?: string | undefined;
+  disabled?: boolean | undefined;
   "aria-label"?: string;
-  "aria-describedby"?: string;
+  "aria-describedby"?: string | undefined;
   "aria-invalid"?: boolean;
+  "aria-required"?: boolean | undefined;
   id?: string;
   /** Defaults to the active language, which `parseMoneyXaf` also reads by default. */
   locale?: string;

@@ -5,6 +5,8 @@ import { chromium, type Browser, type BrowserContext, type Locator, type Page } 
 import { resolveAccount, type DemoAccount } from "./accounts.js";
 import { startCast, type Cast } from "./cast.js";
 import type { DriveOptions, Lang } from "./args.js";
+import { run } from "./proc.js";
+import { SHIFT_PROBE } from "./shifts.js";
 import { REPO_ROOT } from "./slot.js";
 import { newRunDir, requireState, type SlotState } from "./stack.js";
 
@@ -27,6 +29,12 @@ export interface Frame {
   t?: number;
   /** The highlighted element in viewport pixels; the reel's camera eases into it. */
   box?: Box;
+  /**
+   * The username signed in when the shot was taken, "" when no one was. A flow
+   * may sign in as someone else; the reel labels the pane from this. Absent in
+   * older runs.
+   */
+  account?: string;
 }
 
 /** Counts a reel or a before/after comparison can put side by side. */
@@ -34,14 +42,28 @@ export interface RunMetrics {
   apiRequests: number;
   consoleErrors: number;
   failedRequests: number;
+  /** Declared HTTP refusals, excluded from error metrics; absent in older runs. */
+  expectedRefusals?: number;
   /** Layout shifts without recent input since the last full page load. */
   layoutShifts: number;
   cumulativeLayoutShift: number;
   domNodes: number;
 }
 
+export interface ExpectedRefusal {
+  /** Integer HTTP status in the 400–499 range. */
+  status: number;
+  /** Pattern matched against the full response URL. */
+  url: RegExp;
+}
+
 /** What a drive script receives. Scripts live in tools/verify/flows/ or anywhere else. */
 export interface DriveContext {
+  /** Declare before the action: expectRefusal({ status: 409, url: /\/v1\/commands\/register-asset$/ }).
+   * Applies to subsequent responses in this drive. Counts refusals separately in the reel;
+   * only matching browser resource console errors are excluded. Raw evidence stays intact.
+   */
+  expectRefusal: (refusal: ExpectedRefusal) => void;
   page: Page;
   account: DemoAccount;
   lang: Lang;
@@ -76,6 +98,9 @@ export function classifyTarget(target: string, initCwd: string): { kind: "route"
 }
 
 interface Recorder {
+  expectedRefusals: number;
+  expectedConsoleErrors: number;
+  expectRefusal: DriveContext["expectRefusal"];
   consoleErrors: string[];
   failedRequests: string[];
   /** Requests the app cancelled itself (route change, query abort); counted, not reported as failures. */
@@ -93,10 +118,22 @@ function firstLines(text: string): string {
 }
 
 function record(page: Page): Recorder {
-  const rec: Recorder = { consoleErrors: [], failedRequests: [], aborted: 0, apiRequests: 0, inflight: 0, lastActivity: Date.now() };
+  const expected: ExpectedRefusal[] = [];
+  const matches = (status: number, url: string) => expected.some((refusal) => {
+    refusal.url.lastIndex = 0;
+    return refusal.status === status && refusal.url.test(url);
+  });
+  const expectRefusal: DriveContext["expectRefusal"] = ({ status, url }) => {
+    if (!Number.isInteger(status) || status < 400 || status >= 500) throw new Error("expected refusal status must be an integer from 400 to 499");
+    expected.push({ status, url: new RegExp(url.source, url.flags) });
+  };
+  const rec: Recorder = { expectedRefusals: 0, expectedConsoleErrors: 0, expectRefusal, consoleErrors: [], failedRequests: [], aborted: 0, apiRequests: 0, inflight: 0, lastActivity: Date.now() };
   const isApi = (url: string) => new URL(url).pathname.startsWith("/v1/");
   page.on("console", (msg) => {
-    if (msg.type() === "error") rec.consoleErrors.push(`[console.error] ${firstLines(msg.text())} (${page.url()})`);
+    if (msg.type() !== "error") return;
+    rec.consoleErrors.push(`[console.error] ${firstLines(msg.text())} (${page.url()})`);
+    const resourceStatus = /^Failed to load resource: the server responded with a status of (\d{3})\b/.exec(msg.text());
+    if (resourceStatus !== null && matches(Number(resourceStatus[1]), msg.location().url)) rec.expectedConsoleErrors += 1;
   });
   page.on("pageerror", (error) => rec.consoleErrors.push(`[pageerror] ${firstLines(error.stack ?? error.message)} (${page.url()})`));
   page.on("request", (req) => {
@@ -120,7 +157,10 @@ function record(page: Page): Recorder {
     else rec.failedRequests.push(`FAILED ${req.method()} ${req.url()} ${reason}`);
   });
   page.on("response", (res) => {
-    if (res.status() >= 400) rec.failedRequests.push(`${res.status()} ${res.request().method()} ${res.url()}`);
+    if (res.status() >= 400) {
+      rec.failedRequests.push(`${res.status()} ${res.request().method()} ${res.url()}`);
+      if (matches(res.status(), res.url())) rec.expectedRefusals += 1;
+    }
   });
   return rec;
 }
@@ -134,19 +174,9 @@ async function waitQuiet(page: Page, rec: Recorder): Promise<void> {
   await page.waitForTimeout(150);
 }
 
-/** Collects layout shifts in every document the context loads; read back by readPageMetrics. */
-const LAYOUT_SHIFT_PROBE = `(() => {
-  const shifts = (window.__routiqShifts = []);
-  try {
-    new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) if (!entry.hadRecentInput) shifts.push(entry.value);
-    }).observe({ type: "layout-shift", buffered: true });
-  } catch {}
-})();`;
-
 async function readPageMetrics(page: Page): Promise<{ layoutShifts: number; cumulativeLayoutShift: number; domNodes: number }> {
   return page.evaluate(() => {
-    const shifts = ((window as unknown as { __routiqShifts?: number[] }).__routiqShifts ?? []).filter((value) => value > 0);
+    const shifts = ((window as unknown as { __routiqShifts?: Array<{ value: number }> }).__routiqShifts ?? []).map((shift) => shift.value);
     const cls = shifts.reduce((sum, value) => sum + value, 0);
     return { layoutShifts: shifts.length, cumulativeLayoutShift: Math.round(cls * 10_000) / 10_000, domNodes: document.getElementsByTagName("*").length };
   });
@@ -229,6 +259,22 @@ async function clearHighlight(page: Page): Promise<void> {
   await page.evaluate((id) => document.getElementById(id)?.remove(), HIGHLIGHT_ID);
 }
 
+/**
+ * The active username in the app's stored sessions (apps/web/src/auth/session.ts),
+ * "" when no one is signed in, undefined when the value can't be read.
+ */
+export function signedInUsername(raw: unknown): string | undefined {
+  if (raw === null) return "";
+  if (typeof raw !== "string") return undefined;
+  try {
+    const parsed = JSON.parse(raw) as { activeKey?: string; sessions?: Record<string, { username?: string }> };
+    if (parsed.activeKey === undefined) return "";
+    return parsed.sessions?.[parsed.activeKey]?.username ?? "";
+  } catch {
+    return undefined;
+  }
+}
+
 /** "approvals-queue" → "Approvals queue". */
 export function captionFromLabel(label: string): string {
   const words = label.replace(/^\//, "").replace(/[-_/]+/g, " ").trim();
@@ -251,6 +297,9 @@ async function loginThroughUi(page: Page, state: SlotState, account: DemoAccount
  * they pass at every viewport.
  */
 export async function openSidebar(page: Page): Promise<Locator> {
+  // While the member loads, the shell is a placeholder frame (#495) whose menu
+  // is replaced, open or not, when the real shell draws.
+  await page.locator("[data-slot='sidebar-inset'][aria-busy='true']").waitFor({ state: "detached", timeout: 30_000 });
   const nav = page.getByRole("navigation", { name: "Navigation" });
   if (await nav.isVisible().catch(() => false)) return nav;
   await page.getByRole("button", { name: /Afficher ou masquer le menu|Show or hide the menu/ }).first().click();
@@ -283,6 +332,9 @@ async function switchToEnglish(page: Page, rec: Recorder): Promise<void> {
 
 export async function drive(slot: number, targets: readonly string[], options: DriveOptions, command: "drive" | "login"): Promise<boolean> {
   const state = requireState(slot);
+  const head = run("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT }).stdout.trim();
+  const dirty = run("git", ["status", "--porcelain"], { cwd: REPO_ROOT }).stdout.trim() !== "";
+  const commit = `${head}${dirty ? "-dirty" : ""}`;
   const account = resolveAccount(options.role);
   const evidenceDir = newRunDir(command, slot);
   const initCwd = process.env["INIT_CWD"] ?? process.cwd();
@@ -312,7 +364,7 @@ export async function drive(slot: number, targets: readonly string[], options: D
       colorScheme: "light",
       ...(options.video ? { recordVideo: { dir: evidenceDir, size: options.viewport } } : {}),
     });
-    await context.addInitScript(LAYOUT_SHIFT_PROBE);
+    await context.addInitScript(SHIFT_PROBE);
     const page = await context.newPage();
     openPage = page;
     const rec = record(page);
@@ -326,6 +378,7 @@ export async function drive(slot: number, targets: readonly string[], options: D
       const t = cast?.now();
       const resume = cast?.pause();
       let box: Box | undefined;
+      const account = signedInUsername(await page.evaluate(() => window.localStorage.getItem("routiq.sessions.v1")).catch(() => undefined));
       try {
         if (shotOptions.highlight !== undefined) box = await showHighlight(page, shotOptions.highlight);
         await page.screenshot({ path: file, fullPage: true });
@@ -343,6 +396,7 @@ export async function drive(slot: number, targets: readonly string[], options: D
         url: page.url(),
         ...(t === undefined ? {} : { t }),
         ...(box === undefined ? {} : { box }),
+        ...(account === undefined ? {} : { account }),
       });
       say(`  screenshot ${file}`);
       return file;
@@ -410,11 +464,11 @@ export async function drive(slot: number, targets: readonly string[], options: D
             await shot(item.route === "/" ? "home" : item.route);
           });
         } else {
-          const mod = (await import(pathToFileURL(item.file).href)) as { default?: DriveScript };
-          const script = mod.default;
-          if (typeof script !== "function") throw new Error(`${item.file} has no default export function`);
-          await runStep(`script ${path.relative(REPO_ROOT, item.file)}`, () =>
-            script({
+          await runStep(`script ${path.relative(REPO_ROOT, item.file)}`, async () => {
+            const mod = (await import(pathToFileURL(item.file).href)) as { default?: DriveScript };
+            const script = mod.default;
+            if (typeof script !== "function") throw new Error(`${item.file} has no default export function`);
+            await script({
               page,
               account,
               lang: options.lang,
@@ -429,8 +483,9 @@ export async function drive(slot: number, targets: readonly string[], options: D
                 say(`  ${line}`);
               },
               apiGet,
-            }),
-          );
+              expectRefusal: rec.expectRefusal,
+            });
+          });
         }
       }
     } catch {
@@ -444,27 +499,29 @@ export async function drive(slot: number, targets: readonly string[], options: D
     const pageMetrics = await readPageMetrics(page).catch(() => ({ layoutShifts: 0, cumulativeLayoutShift: 0, domNodes: 0 }));
     const metrics: RunMetrics = {
       apiRequests: rec.apiRequests,
-      consoleErrors: rec.consoleErrors.length,
-      failedRequests: rec.failedRequests.length,
+      consoleErrors: rec.consoleErrors.length - rec.expectedConsoleErrors,
+      failedRequests: rec.failedRequests.length - rec.expectedRefusals,
+      expectedRefusals: rec.expectedRefusals,
       ...pageMetrics,
     };
 
+    // Before summary.json, which reels and later tooling read the verdict from (#567).
+    if (options.strict && rec.consoleErrors.length > 0) {
+      ok = false;
+      say("FAIL  --strict: console errors present");
+    }
     const consoleFile = path.join(evidenceDir, "console-errors.txt");
     const requestsFile = path.join(evidenceDir, "failed-requests.txt");
     writeFileSync(consoleFile, rec.consoleErrors.join("\n") + (rec.consoleErrors.length ? "\n" : ""));
     writeFileSync(requestsFile, rec.failedRequests.join("\n") + (rec.failedRequests.length ? "\n" : ""));
     writeFileSync(
       path.join(evidenceDir, "summary.json"),
-      `${JSON.stringify({ slot, commit: state.commit, account: account.username, role: account.role, lang: options.lang, viewport: options.viewport, targets, ok, steps, frames, metrics, finalUrl: page.url(), consoleErrors: rec.consoleErrors.length, failedRequests: rec.failedRequests.length, abortedRequests: rec.aborted }, null, 2)}\n`,
+      `${JSON.stringify({ slot, commit, account: account.username, role: account.role, lang: options.lang, viewport: options.viewport, targets, ok, steps, frames, metrics, finalUrl: page.url(), consoleErrors: rec.consoleErrors.length, failedRequests: rec.failedRequests.length, abortedRequests: rec.aborted }, null, 2)}\n`,
     );
     say(`console errors: ${rec.consoleErrors.length} → ${consoleFile}`);
     say(`failed requests (status >= 400 or network): ${rec.failedRequests.length} → ${requestsFile}`);
     if (rec.aborted > 0) say(`requests the app cancelled itself (ERR_ABORTED, not failures): ${rec.aborted}`);
     say(`api requests: ${metrics.apiRequests}, layout shifts: ${metrics.layoutShifts} (CLS ${metrics.cumulativeLayoutShift}), DOM nodes: ${metrics.domNodes}`);
-    if (options.strict && rec.consoleErrors.length > 0) {
-      ok = false;
-      say("FAIL  --strict: console errors present");
-    }
   } finally {
     // Close the tab the way a user does, so the app's pagehide handler sends
     // its last telemetry batch, and give that keepalive request time to land.

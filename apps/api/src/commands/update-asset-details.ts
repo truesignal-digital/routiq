@@ -8,9 +8,10 @@ import {
 } from "@routiq/contracts";
 import { isDeepStrictEqual } from "node:util";
 import { and, eq } from "drizzle-orm";
-import { assets, workspaces } from "../db/schema.js";
+import { assets } from "../db/schema.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import { currentBusinessDate } from "../reads/business-date.js";
+import { workspaceTimezone } from "../reads/workspace-day.js";
 import { assertPlateFree } from "./asset-identity.js";
 import { assetBranchIds } from "./branch-authorization.js";
 import {
@@ -120,11 +121,7 @@ export const updateAssetDetails: CommandDefinition<UpdateAssetDetailsPayload> = 
     }
 
     if (payload.acquisitionDate !== undefined && payload.acquisitionDate !== null) {
-      const [workspace] = await tx
-        .select({ timezone: workspaces.timezone })
-        .from(workspaces)
-        .where(eq(workspaces.id, ctx.workspaceId));
-      const today = currentBusinessDate(new Date(), workspace?.timezone ?? "Africa/Douala");
+      const today = currentBusinessDate(new Date(), await workspaceTimezone(tx, ctx.workspaceId));
       if (payload.acquisitionDate > today) {
         throw validationFailed("acquisitionDate", "IN_FUTURE");
       }

@@ -26,10 +26,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/components/ui/toast.js", () => ({ toast: { add: mocks.toastAdd } }));
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: mocks.useAssetRegistrationReference,
 }));
-vi.mock("../documents/useCategories.js", () => ({ useCategories: mocks.useCategories }));
+vi.mock("../categories/useCategories.js", () => ({ useCategories: mocks.useCategories }));
 vi.mock("../assets/useAssets.js", () => ({ useAssets: mocks.useAssets }));
 vi.mock("../approval-rules/useApprovalChain.js", () => ({
   useApprovalChain: mocks.useApprovalChain,
@@ -302,7 +302,11 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
       },
     });
     inPanel(<RecordEntryForm surface="panel" pinnedAssetId={ASSET_ID} onRecorded={vi.fn()} />);
-    expect(screen.getByText("Above FCFA 150,000, this entry waits for Finance.")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Above 150 000 FCFA, this entry waits for Finance. Above 1 000 000 FCFA, this entry waits for the Director.",
+      ),
+    ).toBeTruthy();
 
     inPanel(
       <RecordEntryForm
@@ -313,7 +317,30 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
         onRecorded={vi.fn()}
       />,
     );
-    expect(screen.getByText("Above FCFA 100,000, this entry waits for Finance.")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Above 100 000 FCFA, this entry waits for Finance. Above 1 000 000 FCFA, this entry waits for the Director.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("follows the typed amount to the band that decides it (#534)", async () => {
+    mocks.useApprovalChain.mockReturnValue({
+      data: { currency: "XAF", chains: [{ commandType: "record-expense", steps: steps(100_000) }], notice: null },
+    });
+    inPanel(<RecordEntryForm surface="panel" pinnedAssetId={ASSET_ID} onRecorded={vi.fn()} />);
+    const amount = screen.getByLabelText("Amount (FCFA)");
+
+    await userEvent.type(amount, "1500000");
+    expect(await screen.findByText("Above 1 000 000 FCFA, this entry waits for the Director.")).toBeTruthy();
+
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "250000");
+    expect(await screen.findByText("Above 100 000 FCFA, this entry waits for Finance.")).toBeTruthy();
+
+    await userEvent.clear(amount);
+    await userEvent.type(amount, "40000");
+    expect(await screen.findByText("At this amount, the entry posts directly.")).toBeTruthy();
   });
 
   it("tells Direction its entries post at any amount", () => {
@@ -335,7 +362,41 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
 });
 
 describe("entry decisions on a record panel", () => {
-  const entry = { id: ENTRY_ID, rowVersion: 3 };
+  const entry = {
+    id: ENTRY_ID,
+    rowVersion: 3,
+    entryNumber: "DLA-2026-00014",
+    description: "Brake pads",
+    category: { code: "MAINTENANCE", labelFr: "Entretien", labelEn: "Maintenance", layer: null },
+    amountMinor: 180_000,
+    currency: "XAF",
+    recordedBy: { principalId: "00000000-0000-4000-8000-000000000070", displayName: "Hervé", scope: "WORKSPACE" as const },
+  };
+
+  it("names the entry it rejects and says what happens next (#515)", () => {
+    const description = () => {
+      const id = screen.getByRole("dialog").getAttribute("aria-describedby") ?? "";
+      const node = document.getElementById(id);
+      return {
+        // Money keeps its no-break space; compare words, not space characters.
+        text: node?.textContent?.replace(/\s/g, " "),
+        unbroken: node?.querySelector("[data-record-number]")?.textContent,
+      };
+    };
+    inPanel(<RejectEntryForm surface="panel" entry={entry} client={recordingClient(posted)} onDismiss={vi.fn()} />);
+    expect(description()).toEqual({
+      text: "DLA-2026-00014 · Brake pads · 180 000 FCFA. Your reason is shown to Hervé. The entry stays in the history as rejected and never counts in the books.",
+      unbroken: "DLA-2026-00014",
+    });
+    cleanup();
+
+    // Without a description it names the category, and nobody it cannot name.
+    const bare = { ...entry, description: null, recordedBy: { ...entry.recordedBy, displayName: null } };
+    inPanel(<RejectEntryForm surface="panel" entry={bare} client={recordingClient(posted)} onDismiss={vi.fn()} />);
+    expect(description().text).toBe(
+      "DLA-2026-00014 · Maintenance · 180 000 FCFA. Your reason is shown to whoever recorded it. The entry stays in the history as rejected and never counts in the books.",
+    );
+  });
 
   it("approves at the version the approver was shown", async () => {
     const client = recordingClient(posted);
@@ -369,7 +430,7 @@ describe("entry decisions on a record panel", () => {
     expect(submit.disabled).toBe(false);
   });
 
-  function openCancel(client: CommandClient, extra: { onReversed?: (id: string, code: string) => void; onRecordAgain?: () => void } = {}) {
+  function openCancel(client: CommandClient, extra: { onReversed?: (id: string, code: string) => void; onRecordAgain?: () => void; onOpenWorkOrder?: () => void } = {}) {
     inPanel(<ReverseEntryForm surface="panel" entry={entry} client={client} onDismiss={vi.fn()} {...extra} />);
     return screen.getByRole("dialog", { name: "Cancel entry" });
   }
@@ -443,6 +504,23 @@ describe("entry decisions on a record panel", () => {
     expect(onRecordAgain).toHaveBeenCalledOnce();
   });
 
+  it("hands a work-order cost to the work order instead of Record again (#559)", async () => {
+    const onOpenWorkOrder = vi.fn();
+    const client = recordingClient(posted);
+    const panel = openCancel(client, { onOpenWorkOrder });
+
+    expect(within(panel).queryByText(/books work-order costs/)).toBeNull();
+    await userEvent.click(within(panel).getByRole("radio", { name: "Wrong details, to record again" }));
+    expect(within(panel).getByText(/Only the Director, the Administrator or a technician books work-order costs/)).toBeTruthy();
+    await userEvent.click(within(panel).getByRole("button", { name: "Cancel entry" }));
+
+    expect(await screen.findByText(/Ask the Director, the Administrator or the work order's technician/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Record again" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Open the work order" }));
+    expect(onOpenWorkOrder).toHaveBeenCalledOnce();
+    expect(client.seen.map((sent) => sent.name)).toEqual(["reverse-entry"]);
+  });
+
   it("closes straight away for the other reasons", async () => {
     const onRecordAgain = vi.fn();
     const onDismiss = vi.fn();
@@ -482,7 +560,14 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     evidence: { state: "PAYMENT_REFERENCE", artifactCount: 0 },
     assetShareMinor: null,
     assetLinks: null,
-    links: { activityId: null, activityNumber: null, workOrderId: null, workOrderAssetId: null },
+    links: {
+      activityId: null,
+      activityNumber: null,
+      workOrderId: null,
+      workOrderAssetId: null,
+      workOrderNumber: null,
+      workOrderDescription: null,
+    },
     description: "Plaquettes de frein",
     paymentReference: "MP-778",
     sourceReference: null,
@@ -503,6 +588,7 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     ],
     evidenceFiles: [],
     directionDecides: false,
+    approver: null,
   };
 
   const submitted: SubmitResult = {
@@ -559,7 +645,7 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     expect(amount.value).toMatch(/^45\s?000$/);
     expect(within(panel).getByLabelText("Category").textContent).toContain("Repairs");
     expect(within(panel).getByLabelText("Payment method").textContent).toContain("Mobile Money");
-    expect((within(panel).getByLabelText("Date") as HTMLInputElement).value).toBe("9/12/26");
+    expect((within(panel).getByLabelText("Date") as HTMLInputElement).value).toBe("12/09/2026");
     expect((within(panel).getByLabelText("Description (optional)") as HTMLTextAreaElement).value).toBe(
       "Plaquettes de frein",
     );
@@ -589,6 +675,32 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     ]);
   });
 
+  it("records again a cost on a completed work order as a late invoice: approval hint, reason required (#613)", async () => {
+    const client = recordingClient(submitted);
+    const cancelled: FinancialEntryDetail = {
+      ...pending,
+      status: "REVERSED",
+      postedAt: "2026-09-12T08:00:00.000Z",
+      description: null,
+      lateWorkOrderCost: true,
+    };
+    inPanel(
+      <RecordEntryForm surface="panel" recordAgainFrom={cancelled} client={client} onRecorded={vi.fn()} onDismiss={vi.fn()} />,
+    );
+    const panel = screen.getByRole("dialog", { name: "Record expense" });
+
+    expect(
+      within(panel).getByText("This work is completed: the invoice goes to approval, whatever its amount."),
+    ).toBeTruthy();
+    expect(within(panel).queryByLabelText("Description (optional)")).toBeNull();
+    const submit = within(panel).getByRole("button", { name: "Record the expense" });
+    await waitFor(() => expect(within(panel).getByLabelText("Branch").textContent).toContain("Douala"));
+    // No reason, no invoice: the server would refuse it (LATE_COST_REASON_REQUIRED).
+    expect(submit.hasAttribute("disabled")).toBe(true);
+    await userEvent.type(within(panel).getByLabelText("Reason"), "Invoice re-entered with the right amount");
+    await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(false));
+  });
+
   it("keeps the entry number in the title on one line (#442)", () => {
     const panel = openEdit(recordingClient(submitted));
     const numbers = [...panel.querySelectorAll("[data-slot='sheet-title'] [data-record-number]")];
@@ -601,7 +713,7 @@ describe("RecordEntryForm editing the author's pending entry", () => {
     expect((within(panel).getByLabelText("Amount (FCFA)") as HTMLInputElement).value).toMatch(/^45\s?000$/);
     expect(within(panel).getByLabelText("Category").textContent).toContain("Repairs");
     expect(within(panel).getByLabelText("Payment method").textContent).toContain("Mobile Money");
-    expect((within(panel).getByLabelText("Date") as HTMLInputElement).value).toBe("9/12/26");
+    expect((within(panel).getByLabelText("Date") as HTMLInputElement).value).toBe("12/09/2026");
     expect((within(panel).getByLabelText("Counterparty (optional)") as HTMLInputElement).value).toBe(
       "Garage Tchinda",
     );

@@ -63,6 +63,13 @@ export function tolerance(kind: Kind, ceiling: number): number {
   return 0;
 }
 
+/**
+ * Recorded and shown, but never gated: the API's p95 over one run is a handful
+ * of requests on a shared machine, and it read 50, 177, 202, 445 and 527 ms
+ * across runs of identical API code.
+ */
+export const isGated = (name: string) => !name.startsWith("api.");
+
 export type Verdict =
   | { name: string; status: "new"; value: number }
   | { name: string; status: "ok" | "over" | "beaten"; value: number; ceiling: number }
@@ -70,7 +77,7 @@ export type Verdict =
 
 /** "beaten" means the run is clearly under the ceiling: tighten to lock the gain in. */
 export function judge(measured: Measured, ceilings: Ceilings): Verdict[] {
-  const names = [...new Set([...Object.keys(ceilings), ...Object.keys(measured)])].sort();
+  const names = [...new Set([...Object.keys(ceilings), ...Object.keys(measured)])].filter(isGated).sort();
   return names.map((name): Verdict => {
     const sample = measured[name];
     const ceiling = ceilings[name];

@@ -4,18 +4,19 @@ import {
   ledgerEntryStatuses,
   type Role,
 } from "@routiq/contracts";
-import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import type { RequireAuth } from "../auth/plugin.js";
 import type { Db } from "../db/client.js";
-import { commands, financialEntries, postingPeriods, workspaces } from "../db/schema.js";
-import { directionDecidesEntries, pendingApprovalConditions } from "./approvals-queue.js";
+import { financialEntries, postingPeriods, workspaces } from "../db/schema.js";
+import { decidablePendingEntries } from "./approvals-queue.js";
 import { currentBusinessDate } from "./business-date.js";
 import { defineRead, ENTRIES_GATE } from "./define-read.js";
 import { entryEvidenceMissingSql } from "./entry-evidence.js";
 import { monthBounds } from "./finance.js";
 import { readableEntrySql } from "./money-scope.js";
 import { serializeMinor } from "./serialize-minor.js";
+import { workspaceTimezone } from "./workspace-day.js";
 
 /** approve-entry's `allowedRoles` (commands/entry-decisions.ts). */
 const ENTRY_DECIDER_ROLES: readonly Role[] = ["DIRECTOR", "FINANCE"];
@@ -43,13 +44,13 @@ export function registerFinanceSummaryReadRoutes(
 
       const result = await read(async (tx) => {
         const [workspace] = await tx
-          .select({ currency: workspaces.defaultCurrency, timezone: workspaces.timezone })
+          .select({ currency: workspaces.defaultCurrency })
           .from(workspaces)
           .where(eq(workspaces.id, auth.workspaceId));
         const currency = workspace?.currency ?? "XAF";
         const month = currentBusinessDate(
           new Date(),
-          workspace?.timezone ?? "Africa/Douala",
+          await workspaceTimezone(tx, auth.workspaceId),
         ).slice(0, 7);
         const { from, to } = monthBounds(month);
 
@@ -58,20 +59,28 @@ export function registerFinanceSummaryReadRoutes(
           ...(branchId === undefined ? [] : [eq(financialEntries.branchId, branchId)]),
         ];
 
-        const latestPeriod = async (status: "OPEN" | "LOCKED") => {
-          const [row] = await tx
-            .select({ periodCode: postingPeriods.periodCode })
-            .from(postingPeriods)
-            .where(
-              and(
-                eq(postingPeriods.workspaceId, auth.workspaceId),
-                eq(postingPeriods.status, status),
-              ),
-            )
-            .orderBy(desc(postingPeriods.periodCode))
-            .limit(1);
-          return row?.periodCode ?? null;
-        };
+        const [lastLocked] = await tx
+          .select({ periodCode: postingPeriods.periodCode })
+          .from(postingPeriods)
+          .where(
+            and(
+              eq(postingPeriods.workspaceId, auth.workspaceId),
+              eq(postingPeriods.status, "LOCKED"),
+            ),
+          )
+          .orderBy(desc(postingPeriods.periodCode))
+          .limit(1);
+        const unlocked = await tx
+          .select({ periodCode: postingPeriods.periodCode })
+          .from(postingPeriods)
+          .where(
+            and(
+              eq(postingPeriods.workspaceId, auth.workspaceId),
+              eq(postingPeriods.status, "OPEN"),
+              lt(postingPeriods.periodCode, month),
+            ),
+          )
+          .orderBy(asc(postingPeriods.periodCode));
 
         // The entry's own signed amount: postings sum to it by invariant
         // (§3.4), and a reversal is a second, negative entry in the ledger set.
@@ -108,29 +117,7 @@ export function registerFinanceSummaryReadRoutes(
           // The same queue `/v1/finance/approvals` lists, less what this caller
           // cannot decide: their own submissions (maker-checker) and entries
           // above their band (Direction decides).
-          const pending = await tx
-            .select({
-              status: financialEntries.status,
-              branchId: financialEntries.branchId,
-              amountMinor: financialEntries.amountMinor,
-              currency: financialEntries.currency,
-              submittedAt: financialEntries.createdAt,
-              submittedBy: commands.initiatedByPrincipalId,
-            })
-            .from(financialEntries)
-            .innerJoin(
-              commands,
-              and(
-                eq(commands.workspaceId, financialEntries.workspaceId),
-                eq(commands.id, financialEntries.createdByCommandId),
-              ),
-            )
-            .where(and(...pendingApprovalConditions(auth, branchId)));
-          const directionDecides = await directionDecidesEntries(tx, auth, pending);
-          const decidable = pending.filter(
-            (entry, index) =>
-              entry.submittedBy !== auth.principalId && directionDecides[index] !== true,
-          );
+          const decidable = await decidablePendingEntries(tx, auth, branchId);
           waiting = { count: decidable.length, amountMinor: 0n, oldestSubmittedAt: null };
           for (const entry of decidable) {
             if (entry.currency === currency) {
@@ -145,8 +132,8 @@ export function registerFinanceSummaryReadRoutes(
         return {
           currency,
           month,
-          openPeriodCode: await latestPeriod("OPEN"),
-          lastLockedPeriodCode: await latestPeriod("LOCKED"),
+          unlockedPeriodCodes: unlocked.map((row) => row.periodCode),
+          lastLockedPeriodCode: lastLocked?.periodCode ?? null,
           outMinor: BigInt(totals?.outMinor ?? "0"),
           inMinor: BigInt(totals?.inMinor ?? "0"),
           missing: { count: missing?.count ?? 0, oldest: missing?.oldest ?? null },
@@ -157,7 +144,7 @@ export function registerFinanceSummaryReadRoutes(
       return financeSummaryResponse.parse({
         currency: result.currency,
         month: result.month,
-        openPeriodCode: result.openPeriodCode,
+        unlockedPeriodCodes: result.unlockedPeriodCodes,
         lastLockedPeriodCode: result.lastLockedPeriodCode,
         outMinor: serializeMinor(result.outMinor),
         inMinor: serializeMinor(result.inMinor),

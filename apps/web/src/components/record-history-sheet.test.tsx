@@ -59,6 +59,8 @@ function event(overrides: Partial<HistoryItem> = {}): HistoryItem {
       clientOccurredAt: null,
     },
     changedFields: ["status", "rowVersion"],
+    // A fixture that names its own changed fields names its shown ones too.
+    shownFields: overrides.changedFields === undefined ? ["status"] : [],
     note: null,
     noteCode: null,
     ...overrides,
@@ -106,9 +108,10 @@ async function openSheet() {
   await userEvent.click(screen.getByRole("button", { name: "History" }));
 }
 
+/** Whether the trail was asked for: a closed sheet does not even mount the read. */
 function lastEnabled(): boolean {
   const call = mocks.useHistory.mock.calls.at(-1);
-  return (call?.[2] as { enabled: boolean }).enabled;
+  return call === undefined ? false : (call[2] as { enabled: boolean }).enabled;
 }
 
 beforeAll(async () => {
@@ -243,6 +246,8 @@ describe("record history sheet", () => {
           "updatedAt",
           "createdByCommandId",
         ],
+        // A financial entry's change list does show createdAt.
+        shownFields: ["status", "createdAt"],
       }),
     ]);
     await openSheet();
@@ -260,6 +265,7 @@ describe("record history sheet", () => {
       event({
         eventType: "member.pin-reset",
         changedFields: ["pinHash", "failedAttempts", "lockedUntil"],
+        shownFields: [],
       }),
     ]);
     await openSheet();
@@ -276,6 +282,7 @@ describe("record history sheet", () => {
       event({
         eventType: "posting_period.locked",
         changedFields: ["lockedAt", "status", "lockedByCommandId"],
+        shownFields: ["status", "lockedAt"],
       }),
     ]);
     await openSheet();
@@ -284,17 +291,23 @@ describe("record history sheet", () => {
     expect(screen.getByText("status")).toBeTruthy();
   });
 
-  it("hides a credential column a later command adds, but not a lookalike", async () => {
+  it("chips only the fields its change list shows (#465)", async () => {
+    // A trip's creation records every column; most were empty and stayed so,
+    // and its custom fields are never listed. The server says which fields the
+    // change list shows, and the chips follow it.
     stubHistory([
-      event({ changedFields: ["passwordHash", "apiSecret", "shippingRef"] }),
+      event({
+        eventType: "activity.created",
+        changedFields: ["status", "customValues", "plannedEndAt", "crew", "rowVersion"],
+        shownFields: ["status"],
+      }),
     ]);
     await openSheet();
 
-    expect(screen.queryByText("passwordHash")).toBeNull();
-    expect(screen.queryByText("apiSecret")).toBeNull();
-    // "shipping" only contains "pin" as a substring, and the field vocabulary
-    // is open — matching whole segments is what keeps this one visible.
-    expect(screen.getByText("shippingRef")).toBeTruthy();
+    expect(screen.getByText("status")).toBeTruthy();
+    expect(screen.queryByText("custom fields")).toBeNull();
+    expect(screen.queryByText("planned end")).toBeNull();
+    expect(screen.queryByText("crew")).toBeNull();
   });
 
   it("walks the keyset with load more", async () => {
@@ -390,7 +403,7 @@ describe("record history days", () => {
     const headings = screen.getAllByRole("heading", { level: 3 });
     expect(headings).toHaveLength(2);
     expect(headings[0]?.textContent).toBe("Today");
-    expect(headings[1]?.textContent).toMatch(/January 1[45], 2026/);
+    expect(headings[1]?.textContent).toMatch(/^1[45] January 2026$/);
   });
 
   it("keeps a run of same-day events under a single heading", async () => {
@@ -472,8 +485,8 @@ describe("record history diff", () => {
 
     expect(screen.getByText("Fuel")).toBeTruthy();
     expect(screen.getByText("Douala")).toBeTruthy();
-    expect(screen.getByText("1 line, FCFA 30,000")).toBeTruthy();
-    expect(screen.getByText("2 lines, FCFA 45,000")).toBeTruthy();
+    expect(screen.getByText("1 line, 30 000 FCFA")).toBeTruthy();
+    expect(screen.getByText("2 lines, 45 000 FCFA")).toBeTruthy();
   });
 
   it("says a change it cannot show is not available, rather than hiding it or inventing a value", async () => {
@@ -529,7 +542,7 @@ describe("record history diff", () => {
     await expandRow();
 
     // XAF has exponent 0 — 125 000 minor units is 125 000 francs.
-    expect(screen.getByText("FCFA 125,000")).toBeTruthy();
+    expect(screen.getByText("125 000 FCFA")).toBeTruthy();
   });
 
   it("leaves a non-money number alone however large it looks", async () => {
@@ -547,7 +560,7 @@ describe("record history diff", () => {
     ]);
     await expandRow();
 
-    expect(screen.getByText("—")).toBeTruthy();
+    expect(screen.getByText("Not recorded")).toBeTruthy();
     expect(screen.queryByText("null")).toBeNull();
   });
 

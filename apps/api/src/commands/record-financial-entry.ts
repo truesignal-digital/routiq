@@ -8,9 +8,11 @@ import { canBookWorkOrderCost, type Role } from "@routiq/contracts";
 import {
   CommandError,
   registerCommand,
+  resolveCommand,
   type CommandDefinition,
 } from "./dispatcher.js";
 import {
+  namesCompletedWorkOrder,
   writeFinancialEntry,
   type FinancialEntryWriteRequest,
 } from "./financial-entry-writer.js";
@@ -28,7 +30,8 @@ interface FinancialEntryCommandConfig {
 /**
  * The workshop records what a repair cost, and nothing else: a TECHNICIAN
  * member's expense is accepted only when every line is attributed to a work
- * order, which the writer then holds to APPROVED status and branch scope.
+ * order, which the writer then holds to an open or completed order and
+ * branch scope.
  * Parts and labour are not the other roles' to book (`canBookWorkOrderCost`),
  * so no line of a DRIVER, FINANCE or CASHIER member may name a work order.
  */
@@ -52,6 +55,22 @@ export function requireWorkOrderAttribution(
       command,
       reason: "WORK_ORDER_REQUIRED",
     });
+  }
+}
+
+/**
+ * A write under record-expense's or record-revenue's rules (a pending-entry
+ * edit, each money line of a sheet) passes that command's role gate too, read from its registration so the roles live in one
+ * place: a driver records expenses, never revenue (#532), and so may not edit
+ * a pending revenue entry either (#572).
+ */
+export function requireRecordRole(
+  role: Role,
+  recordCommand: "record-expense" | "record-revenue",
+): void {
+  const definition = resolveCommand(recordCommand, 1);
+  if (!("allowedRoles" in definition) || !definition.allowedRoles.includes(role)) {
+    throw new CommandError(403, "ROLE_FORBIDDEN", { command: recordCommand });
   }
 }
 
@@ -79,11 +98,13 @@ function financialEntryCommand(
       },
     },
 
-    async approvalContext(_tx, _ctx, payload) {
+    async approvalContext(tx, ctx, payload) {
       return {
         branchCode: payload.branchCode,
         categoryCode: payload.categoryCode,
         amountMinor: payload.amountMinor,
+        // A repair invoice after the close always waits for review (#82).
+        requiresReview: await namesCompletedWorkOrder(tx, ctx, payload.postings),
       };
     },
 

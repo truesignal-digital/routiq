@@ -9,6 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { formatDate } from "@/lib/format.js"
 import { cn } from "@/lib/utils"
 
 export interface DatePickerProps {
@@ -61,12 +62,7 @@ function DatePicker({
 }: DatePickerProps) {
   const { t, i18n } = useTranslation()
   const [open, setOpen] = useState(false)
-  const locale = (i18n.resolvedLanguage ?? i18n.language).startsWith("fr")
-    ? "fr"
-    : "en"
-  const formatter = new Intl.DateTimeFormat(locale === "fr" ? "fr-FR" : "en-US", {
-    dateStyle: "medium",
-  })
+  const language = i18n.resolvedLanguage ?? i18n.language
   const selected = parseIsoDate(value)
   const last = parseIsoDate(max)
 
@@ -93,7 +89,7 @@ function DatePicker({
         <span className="truncate">
           {selected === undefined
             ? (placeholder ?? t("datePicker.placeholder"))
-            : formatter.format(selected)}
+            : formatDate(selected, language, "short")}
         </span>
         <CalendarDays className="size-4 text-muted-foreground" aria-hidden />
       </PopoverTrigger>

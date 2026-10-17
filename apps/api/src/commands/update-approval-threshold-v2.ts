@@ -1,4 +1,5 @@
 import {
+  COMPANY_SETTINGS_ROLES,
   thresholdBandsProblem,
   updateApprovalThresholdV2Payload,
   type UpdateApprovalThresholdV2Payload,
@@ -29,7 +30,7 @@ const updateApprovalThresholdV2: CommandDefinition<UpdateApprovalThresholdV2Payl
   name: "update-approval-threshold",
   version: 2,
   module: "CORE",
-  allowedRoles: ["DIRECTOR"],
+  allowedRoles: COMPANY_SETTINGS_ROLES,
   payloadSchema: updateApprovalThresholdV2Payload,
   branchAuthorization: { kind: "workspace" },
   async execute(tx, ctx, envelope, payload) {

@@ -11,12 +11,12 @@ import {
   WorkOrderDecisionForm,
   type WorkOrderRef,
 } from "@/maintenance/MaintenanceDialogs.js";
-import { Chronologie, CostLines } from "@/maintenance/WorkOrderSheet.js";
+import { Chronologie, WorkOrderCosts } from "@/maintenance/WorkOrderSheet.js";
 import { useWorkOrder } from "@/maintenance/useMaintenance.js";
 import { WorkOrderStatusBadge } from "@/maintenance/WorkOrderStatusBadge.js";
 import { useVehicle, type PanelForm } from "../context.js";
-import { groundingFacts, workOrderSteps, workOrderWaiting } from "../flow.js";
-import { recordReference } from "../model.js";
+import { groundingFacts, situationOf, workOrderSteps, workOrderWaiting } from "../flow.js";
+import { recordNumberText } from "@/lib/record-number.js";
 import { DetailHeader, DetailSection, FactList, Note, SafetyMark } from "../parts.js";
 import {
   PanelFooter,
@@ -28,12 +28,11 @@ import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 
 export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | undefined }) {
   const { t, i18n } = useTranslation();
-  const { asset, viewer, panel, gates } = useVehicle();
-  const query = useWorkOrder(gates.maintenance ? id : undefined);
-  const host = useFormHost(t("vehicle.panel.workOrderTitle", { ref: recordReference(id) }));
+  const { asset, attention, viewer, panel, gates } = useVehicle();
+  const query = useWorkOrder(id);
+  const host = useFormHost(t("vehicle.panel.workOrderTitle", { ref: recordNumberText(t, "work_order", query.data?.number) }));
   const locale = i18n.language;
 
-  if (!gates.maintenance) return <PanelMissing />;
   if (query.isPending) return <PanelLoading />;
   if (query.isError || query.data === undefined) return <PanelMissing onRetry={() => void query.refetch()} />;
   const wo = query.data;
@@ -47,13 +46,21 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
     return <WorkOrderForm stepKey={form.key} wo={wo} host={host} />;
   }
 
-  const waiting = workOrderWaiting(wo.status, isGrounding);
+  // Another safety-critical problem blocks the release, whoever signs it (#588).
+  const others = isGrounding ? (grounding?.grounded.otherOpenSafetyIssues ?? []) : [];
+  const [otherIssue] = others;
+  const otherIssueParams =
+    otherIssue === undefined ? undefined : { count: others.length, description: otherIssue.description };
+  const waiting = workOrderWaiting(wo.status, isGrounding, otherIssue !== undefined);
   const actor = (name: string | null) => name ?? t("history.actor.unknown");
+  // The vehicle header's own test, so the panel and the header never disagree on one screen.
+  const situation = situationOf(asset, attention, new Date());
+  const repaired = situation.kind === "grounded" && situation.repaired;
 
   return (
     <>
       <DetailHeader
-        eyebrow={t("vehicle.panel.workOrderEyebrow", { ref: recordReference(wo.id) })}
+        eyebrow={t("vehicle.panel.workOrderEyebrow", { ref: recordNumberText(t, "work_order", wo.number) })}
         title={wo.description}
         meta={
           <>
@@ -77,18 +84,41 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
               aria-hidden
             />
             <span className="min-w-0 flex-1 text-sm font-medium">
-              {t("vehicle.panel.fromProblem", { ref: recordReference(wo.issue.id) })}
+              {t("vehicle.panel.fromProblem", { ref: recordNumberText(t, "issue", wo.issue.number) })}
             </span>
             <ChevronRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
           </button>
         )}
         {isGrounding && (
-          <Note tone="danger">
-            {t(wo.status === "COMPLETED" ? "vehicle.panel.keepsGroundedUntilRelease" : "vehicle.panel.keepsGrounded")}
+          <Note tone={repaired ? "warning" : "danger"}>
+            {wo.status !== "COMPLETED"
+              ? t("vehicle.panel.keepsGrounded")
+              : otherIssueParams === undefined
+                ? t("vehicle.panel.keepsGroundedUntilRelease")
+                : t("vehicle.panel.keepsGroundedOtherIssueOpen", otherIssueParams)}
           </Note>
         )}
         {wo.status === "APPROVED" && wo.completionRejectReason !== null && (
           <Note>{t("vehicle.panel.completionSentBack", { reason: wo.completionRejectReason })}</Note>
+        )}
+        {wo.costToCome !== null && (
+          <Note tone="warning">
+            {wo.costToCome.reason === "INVOICE_PENDING"
+              ? t(
+                  wo.costToCome.awaitingApproval
+                    ? "vehicle.panel.costToCome.invoiceAwaitingApproval"
+                    : "vehicle.panel.costToCome.invoicePending",
+                )
+              : t(
+                  wo.costToCome.awaitingApproval
+                    ? "vehicle.panel.costToCome.declaredAwaitingApproval"
+                    : "vehicle.panel.costToCome.declared",
+                  {
+                    declared: formatMoney(wo.costToCome.declaredCostMinor, { currency: wo.currency, locale }),
+                    recorded: formatMoney(wo.costToCome.recordedCostMinor, { currency: wo.currency, locale }),
+                  },
+                )}
+          </Note>
         )}
 
         <FactList
@@ -100,24 +130,29 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
                 name: actor(wo.createdBy.displayName),
               }),
             ],
-            [
-              t("vehicle.panel.expectedCost"),
-              !gates.workOrderCosts
-                ? "—"
-                : wo.expectedCostMinor === null
-                  ? t("vehicle.maintenance.noEstimate")
-                  : formatMoney(wo.expectedCostMinor, { currency: wo.currency, locale }),
-            ],
-            [
-              t("vehicle.panel.actualCost"),
-              !gates.workOrderCosts
-                ? "—"
-                : wo.actualCostMinor === null
-                  ? t("vehicle.panel.actualCostLater")
-                  : wo.costOutcome === "INVOICE_PENDING" && wo.actualCostMinor === 0
-                    ? t("vehicle.panel.invoicePending")
-                    : formatMoney(wo.actualCostMinor, { currency: wo.currency, locale }),
-            ],
+            // Costs a viewer may not read are left out, not shown as blanks.
+            ...(!gates.workOrderEstimate
+              ? []
+              : ([
+                  [
+                    t("vehicle.panel.expectedCost"),
+                    wo.expectedCostMinor === null
+                      ? t("vehicle.maintenance.noEstimate")
+                      : formatMoney(wo.expectedCostMinor, { currency: wo.currency, locale }),
+                  ],
+                ] as const)),
+            ...(!gates.workOrderCosts
+              ? []
+              : ([
+                  [
+                    t("vehicle.panel.actualCost"),
+                    wo.actualCostMinor === null
+                      ? t("vehicle.panel.actualCostLater")
+                      : wo.costOutcome === "INVOICE_PENDING" && wo.actualCostMinor === 0
+                        ? t("vehicle.panel.invoicePending")
+                        : formatMoney(wo.actualCostMinor, { currency: wo.currency, locale }),
+                  ],
+                ] as const)),
             ...(wo.completedAt === null
               ? []
               : ([
@@ -145,20 +180,10 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
           </DetailSection>
         )}
 
-        {/* Null when the reader may not see work-order costs (#390). */}
+        {/* Null when the reader may not see work-order costs (#390, #328). */}
         {wo.costLines !== null && (
           <DetailSection title={t("vehicle.panel.costs")}>
-            {wo.costLines.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("maintenance.detail.costLinesEmpty")}</p>
-            ) : (
-              <CostLines lines={wo.costLines} locale={locale} />
-            )}
-          </DetailSection>
-        )}
-        {wo.pendingCostLines !== null && wo.pendingCostLines.length > 0 && (
-          <DetailSection title={t("maintenance.detail.pendingCostLines")}>
-            <p className="text-xs text-muted-foreground">{t("maintenance.detail.pendingCostLinesHint")}</p>
-            <CostLines lines={wo.pendingCostLines} locale={locale} />
+            <WorkOrderCosts detail={wo} locale={locale} />
           </DetailSection>
         )}
 
@@ -171,7 +196,7 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
       </div>
       <PanelFooter
         steps={steps}
-        waiting={waiting === null ? null : t(`vehicle.panel.waitingOn.${waiting}`)}
+        waiting={waiting === null ? null : t(`vehicle.panel.waitingOn.${waiting}`, otherIssueParams ?? {})}
         onStep={panel.openStep}
       />
     </>
@@ -190,6 +215,7 @@ function WorkOrderForm({
   const { asset, pinnedLabel, refresh, panel } = useVehicle();
   const ref: WorkOrderRef = {
     id: wo.id,
+    number: wo.number,
     assetId: wo.asset.id,
     status: wo.status,
     issueId: wo.issue?.id ?? null,
@@ -221,6 +247,7 @@ function WorkOrderForm({
           pinnedAssetId={asset.id}
           pinnedAssetLabel={pinnedLabel}
           link={{ workOrderId: wo.id }}
+          lateCost={wo.status === "COMPLETED"}
           defaultBranchCode={asset.branch.code}
           back={host.back}
           onRecorded={() => {

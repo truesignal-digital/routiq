@@ -167,13 +167,16 @@ describe("work-order cost attribution", () => {
    * — the writer's check is what is under test, not the state machine. The
    * row reuses a real creating receipt so the composite command FK holds.
    */
+  let parkedNumber = 0;
   async function workOrderIn(status: (typeof workOrders.$inferSelect)["status"]) {
     const [template] = await db
       .select()
       .from(workOrders)
       .where(and(eq(workOrders.workspaceId, workspaceId), eq(workOrders.id, workOrderId)));
     const id = randomUUID();
-    await db.insert(workOrders).values({ ...template!, id, status });
+    // Numbers are unique per workspace (#608); a parked copy takes a free one.
+    parkedNumber += 1;
+    await db.insert(workOrders).values({ ...template!, id, number: 100_000 + parkedNumber, status });
     return id;
   }
 
@@ -231,11 +234,11 @@ describe("work-order cost attribution", () => {
     });
   });
 
-  describe("costs attach only to APPROVED work (#28)", () => {
+  // COMPLETED takes the late invoice (#82): late-work-order-cost.test.ts.
+  describe("costs attach only to APPROVED or COMPLETED work (#28, #82)", () => {
     for (const status of [
       "SUBMITTED",
       "COMPLETION_SUBMITTED",
-      "COMPLETED",
       "REJECTED",
       "CANCELLED",
     ] as const) {

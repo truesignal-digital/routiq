@@ -28,6 +28,7 @@ import { canAdministerBranches } from "@/branches/permissions.js";
 import { useBranches } from "@/branches/useBranches.js";
 
 const PRIMARY_COLUMN = { columnId: "code" } as const;
+const DEFAULT_SORTING: SortingState = [{ id: "code", desc: false }];
 
 const ACTION_ICONS: Record<BranchActionKey, typeof Pencil> = {
   rename: Pencil,
@@ -49,7 +50,7 @@ export function BranchesScreen() {
   const canAdminister = canAdministerBranches(me?.role);
 
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [sorting, setSorting] = useState<SortingState>([{ id: "code", desc: false }]);
+  const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   const [adding, setAdding] = useState(false);
   const [acting, setActing] = useState<{
     branch: BranchListItem;
@@ -111,7 +112,6 @@ export function BranchesScreen() {
   if (me !== undefined && !canAdminister) {
     return (
       <PermissionDenied
-        width="wide"
         title={t("branches.title")}
         icon={<Building2 className="size-7" aria-hidden />}
         code="ROLE_FORBIDDEN"
@@ -120,9 +120,10 @@ export function BranchesScreen() {
   }
 
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader
         title={t("branches.title")}
+        description={t("branches.lead")}
         actions={
           <Button type="button" onClick={() => setAdding(true)}>
             <Plus className="size-4" aria-hidden />
@@ -130,7 +131,6 @@ export function BranchesScreen() {
           </Button>
         }
       />
-      <p className="mt-2 max-w-lg text-sm text-muted-foreground">{t("branches.lead")}</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
         <DataTableViewOptions
@@ -157,6 +157,7 @@ export function BranchesScreen() {
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}
             sorting={sorting}
+            defaultSorting={DEFAULT_SORTING}
             onSortingChange={setSorting}
             primaryColumn={PRIMARY_COLUMN}
             rowActions={(branch) =>

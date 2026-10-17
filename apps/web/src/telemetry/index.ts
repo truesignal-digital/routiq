@@ -50,7 +50,7 @@ function currentRoute(): string {
 }
 
 function appVersion(): string {
-  return (typeof __ROUTIQ_VERSION__ === "string" ? __ROUTIQ_VERSION__ : "dev").slice(0, 40) || "dev";
+  return document.querySelector('meta[name="routiq-version"]')?.getAttribute("content")?.slice(0, 40) || "dev";
 }
 
 /** Starts field telemetry once per page load. Never throws. */

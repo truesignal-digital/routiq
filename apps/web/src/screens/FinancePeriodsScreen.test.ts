@@ -5,7 +5,6 @@ import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { MeCtx, type MeContext } from "../auth/me.js";
-import { currentPeriodCode } from "../finance/model.js";
 import { i18n } from "../i18n/index.js";
 import { FinancePeriodsScreen } from "./FinancePeriodsScreen.js";
 
@@ -31,6 +30,9 @@ vi.mock("../finance/usePeriods.js", () => ({
   usePeriods: mocks.usePeriods,
 }));
 
+/** The month the server says it is in the workspace's time zone (#591). */
+const CURRENT = "2026-10";
+
 const director: MeContext = {
   workspaceId: "00000000-0000-4000-8000-000000000001",
   principalId: "00000000-0000-4000-8000-000000000002",
@@ -42,13 +44,14 @@ const director: MeContext = {
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+  timezone: "Africa/Douala",
 };
 
-function renderScreen(me: MeContext = director) {
+function renderScreen(me: MeContext = director, client = new QueryClient()) {
   return render(
     createElement(
       QueryClientProvider,
-      { client: new QueryClient() },
+      { client },
       createElement(
         MeCtx.Provider,
         { value: me },
@@ -108,9 +111,10 @@ beforeEach(() => {
   mockDesktop();
   mocks.usePeriods.mockReturnValue({
     data: {
+      currentPeriodCode: CURRENT,
       periods: [
         {
-          periodCode: currentPeriodCode(),
+          periodCode: CURRENT,
           status: "OPEN",
           lockedAt: null,
           entryCount: 2,
@@ -177,6 +181,102 @@ describe("finance period command routing", () => {
     );
   });
 
+  // #571: both commands version-check a stored period row, so the screen must
+  // send the row version it showed; without it the server answers
+  // EXPECTED_VERSION_REQUIRED and the month never locks.
+  it("sends the row version it shows with lock and reopen", async () => {
+    const submits = new Map<string, ReturnType<typeof vi.fn>>();
+    mocks.createCommandIntent.mockImplementation(
+      (_client: unknown, commandName: string) => {
+        const submit = vi.fn(async () => ({
+          ok: true,
+          outcome: {
+            commandId: crypto.randomUUID(),
+            recordId: crypto.randomUUID(),
+            rowVersion: 9,
+            warnings: [],
+            idempotentReplay: false,
+          },
+        }));
+        submits.set(commandName, submit);
+        return { current: vi.fn(), submit };
+      },
+    );
+    const user = userEvent.setup();
+    renderScreen();
+
+    await chooseRowAction(user, 0, "Lock period");
+    await user.click(screen.getByRole("button", { name: "Lock period" }));
+    await waitFor(() =>
+      expect(submits.get("lock-period")).toHaveBeenCalledWith(
+        { periodCode: CURRENT },
+        { expectedVersion: 1 },
+      ),
+    );
+
+    await chooseRowAction(user, 1, "Reopen period");
+    await user.type(screen.getByLabelText("Reason for reopening"), "Correction needed");
+    await user.click(screen.getByRole("button", { name: "Reopen period" }));
+    await waitFor(() =>
+      expect(submits.get("reopen-period")).toHaveBeenCalledWith(
+        { periodCode: "2026-06", reason: "Correction needed" },
+        { expectedVersion: 2 },
+      ),
+    );
+  });
+
+  it("locks the current month at version 0 when the server has no row for it yet", async () => {
+    mocks.usePeriods.mockReturnValue({
+      data: { periods: [], currentPeriodCode: CURRENT },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    const submit = vi.fn(async () => ({
+      ok: true,
+      outcome: {
+        commandId: crypto.randomUUID(),
+        recordId: crypto.randomUUID(),
+        rowVersion: 2,
+        warnings: [],
+        idempotentReplay: false,
+      },
+    }));
+    mocks.createCommandIntent.mockReturnValue({ current: vi.fn(), submit });
+    const user = userEvent.setup();
+    renderScreen();
+
+    await chooseRowAction(user, 0, "Lock period");
+    await user.click(screen.getByRole("button", { name: "Lock period" }));
+    await waitFor(() =>
+      expect(submit).toHaveBeenCalledWith(
+        { periodCode: CURRENT },
+        { expectedVersion: 0 },
+      ),
+    );
+  });
+
+  it("refetches the months after a version conflict so the next try sends the fresh version", async () => {
+    const submit = vi.fn(async () => ({ ok: false, code: "VERSION_CONFLICT" }));
+    mocks.createCommandIntent.mockReturnValue({ current: vi.fn(), submit });
+    const queryClient = new QueryClient();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const user = userEvent.setup();
+    renderScreen(director, queryClient);
+
+    await chooseRowAction(user, 0, "Lock period");
+    await user.click(screen.getByRole("button", { name: "Lock period" }));
+
+    expect(
+      await within(screen.getByRole("alertdialog")).findByText(
+        "Someone else modified this record. Refresh, then reapply your changes.",
+      ),
+    ).toBeTruthy();
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ["ws", undefined, "finance", "periods"],
+    });
+  });
+
   it("lets Finance lock a period but leaves reopening to the Director", async () => {
     const user = userEvent.setup();
     renderScreen({ ...director, role: "FINANCE" });
@@ -217,20 +317,92 @@ describe("finance period command routing", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    expect(periodCodesInOrder()).toEqual([currentPeriodCode(), "2026-06"]);
+    expect(periodCodesInOrder()).toEqual([CURRENT, "2026-06"]);
 
     // Busiest period first: 2026-06 holds four entries, the current one two.
     await user.click(screen.getByRole("button", { name: "Entries" }));
-    expect(periodCodesInOrder()).toEqual(["2026-06", currentPeriodCode()]);
+    expect(periodCodesInOrder()).toEqual(["2026-06", CURRENT]);
 
     await user.click(screen.getByRole("button", { name: "Entries" }));
-    expect(periodCodesInOrder()).toEqual([currentPeriodCode(), "2026-06"]);
+    expect(periodCodesInOrder()).toEqual([CURRENT, "2026-06"]);
   });
 
-  it("uses the wide container the other finance list screens use", () => {
+  it("sits in the page frame every other page uses (#658)", () => {
     const { container } = renderScreen();
 
-    expect(container.querySelector("section")?.className).toContain("max-w-6xl");
+    expect(container.querySelector("section")?.hasAttribute("data-page-frame")).toBe(true);
+  });
+
+  // #585: a locked month still takes late entries, into the current month
+  // (resolvePostingPeriod); only locking the current month stops posting.
+  it("says what locking does to late entries, past month or current", async () => {
+    mocks.usePeriods.mockReturnValue({
+      data: {
+        currentPeriodCode: CURRENT,
+        periods: [
+          { periodCode: CURRENT, status: "OPEN", lockedAt: null, entryCount: 2, rowVersion: 1 },
+          { periodCode: "2026-05", status: "OPEN", lockedAt: null, entryCount: 3, rowVersion: 1 },
+        ],
+      },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    const user = userEvent.setup();
+    renderScreen();
+
+    await chooseRowAction(user, 1, "Lock period");
+    const past = screen.getByRole("alertdialog", { name: "Lock period" });
+    expect(past.textContent).toContain(
+      "Entries already posted in this month can no longer change. A late entry dated in this month posts in the current month and keeps its date.",
+    );
+    expect(past.textContent).not.toMatch(/no entries can be created/);
+    await user.click(within(past).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+
+    await chooseRowAction(user, 0, "Lock period");
+    // #595: an entry dated in an earlier, still-open month still posts there.
+    expect(screen.getByRole("alertdialog", { name: "Lock period" }).textContent).toContain(
+      "Entries already posted in this month can no longer change, and entries dated this month can't post until it is reopened.",
+    );
+  });
+
+  // #591: the server decides which month is current, in the workspace's time
+  // zone. Here the device clock still says October while the workspace is
+  // already in November.
+  it("takes the current month from the server, not the device clock", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 9, 31, 23, 30));
+    mocks.usePeriods.mockReturnValue({
+      data: {
+        currentPeriodCode: "2026-11",
+        periods: [
+          { periodCode: "2026-10", status: "OPEN", lockedAt: null, entryCount: 3, rowVersion: 1 },
+        ],
+      },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    try {
+      const user = userEvent.setup();
+      renderScreen();
+
+      expect(periodCodesInOrder()).toEqual(["2026-11", "2026-10"]);
+
+      await chooseRowAction(user, 1, "Lock period");
+      const october = screen.getByRole("alertdialog", { name: "Lock period" });
+      expect(october.textContent).toContain("A late entry dated in this month posts in the current month");
+      await user.click(within(october).getByRole("button", { name: "Cancel" }));
+      await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+
+      await chooseRowAction(user, 0, "Lock period");
+      expect(screen.getByRole("alertdialog", { name: "Lock period" }).textContent).toContain(
+        "entries dated this month can't post until it is reopened",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("cancels lock from the overlay without dispatching", async () => {

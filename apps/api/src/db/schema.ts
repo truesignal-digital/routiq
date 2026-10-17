@@ -7,9 +7,12 @@ import {
   PRINCIPAL_TYPES,
   PROFITABILITY_LAYERS,
   ROLES,
+  SUMMARY_SCHEDULES,
   TEMPLATE_CODES,
+  TRIP_CANCELLATION_REASONS,
   type ActivityCompletenessCode,
   type CommandWarningCode,
+  type TripDiscrepancyCode,
 } from "@routiq/contracts";
 import { sql } from "drizzle-orm";
 import {
@@ -661,7 +664,7 @@ export const financialPostings = pgTable(
   ],
 );
 
-/** Per-scope sequences for human-readable numbering (e.g. 'ENTRY:{branchId}:{year}'). */
+/** Per-scope sequences for human-readable numbering (e.g. 'ENTRY:{branchId}:{year}', 'WORK_ORDER', 'ISSUE'). */
 export const numberCounters = pgTable(
   "number_counters",
   {
@@ -718,6 +721,47 @@ export const persons = pgTable(
   (t) => [
     uniqueIndex("persons_ws_code_uq").on(t.workspaceId, t.personCode),
     index("persons_ws_branch_idx").on(t.workspaceId, t.branchId),
+    // One login, one person (ADR-0010). `membership_id` is the current link,
+    // which `link-person-login` and `unlink-person-login` alone write.
+    uniqueIndex("persons_ws_membership_uq")
+      .on(t.workspaceId, t.membershipId)
+      .where(sql`${t.membershipId} is not null`),
+  ],
+);
+
+/**
+ * Every link between a Person and a login (#569), one row per period. A link
+ * is ended, never rewritten: relinking ends the current row and opens a new
+ * one, unlinking only ends it. `persons.membership_id` mirrors the open row.
+ * Only `ended_at` and `ended_by_command_id` may be updated (migration 0047).
+ */
+export const personLogins = pgTable(
+  "person_logins",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => persons.id),
+    membershipId: uuid("membership_id")
+      .notNull()
+      .references(() => memberships.id),
+    createdByCommandId: uuid("created_by_command_id")
+      .notNull()
+      .references(() => commands.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    endedByCommandId: uuid("ended_by_command_id").references(() => commands.id),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("person_logins_open_person_uq")
+      .on(t.workspaceId, t.personId)
+      .where(sql`${t.endedAt} is null`),
+    uniqueIndex("person_logins_open_membership_uq")
+      .on(t.workspaceId, t.membershipId)
+      .where(sql`${t.endedAt} is null`),
   ],
 );
 
@@ -754,6 +798,11 @@ export const places = pgTable(
  * A haulage job, scheduled journey, charter, or plant hire. Closing warns rather
  * than blocks (§3.4 inv. 6): `completeness_codes` records what was missing, using
  * the same vocabulary the command returns as warnings.
+ *
+ * With Scheduling (ADR-0012) a trip may be booked first: PLANNED, with no actual
+ * start, then started into OPEN, or CANCELLED before it starts. The planned_*
+ * columns are the plan, never the facts; segments and crew rows are written
+ * only at start. CHECKs in migration 0045 tie each status to its dates.
  */
 export const activities = pgTable(
   "activities",
@@ -778,7 +827,7 @@ export const activities = pgTable(
       .$type<Record<string, unknown>>()
       .notNull()
       .default({}),
-    status: text("status", { enum: ["OPEN", "CLOSED"] })
+    status: text("status", { enum: ["PLANNED", "OPEN", "CLOSED", "CANCELLED"] })
       .notNull()
       .default("OPEN"),
     /** NULL while OPEN; set once by close. */
@@ -802,6 +851,29 @@ export const activities = pgTable(
     endedAt: timestamp("ended_at", { withTimezone: true }),
     closedAt: timestamp("closed_at", { withTimezone: true }),
     closedByCommandId: uuid("closed_by_command_id").references(() => commands.id),
+    /** The planned assignment (ADR-0012). Facts live in segments and crew rows. */
+    plannedAssetId: uuid("planned_asset_id").references(() => assets.id),
+    plannedDriverPersonId: uuid("planned_driver_person_id").references(() => persons.id),
+    /** The planned route; it pre-fills the first leg and is not a leg. */
+    plannedOriginPlaceId: uuid("planned_origin_place_id").references(() => places.id),
+    plannedOriginText: text("planned_origin_text"),
+    plannedDestinationPlaceId: uuid("planned_destination_place_id").references(() => places.id),
+    plannedDestinationText: text("planned_destination_text"),
+    /** Minor units of price_currency. A booking never posts; these pre-fill revenue. */
+    agreedPriceMinor: bigint("agreed_price_minor", { mode: "bigint" }),
+    amountToCollectMinor: bigint("amount_to_collect_minor", { mode: "bigint" }),
+    priceCurrency: char("price_currency", { length: 3 }).notNull().default("XAF"),
+    /** Kept if a late offline start revives the trip (ADR-0012 §5). */
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelledByCommandId: uuid("cancelled_by_command_id").references(() => commands.id),
+    cancellationReason: text("cancellation_reason", { enum: TRIP_CANCELLATION_REASONS }),
+    cancellationNote: text("cancellation_note"),
+    /** Permanent facts written by start-planned-trip, like completeness_codes. */
+    discrepancyCodes: text("discrepancy_codes")
+      .array()
+      .$type<TripDiscrepancyCode[]>()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     rowVersion: integer("row_version").notNull().default(1),
     createdByCommandId: uuid("created_by_command_id")
       .notNull()
@@ -812,6 +884,11 @@ export const activities = pgTable(
     uniqueIndex("activities_ws_number_uq").on(t.workspaceId, t.activityNumber),
     index("activities_ws_branch_started_idx").on(t.workspaceId, t.branchId, t.startedAt),
     index("activities_ws_status_idx").on(t.workspaceId, t.status),
+    index("activities_ws_branch_planned_idx")
+      .on(t.workspaceId, t.branchId, t.plannedStartAt)
+      .where(sql`${t.status} IN ('PLANNED', 'OPEN')`),
+    index("activities_ws_planned_asset_idx").on(t.workspaceId, t.plannedAssetId),
+    index("activities_ws_planned_driver_idx").on(t.workspaceId, t.plannedDriverPersonId),
   ],
 );
 
@@ -988,6 +1065,12 @@ export const operationalIssues = pgTable(
     assetId: uuid("asset_id")
       .notNull()
       .references(() => assets.id),
+    /**
+     * Per-workspace sequence (#608), drawn from number_counters when the
+     * creating command commits; the uuid stays the key. The prefix ("OT-",
+     * "WO-") is the client's words, never stored. Set once, never edited.
+     */
+    number: integer("number").notNull(),
     description: text("description").notNull(),
     safetyCritical: boolean("safety_critical").notNull(),
     category: text("category"),
@@ -1013,6 +1096,7 @@ export const operationalIssues = pgTable(
   },
   (t) => [
     index("operational_issues_ws_asset_idx").on(t.workspaceId, t.assetId),
+    uniqueIndex("operational_issues_ws_number_uq").on(t.workspaceId, t.number),
   ],
 );
 
@@ -1040,6 +1124,12 @@ export const workOrders = pgTable(
       .notNull()
       .references(() => assets.id),
     issueId: uuid("issue_id").references((): AnyPgColumn => operationalIssues.id),
+    /**
+     * Per-workspace sequence (#608), drawn from number_counters when the
+     * creating command commits; the uuid stays the key. The prefix ("OT-",
+     * "WO-") is the client's words, never stored. Set once, never edited.
+     */
+    number: integer("number").notNull(),
     description: text("description").notNull(),
     /**
      * Plain `text` with no CHECK, as Drizzle emits it; the value set is held by
@@ -1093,6 +1183,7 @@ export const workOrders = pgTable(
   (t) => [
     index("work_orders_ws_asset_idx").on(t.workspaceId, t.assetId),
     index("work_orders_ws_status_idx").on(t.workspaceId, t.status),
+    uniqueIndex("work_orders_ws_number_uq").on(t.workspaceId, t.number),
   ],
 );
 
@@ -1256,6 +1347,29 @@ export const approvalRuleAcknowledgements = pgTable(
     ),
   ],
 );
+
+/**
+ * Company-wide settings that belong to no module (#669), one row per
+ * workspace, written by `set-summary-schedule`. No row means every default:
+ * the first change inserts it. `updated_by_command_id` names the last change;
+ * the audit trail keeps every one.
+ */
+export const companySettings = pgTable("company_settings", {
+  workspaceId: uuid("workspace_id")
+    .primaryKey()
+    .references(() => workspaces.id),
+  summarySchedule: text("summary_schedule", { enum: SUMMARY_SCHEDULES })
+    .notNull()
+    .default("MONDAY_AND_MONTH_START"),
+  createdByCommandId: uuid("created_by_command_id")
+    .notNull()
+    .references(() => commands.id),
+  updatedByCommandId: uuid("updated_by_command_id")
+    .notNull()
+    .references(() => commands.id),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  rowVersion: integer("row_version").notNull().default(1),
+});
 
 /**
  * Field telemetry from the web app (ADR-0011). Its own schema because it is

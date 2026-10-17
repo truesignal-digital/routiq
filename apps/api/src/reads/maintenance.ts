@@ -1,17 +1,18 @@
 import {
-  canReadWorkOrderCosts,
   issueDetail,
   issueListQuery,
   issueListResponse,
   maintenanceSummary,
   maintenanceSummaryQuery,
+  OPEN_WORK_ORDER_STATUSES,
   workOrderDetail,
   workOrderListQuery,
   workOrderListResponse,
   type HistoryActor,
   type ListSort,
+  type ModuleCode,
 } from "@routiq/contracts";
-import { and, asc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, notInArray, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
@@ -32,6 +33,7 @@ import {
   operationalIssues,
   principals,
   workOrders,
+  workspaces,
 } from "../db/schema.js";
 import type { TenantTx } from "../db/tenant.js";
 import { lastEventActors, toActor } from "./actors.js";
@@ -48,8 +50,17 @@ import {
   type KeysetColumn,
 } from "./cursor.js";
 import { serializeMinor } from "./serialize-minor.js";
-import { parseActualCost, workOrderActualCostSql } from "./work-order-cost.js";
+import {
+  costToCome,
+  parseActualCost,
+  workOrderActualCostSql,
+  workOrderCostToComeColumns,
+  workOrderMoneyVisibility,
+  type CostToComeFacts,
+  type WorkOrderMoneyVisibility,
+} from "./work-order-cost.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
+import { overviewNoticeToday } from "./overview-notice.js";
 
 /**
  * Newest first, always — both maintenance queues read that way and neither
@@ -90,25 +101,26 @@ function serializeOptionalMinor(value: bigint | null): number | null {
 }
 
 /**
- * A work order's three amounts, or null for each when the caller may not read
- * work-order costs (#390). Null, never zero: a hidden figure must not read as
- * a free repair.
+ * A work order's amounts and its cost still to come (#82), each null when the
+ * caller may not read it. Null, never zero: a hidden figure must not read as a
+ * free repair.
  */
 function workOrderAmounts(
-  auth: AuthContext,
-  row: {
+  visible: WorkOrderMoneyVisibility,
+  row: CostToComeFacts & {
     expectedCostMinor: bigint | null;
     actualCostMinor: string | null;
-    declaredCostMinor: bigint | null;
   },
 ) {
-  if (!canReadWorkOrderCosts(auth.role)) {
-    return { expectedCostMinor: null, actualCostMinor: null, declaredCostMinor: null };
-  }
   return {
-    expectedCostMinor: serializeOptionalMinor(row.expectedCostMinor),
-    actualCostMinor: serializeOptionalMinor(parseActualCost(row.actualCostMinor)),
-    declaredCostMinor: serializeOptionalMinor(row.declaredCostMinor),
+    expectedCostMinor: visible.estimate ? serializeOptionalMinor(row.expectedCostMinor) : null,
+    ...(visible.actual
+      ? {
+          actualCostMinor: serializeOptionalMinor(parseActualCost(row.actualCostMinor)),
+          declaredCostMinor: serializeOptionalMinor(row.declaredCostMinor),
+          costToCome: costToCome(row),
+        }
+      : { actualCostMinor: null, declaredCostMinor: null, costToCome: null }),
   };
 }
 
@@ -153,13 +165,14 @@ export function registerMaintenanceReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/maintenance/summary", module: "MAINTENANCE", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedQuery = maintenanceSummaryQuery.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
         const { branchId } = parsedQuery.data;
+        const costVisible = workOrderMoneyVisibility(auth, modules).actual;
 
         const assetConditions: SQL[] = [eq(assets.workspaceId, auth.workspaceId)];
         if (auth.branchScope !== "ALL") {
@@ -167,61 +180,141 @@ export function registerMaintenanceReadRoutes(
         }
         if (branchId) assetConditions.push(eq(assets.branchId, branchId));
         const scopedAssetIds = sql`(select ${assets.id} from ${assets} where ${and(...assetConditions)})`;
+        const inRepairWindow = sql`${workOrders.status} = 'COMPLETED'
+          and ${workOrders.completedAt} >= now() - make_interval(days => ${REPAIR_WINDOW_DAYS}::int)`;
 
-        const [counts] = await read((tx) =>
-          tx.execute<{
-            open_issues: number;
-            open_safety_critical: number;
-            grounded: number;
-            approved_work_orders: number;
-            average_repair_days: string | null;
-            repairs_counted: number;
-          }>(sql`
-            select
-              (select count(*)::int from ${operationalIssues}
-                where ${operationalIssues.workspaceId} = ${auth.workspaceId}
-                  and ${operationalIssues.status} = 'OPEN'
-                  and ${operationalIssues.assetId} in ${scopedAssetIds}) as open_issues,
-              (select count(*)::int from ${operationalIssues}
-                where ${operationalIssues.workspaceId} = ${auth.workspaceId}
-                  and ${operationalIssues.status} = 'OPEN'
-                  and ${operationalIssues.safetyCritical}
-                  and ${operationalIssues.assetId} in ${scopedAssetIds}) as open_safety_critical,
-              (select count(distinct ${assetAvailabilityIntervals.assetId})::int
-                from ${assetAvailabilityIntervals}
-                where ${assetAvailabilityIntervals.workspaceId} = ${auth.workspaceId}
-                  and ${assetAvailabilityIntervals.closedAt} is null
-                  and ${assetAvailabilityIntervals.assetId} in ${scopedAssetIds}) as grounded,
-              (select count(*)::int from ${workOrders}
-                where ${workOrders.workspaceId} = ${auth.workspaceId}
-                  and ${workOrders.status} = 'APPROVED'
-                  and ${workOrders.assetId} in ${scopedAssetIds}) as approved_work_orders,
-              repairs.average_repair_days,
-              repairs.repairs_counted
-            from (
+        const { counts, firstGrounded, repairCost, notice } = await read(async (tx) => {
+          const [counts] = await tx
+            .execute<{
+              open_issues: number;
+              open_safety_critical: number;
+              grounded: number;
+              approved_work_orders: number;
+              open_work_orders: number;
+              waiting_approval: number;
+              waiting_completion: number;
+              average_repair_days: string | null;
+              repairs_counted: number;
+            }>(sql`
               select
-                round(avg(extract(epoch from (${workOrders.completedAt} - ${commands.executedAt})) / 86400)::numeric, 1)::text
-                  as average_repair_days,
-                count(*)::int as repairs_counted
-              from ${workOrders}
-              inner join ${commands} on ${commands.id} = ${workOrders.createdByCommandId}
-              where ${workOrders.workspaceId} = ${auth.workspaceId}
-                and ${workOrders.status} = 'COMPLETED'
-                and ${workOrders.completedAt} >= now() - make_interval(days => ${REPAIR_WINDOW_DAYS}::int)
-                and ${workOrders.assetId} in ${scopedAssetIds}
-            ) as repairs
-          `),
-        ).then((result) => result.rows);
+                (select count(*)::int from ${operationalIssues}
+                  where ${operationalIssues.workspaceId} = ${auth.workspaceId}
+                    and ${operationalIssues.status} = 'OPEN'
+                    and ${operationalIssues.assetId} in ${scopedAssetIds}) as open_issues,
+                (select count(*)::int from ${operationalIssues}
+                  where ${operationalIssues.workspaceId} = ${auth.workspaceId}
+                    and ${operationalIssues.status} = 'OPEN'
+                    and ${operationalIssues.safetyCritical}
+                    and ${operationalIssues.assetId} in ${scopedAssetIds}) as open_safety_critical,
+                (select count(distinct ${assetAvailabilityIntervals.assetId})::int
+                  from ${assetAvailabilityIntervals}
+                  where ${assetAvailabilityIntervals.workspaceId} = ${auth.workspaceId}
+                    and ${assetAvailabilityIntervals.closedAt} is null
+                    and ${assetAvailabilityIntervals.assetId} in ${scopedAssetIds}) as grounded,
+                orders.approved_work_orders,
+                orders.open_work_orders,
+                orders.waiting_approval,
+                orders.waiting_completion,
+                repairs.average_repair_days,
+                repairs.repairs_counted
+              from (
+                select
+                  count(*) filter (where ${workOrders.status} = 'APPROVED')::int as approved_work_orders,
+                  count(*) filter (where ${inArray(workOrders.status, [...OPEN_WORK_ORDER_STATUSES])})::int
+                    as open_work_orders,
+                  count(*) filter (where ${workOrders.status} = 'SUBMITTED')::int as waiting_approval,
+                  count(*) filter (where ${workOrders.status} = 'COMPLETION_SUBMITTED')::int as waiting_completion
+                from ${workOrders}
+                where ${workOrders.workspaceId} = ${auth.workspaceId}
+                  and ${workOrders.assetId} in ${scopedAssetIds}
+              ) as orders, (
+                select
+                  round(avg(extract(epoch from (${workOrders.completedAt} - ${commands.executedAt})) / 86400)::numeric, 1)::text
+                    as average_repair_days,
+                  count(*)::int as repairs_counted
+                from ${workOrders}
+                inner join ${commands} on ${commands.id} = ${workOrders.createdByCommandId}
+                where ${workOrders.workspaceId} = ${auth.workspaceId}
+                  and ${inRepairWindow}
+                  and ${workOrders.assetId} in ${scopedAssetIds}
+              ) as repairs
+            `)
+            .then((result) => result.rows);
+
+          const [firstGrounded] = await tx
+            .select({
+              assetId: assets.id,
+              assetCode: assets.assetCode,
+              since: assetAvailabilityIntervals.openedAt,
+            })
+            .from(assetAvailabilityIntervals)
+            .innerJoin(
+              assets,
+              and(
+                eq(assets.workspaceId, assetAvailabilityIntervals.workspaceId),
+                eq(assets.id, assetAvailabilityIntervals.assetId),
+              ),
+            )
+            .where(and(...assetConditions, isNull(assetAvailabilityIntervals.closedAt)))
+            .orderBy(asc(assetAvailabilityIntervals.openedAt), asc(assets.assetCode), asc(assets.id))
+            .limit(1);
+
+          const notice = await overviewNoticeToday(tx, auth, modules, branchId);
+          if (!costVisible) return { counts, firstGrounded, repairCost: null, notice };
+          // The same orders `repairsCounted` averages, in the workspace
+          // currency only: amounts in two currencies never add up.
+          const [workspace] = await tx
+            .select({ currency: workspaces.defaultCurrency })
+            .from(workspaces)
+            .where(eq(workspaces.id, auth.workspaceId));
+          const currency = workspace?.currency ?? "XAF";
+          const [cost] = await tx
+            .select({
+              amountMinor: sql<string>`coalesce(sum((${workOrderActualCostSql()})::bigint), 0)::text`,
+              workOrders: sql<number>`count(*)::int`,
+            })
+            .from(workOrders)
+            // Joined to the asset for the scope, which also keeps the
+            // correlated cost subquery's columns qualified.
+            .innerJoin(
+              assets,
+              and(eq(assets.workspaceId, workOrders.workspaceId), eq(assets.id, workOrders.assetId)),
+            )
+            .where(and(...assetConditions, inRepairWindow, eq(workOrders.currency, currency)));
+          return {
+            counts,
+            firstGrounded,
+            repairCost: {
+              amountMinor: serializeMinor(BigInt(cost?.amountMinor ?? "0")),
+              currency,
+              workOrders: cost?.workOrders ?? 0,
+            },
+            notice,
+          };
+        });
 
         return maintenanceSummary.parse({
           openIssues: counts?.open_issues ?? 0,
           openSafetyCritical: counts?.open_safety_critical ?? 0,
           grounded: counts?.grounded ?? 0,
+          firstGrounded:
+            firstGrounded === undefined
+              ? null
+              : {
+                  assetId: firstGrounded.assetId,
+                  assetCode: firstGrounded.assetCode,
+                  since: firstGrounded.since.toISOString(),
+                },
           approvedWorkOrders: counts?.approved_work_orders ?? 0,
+          openWorkOrders: counts?.open_work_orders ?? 0,
+          waitingApproval: counts?.waiting_approval ?? 0,
+          waitingCompletion: counts?.waiting_completion ?? 0,
           averageRepairDays:
             counts?.average_repair_days == null ? null : Number(counts.average_repair_days),
           repairsCounted: counts?.repairs_counted ?? 0,
           repairWindowDays: REPAIR_WINDOW_DAYS,
+          repairCost,
+          notice,
         });
       } catch (error) {
         req.log.error({ err: error }, "maintenance summary read failed");
@@ -234,13 +327,13 @@ export function registerMaintenanceReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/work-orders", module: "MAINTENANCE", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedQuery = workOrderListQuery.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
-        const { status, branchId, assetId, cursor, limit } = parsedQuery.data;
+        const { status, open, branchId, assetId, cursor, limit } = parsedQuery.data;
 
         const result = await read(async (tx) => {
           const decodedCursor = cursor
@@ -260,6 +353,13 @@ export function registerMaintenanceReadRoutes(
           }
           if (branchId) conditions.push(eq(assets.branchId, branchId));
           if (status) conditions.push(eq(workOrders.status, status));
+          // The summary's `openWorkOrders` counts the same set.
+          if (open !== undefined) {
+            const openStatuses = [...OPEN_WORK_ORDER_STATUSES];
+            conditions.push(
+              open ? inArray(workOrders.status, openStatuses) : notInArray(workOrders.status, openStatuses),
+            );
+          }
           if (assetId) conditions.push(eq(workOrders.assetId, assetId));
           if (decodedCursor) {
             conditions.push(
@@ -275,6 +375,7 @@ export function registerMaintenanceReadRoutes(
           const rows = await tx
             .select({
               id: workOrders.id,
+              number: workOrders.number,
               status: workOrders.status,
               description: workOrders.description,
               assetId: workOrders.assetId,
@@ -287,8 +388,10 @@ export function registerMaintenanceReadRoutes(
               actualCostMinor: workOrderActualCostSql(),
               declaredCostMinor: workOrders.declaredCostMinor,
               costOutcome: workOrders.costOutcome,
+              ...workOrderCostToComeColumns(),
               currency: workOrders.currency,
               issueId: workOrders.issueId,
+              issueNumber: operationalIssues.number,
               safetyCritical: operationalIssues.safetyCritical,
               createdAt: commands.executedAt,
               createdAtKey: microsecondKey(commands.executedAt),
@@ -352,6 +455,7 @@ export function registerMaintenanceReadRoutes(
         const pageRows = result.rows.slice(0, limit);
         const items = pageRows.map((row) => ({
           id: row.id,
+          number: row.number,
           status: row.status,
           description: row.description,
           asset: {
@@ -364,13 +468,13 @@ export function registerMaintenanceReadRoutes(
             code: row.branchCode,
             name: row.branchName,
           },
-          ...workOrderAmounts(auth, row),
+          ...workOrderAmounts(workOrderMoneyVisibility(auth, modules), row),
           costOutcome: row.costOutcome,
           currency: row.currency,
           issue:
             row.issueId === null
               ? null
-              : { id: row.issueId, safetyCritical: row.safetyCritical ?? false },
+              : { id: row.issueId, number: row.issueNumber, safetyCritical: row.safetyCritical ?? false },
           createdAt: row.createdAt.toISOString(),
           completedAt: row.completedAt?.toISOString() ?? null,
           cancelledAt: row.cancelledAt?.toISOString() ?? null,
@@ -408,7 +512,7 @@ export function registerMaintenanceReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/work-orders/:workOrderId", module: "MAINTENANCE", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedParams = z
           .object({ workOrderId: z.uuid() })
@@ -430,6 +534,7 @@ export function registerMaintenanceReadRoutes(
           const [header] = await tx
             .select({
               id: workOrders.id,
+              number: workOrders.number,
               status: workOrders.status,
               description: workOrders.description,
               assetId: workOrders.assetId,
@@ -442,8 +547,10 @@ export function registerMaintenanceReadRoutes(
               actualCostMinor: workOrderActualCostSql(),
               declaredCostMinor: workOrders.declaredCostMinor,
               costOutcome: workOrders.costOutcome,
+              ...workOrderCostToComeColumns(),
               currency: workOrders.currency,
               issueId: workOrders.issueId,
+              issueNumber: operationalIssues.number,
               safetyCritical: operationalIssues.safetyCritical,
               summary: workOrders.summary,
               cancelReason: workOrders.cancelReason,
@@ -526,8 +633,14 @@ export function registerMaintenanceReadRoutes(
             )
             .orderBy(asc(auditEvents.occurredAt), asc(auditEvents.id));
 
-          if (!canReadWorkOrderCosts(auth.role)) {
-            return { header, eventRows, costRows: null, completedBy: completers.get(header.id) ?? null };
+          if (!workOrderMoneyVisibility(auth, modules).actual) {
+            return {
+              header,
+              eventRows,
+              costRows: null,
+              otherBranchesCostMinor: null,
+              completedBy: completers.get(header.id) ?? null,
+            };
           }
 
           // A cost line is a financial record: its entry's branch is read
@@ -540,7 +653,25 @@ export function registerMaintenanceReadRoutes(
             eq(financialPostings.direction, "EXPENSE"),
             inArray(financialEntries.status, ["POSTED", "REVERSED", "SUBMITTED"]),
           ];
+          // The lines outside the reader's branches still count in the actual
+          // cost (#81). They come back as one sum and nothing else (#643), so
+          // the list adds up without exposing another branch's records.
+          let otherBranchesCostMinor = 0n;
           if (auth.branchScope !== "ALL") {
+            const [other] = await tx
+              .select({
+                sum: sql<string>`coalesce(sum(${financialPostings.amountMinor}), 0)::text`,
+              })
+              .from(financialPostings)
+              .innerJoin(
+                financialEntries,
+                and(
+                  eq(financialEntries.workspaceId, financialPostings.workspaceId),
+                  eq(financialEntries.id, financialPostings.financialEntryId),
+                ),
+              )
+              .where(and(...costConditions, notInArray(financialEntries.branchId, auth.branchScope)));
+            otherBranchesCostMinor = BigInt(other?.sum ?? "0");
             costConditions.push(inArray(financialEntries.branchId, auth.branchScope));
           }
           const costRows = await tx
@@ -569,7 +700,13 @@ export function registerMaintenanceReadRoutes(
               asc(financialPostings.lineNo),
             );
 
-          return { header, eventRows, costRows, completedBy: completers.get(header.id) ?? null };
+          return {
+            header,
+            eventRows,
+            costRows,
+            otherBranchesCostMinor,
+            completedBy: completers.get(header.id) ?? null,
+          };
         });
 
         if (!result) {
@@ -578,13 +715,14 @@ export function registerMaintenanceReadRoutes(
             .send({ error: { code: "REFERENCE_NOT_FOUND" } });
         }
 
-        const { header, eventRows, costRows, completedBy } = result;
+        const { header, eventRows, costRows, otherBranchesCostMinor, completedBy } = result;
         const costLine = (line: NonNullable<typeof costRows>[number]) => ({
           ...line,
           amountMinor: serializeMinor(line.amountMinor),
         });
         return workOrderDetail.parse({
           id: header.id,
+          number: header.number,
           status: header.status,
           description: header.description,
           asset: {
@@ -597,7 +735,7 @@ export function registerMaintenanceReadRoutes(
             code: header.branchCode,
             name: header.branchName,
           },
-          ...workOrderAmounts(auth, header),
+          ...workOrderAmounts(workOrderMoneyVisibility(auth, modules), header),
           costOutcome: header.costOutcome,
           currency: header.currency,
           issue:
@@ -605,6 +743,7 @@ export function registerMaintenanceReadRoutes(
               ? null
               : {
                   id: header.issueId,
+                  number: header.issueNumber,
                   safetyCritical: header.safetyCritical ?? false,
                 },
           summary: header.summary,
@@ -640,6 +779,7 @@ export function registerMaintenanceReadRoutes(
             costRows?.filter((line) => line.entryStatus !== "SUBMITTED").map(costLine) ?? null,
           pendingCostLines:
             costRows?.filter((line) => line.entryStatus === "SUBMITTED").map(costLine) ?? null,
+          otherBranchesCostMinor: serializeOptionalMinor(otherBranchesCostMinor),
         });
       } catch (error) {
         req.log.error({ err: error }, "work order detail read failed");
@@ -703,6 +843,7 @@ export function registerMaintenanceReadRoutes(
           const rows = await tx
             .select({
               id: operationalIssues.id,
+              number: operationalIssues.number,
               assetId: operationalIssues.assetId,
               assetCode: assets.assetCode,
               registrationNumber: assets.registrationNumber,
@@ -757,6 +898,7 @@ export function registerMaintenanceReadRoutes(
               : await tx
                   .select({
                     id: workOrders.id,
+                    number: workOrders.number,
                     issueId: workOrders.issueId,
                     status: workOrders.status,
                   })
@@ -767,7 +909,7 @@ export function registerMaintenanceReadRoutes(
                       inArray(workOrders.issueId, issueIds),
                     ),
                   )
-                  .orderBy(asc(workOrders.id));
+                  .orderBy(asc(workOrders.number));
 
           const groundedAssets =
             pageAssetIds.length === 0
@@ -802,18 +944,19 @@ export function registerMaintenanceReadRoutes(
 
         const workOrdersByIssue = new Map<
           string,
-          Array<{ id: string; status: string }>
+          Array<{ id: string; number: number; status: string }>
         >();
         for (const workOrder of result.linkedWorkOrders) {
           if (workOrder.issueId === null) continue;
           const bucket = workOrdersByIssue.get(workOrder.issueId) ?? [];
-          bucket.push({ id: workOrder.id, status: workOrder.status });
+          bucket.push({ id: workOrder.id, number: workOrder.number, status: workOrder.status });
           workOrdersByIssue.set(workOrder.issueId, bucket);
         }
         const groundedAssetIds = new Set(result.groundedAssetIds);
 
         const items = pageRows.map((row) => ({
           id: row.id,
+          number: row.number,
           asset: {
             id: row.assetId,
             assetCode: row.assetCode,
@@ -879,6 +1022,7 @@ export function registerMaintenanceReadRoutes(
           const [row] = await tx
             .select({
               id: operationalIssues.id,
+              number: operationalIssues.number,
               assetId: operationalIssues.assetId,
               assetCode: assets.assetCode,
               registrationNumber: assets.registrationNumber,
@@ -911,10 +1055,10 @@ export function registerMaintenanceReadRoutes(
           if (!row) throw notFound();
 
           const linkedWorkOrders = await tx
-            .select({ id: workOrders.id, status: workOrders.status })
+            .select({ id: workOrders.id, number: workOrders.number, status: workOrders.status })
             .from(workOrders)
             .where(and(eq(workOrders.workspaceId, auth.workspaceId), eq(workOrders.issueId, row.id)))
-            .orderBy(asc(workOrders.id));
+            .orderBy(asc(workOrders.number));
 
           const [grounded] = await tx
             .select({ id: assetAvailabilityIntervals.id })
@@ -962,6 +1106,7 @@ export function registerMaintenanceReadRoutes(
 
           return {
             id: row.id,
+            number: row.number,
             asset: { id: row.assetId, assetCode: row.assetCode, registrationNumber: row.registrationNumber },
             branch: { id: row.branchId, code: row.branchCode, name: row.branchName },
             description: row.description,

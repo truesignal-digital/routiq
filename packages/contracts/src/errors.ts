@@ -111,6 +111,11 @@ export const COMMAND_ERROR_CODES = [
   "MEMBER_ROLE_NOT_GRANTABLE",
   /** An ADMIN reaching a member, or a branch scope, outside their own branches. */
   "MEMBER_BRANCH_OUT_OF_SCOPE",
+  /**
+   * `link-person-login` naming a login another person already holds. One
+   * login belongs to one person (ADR-0010); unlink it from them first.
+   */
+  "LOGIN_ALREADY_LINKED",
   /** DIRECTOR always covers every branch, so its branch scope can only be ALL. */
   "DIRECTOR_REQUIRES_ALL_BRANCHES",
   /** Deactivating the workspace's only remaining active branch. */
@@ -147,11 +152,18 @@ export const COMMAND_ERROR_CODES = [
    */
   "WORK_ORDER_ISSUE_MISMATCH",
   /**
-   * A cost attributed to a work order that is not APPROVED (#28): pending work
-   * has not been authorized, and completed, rejected or cancelled work is closed
-   * to new spend. Reversals are exempt — they correct what already stands.
+   * A cost attributed to a work order that takes none (#28): pending work has
+   * not been authorized, a completion awaiting sign-off is being judged on the
+   * cost it declared, and rejected or cancelled work is closed to new spend. A
+   * COMPLETED order takes the late invoice (#82). Reversals are exempt — they
+   * correct what already stands.
    */
   "WORK_ORDER_NOT_OPEN",
+  /**
+   * A cost on a work order that is already completed, with no description
+   * saying why it comes after the close (#82). The description is the reason.
+   */
+  "LATE_COST_REASON_REQUIRED",
   /**
    * A revenue line naming a work order (#432). A work order collects what a
    * repair cost; money coming in is never one of its lines, whoever records it.
@@ -216,6 +228,23 @@ export const COMMAND_ERROR_CODES = [
    * its author saying "seen" would take it out of the To-do unread.
    */
   "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE",
+  /**
+   * A planned trip naming a driver who cannot drive it (ADR-0012 §3):
+   * `metadata.reason` is INACTIVE (the person is no longer active) or
+   * NOT_A_DRIVER (their usual job is not Chauffeur).
+   */
+  "DRIVER_INELIGIBLE",
+  /**
+   * Turning a module off while a module that requires it is on (the module
+   * manifests' `requires`): Trips while Scheduling is on. `metadata.requiredBy`
+   * names them; turn those off first.
+   */
+  "MODULE_STILL_REQUIRED",
+  /**
+   * Turning a module on while a module it requires is off: Scheduling while
+   * Trips is off. `metadata.requires` names them; turn those on first.
+   */
+  "MODULE_DEPENDENCY_DISABLED",
 ] as const;
 
 export type CommandErrorCode = (typeof COMMAND_ERROR_CODES)[number];
@@ -246,6 +275,28 @@ export const COMMAND_WARNING_CODES = [
    * still needs resolving or dismissing.
    */
   "GROUNDING_ISSUE_STILL_OPEN",
+  /**
+   * The planned vehicle is on another planned or running trip whose booked
+   * window overlaps this one (ADR-0012 §4). Warn, don't block: two short runs
+   * fit in one day. `warningMetadata.VEHICLE_DOUBLE_BOOKED.tripIds` names them.
+   */
+  "VEHICLE_DOUBLE_BOOKED",
+  /** The same for the planned driver; `warningMetadata.DRIVER_DOUBLE_BOOKED.tripIds`. */
+  "DRIVER_DOUBLE_BOOKED",
+  /**
+   * The planned vehicle is grounded now (an open availability interval). The
+   * release, not the booking, is the safety gate, so the booking stands.
+   * Only while Maintenance is on.
+   */
+  "VEHICLE_GROUNDED",
+  /** A planned trip started with a vehicle or driver other than the plan (ADR-0012 §5). */
+  "TRIP_STARTED_OFF_PLAN",
+  /**
+   * An offline start replayed onto a trip the office had cancelled (ADR-0012
+   * §5). The truck left, so the trip is revived; this code is also kept on
+   * the trip's `discrepancy_codes`.
+   */
+  "TRIP_STARTED_AFTER_CANCELLATION",
 ] as const;
 
 export type CommandWarningCode = (typeof COMMAND_WARNING_CODES)[number];
@@ -266,6 +317,29 @@ export const ACTIVITY_COMPLETENESS_CODES = [
 ] as const satisfies readonly CommandWarningCode[];
 
 export type ActivityCompletenessCode = (typeof ACTIVITY_COMPLETENESS_CODES)[number];
+
+/**
+ * The warning codes a trip keeps forever on `activities.discrepancy_codes`
+ * (ADR-0012 §1, §5), the same one-vocabulary rule as completeness codes.
+ */
+export const TRIP_DISCREPANCY_CODES = [
+  "TRIP_STARTED_AFTER_CANCELLATION",
+] as const satisfies readonly CommandWarningCode[];
+
+export type TripDiscrepancyCode = (typeof TRIP_DISCREPANCY_CODES)[number];
+
+/**
+ * A booking's collisions (ADR-0012 §4): the warnings the plan and edit
+ * commands return, recomputed by the planning read on every read and never
+ * stored. One vocabulary with the command warnings.
+ */
+export const TRIP_CONFLICT_CODES = [
+  "VEHICLE_DOUBLE_BOOKED",
+  "VEHICLE_GROUNDED",
+  "DRIVER_DOUBLE_BOOKED",
+] as const satisfies readonly CommandWarningCode[];
+
+export type TripConflictCode = (typeof TRIP_CONFLICT_CODES)[number];
 
 export type ApiErrorCode = AuthErrorCode | ValidationErrorCode | CommandErrorCode;
 

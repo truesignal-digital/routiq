@@ -15,6 +15,7 @@ import {
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
+import { setModule } from "../test/vendor.js";
 
 /**
  * complete-work-order v2 (#81): closing a work order records its cost in the
@@ -635,7 +636,7 @@ describe("complete-work-order.v2 with the books switched off", () => {
     const { workspace } = await seedWorkspace(ctx.db);
     const admin = await seedActor(ctx.db, { workspaceId: workspace.id, role: "DIRECTOR" });
     const truck = await seedAsset(ctx.app, admin.token);
-    await api.ok(admin.token, "disable-module", { moduleCode: "FINANCE" });
+    await setModule(ctx.db, workspace.id, "FINANCE", false);
 
     const open = async () => {
       const workOrderId = randomUUID();

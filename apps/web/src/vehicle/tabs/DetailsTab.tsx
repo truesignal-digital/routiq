@@ -23,8 +23,10 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { assetDetailQueryKey } from "@/assets/useAssetDetail.js";
 import { useActiveSession } from "@/auth/store.js";
+import { useWorkspaceToday } from "@/auth/workspace-day.js";
 import { applyTemplateFieldMetadata } from "@/commands/field-errors";
-import { formatDate, formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
+import { formatDate, formatDateTime, formatMoney, localizedLabel, notRecorded } from "@/lib/format.js";
+import { NotRecorded } from "@/components/not-recorded.js";
 import { notifyCommandSuccess, notifyInfo } from "@/lib/notify.js";
 import { cn } from "@/lib/utils";
 import { commandClient } from "../../commands/instance.js";
@@ -37,14 +39,14 @@ import {
   editableSpecifications,
   formValuesOf,
   isDisposed,
-  todayIso,
   YEAR_BOUNDS,
   type DetailsFieldName,
   type DetailsFormValues,
   type DetailsProblem,
 } from "../details/model.js";
 import { makeAndModel } from "../header/IdentityStrip.js";
-import { recordReference } from "../model.js";
+import { RecordNumber } from "@/components/record-number";
+import { recordNumberText } from "@/lib/record-number.js";
 import { LinkButton } from "../parts.js";
 
 type Row = readonly [string, ReactNode];
@@ -73,15 +75,17 @@ export function DetailsTab() {
     setBase(queryClient.getQueryData<AssetDetail>(assetDetailQueryKey(session?.workspaceSlug, asset.id)) ?? asset);
     setConflict(false);
   }
-  const nowRows = useNowRows();
-  const vehicleRows = useVehicleRows();
-  const specificationRows = useSpecificationRows();
-
   // role-config: editing what a vehicle is follows register-asset — the fleet
   // managers (update-asset-details' default rules). The server decides.
   const mayEdit = viewer.role === "DIRECTOR" || viewer.role === "ADMIN";
   const disposed = isDisposed(asset.lifecycleStatus);
   const editable = mayEdit && !disposed;
+
+  // A missing value the viewer may fill offers "Add", which opens the same edit.
+  const onAdd = editable && !editing ? () => setBase(asset) : undefined;
+  const nowRows = useNowRows();
+  const vehicleRows = useVehicleRows(onAdd);
+  const specificationRows = useSpecificationRows(onAdd);
 
   return (
     <section aria-labelledby="vehicle-details-title" className="space-y-3">
@@ -170,7 +174,7 @@ function useNowRows(): Row[] {
           {t("vehicle.details.groundedSince", { date: formatDateTime(availability.since, locale) })}
           {" · "}
           <LinkButton onClick={() => panel.openRecord({ kind: "issue", id: availability.issue.id })}>
-            {recordReference(availability.issue.id)}
+            <RecordNumber>{recordNumberText(t, "issue", availability.issue.number)}</RecordNumber>
           </LinkButton>
         </>
       ) : availability.state === "AVAILABLE" ? (
@@ -239,22 +243,22 @@ function useNowRows(): Row[] {
   return now;
 }
 
-function useVehicleRows(): Row[] {
+function useVehicleRows(onAdd: (() => void) | undefined): Row[] {
   const { t, i18n } = useTranslation();
   const { asset, gates } = useVehicle();
   const locale = i18n.language;
-  const notRecorded = t("vehicle.details.notRecorded");
+  const missing = <NotRecorded onAdd={onAdd} />;
   return [
     [t("vehicle.details.fleetCode"), asset.assetCode],
-    [t("vehicle.details.plate"), asset.registrationNumber ?? notRecorded],
-    [t("vehicle.details.makeModel"), makeAndModel(asset) || notRecorded],
-    [t("vehicle.details.year"), asset.modelYear === null ? notRecorded : String(asset.modelYear)],
+    [t("vehicle.details.plate"), asset.registrationNumber ?? missing],
+    [t("vehicle.details.makeModel"), makeAndModel(asset) || missing],
+    [t("vehicle.details.year"), asset.modelYear === null ? missing : String(asset.modelYear)],
     [t("vehicle.details.class"), localizedLabel(asset.category, locale)],
-    [t("vehicle.details.chassis"), <span className="break-all">{asset.chassisNumber ?? notRecorded}</span>],
+    [t("vehicle.details.chassis"), <span className="break-all">{asset.chassisNumber ?? missing}</span>],
     [
       t("vehicle.details.acquired"),
       asset.acquisitionDate === null
-        ? notRecorded
+        ? missing
         : // Money is shown only to those who read the books.
           gates.money && asset.acquisitionAmountMinor !== null
           ? t("vehicle.details.acquiredWithAmount", {
@@ -266,16 +270,16 @@ function useVehicleRows(): Row[] {
   ];
 }
 
-function useSpecificationRows(): Row[] {
+function useSpecificationRows(onAdd: (() => void) | undefined): Row[] {
   const { t } = useTranslation();
   const { asset } = useVehicle();
-  const notRecorded = t("vehicle.details.notRecorded");
+  const missing = <NotRecorded onAdd={onAdd} />;
   const fields = TEMPLATE_FIELDS[asset.templateCode as TemplateCode] ?? [];
   return fields.map((field) => {
     const value = asset.customValues[field.key];
     return [
       t(`assets.form.custom.${field.key}`),
-      value === undefined || value === null || value === "" ? notRecorded : String(value),
+      value === undefined || value === null || value === "" ? missing : String(value),
     ];
   });
 }
@@ -350,7 +354,7 @@ function DetailsEditCard({
   const intent = useRef(
     createCommandIntent<UpdateAssetDetailsPayload>(commandClient, "update-asset-details", 1),
   );
-  const today = todayIso();
+  const today = useWorkspaceToday();
   const specifications = editableSpecifications(asset.templateCode);
 
   const problemMessage = (problem: DetailsProblem) =>
@@ -499,7 +503,7 @@ function DetailsEditCard({
                         onChange={field.onChange}
                         max={today}
                         clearable
-                        placeholder={t("vehicle.details.notRecorded")}
+                        placeholder={notRecorded()}
                         className="md:min-h-9"
                       />
                     </FormControl>

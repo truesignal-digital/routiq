@@ -299,6 +299,47 @@ describe("default approval chain", () => {
       }
     });
 
+    // #542: "Waiting on Finance" named the wrong approver above Finance's band
+    // and on a Finance member's own entry. Who decides is the same for every viewer.
+    it("names who decides each waiting entry, on the vehicle and the entry", async () => {
+      const ownEntryId = randomUUID();
+      const recorded = await post(tokens.finance, "record-expense", {
+        entryId: ownEntryId,
+        branchCode: "DLA",
+        categoryCode: "FUEL",
+        economicDate: `${currentPeriodCode(new Date(), "Africa/Douala")}-15`,
+        amountMinor: 450_000,
+        paymentMethod: "MOMO",
+        paymentReference: `MOMO-${randomUUID()}`,
+        postings: [{ assetId, amountMinor: 450_000 }],
+      });
+      expect(recorded.json()).toMatchObject({ recordStatus: "SUBMITTED" });
+
+      const read = async (token: string, url: string) =>
+        (await ctx.app.inject({ method: "GET", url, headers: { authorization: `Bearer ${token}` } })).json();
+      const expected = [
+        [financeBandEntryIds[0]!, "FINANCE_APPROVES"],
+        [ownEntryId, "FINANCE_PEER_APPROVES"],
+        [aboveBandEntryIds[0]!, "DIRECTION_APPROVES"],
+      ] as const;
+      for (const token of [tokens.finance, tokens.director, tokens.adminDla]) {
+        const attention = (await read(token, `/v1/assets/${assetId}/attention`)) as {
+          items: Array<{ code: string; subject: { id: string }; params: { approver?: string } }>;
+        };
+        const approver = (id: string) =>
+          attention.items.find((item) => item.code === "ENTRY_AWAITING_REVIEW" && item.subject.id === id)
+            ?.params.approver;
+        expect(expected.map(([id]) => approver(id))).toEqual(expected.map(([, who]) => who));
+      }
+      for (const [id, who] of expected) {
+        expect(await read(tokens.finance, `/v1/finance/entries/${id}`)).toMatchObject({ approver: who });
+      }
+
+      // Settled entries wait on nobody.
+      expect(await decideEntry(tokens.director, "reject-entry", ownEntryId)).toEqual({ status: 200, code: undefined });
+      expect(await read(tokens.finance, `/v1/finance/entries/${ownEntryId}`)).toMatchObject({ approver: null });
+    });
+
     it("lets FINANCE approve and reject above the recording band, up to its own", async () => {
       expect(RECORDING_BAND).toBeLessThan(450_000);
       expect(await decideEntry(tokens.finance, "approve-entry", financeBandEntryIds[0]!)).toEqual({

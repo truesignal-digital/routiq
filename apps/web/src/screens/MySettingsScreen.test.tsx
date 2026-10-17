@@ -19,6 +19,7 @@ const me: MeContext = {
   branchScope: "ALL",
   enabledModules: ["CORE"],
   enabledPresets: ["TRUCKING"],
+  timezone: "Africa/Douala",
 };
 
 function renderSettings() {

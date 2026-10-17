@@ -23,7 +23,7 @@ import {
   type CommandDefinition,
   type Tx,
 } from "./dispatcher.js";
-import { assertOwnRecord } from "./own-records.js";
+import { assertOwnTrip } from "./own-records.js";
 
 type CloseActivityPayload = z.infer<typeof closeActivityPayload>;
 type ReopenActivityPayload = z.infer<typeof reopenActivityPayload>;
@@ -70,13 +70,11 @@ const closeActivity: CommandDefinition<CloseActivityPayload> = {
         referenceCode: payload.activityId,
       });
     }
-    await assertOwnRecord(tx, ctx, ["DRIVER"], {
-      entityType: "activity",
-      id: activity.id,
-      createdByCommandId: activity.createdByCommandId,
-    });
+    await assertOwnTrip(tx, ctx, ["DRIVER"], activity);
     checkOptimisticVersion(envelope, activity.rowVersion);
-    if (activity.status === "CLOSED") {
+    // Only a running trip closes: a planned one has not started and a
+    // cancelled one never will (ADR-0012 §3).
+    if (activity.status !== "OPEN") {
       throw new CommandError(409, "INVALID_STATE_TRANSITION", {
         entityType: "activity",
         status: activity.status,

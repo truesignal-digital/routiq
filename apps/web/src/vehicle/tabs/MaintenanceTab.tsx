@@ -3,53 +3,25 @@ import { useTranslation } from "react-i18next";
 import { ChevronRight, CircleCheck, ShieldAlert, TriangleAlert, Wrench } from "lucide-react";
 import type { IssueListItem, WorkOrderListItem } from "@routiq/contracts";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatDate, formatMoney, formatRelativeTime } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
 import { useIssues, useWorkOrders } from "@/maintenance/useMaintenance.js";
 import { ALL_BRANCHES } from "@/shell/branch-context.js";
-import { actionDef } from "../actions.js";
 import { useVehicle } from "../context.js";
 import { groundingFacts, isActiveWorkOrder, issueSteps, workOrderSteps } from "../flow.js";
-import { recordReference, type VehicleActionKey } from "../model.js";
-import { RecordRow, RowIcon, RowMenu, SafetyMark, Sep, SubHead, TabHeader, useStepLabel } from "../parts.js";
+import { RecordNumber, RecordText } from "@/components/record-number";
+import { recordNumberText } from "@/lib/record-number.js";
+import { RecordRow, RowIcon, RowMenu, SafetyMark, Sep, SubHead, TabAction, TabHeader } from "../parts.js";
 import { IssueStatusBadge } from "@/maintenance/IssueStatusBadge.js";
 import { WorkOrderStatusBadge } from "@/maintenance/WorkOrderStatusBadge.js";
 import { useIssueCategoryLabel } from "@/maintenance/issue-category.js";
 
-/** The one primary button a tab carries; it starts the action the way the catalogue says. */
-export function TabAction({ actionKey }: { actionKey: VehicleActionKey }) {
-  const stepLabel = useStepLabel();
-  const { can, availability, runAction } = useVehicle();
-  if (!can(actionKey) || availability(actionKey).state !== "enabled") return null;
-  const Icon = actionDef(actionKey).icon;
-  return (
-    <Button className="self-start sm:self-auto desktop:h-9" onClick={() => runAction(actionKey)}>
-      <Icon aria-hidden />
-      {stepLabel({ key: actionKey })}
-    </Button>
-  );
-}
-
+/**
+ * Problems reported on this vehicle and the work orders that fix them. With
+ * the module off the workspace never opens this tab (its manifest owns it).
+ */
 export function MaintenanceTab() {
-  const { t } = useTranslation();
-  const { gates } = useVehicle();
-  if (!gates.maintenance) {
-    return (
-      <PermissionDenied
-        title={t("vehicle.tabs.maintenance")}
-        icon={<Wrench className="size-7" aria-hidden />}
-        code={deniedCode(false)}
-      />
-    );
-  }
-  return <MaintenanceSection />;
-}
-
-/** Problems reported on this vehicle and the work orders that fix them. */
-function MaintenanceSection() {
   const { t } = useTranslation();
   const { asset } = useVehicle();
   const [showDone, setShowDone] = useState(false);
@@ -173,6 +145,7 @@ function WorkOrderRow({ wo }: { wo: WorkOrderListItem }) {
   const active = isActiveWorkOrder(wo.status);
   const steps = workOrderSteps(wo, viewer, groundingFacts(asset));
   const safety = wo.issue?.safetyCritical === true;
+  const issueRef = wo.issue === null ? "" : recordNumberText(t, "issue", wo.issue.number);
   const money = (minor: number) => formatMoney(minor, { currency: wo.currency, locale });
   const over =
     wo.actualCostMinor !== null && wo.expectedCostMinor !== null && wo.expectedCostMinor > 0 &&
@@ -198,11 +171,16 @@ function WorkOrderRow({ wo }: { wo: WorkOrderListItem }) {
       muted={!active}
       detail={
         <span className="flex flex-wrap items-center gap-x-1.5">
-          <span className="tabular-nums">{recordReference(wo.id)}</span>
+          <RecordNumber>{recordNumberText(t, "work_order", wo.number)}</RecordNumber>
           {wo.issue !== null && (
             <>
               <Sep />
-              <span>{t("vehicle.maintenance.fromProblem", { ref: recordReference(wo.issue.id) })}</span>
+              <span>
+                <RecordText
+                  text={t("vehicle.maintenance.fromProblem", { ref: issueRef })}
+                  numbers={[issueRef]}
+                />
+              </span>
             </>
           )}
           {active && safety && (
@@ -224,7 +202,15 @@ function WorkOrderRow({ wo }: { wo: WorkOrderListItem }) {
       aside={
         <>
           {/* Without work-order costs (#390) the amounts never came: no line,
-              rather than a "No estimate" that would not be true. */}
+              rather than a "No estimate" that would not be true. With FINANCE
+              off the estimate alone is the workshop's to show (#640). */}
+          {gates.workOrderEstimate && !gates.workOrderCosts && (
+            <div className={cn(!active && "text-muted-foreground")}>
+              {wo.expectedCostMinor !== null
+                ? t("vehicle.maintenance.planned", { amount: money(wo.expectedCostMinor) })
+                : t("vehicle.maintenance.noEstimate")}
+            </div>
+          )}
           {gates.workOrderCosts && (
             <div className={cn(!active && "text-muted-foreground")}>
               {closedWithoutCost !== null
@@ -239,6 +225,11 @@ function WorkOrderRow({ wo }: { wo: WorkOrderListItem }) {
                   {t("vehicle.maintenance.overBudget", {
                     percent: Math.round(((wo.actualCostMinor - wo.expectedCostMinor) / wo.expectedCostMinor) * 100),
                   })}
+                </span>
+              )}
+              {wo.costToCome !== null && (
+                <span className="ml-1 text-xs font-medium text-warning-foreground">
+                  {t("vehicle.maintenance.costToCome")}
                 </span>
               )}
             </div>
@@ -256,7 +247,7 @@ function WorkOrderRow({ wo }: { wo: WorkOrderListItem }) {
       }
       menu={
         <RowMenu
-          label={t("vehicle.panel.workOrderTitle", { ref: recordReference(wo.id) })}
+          label={t("vehicle.panel.workOrderTitle", { ref: recordNumberText(t, "work_order", wo.number) })}
           steps={offered}
           onStep={panel.openStep}
         />
@@ -292,7 +283,7 @@ function IssueRow({ issue }: { issue: IssueListItem }) {
       muted={!open}
       detail={
         <span className="flex flex-wrap items-center gap-x-1.5">
-          <span className="tabular-nums">{recordReference(issue.id)}</span>
+          <RecordNumber>{recordNumberText(t, "issue", issue.number)}</RecordNumber>
           {category !== null && (
             <>
               <Sep />
@@ -318,7 +309,7 @@ function IssueRow({ issue }: { issue: IssueListItem }) {
       }
       menu={
         <RowMenu
-          label={t("vehicle.panel.issueTitle", { ref: recordReference(issue.id) })}
+          label={t("vehicle.panel.issueTitle", { ref: recordNumberText(t, "issue", issue.number) })}
           steps={steps.offered}
           onStep={panel.openStep}
         />

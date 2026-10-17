@@ -75,15 +75,15 @@ describe("ApprovalRulesNotice (#422)", () => {
     renderNotice(recordingClient(acknowledged));
 
     expect(screen.getByText("The approval rules have changed")).toBeTruthy();
-    expect(screen.getByText("Mme Ngo changed them on October 5, 2026.")).toBeTruthy();
+    expect(screen.getByText("Mme Ngo changed them on 5 October 2026.")).toBeTruthy();
     expect(screen.getByText("Your expenses")).toBeTruthy();
     const steps = screen
       .getAllByRole("listitem")
       .map((item) => item.textContent?.replace(/\s/g, " "));
     expect(steps).toEqual([
-      "Up to FCFA 150,000: posts directly",
-      "Up to FCFA 1,000,000: Finance approves",
-      "Above FCFA 1,000,000: Direction approves",
+      "Up to 150 000 FCFA: posts directly",
+      "Up to 1 000 000 FCFA: Finance approves",
+      "Above 1 000 000 FCFA: the Director approves",
     ]);
   });
 
@@ -92,7 +92,7 @@ describe("ApprovalRulesNotice (#422)", () => {
       data: { ...changed, notice: { ...changed.notice!, changedBy: null } },
     });
     renderNotice(recordingClient(acknowledged));
-    expect(screen.getByText("ROUTIQ updated them on October 5, 2026.")).toBeTruthy();
+    expect(screen.getByText("ROUTIQ updated them on 5 October 2026.")).toBeTruthy();
   });
 
   it("records the dismissal through acknowledge-approval-rules, then goes away", async () => {

@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { branches } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
 
 describe("GET /v1/assets/:assetId/readings", () => {
@@ -188,7 +189,7 @@ describe("GET /v1/assets/:assetId/readings", () => {
     const gated = await seedWorkspace(ctx.db);
     const gatedAdmin = await seedActor(ctx.db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
     const gatedAsset = await seedAsset(ctx.app, gatedAdmin.token);
-    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "ACTIVITIES" });
+    await setModule(ctx.db, gated.workspace.id, "ACTIVITIES", false);
 
     const response = await api.get(gatedAdmin.token, `/v1/assets/${gatedAsset}/readings`);
     expect(response.status).toBe(403);

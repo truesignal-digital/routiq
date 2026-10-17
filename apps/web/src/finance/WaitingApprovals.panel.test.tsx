@@ -45,6 +45,7 @@ const approver: MeContext = {
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],
   enabledPresets: ["TRUCKING"],
+  timezone: "Africa/Douala",
 };
 
 function entry(id: string, number: string, submittedBy = SUBMITTER) {
@@ -76,6 +77,7 @@ function entry(id: string, number: string, submittedBy = SUBMITTER) {
       activityNumber: null,
       workOrderId: null,
       workOrderAssetId: null,
+      workOrderDescription: null,
     },
     submittedByPrincipalId: submittedBy,
     submittedAt: "2026-07-01T10:00:00.000Z",
@@ -319,16 +321,16 @@ describe("approvals queue: economic date and submission date (#55)", () => {
     {
       locale: "en",
       economicLabel: "Economic date",
-      economicDate: "7/29/26",
+      economicDate: "29 Jul 2026",
       submittedLabel: "Submitted",
-      submittedDate: "10/4/26",
+      submittedDate: "4 Oct 2026",
     },
     {
       locale: "fr-CM",
       economicLabel: "Date comptable",
-      economicDate: "29/07/2026",
+      economicDate: "29 juil. 2026",
       submittedLabel: "Soumis le",
-      submittedDate: "04/10/2026",
+      submittedDate: "4 oct. 2026",
     },
   ])("shows each date under its own heading in $locale", async (viewer) => {
     await i18n.changeLanguage(viewer.locale);

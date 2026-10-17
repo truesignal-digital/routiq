@@ -69,9 +69,10 @@ export function measureWebBuild(dist: string): Values {
 }
 
 /**
- * The build bakes the commit hash in, so gzip size moves by a few bytes from
- * commit to commit with no code change. Inside this band a build is at its
- * ceiling; a real change is far larger (1 kB is about 5 ms on a pilot phone).
+ * Gzip size can move by a few bytes between builds with no code change. Inside
+ * this band a build is at its ceiling; a real change is far larger (1 kB is
+ * about 5 ms on a pilot phone). The commit hash is not one of those bytes: it
+ * lives in index.html, not in the JS (guard C2, #598).
  */
 export const NOISE_BYTES = 64;
 

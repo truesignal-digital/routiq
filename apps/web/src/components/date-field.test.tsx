@@ -5,7 +5,7 @@ import { useState } from "react";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n/index.js";
-import { formatDate, formatDateTime } from "../lib/format.js";
+import { formatDateInput } from "../lib/format.js";
 import { DateField, DateTimeField } from "./date-field.js";
 
 type Props = { initial?: string; min?: string; max?: string };
@@ -70,13 +70,31 @@ describe("DateField", () => {
     expect(field.input.value).toBe("28/07/2026");
   });
 
-  it("reads a date typed the English way, month first", async () => {
+  it("reads day/month/year in English too, never the US order (#712)", async () => {
     await i18n.changeLanguage("en");
     const user = userEvent.setup();
     const field = renderField("date");
 
-    await user.type(field.input, "07/28/2026");
+    await user.type(field.input, "28/07/2026");
     expect(field.value()).toBe("2026-07-28");
+    await user.tab();
+    expect(field.input.value).toBe("28/07/2026");
+
+    await user.clear(field.input);
+    await user.type(field.input, "07/28/2026");
+    await user.tab();
+    expect(field.value()).toBe("");
+    expect(field.input.getAttribute("aria-invalid")).toBe("true");
+  });
+
+  it("wants the year in four digits", async () => {
+    const user = userEvent.setup();
+    const field = renderField("date");
+
+    await user.type(field.input, "28/07/26");
+    await user.tab();
+    expect(field.value()).toBe("");
+    expect(field.input.getAttribute("aria-invalid")).toBe("true");
   });
 
   it("accepts an ISO date as typed or pasted", async () => {
@@ -96,7 +114,7 @@ describe("DateField", () => {
 
     await i18n.changeLanguage("en");
     renderField("date", { initial: "2026-10-04" });
-    expect((screen.getByLabelText("When") as HTMLInputElement).value).toBe("10/4/26");
+    expect((screen.getByLabelText("When") as HTMLInputElement).value).toBe("04/10/2026");
   });
 
   it("flags a day that does not exist and hands out nothing", async () => {
@@ -176,24 +194,23 @@ describe("DateField", () => {
   });
 });
 
-describe("reads the same as the rest of the app", () => {
+describe("shows and reads dd/mm/yyyy in both languages (#712)", () => {
   it.each(["fr-CM", "en"])("in %s, for a date and a date with a time", async (language) => {
     await i18n.changeLanguage(language);
     renderField("date", { initial: "2026-10-04" });
-    expect((screen.getByLabelText("When") as HTMLInputElement).value).toBe(formatDate("2026-10-04", language));
+    expect((screen.getByLabelText("When") as HTMLInputElement).value).toBe(formatDateInput("2026-10-04"));
+    expect((screen.getByLabelText("When") as HTMLInputElement).value).toBe("04/10/2026");
     cleanup();
 
     renderField("datetime", { initial: "2026-10-04T13:07" });
-    expect((screen.getByLabelText("When") as HTMLInputElement).value).toBe(
-      formatDateTime("2026-10-04T13:07", language),
-    );
+    expect((screen.getByLabelText("When") as HTMLInputElement).value).toBe("04/10/2026 13:07");
   });
 
   it.each(["fr-CM", "en"])("in %s, takes back the text it shows", async (language) => {
     await i18n.changeLanguage(language);
     const field = renderField("datetime", { initial: "2026-10-04T13:07" });
 
-    fireEvent.change(field.input, { target: { value: formatDateTime("2026-07-28T06:15", language) } });
+    fireEvent.change(field.input, { target: { value: "28/07/2026 06:15" } });
     expect(field.value()).toBe("2026-07-28T06:15");
   });
 });
@@ -235,15 +252,15 @@ describe("DateTimeField", () => {
     expect(field.value()).toBe("2026-10-04T13:07");
   });
 
-  it("reads an English date with a 12-hour time", async () => {
+  it("reads a day/month/year English date with a 12-hour time, and shows it on 24 hours", async () => {
     await i18n.changeLanguage("en");
     const user = userEvent.setup();
     const field = renderField("datetime");
 
-    await user.type(field.input, "07/28/2026 2:30 PM");
+    await user.type(field.input, "28/07/2026 2:30 PM");
     expect(field.value()).toBe("2026-07-28T14:30");
     await user.tab();
-    expect(field.input.value).toBe(formatDateTime("2026-07-28T14:30", "en"));
+    expect(field.input.value).toBe("28/07/2026 14:30");
   });
 
   it("accepts the ISO wall clock a datetime-local input produced", () => {
@@ -260,7 +277,7 @@ describe("DateTimeField", () => {
 
     await i18n.changeLanguage("en");
     renderField("datetime", { initial: "2026-10-04T13:07" });
-    expect((screen.getByLabelText("When") as HTMLInputElement).value).toBe(formatDateTime("2026-10-04T13:07", "en"));
+    expect((screen.getByLabelText("When") as HTMLInputElement).value).toBe("04/10/2026 13:07");
   });
 
   it("wants a time as well as a date", async () => {

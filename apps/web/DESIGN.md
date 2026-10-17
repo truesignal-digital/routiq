@@ -16,6 +16,7 @@ Every colour is a token in `src/styles.css`, defined under `:root` and again und
 | `--border` / `--input` / `--ring` | Lines, field outlines, the focus ring |
 | `--success` `--warning` `--info` `--destructive` `--signal` | Status only, never decoration |
 | `--chart-1` … `--chart-5` | Chart series, in order |
+| `--series-1` / `--series-2` | The two chart hues (blue, then orange) for series that must be told apart: revenue and expenses, a profit bridge's rises and falls. Red, amber and green stay for status |
 | `--sidebar-*` | The navigation rail |
 
 Neutrals are pure greys (chroma 0). Cream or warm off-white backgrounds are out.
@@ -31,7 +32,7 @@ The only other file that holds colour values is `src/lib/theme.ts`: it mirrors `
 
 ## Layout
 
-- **Pages:** `PageHeader` owns the title, an optional one-sentence description and the actions. `PageContainer` owns the gutters and width: `narrow` for forms, `default` for reading, `wide` for lists and workspaces.
+- **Pages:** `PageHeader` owns the title, an optional one-sentence description and the actions. `PageContainer` is the page frame and owns the gutters and width: one width for every page (lists, dashboards and full pages), at most 1 200 px of content, centred, in 24 px gutters (16 on a phone). Screens set no `max-w-*` of their own (guard DS-5, #658).
 - **Tables:** `DataTable` only (see `apps/web/AGENTS.md`).
 - **Touch:** 44 px targets on phones [H13].
 

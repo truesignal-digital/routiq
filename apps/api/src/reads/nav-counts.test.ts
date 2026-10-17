@@ -4,14 +4,18 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { branches } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
 
-/** Above every recording band, so the entry waits for a decision. */
-const WAITING_AMOUNT = 5_000_000;
+/** Above every recording band, so the entry waits for a decision, and inside Finance's. */
+const WAITING_AMOUNT = 500_000;
+/** Above Finance's decision band: only Direction decides it. */
+const ABOVE_FINANCE_BAND = 1_450_000;
 
 describe("GET /v1/nav-counts", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
   let api: ReturnType<typeof apiClient>;
+  let workspaceId: string;
   let director: Actor;
   let admin: Actor;
   let finance: Actor;
@@ -28,15 +32,15 @@ describe("GET /v1/nav-counts", () => {
     return navCountsResponse.parse(response.body);
   }
 
-  async function recordExpense(actor: Actor, truck: string, branchCode = "DLA") {
+  async function recordExpense(actor: Actor, truck: string, branchCode = "DLA", amountMinor = WAITING_AMOUNT) {
     const recorded = await api.ok(actor.token, "record-expense", {
       entryId: randomUUID(),
       branchCode,
       categoryCode: "FUEL",
       economicDate: "2026-09-02",
-      amountMinor: WAITING_AMOUNT,
+      amountMinor,
       paymentMethod: "CASH",
-      postings: [{ assetId: truck, amountMinor: WAITING_AMOUNT }],
+      postings: [{ assetId: truck, amountMinor }],
     });
     expect(recorded.recordStatus).toBe("SUBMITTED");
   }
@@ -59,7 +63,7 @@ describe("GET /v1/nav-counts", () => {
     ctx = await createTestApp();
     api = apiClient(ctx.app);
     const seeded = await seedWorkspace(ctx.db);
-    const workspaceId = seeded.workspace.id;
+    workspaceId = seeded.workspace.id;
     const [yaounde] = await ctx.db
       .insert(branches)
       .values({ workspaceId, code: "YDE", name: "Yaoundé" })
@@ -103,6 +107,24 @@ describe("GET /v1/nav-counts", () => {
     expect((await counts(ydeFinance)).moneyWaiting).toBe(1);
   });
 
+  // #542: the badge said 1 while the Money page's waiting tile said 0, because
+  // the badge still counted an entry above Finance's band.
+  it("leaves out entries above the caller's approval band, like the Money tile", async () => {
+    const before = { director: (await counts(director)).moneyWaiting, finance: (await counts(finance)).moneyWaiting };
+    await recordExpense(driver, dlaTruck, "DLA", ABOVE_FINANCE_BAND);
+
+    expect((await counts(director)).moneyWaiting).toBe(before.director! + 1);
+    expect((await counts(finance)).moneyWaiting).toBe(before.finance);
+
+    for (const actor of [director, finance, dlaFinance, ydeFinance]) {
+      const summary = await api.get(actor.token, "/v1/finance/summary");
+      expect(summary.status).toBe(200);
+      expect((await counts(actor)).moneyWaiting).toBe(
+        (summary.body as { waiting: { count: number } }).waiting.count,
+      );
+    }
+  });
+
   it("counts open problems in the caller's branches until a work order takes them", async () => {
     const brakes = await reportIssue(driver, dlaTruck);
     await reportIssue(driver, ydeTruck);
@@ -126,8 +148,8 @@ describe("GET /v1/nav-counts", () => {
   });
 
   it("returns no count for a module that is off", async () => {
-    for (const moduleCode of ["FINANCE", "MAINTENANCE"]) {
-      await api.ok(director.token, "disable-module", { moduleCode });
+    for (const moduleCode of ["FINANCE", "MAINTENANCE"] as const) {
+      await setModule(ctx.db, workspaceId, moduleCode, false);
     }
     expect(await counts(director)).toEqual({ moneyWaiting: null, maintenanceNew: null });
     expect(await counts(technician)).toEqual({ moneyWaiting: null, maintenanceNew: null });

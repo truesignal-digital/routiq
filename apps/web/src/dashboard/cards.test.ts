@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ModuleCode, Role } from "@routiq/contracts";
-import { canOpenEntriesList, visibleDashboardCards } from "./cards.js";
+import { canOpenEntriesList, showsDashboardOverview, visibleDashboardCards } from "./cards.js";
 
 const ALL_MODULES: ModuleCode[] = ["CORE", "ASSETS", "FINANCE"];
 
@@ -72,5 +72,24 @@ describe("canOpenEntriesList", () => {
     expect(canOpenEntriesList("TECHNICIAN", ALL_MODULES)).toBe(false);
     expect(canOpenEntriesList("ADMIN", ["CORE", "ASSETS"])).toBe(false);
     expect(canOpenEntriesList(undefined, undefined)).toBe(false);
+  });
+});
+
+describe("showsDashboardOverview (#666, dashboards.html \"Who sees what\")", () => {
+  it("opens Direction, finance and administrators on the Dashboard's Overview", () => {
+    for (const role of ["DIRECTOR", "FINANCE", "ADMIN"] as const) {
+      expect(showsDashboardOverview(role, ALL_MODULES), role).toBe(true);
+    }
+  });
+
+  it("keeps the cashier, the workshop and the driver on Home's tiles", () => {
+    for (const role of ["CASHIER", "TECHNICIAN", "DRIVER"] as const) {
+      expect(showsDashboardOverview(role, ALL_MODULES), role).toBe(false);
+    }
+  });
+
+  it("needs Money, and a known membership", () => {
+    expect(showsDashboardOverview("DIRECTOR", ["CORE", "ASSETS"])).toBe(false);
+    expect(showsDashboardOverview("DIRECTOR", undefined)).toBe(false);
   });
 });

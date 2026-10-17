@@ -67,6 +67,11 @@ vi.mock("./useEntry.js", () => ({
   useEntry: () => entryQuery,
 }));
 
+// Maintenance adds the work order an entry belongs to (#87).
+vi.mock("@/auth/me.js", () => ({
+  useMeContext: () => ({ role: "FINANCE", enabledModules: ["CORE", "FINANCE", "MAINTENANCE", "ACTIVITIES"] }),
+}));
+
 import { EntrySummary } from "./EntrySummary.js";
 import { entryVehicleFields } from "../test-entry-fields.js";
 
@@ -97,6 +102,7 @@ const entry: FinancialEntryDetail = {
   ...entryVehicleFields,
   evidenceFiles: [],
   directionDecides: false,
+  approver: null,
   postings: [],
 };
 
@@ -173,6 +179,8 @@ describe("EntrySummary", () => {
           activityNumber: "DLA-2026-00042",
           workOrderId: "3f1a9c40-0000-4000-8000-0000000000c1",
           workOrderAssetId: "00000000-0000-4000-8000-0000000000a1",
+          workOrderNumber: 7,
+          workOrderDescription: "Replace brake pads",
         },
       },
       refetch: vi.fn(),

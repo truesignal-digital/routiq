@@ -2,7 +2,8 @@ import { z } from "zod";
 import { activityCompleteness, activityStatus } from "./activities.js";
 import { historyActor } from "./history.js";
 import { listResponse } from "./list.js";
-import { issueStatus, workOrderStatus } from "./maintenance.js";
+import { issueStatus, maintenanceRecordNumber, workOrderStatus } from "./maintenance.js";
+import { overviewNoticeSchema } from "./overview-notice.js";
 
 export const assetLifecycleStatuses = [
   "REGISTERED",
@@ -64,6 +65,61 @@ export const assetSummary = z.object({
   inService: z.number().int().nonnegative(),
   attention: z.number().int().nonnegative(),
 });
+
+/** Days without a trip after which an available vehicle counts as idle (dashboards.html#trucks). */
+export const ASSET_IDLE_DAYS = 5;
+
+/**
+ * The Trucks Overview's availability filters, shared by `/v1/assets` and
+ * `/v1/assets/overview` so a tile and the list it opens count the same
+ * vehicles. CAN_DRIVE: IN_SERVICE and, while Maintenance is on, not grounded.
+ * GROUNDED: an open availability interval (Maintenance on only). IDLE: can
+ * drive, no trip open, and no trip started or ended in the last
+ * ASSET_IDLE_DAYS days (Trips on only).
+ */
+export const ASSET_AVAILABILITY_FILTERS = ["CAN_DRIVE", "GROUNDED", "IDLE"] as const;
+export type AssetAvailabilityFilter = (typeof ASSET_AVAILABILITY_FILTERS)[number];
+
+/**
+ * `GET /v1/assets/overview` (#665): can the fleet work? Counted in SQL over
+ * the caller's branch scope, narrowed by `branchId` like the list. `total` is
+ * every vehicle not disposed (SOLD, RETIRED, WRITTEN_OFF). `grounded` is null
+ * while Maintenance is off and `idle` while Trips is off: not counted, never
+ * zero. Built inside a pure call: the web reads it by its type only.
+ */
+export const assetOverviewQuery = /* @__PURE__ */ (() => z.object({ branchId: z.uuid().optional() }))();
+
+export const assetOverview = /* @__PURE__ */ (() =>
+  z.object({
+    total: z.number().int().nonnegative(),
+    /**
+     * Of `total`, in service and not grounded. The fleet's one can-drive count:
+     * the Dashboard tile and the Trucks Overview both show it (#699).
+     */
+    canDrive: z.number().int().nonnegative(),
+    grounded: z
+      .object({
+        count: z.number().int().nonnegative(),
+        /** Grounded longest; null when none is. */
+        first: z.object({ assetId: z.uuid(), assetCode: z.string(), since: z.iso.datetime() }).nullable(),
+      })
+      .nullable(),
+    idle: z
+      .object({
+        count: z.number().int().nonnegative(),
+        days: z.number().int().positive(),
+        /** Idle longest: no trip ever first, then the oldest last trip. Null when none is idle. */
+        first: z
+          .object({ assetId: z.uuid(), assetCode: z.string(), lastTripAt: z.iso.datetime().nullable() })
+          .nullable(),
+      })
+      .nullable(),
+    /** When the Trucks Overview's summary notice shows (#667). */
+    notice: overviewNoticeSchema(),
+  }))();
+
+export type AssetOverviewQuery = z.infer<typeof assetOverviewQuery>;
+export type AssetOverview = z.infer<typeof assetOverview>;
 
 /** One expense category's signed total for the asset. */
 export const assetExpenseCategoryTotal = z.object({
@@ -131,6 +187,7 @@ export const assetCustodian = z.object({
 /** A work order answering the grounding signalement, with its makers for the client's lock reasons. */
 export const availabilityWorkOrder = z.object({
   id: z.uuid(),
+  number: maintenanceRecordNumber,
   status: workOrderStatus,
   rowVersion: z.number().int().positive(),
   createdAt: z.iso.datetime(),
@@ -158,6 +215,7 @@ export const assetAvailability = z.discriminatedUnion("state", [
     intervalRowVersion: z.number().int().positive(),
     issue: z.object({
       id: z.uuid(),
+      number: maintenanceRecordNumber,
       description: z.string(),
       safetyCritical: z.boolean(),
       category: z.string().nullable(),
@@ -170,6 +228,14 @@ export const assetAvailability = z.discriminatedUnion("state", [
     }),
     /** Work orders on the grounding signalement, newest first. */
     workOrders: z.array(availabilityWorkOrder),
+    /**
+     * Every other OPEN safety-critical signalement on the vehicle: while one
+     * is listed, release-asset-to-service refuses (SAFETY_ISSUE_OPEN). The
+     * server computes both from one query, so the lock and the refusal agree.
+     */
+    otherOpenSafetyIssues: z.array(
+      z.object({ id: z.uuid(), number: maintenanceRecordNumber, description: z.string() }),
+    ),
   }),
 ]);
 

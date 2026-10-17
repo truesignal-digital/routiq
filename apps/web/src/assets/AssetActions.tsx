@@ -30,7 +30,7 @@ import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { useCommandLabel, type CommandLabelRef } from "../commands/labels.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
 import { canCommissionAsset, canTransferAsset } from "./permissions.js";
-import { useAssetRegistrationReference } from "./reference.js";
+import { useAssetRegistrationReference } from "../reference/asset-registration.js";
 
 /**
  * `assign` moves the vehicle to another branch; `custodian` names who answers

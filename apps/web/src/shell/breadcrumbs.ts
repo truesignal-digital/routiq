@@ -1,4 +1,6 @@
-import { activeSection, type ShellSection } from "./sections.js";
+import { activeSection, isSectionActive, type ShellSection } from "./sections.js";
+import type { ModuleCode } from "@routiq/contracts";
+import { pageOwner } from "../modules/manifest.js";
 
 export interface Crumb {
   /** Translation key; this module stays free of i18n so it can be unit-tested. */
@@ -16,6 +18,12 @@ interface PageTrail {
   pattern: string;
   /** Crumbs below the shell section, outermost first. */
   trail: readonly Crumb[];
+  /**
+   * The section key to file the page under when the viewer does not have the
+   * section that owns the route: a driver has no Money, so their entry sits
+   * under their truck (#584).
+   */
+  elsewhere?: string;
 }
 
 /**
@@ -25,7 +33,20 @@ interface PageTrail {
  * actually looking at.
  */
 export const PAGE_TRAILS: readonly PageTrail[] = [
+  // The Dashboard's tabs (#666): Overview is Home itself, the others name their tab under it.
+  { pattern: "/to-do", trail: [{ labelKey: "dashboard.tabs.todo" }] },
+  { pattern: "/profit-by-vehicle", trail: [{ labelKey: "dashboard.tabs.vehicles" }] },
+  { pattern: "/profit-by-branch", trail: [{ labelKey: "dashboard.tabs.branches" }] },
   { pattern: "/assets/new", trail: [{ labelKey: "commands.register-asset.label" }] },
+  // The module pages' tabs (#665): Overview is the section itself, the others
+  // name their tab under it. Before the record patterns, or "list" reads as a
+  // vehicle or a trip.
+  { pattern: "/assets/list", trail: [{ labelKey: "assets.page.tabs.list" }] },
+  { pattern: "/assets/documents", trail: [{ labelKey: "assets.page.tabs.documents" }] },
+  { pattern: "/activities/list", trail: [{ labelKey: "activities.page.tabs.list" }] },
+  { pattern: "/activities/planning", trail: [{ labelKey: "activities.page.tabs.planning" }] },
+  { pattern: "/maintenance/problems", trail: [{ labelKey: "maintenance.page.tabs.problems" }] },
+  { pattern: "/maintenance/work-orders", trail: [{ labelKey: "maintenance.page.tabs.work-orders" }] },
   // The vehicle workspace: its sections are tabs on one record, so every
   // section shares the record's crumb and the tabs say where you are.
   ...["", "/maintenance", "/money", "/trips", "/documents", "/history", "/details"].map((section) => ({
@@ -40,16 +61,20 @@ export const PAGE_TRAILS: readonly PageTrail[] = [
   },
   { pattern: "/finance/record", trail: [{ labelKey: "finance.navigation.record" }] },
   // The page title keys, so the Money and Accounting months rows name these pages once.
-  { pattern: "/finance/entries", trail: [{ labelKey: "finance.entries.title" }] },
+  // The Money page's tabs (#664): Overview is the section itself, the others
+  // name their tab under it so a phone gets a step back up.
+  { pattern: "/finance/entries", trail: [{ labelKey: "finance.page.tabs.entries" }] },
+  { pattern: "/finance/approve", trail: [{ labelKey: "finance.page.tabs.approve" }] },
   {
     pattern: "/finance/entries/$entryId",
     trail: [
-      { labelKey: "finance.entries.title", to: "/finance/entries" },
+      { labelKey: "finance.page.tabs.entries", to: "/finance/entries" },
       { labelKey: "finance.entries.detail.breadcrumb", record: true },
     ],
+    elsewhere: "assets",
   },
-  // Redirects to the waiting view; named the same in case a frame renders first.
-  { pattern: "/finance/approvals", trail: [{ labelKey: "finance.money.lens.waiting" }] },
+  // Redirects to the To approve tab; named the same in case a frame renders first.
+  { pattern: "/finance/approvals", trail: [{ labelKey: "finance.page.tabs.approve" }] },
   { pattern: "/finance/periods", trail: [{ labelKey: "finance.periods.title" }] },
   { pattern: "/my-settings", trail: [{ labelKey: "mySettings.title" }] },
   { pattern: "/more/persons", trail: [{ labelKey: "persons.title" }] },
@@ -71,29 +96,49 @@ function matchesPattern(pattern: string, pathname: string): boolean {
   );
 }
 
+function reachable(sections: readonly ShellSection[], to: string | undefined): boolean {
+  return to === undefined || sections.some((section) => isSectionActive(section, to));
+}
+
 /**
  * `Accueil / <section> / <page>` for the current location. The last crumb is
  * always the page you are on and carries no `to`; everything before it links.
  * `recordLabel` names the record on a detail route; until the screen has
- * loaded it the crumb says what kind of record it is.
+ * loaded it the crumb says what kind of record it is. With `enabledModules`,
+ * a page whose module is off is named by that module's row (#617).
  */
 export function breadcrumbTrail(
   sections: readonly ShellSection[],
   pathname: string,
   recordLabel?: string,
+  enabledModules?: readonly ModuleCode[],
 ): Crumb[] {
   const crumbs: Crumb[] = [{ labelKey: "home.title", to: "/" }];
+  const owner = pageOwner(pathname);
+  if (owner !== undefined && enabledModules !== undefined && !enabledModules.includes(owner.code)) {
+    // ModulePageGate shows the module's not-included page in place of this
+    // one, titled with the module's row; anything deeper would link into it.
+    return [...crumbs, { labelKey: owner.row.labelKey }];
+  }
 
-  const section = activeSection(sections, pathname);
+  const page = PAGE_TRAILS.find(({ pattern }) => matchesPattern(pattern, pathname));
+  const section =
+    activeSection(sections, pathname) ?? sections.find(({ key }) => key === page?.elsewhere);
   // The home section is the crumb we just seeded; anything else nests under it.
   if (section !== undefined && section.key !== "home") {
     crumbs.push({ labelKey: section.labelKey, to: section.to });
   }
 
-  const page = PAGE_TRAILS.find(({ pattern }) => matchesPattern(pattern, pathname));
   if (page !== undefined) {
-    // A page that is itself a sidebar row (Users, Branches) is already named by its section crumb.
-    crumbs.push(...page.trail.filter((crumb) => crumb.labelKey !== section?.labelKey));
+    crumbs.push(
+      ...page.trail.filter(
+        (crumb) =>
+          // A page that is itself a sidebar row (Users, Branches) is already named by its section crumb.
+          crumb.labelKey !== section?.labelKey &&
+          // A link into a place the viewer does not have would open a page they cannot use.
+          reachable(sections, crumb.to),
+      ),
+    );
   }
 
   const last = crumbs[crumbs.length - 1];

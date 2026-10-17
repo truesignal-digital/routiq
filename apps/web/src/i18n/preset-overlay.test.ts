@@ -5,7 +5,7 @@ import type { TemplateCode } from "@routiq/contracts";
 import { TEMPLATE_CODES } from "@routiq/contracts";
 import en from "./locales/en.json";
 import fr from "./locales/fr.json";
-import { PRESET_VOCABULARIES } from "./presets/index.js";
+import { FRENCH_AGREEMENT_KEYS, PRESET_VOCABULARIES } from "./presets/index.js";
 import { applyPresetVocabulary, presetVocabularyFor } from "./preset-overlay.js";
 
 function flattenKeys(obj: Record<string, unknown>, prefix = ""): string[] {
@@ -74,8 +74,12 @@ describe("preset overlays", () => {
         });
       }
 
-      it("fr and en overlay the same keys", () => {
-        expect(flattenKeys(overlay.en).sort()).toEqual(flattenKeys(overlay.fr).sort());
+      it("fr and en overlay the same keys, besides French agreement", () => {
+        const agreement = new Set(FRENCH_AGREEMENT_KEYS);
+        const fr = flattenKeys(overlay.fr);
+        expect(flattenKeys(overlay.en).sort()).toEqual(fr.filter((key) => !agreement.has(key)).sort());
+        // Every preset's trip noun is masculine, so each one carries them all.
+        expect(fr.filter((key) => agreement.has(key)).sort()).toEqual([...agreement].sort());
       });
 
       // An activity renamed to whatever French calls a leg would leave one
@@ -166,6 +170,54 @@ describe("trip noun in the base catalog", () => {
       expect(offenders).toEqual([]);
     });
   }
+});
+
+// #589: base strings without an overlay still said "activité"/"activity" in a
+// trucking or passenger workspace. The base noun for a trip is the activity,
+// so every base string that names it is overlaid by every preset, unless it
+// names something else.
+const ACTIVITY_NOUN = /activit/i;
+const NOT_THE_TRIP: Record<string, string> = {
+  "errors.PRESET_DISABLED": "the preset, the kind of fleet a workspace runs",
+  "errors.PRESET_ALREADY_SET": "the preset, the kind of fleet a workspace runs",
+  "errors.LAST_PRESET": "the preset, the kind of fleet a workspace runs",
+};
+
+describe("activity noun in the base catalog", () => {
+  const visible = (message: string) =>
+    message.replace(/\b\w+\s*\{(?!\s*\w+\s*[,}])/g, "{").replace(/\{\s*\w+\s*[,}]/g, "{");
+
+  for (const locale of LOCALES) {
+    it(`${locale}: every base string naming the activity is overlaid by every preset`, () => {
+      const offenders = flattenKeys(BASE[locale])
+        .filter((key) => ACTIVITY_NOUN.test(visible(String(at(BASE[locale], key)))))
+        .filter((key) => !(key in NOT_THE_TRIP))
+        .flatMap((key) =>
+          TEMPLATE_CODES.filter(
+            (preset) => at(PRESET_VOCABULARIES[preset][locale], key) === undefined,
+          ).map((preset) => `${key} (${preset})`),
+        );
+      expect(offenders).toEqual([]);
+    });
+
+    it(`${locale}: no overlay names the activity`, () => {
+      const offenders = TEMPLATE_CODES.flatMap((preset) => {
+        const overlay = PRESET_VOCABULARIES[preset][locale];
+        return flattenKeys(overlay)
+          .filter((key) => ACTIVITY_NOUN.test(visible(String(at(overlay, key)))))
+          .map((key) => `${key} (${preset})`);
+      });
+      expect(offenders).toEqual([]);
+    });
+  }
+
+  it("keeps the allow-list to base strings that still name the activity", () => {
+    for (const key of Object.keys(NOT_THE_TRIP)) {
+      for (const locale of LOCALES) {
+        expect(String(at(BASE[locale], key)), `${locale} ${key}`).toMatch(ACTIVITY_NOUN);
+      }
+    }
+  });
 });
 
 describe("presetVocabularyFor", () => {
@@ -301,6 +353,39 @@ describe("applyPresetVocabulary", () => {
     );
   });
 
+  // #653: a start now returns these, so they speak the fleet's words.
+  it("names the trip and the truck in each fleet's own word in a start's warnings", () => {
+    const instance = freshInstance();
+    const warnings = (lng: "fr" | "en") =>
+      ["DRIVER_DOUBLE_BOOKED", "TRIP_STARTED_AFTER_CANCELLATION", "VEHICLE_GROUNDED"].map((code) =>
+        instance.t(`warnings.${code}`, { lng }),
+      );
+
+    applyPresetVocabulary(instance, "TRUCKING");
+    expect(warnings("fr")).toEqual([
+      "Ce chauffeur est déjà prévu sur un autre trajet au même moment.",
+      "Ce trajet avait été annulé, mais il a été démarré hors connexion. Il est de nouveau en cours.",
+      "Ce camion est immobilisé en ce moment. Il doit être remis en service avant de partir.",
+    ]);
+    expect(warnings("en")).toEqual([
+      "This driver is already booked on another trip at the same time.",
+      "This trip had been cancelled, but it was started offline. It is running again.",
+      "This truck is grounded right now. It must be released to service before it leaves.",
+    ]);
+
+    applyPresetVocabulary(instance, "PASSENGER_TRANSPORT");
+    expect(warnings("fr")).toEqual([
+      "Ce chauffeur est déjà prévu sur un autre voyage au même moment.",
+      "Ce voyage avait été annulé, mais il a été démarré hors connexion. Il est de nouveau en cours.",
+      "Ce véhicule est immobilisé en ce moment. Il doit être remis en service avant de partir.",
+    ]);
+    expect(warnings("en")).toEqual([
+      "This driver is already booked on another trip at the same time.",
+      "This trip had been cancelled, but it was started offline. It is running again.",
+      "This vehicle is grounded right now. It must be released to service before it leaves.",
+    ]);
+  });
+
   it("renames the vehicle inside the workshop too", () => {
     const instance = freshInstance();
 
@@ -333,6 +418,26 @@ describe("applyPresetVocabulary", () => {
     );
   });
 
+  // #564: the record history read "Activité clôturée" in a trucking workspace.
+  // The trip's own history events name it in the fleet's word, agreeing in French.
+  it("names the trip in each fleet's own word in the record history", () => {
+    const instance = freshInstance();
+    const events = (lng: "fr" | "en") =>
+      ["created", "closed", "reopened"].map((event) => instance.t(`history.event.activity-${event}`, { lng }));
+
+    expect(events("fr")).toEqual(["Activité créée", "Activité clôturée", "Activité rouverte"]);
+    expect(events("en")).toEqual(["Activity created", "Activity closed", "Activity reopened"]);
+
+    for (const [preset, noun] of [
+      ["TRUCKING", "Trajet"],
+      ["PASSENGER_TRANSPORT", "Voyage"],
+    ] as const) {
+      applyPresetVocabulary(instance, preset);
+      expect(events("fr"), preset).toEqual([`${noun} créé`, `${noun} clôturé`, `${noun} rouvert`]);
+      expect(events("en"), preset).toEqual(["Trip created", "Trip closed", "Trip reopened"]);
+    }
+  });
+
   // The sheet's title is its breadcrumb and the Trips button, and its submit
   // says "la fiche": renaming only the title would leave the page disagreeing.
   it("keeps the trip sheet's title in step with its submit in every preset", () => {
@@ -347,6 +452,45 @@ describe("applyPresetVocabulary", () => {
         expect(instance.t("commands.record-journey-sheet.label", { lng }), `${preset} ${lng}`).toBe(title);
         expect(instance.t("commands.record-journey-sheet.submit", { lng }), `${preset} ${lng}`).toBe(submit);
       }
+    }
+  });
+
+  // Activité is feminine, Trajet and Voyage masculine: the closed and complete
+  // words agree with the noun on screen, in French only (#143).
+  it("makes the trip's closed and complete words agree with the noun on screen", () => {
+    const instance = freshInstance();
+    const words = (lng: "fr" | "en") => ({
+      status: instance.t("activities.status.CLOSED", { lng }),
+      chip: instance.t("activities.state.closed", { lng }),
+      chipWithGaps: instance.t("activities.state.closedWithGaps", { count: 2, lng }),
+      complete: instance.t("activities.completeness.COMPLETE", { lng }),
+      withExceptions: instance.t("activities.completeness.COMPLETE_WITH_EXCEPTIONS", { lng }),
+      closedAt: instance.t("activities.detail.closedAt", { date: "04/10/2026", lng }),
+      gapsNote: instance.t("vehicle.trips.gapsNote", { count: 2, lng }).split(".")[0],
+    });
+    const english = words("en");
+
+    expect(words("fr")).toEqual({
+      status: "Clôturée",
+      chip: "Clôturée",
+      chipWithGaps: "Clôturée, 2 manques",
+      complete: "Complète",
+      withExceptions: "Clôturée avec réserves",
+      closedAt: "Clôturée le 04/10/2026",
+      gapsNote: "Clôturée avec 2 manques",
+    });
+    for (const preset of TEMPLATE_CODES) {
+      applyPresetVocabulary(instance, preset);
+      expect(words("fr"), preset).toEqual({
+        status: "Clôturé",
+        chip: "Clôturé",
+        chipWithGaps: "Clôturé, 2 manques",
+        complete: "Complet",
+        withExceptions: "Clôturé avec réserves",
+        closedAt: "Clôturé le 04/10/2026",
+        gapsNote: "Clôturé avec 2 manques",
+      });
+      expect(words("en"), preset).toEqual(english);
     }
   });
 

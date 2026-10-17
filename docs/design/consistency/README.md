@@ -10,6 +10,8 @@ Open `index.html` in a browser for the mockups. Pages:
 |---|---|
 | `choices.html` | Ten decisions, each argued both ways, with a recommendation and a box for the owners' pick; neutral vs brand theme side by side |
 | `insights.html` | Every page's overview, where charts go and who sees them, executive overview (desktop + phone, working charts), chart rules, data we have vs need |
+| `dashboards.html` | Decided 2026-10-10: every page opens on an Overview tab (its dashboard), then its work tabs; Home is the Dashboard. Money words (revenue, expenses, profit, loss, company costs). Dashboard desktop + phone, Money Overview + Entries tab, Trucks, Trips, Maintenance and truck Overviews, roles, parts, data needed, open decisions |
+| `fullpages.html` | Proposal 2026-10-10: one frame for every full page (record pages, long forms, settings): one 1 200 px width, main column + 300 px context column, record header with status badge, status block holding the decision, Overview-first tabs with History last; today vs proposed (money entry, trip, Record a sheet, phone), map of every full page, parts, guards, decisions |
 | `platform.html` | The new direction: core + modules + presets (trucking, bus, internal fleet); setup matrix and vendor setup tool; words per preset; navigation per operator; who is a customer; Customers list and record (trucking and bus); follow-ups and complaints; Parcels (colis); forms, charts, decisions |
 | `modules.html` | Core vs modules, the module contract (manifest examples), how you reach each module, on/off proof, Partners (placement, pages, every action) |
 | `settings.html` | Company settings (logo, accent colour, details, regional, approvals, categories, numbering, module settings) + My settings; what always stays ROUTIQ |
@@ -37,11 +39,11 @@ Every page, every tab and every record panel answers three questions in this ord
 
 | Archetype | Region order | Used by |
 |---|---|---|
-| Module list | Header (title, one-line purpose, one primary action) → `MetricStrip` (server counts, each filters the table) → attention (max 3) → toolbar → DataTable | `/assets`, `/activities`, `/maintenance`, `/finance/entries` |
+| Module page (was Module list, changed 2026-10-10, see `dashboards.html`) | Header (title, one-line purpose, one primary action) → tabs, Overview first → Overview: closable summary notice, `MetricStrip` (each tile opens its tab filtered), why chart(s), To do (max 5) · other tabs: toolbar → DataTable | `/assets`, `/activities`, `/maintenance`, `/finance` |
 | Record workspace | Breadcrumb → identity strip (code, name, status badge, who/where) → status block (the blocking thing, who acts) → facts line → tabs (first = Overview) → fixed action bar; sub-records open in the record panel | `/assets/$id` (reference), `/activities/$id`, `/finance/entries/$id` |
 | Tab inside a record | Tab summary strip → list → tab action; item click opens the record panel | Every vehicle tab |
-| Decision queue | Header (no create) → strip: waiting / amount / oldest → rows showing what's missing, with inline decisions; negative decisions open a dialog | `/finance/approvals`, later issue triage |
-| Home | "Needs you" (same rows as the vehicle To do) → role's metrics → recent | `/` |
+| Decision queue | Inside its module page (Money → To approve: a tab or a filter, open decision 8 in `dashboards.html`): strip: waiting / amount / oldest → rows showing what's missing, with inline decisions; negative decisions open a dialog | `/finance/approvals`, later issue triage |
+| Home = Dashboard | A module page for the company: tabs Overview · To do · Profit by truck · Profit by branch; the Overview follows the role (drivers get "My day") | `/` |
 | Settings list | Header with a sentence explaining what the list controls + primary action → DataTable; create/edit in the panel; deactivate in a dialog | `/more/branches`, `/more/users`, `/more/persons`, `/finance/periods` |
 
 Rules across archetypes:
@@ -55,18 +57,20 @@ Rules across archetypes:
 ## Visual rules carried over from the brand pass (`feat/brand-identity` DESIGN.md)
 
 - Figures (money, counts, references) use `tabular-nums` in the sans face, never monospace. [DS-1]
+- Money is written **450 000 FCFA** in both languages: whole units, digits grouped by three with a non-breaking space, FCFA after the amount, never "FCFA 450,000" or "XAF". A negative amount is "−86 000 FCFA"; a loss is "Loss 86 000 FCFA" / "Perte 86 000 FCFA". Everything goes through `formatMoney` in `apps/web/src/lib/format.ts` (decision 9, #712). [H16]
+- Dates are written **29 July 2026** / **29 juillet 2026**; with a time, "29 July 2026, 07:00" (24-hour). A dense table may use the short month ("29 Jul 2026" / "29 juil. 2026"). Never the US order or a two-digit year. Date inputs show and read dd/mm/yyyy. Everything goes through the date formatters in `lib/format.ts` (#712). [H20]
 - No colour literals in components; semantic tokens only. [DS-2]
 - The logo is drawn only by the brand component (R with map-pin counter and road stem; letter `currentColor`, pin brand blue). [DS-3]
 - Labels and badges in sentence case; no uppercase eyebrows or shouting badges. [DS-4]
-- `PageHeader` owns title + one-sentence description + actions; `PageContainer` owns gutters and width (`narrow` forms, `default` reading, `wide` lists and workspaces).
+- `PageHeader` owns title + one-sentence description + actions; `PageContainer` is the page frame and owns gutters and width: one width for every page, at most 1 200 px of content, centred, 24 px gutters (16 on a phone). Screens set no `max-w-*` of their own (guard DS-5, #658).
 - Not used: pill buttons, numbered section labels, monospace labels, italic accent words, decorative gradients, cream backgrounds.
 - Theme (neutral vs brand navy) is decision 1 in `choices.html`; the logo ships either way.
 
 ## Navigation
 
 - Sidebar rows are places (pages with records), never actions or single records.
-- Two groups: **Daily work** (Home, Trucks, Trips, Maintenance, Money) and **Company** (Personnel, Branches, Accounting months).
-- **Money is one place.** Entries and Approvals merge: approvals is the "Waiting approval" view of the Money list (tile + filter + row decisions for approvers; `/finance/approvals` redirects). Periods become Company → Accounting months (finance approvers and admins). The Finance pill tabs go.
+- Two groups: **Daily work** (Dashboard, Trucks, Trips, Maintenance, Money) and **Company** (Personnel, Branches, Accounting months).
+- **Money is one place.** Entries and Approvals merge: approvals is the "Waiting approval" view of the Money list (tile + filter + row decisions for approvers; `/finance/approvals` redirects). `dashboards.html` proposes showing it as the Money tab "To approve" (decision 8). Periods become Company → Accounting months (finance approvers and admins). The Finance pill tabs go.
 - Hidden when the module is off or the role can't read it (#64); never greyed, never a link to a denial.
 - Row label = page title = first breadcrumb.
 - Counts only where someone waits (expenses waiting your approval on Money, new Maintenance problems), from server aggregates.
@@ -154,7 +158,7 @@ Dialog names the record, says what happens and what stays. Negative decisions (r
 4. Copy: `<feature>.<name>.{title,description,submit,submitting,hint,success}` + field labels in `fr.json` and `en.json`.
 5. Verify: one recipe line in `.agents/skills/verify-routiq/features/<feature>.md`; `pnpm verify drive` on desktop and phone, stored row read back via the API.
 
-`useCommandForm` (`apps/web/src/components/use-command-form.ts`) and the harness (`describeCommandForm` in `apps/web/src/test/form-harness.ts`) exist since #290, with Add note as the first form on them; guard `H17` holds the forms not yet moved (#294). The field kit is #292.
+`useCommandForm` (`apps/web/src/components/use-command-form.ts`) and the harness (`describeCommandForm` in `apps/web/src/test/form-harness.ts`) exist since #290, with Add note as the first form on them; guard `H17` holds the forms not yet moved (#294). The field kit and `FormLayout` live in `apps/web/src/components/form/` since #292, with Log fuel as the first Quick entry; `form-layout.test.tsx` checks each layout's measures and limits and the allowed pairs.
 
 ### Guards (build fails on regressions)
 

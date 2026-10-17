@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Outlet } from "@tanstack/react-router";
+import { PageNoticeProvider } from "@/components/page-container";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/toast.js";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,6 +12,8 @@ import { applyPresetVocabulary, presetVocabularyFor } from "../i18n/preset-overl
 import { AppSidebar } from "./AppSidebar.js";
 import { BottomBar } from "./BottomBar.js";
 import { BranchProvider, useCurrentBranch } from "./branch-context.js";
+import { ModulePageGate } from "./ModulePageGate.js";
+import { OfflineNotice } from "./OfflineNotice.js";
 import { RecordCrumbProvider } from "./record-crumb.js";
 import { SiteHeader } from "./SiteHeader.js";
 
@@ -54,9 +57,16 @@ export function AppShell() {
               <RecordCrumbProvider>
                 <SiteHeader />
                 <BranchScopeAnnouncer />
-                <ApprovalRulesNotice />
-                <div className="flex min-w-0 flex-1 flex-col pb-(--bottom-bar)">
-                  <Outlet />
+                <OfflineNotice />
+                {/* data-shift-region names the parts `flow:no-shift` and
+                    `pnpm perf` hold still once drawn (#494). */}
+                <div data-shift-region="page" className="flex min-w-0 flex-1 flex-col pb-(--bottom-bar)">
+                  {/* Rendered by each page's container, in the page's column (#467). */}
+                  <PageNoticeProvider notice={<ApprovalRulesNotice />}>
+                    <ModulePageGate>
+                      <Outlet />
+                    </ModulePageGate>
+                  </PageNoticeProvider>
                 </div>
                 <BottomBar />
               </RecordCrumbProvider>

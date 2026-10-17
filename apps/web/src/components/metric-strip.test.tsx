@@ -98,11 +98,13 @@ describe("MetricStrip", () => {
     const { container } = render(<MetricStrip tiles={tiles} isError />);
 
     expect(values(container)).toEqual(["—", "—", "—"]);
+    // The dash is the one left in the app (guard H19); it is named for a screen reader.
+    expect(screen.getAllByRole("img", { name: "Chargement impossible" })).toHaveLength(3);
     expect(container.querySelector("dl")?.getAttribute("data-state")).toBe("error");
     expect(container.querySelectorAll("[data-slot=skeleton]")).toHaveLength(0);
   });
 
-  it("dashes a single unknown value without dimming the tiles that do have one", () => {
+  it("says a single unknown value is not recorded, without dimming the tiles that do have one", () => {
     const { container } = render(
       <MetricStrip
         tiles={[
@@ -112,7 +114,23 @@ describe("MetricStrip", () => {
       />,
     );
 
-    expect(values(container)).toEqual(["6", "—"]);
+    expect(values(container)).toEqual(["6", "Non renseigné"]);
+  });
+
+  /** "Not recorded" is a claim about the books; a withheld figure was never missing from them. */
+  it("leaves a withheld value out instead of calling it not recorded", () => {
+    const { container } = render(
+      <MetricStrip
+        tiles={[
+          { label: "Fleet", value: "6" },
+          { label: "Waiting", value: null, withheld: true, hint: "Finances indisponibles" },
+        ]}
+      />,
+    );
+
+    expect(values(container)).toEqual(["6", ""]);
+    expect(screen.queryByText("Non renseigné")).toBeNull();
+    expect(screen.getByText("Finances indisponibles")).toBeTruthy();
   });
 
   it("drops the hint whenever the value it qualifies is missing", () => {
@@ -139,9 +157,9 @@ describe("MetricStrip", () => {
     expect(failed.queryByText("all branches")).toBeNull();
   });
 
-  it("lays two, three and four tiles out without spilling a row", () => {
+  it("lays two to five tiles out without spilling a row", () => {
     const tile = { label: "A", value: "1" };
-    const columns = ([2, 3, 4] as const).map((count) => {
+    const columns = ([2, 3, 4, 5] as const).map((count) => {
       const { container, unmount } = render(
         <MetricStrip
           tiles={
@@ -160,6 +178,7 @@ describe("MetricStrip", () => {
     expect(columns[0]).toContain("grid-cols-2");
     expect(columns[1]).toContain("sm:grid-cols-3");
     expect(columns[2]).toContain("sm:grid-cols-4");
+    expect(columns[3]).toContain("lg:grid-cols-5");
   });
 
   it("colours itself from semantic tokens only", () => {
@@ -267,13 +286,14 @@ describe("MetricStrip", () => {
     const [spent, unknown] = [...container.querySelectorAll("[data-slot=metric-value]")];
     expect(spent?.querySelector("small")?.textContent).toBe("FCFA");
     expect(spent?.textContent?.replace(/\s/g, "")).toBe("1250000FCFA");
-    expect(unknown?.textContent).toBe("—");
+    expect(unknown?.textContent).toBe("Non renseigné");
   });
 
-  it("builds a strip from a run-time list only when it has one to four tiles", () => {
+  it("builds a strip from a run-time list only when it has one to five tiles", () => {
     const tile = { label: "Fleet", value: "6" };
     expect(metricTiles([])).toBeUndefined();
     expect(metricTiles([tile])).toHaveLength(1);
-    expect(metricTiles([tile, tile, tile, tile, tile])).toBeUndefined();
+    expect(metricTiles([tile, tile, tile, tile, tile])).toHaveLength(5);
+    expect(metricTiles([tile, tile, tile, tile, tile, tile])).toBeUndefined();
   });
 });

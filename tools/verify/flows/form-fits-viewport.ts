@@ -51,7 +51,7 @@ const CASES: FormCase[] = [
   {
     username: "nadege",
     form: "reverse",
-    opener: /^(Contre-passer l'écriture|Reverse entry)$/,
+    opener: /^(Annuler l'écriture|Cancel entry)$/,
     status: "POSTED",
     pick: (entries) => entries.find((entry) => entry.reversesEntryId === null),
   },

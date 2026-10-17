@@ -15,11 +15,11 @@ export async function fetchPeriods(
   return (await response.json()) as PeriodsResponse;
 }
 
-export function usePeriods() {
+export function usePeriods(enabled = true) {
   const session = useActiveSession();
   return useQuery({
     queryKey: ["ws", session?.workspaceSlug, "finance", "periods"],
-    enabled: session !== undefined,
+    enabled: enabled && session !== undefined,
     queryFn: ({ signal }) => {
       const token = sessionStore.getToken();
       if (token === undefined) throw new Error("AUTH_REQUIRED");

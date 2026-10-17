@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import type { AssetSummary } from "@routiq/contracts";
-import { sessionStore, useActiveSession } from "../auth/store.js";
+import { queryOptions, useQuery } from "@tanstack/react-query";
+import { useActiveSession } from "../auth/store.js";
+import { authed } from "../lib/list-query.js";
 import { useBranchScopedParams } from "../shell/branch-scope.js";
 import { fetchAssetSummary, type AssetSummaryParams } from "./api.js";
 
@@ -10,17 +10,16 @@ import { fetchAssetSummary, type AssetSummaryParams } from "./api.js";
  * would report the page as if it were the fleet. Branch-scoped like the list it
  * sits above, so the tiles count inside the same narrowing.
  */
-export function useAssetSummary(callerParams: AssetSummaryParams = {}) {
+export function useAssetSummary(callerParams: AssetSummaryParams = {}, enabled = true) {
   const session = useActiveSession();
-  const params = useBranchScopedParams(callerParams);
+  const options = assetSummaryQueryOptions(session?.workspaceSlug, useBranchScopedParams(callerParams));
+  return useQuery({ ...options, enabled: enabled && session !== undefined });
+}
 
-  return useQuery<AssetSummary>({
-    queryKey: ["ws", session?.workspaceSlug, "assets", "summary", params],
-    enabled: session !== undefined,
-    queryFn: ({ signal }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      return fetchAssetSummary(token, params, signal);
-    },
+export function assetSummaryQueryOptions(workspaceSlug: string | undefined, params: AssetSummaryParams) {
+  return queryOptions({
+    queryKey: ["ws", workspaceSlug, "assets", "summary", params],
+    enabled: workspaceSlug !== undefined,
+    queryFn: authed((token, signal) => fetchAssetSummary(token, params, signal)),
   });
 }

@@ -28,6 +28,10 @@ vi.mock("@tanstack/react-router", () => ({
   }),
   // `?reverse=1` opens the dialog on arrival.
   useSearch: () => searchParams.current,
+  useRouterState: ({ select }: { select: (state: unknown) => unknown }) =>
+    select({ location: { pathname: "/finance/entries/e1" } }),
+  Link: ({ children, to: _to, params: _params, search: _search, ...props }: Record<string, unknown> & { children?: unknown }) =>
+    createElement("a", props, children as never),
 }));
 
 vi.mock("../commands/intent.js", () => ({
@@ -49,6 +53,7 @@ const approver: MeContext = {
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+  timezone: "Africa/Douala",
 };
 
 const MAKER_ID = "00000000-0000-4000-8000-000000000031";
@@ -135,7 +140,13 @@ beforeEach(() => {
       reversedByEntryId: null,
       cancellation: null,
       postings: [],
-      links: { activityId: null, activityNumber: null, workOrderId: null, workOrderAssetId: null },
+      links: {
+        activityId: null,
+        activityNumber: null,
+        workOrderId: null,
+        workOrderAssetId: null,
+        workOrderDescription: null,
+      },
       recordedBy: { principalId: MAKER_ID, displayName: "Sali", scope: "WORKSPACE" },
       evidence: { state: "NOT_SUPPLIED", artifactCount: 0 },
       evidenceFiles: [],
@@ -238,7 +249,9 @@ describe("Cancel entry is one level only (#130)", () => {
       cancellation: { reasonCode: "DID_NOT_HAPPEN", reasonText: null },
     });
     renderScreen();
-    expect(screen.getByText("Didn't happen")).toBeTruthy();
+    // The status block says why, in words (#662: the reason moved there from a card).
+    const block = document.querySelector('[data-slot="status-block"]');
+    expect(block?.textContent).toContain("Didn't happen");
     expect(screen.queryByText("DID_NOT_HAPPEN")).toBeNull();
   });
 
@@ -258,7 +271,8 @@ describe("finance entry detail enums", () => {
 
     expect(screen.getByText("Posted")).toBeDefined();
     expect(screen.getByText("Cash")).toBeDefined();
-    expect(screen.getByText("Fuel")).toBeDefined();
+    // The facts line and the Overview both name the category.
+    expect(screen.getAllByText("Fuel").length).toBeGreaterThan(0);
 
     const body = document.body.textContent ?? "";
     for (const code of ["POSTED", "CASH", "FUEL"]) {
@@ -272,7 +286,7 @@ describe("finance entry detail enums", () => {
 
     expect(screen.getByText("Comptabilisée")).toBeDefined();
     expect(screen.getByText("Espèces")).toBeDefined();
-    expect(screen.getByText("Carburant")).toBeDefined();
+    expect(screen.getAllByText("Carburant").length).toBeGreaterThan(0);
 
     await i18n.changeLanguage("en");
   });

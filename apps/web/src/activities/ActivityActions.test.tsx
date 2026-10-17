@@ -45,12 +45,12 @@ vi.mock("./usePlaces.js", () => ({
   usePlaces: mocks.usePlaces,
 }));
 
-vi.mock("../documents/useCategories.js", () => ({
+vi.mock("../categories/useCategories.js", () => ({
   useCategories: mocks.useCategories,
 }));
 
 // The trip's expense is RecordEntryForm: its branch list and approval hint.
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => ({
     data: { assetClasses: [], branches: [{ code: "DLA", name: "Douala" }] },
     isPending: false,
@@ -135,6 +135,13 @@ const openActivity: ActivityDetail = {
   crew: [],
   legs: [],
   readings: [],
+  plannedAsset: null,
+  plannedDriver: null,
+  plannedOriginName: null,
+  plannedDestinationName: null,
+  cancellation: null,
+  discrepancyCodes: [],
+  priceCurrency: "XAF",
   financialEntries: [],
 };
 
@@ -163,6 +170,7 @@ function meWith(role: MeContext["role"]): MeContext {
     branchScope: "ALL",
     enabledModules: ["CORE", "ASSETS", "ACTIVITIES"],
     enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+    timezone: "Africa/Douala",
   };
 }
 

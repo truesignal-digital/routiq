@@ -21,7 +21,7 @@ const reference: { current: ReferenceState } = {
   current: { data: undefined, isError: false, refetch: vi.fn() },
 };
 
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => reference.current,
 }));
 

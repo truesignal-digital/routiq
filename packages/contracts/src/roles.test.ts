@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   ADMIN_GRANTABLE_ROLES,
   canBookWorkOrderCost,
+  canManageCompanySettings,
+  COMPANY_SETTINGS_ROLES,
   canReadEntries,
   canReadLedger,
   canReadWorkOrderCosts,
@@ -12,6 +14,8 @@ import {
   LEGACY_ROLE_MAP,
   legacyRoleInput,
   MONEY_READ_SCOPE,
+  readsOwnTripsOnly,
+  TRIP_READ_SCOPE,
   ROLES,
 } from "./roles.js";
 
@@ -62,6 +66,11 @@ describe("role registry", () => {
     });
   });
 
+  it("narrows only the driver to their own trips (#545)", () => {
+    expect(ROLES.filter(readsOwnTripsOnly)).toEqual(["DRIVER"]);
+    expect(TRIP_READ_SCOPE.DRIVER).toBe("OWN_TRIPS");
+  });
+
   it("derives the role lists from the scope, so they cannot drift", () => {
     expect(LEDGER_READER_ROLES).toEqual(ROLES.filter(canReadLedger));
     expect(ENTRY_READER_ROLES).toEqual(ROLES.filter(canReadEntries));
@@ -83,5 +92,11 @@ describe("role registry", () => {
 
   it("lets only the workshop and the managers book cost on a work order (#410, #414)", () => {
     expect(ROLES.filter(canBookWorkOrderCost)).toEqual(["DIRECTOR", "ADMIN", "TECHNICIAN"]);
+  });
+
+  it("lets the Director and Administrators change the company settings, and no one else (#711)", () => {
+    expect(ROLES.filter(canManageCompanySettings)).toEqual(["DIRECTOR", "ADMIN"]);
+    expect(COMPANY_SETTINGS_ROLES).toEqual(ROLES.filter(canManageCompanySettings));
+    expect(canManageCompanySettings(undefined)).toBe(false);
   });
 });

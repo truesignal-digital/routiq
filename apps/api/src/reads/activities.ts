@@ -8,6 +8,9 @@ import {
   personListQuery,
   personListResponse,
   placeListResponse,
+  ACTIVITY_OVERVIEW_WEEKS,
+  STARTED_ACTIVITY_STATUSES,
+  type ActivityMissingFilter,
   type ListSort,
 } from "@routiq/contracts";
 import {
@@ -18,7 +21,9 @@ import {
   gte,
   ilike,
   inArray,
-  lte,
+  isNotNull,
+  lt,
+  ne,
   sql,
   type SQL,
 } from "drizzle-orm";
@@ -38,11 +43,11 @@ import {
   commands,
   financialEntries,
   financialPostings,
+  memberships,
   meterReadings,
   movementLegs,
   persons,
   places,
-  workspaces,
 } from "../db/schema.js";
 import { addDays, currentBusinessDate, isoWeek } from "./business-date.js";
 import { cancelledBySql, toEntryCancellation } from "./entry-cancellation.js";
@@ -60,6 +65,18 @@ import {
 import { serializeMinor } from "./serialize-minor.js";
 import { ANY_ROLE, defineRead, type ReadTx } from "./define-read.js";
 import { readableEntrySql } from "./money-scope.js";
+import {
+  cancellationOf,
+  plannedAssetCodeSql,
+  plannedDriverNameSql,
+  plannedRouteEndSql,
+  tripPrices,
+  tripPricesVisible,
+  tripRevenueVisible,
+} from "./trip-plan.js";
+import { readableTripSql } from "./trip-scope.js";
+import { dayStartSql, workspaceTimezone } from "./workspace-day.js";
+import { loadOverviewNotice } from "./overview-notice.js";
 
 const defaultActivitySort: ListSort<"startedAt"> = {
   field: "startedAt",
@@ -127,7 +144,7 @@ function legCountSql(): SQL<number> {
  * as the detail read names it — the place, else the text typed for an ad-hoc
  * stop. Null for an activity with no legs.
  */
-function legEndSql(end: "origin" | "destination"): SQL<string | null> {
+export function legEndSql(end: "origin" | "destination"): SQL<string | null> {
   const placeId = end === "origin" ? movementLegs.originPlaceId : movementLegs.destinationPlaceId;
   const text = end === "origin" ? movementLegs.originText : movementLegs.destinationText;
   const order = end === "origin" ? sql`asc` : sql`desc`;
@@ -152,6 +169,68 @@ function distanceKmSql(): SQL<number | null> {
     where ${movementLegs.workspaceId} = ${activities.workspaceId}
       and ${movementLegs.activityId} = ${activities.id}
   )`;
+}
+
+const fuelCategory = alias(categories, "fuel_category");
+
+/**
+ * A fuel expense on the trip (#665): an expense line attributed to it, in the
+ * FUEL category, whose entry waits (SUBMITTED) or is POSTED. A reversed line is
+ * no fuel: its original turns REVERSED and its reversal (an entry that
+ * `reverses_entry_id` another) is no fuel bought either. Counted whoever
+ * recorded it: the fact is the trip's, not the caller's money scope.
+ */
+function fuelExpenseOnTripSql(): SQL {
+  return sql`exists (
+    select 1
+    from ${financialPostings}
+    inner join ${financialEntries}
+      on ${financialEntries.workspaceId} = ${financialPostings.workspaceId}
+      and ${financialEntries.id} = ${financialPostings.financialEntryId}
+    where ${financialPostings.workspaceId} = ${activities.workspaceId}
+      and ${financialPostings.activityId} = ${activities.id}
+      and ${financialPostings.direction} = 'EXPENSE'
+      and ${financialEntries.status} in ('SUBMITTED', 'POSTED')
+      and ${financialEntries.reversesEntryId} is null
+      and ${financialPostings.categoryId} in (
+        select ${fuelCategory.id} from ${categories} as ${sql.identifier("fuel_category")}
+        where ${fuelCategory.workspaceId} = ${financialPostings.workspaceId}
+          and ${fuelCategory.kind} = 'EXPENSE_CATEGORY'
+          and ${fuelCategory.code} = 'FUEL'
+      )
+  )`;
+}
+/**
+ * The trip's type, as the list joins it. Every trip read selecting a
+ * correlated subquery joins it: a single-table select renders its columns
+ * unqualified, which a correlated subquery cannot survive.
+ */
+function activityTypeJoin(): SQL {
+  return and(
+    eq(categories.workspaceId, activities.workspaceId),
+    eq(categories.id, activities.activityTypeId),
+    eq(categories.kind, "ACTIVITY_TYPE"),
+  )!;
+}
+
+/** A leg of the trip records a distance. */
+function legDistanceOnTripSql(): SQL {
+  return sql`exists (
+    select 1 from ${movementLegs}
+    where ${movementLegs.workspaceId} = ${activities.workspaceId}
+      and ${movementLegs.activityId} = ${activities.id}
+      and ${movementLegs.distanceKm} is not null
+  )`;
+}
+
+/**
+ * A CLOSED trip missing `filter`'s fact, as a condition on an `activities`
+ * row. The list's `missing` filter and the summary's `closedMissing` both read
+ * it, so a tile counts exactly the trips its filter lists.
+ */
+function missingSql(filter: ActivityMissingFilter): SQL {
+  const present = filter === "fuel" ? fuelExpenseOnTripSql() : legDistanceOnTripSql();
+  return sql`(${activities.status} = 'CLOSED' and not ${present})`;
 }
 
 /**
@@ -192,10 +271,15 @@ export function registerActivityReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/activities", module: "ACTIVITIES", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedQuery = activityListQuery.safeParse(req.query);
         if (!parsedQuery.success) {
+          return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
+        }
+        // Fuel is a money fact: while FINANCE is off it is not counted, so it
+        // cannot be filtered either.
+        if (parsedQuery.data.missing === "fuel" && !modules.has("FINANCE")) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
 
@@ -207,6 +291,7 @@ export function registerActivityReadRoutes(
           activityTypeCode,
           from,
           to,
+          missing,
           cursor,
           limit,
         } = parsedQuery.data;
@@ -221,22 +306,32 @@ export function registerActivityReadRoutes(
             return { error: "VALIDATION_FAILED" as const };
           }
 
-          const conditions: SQL[] = [
-            eq(activities.workspaceId, auth.workspaceId),
-          ];
-          if (auth.branchScope !== "ALL") {
-            conditions.push(inArray(activities.branchId, auth.branchScope));
-          }
+          const conditions: SQL[] = [readableTripSql(auth)];
           if (branchId) conditions.push(eq(activities.branchId, branchId));
-          if (status) conditions.push(eq(activities.status, status));
+          // Unasked, only trips that have started (ADR-0012 §7): a client
+          // from before Scheduling never meets one with no start date.
+          conditions.push(
+            status === undefined
+              ? inArray(activities.status, [...STARTED_ACTIVITY_STATUSES])
+              : eq(activities.status, status),
+          );
           if (completeness) {
             conditions.push(eq(activities.completeness, completeness));
           }
+          // CLOSED trips only; with another `status`, both apply and nothing lists.
+          if (missing) conditions.push(missingSql(missing));
           if (activityTypeCode) {
             conditions.push(eq(categories.code, activityTypeCode));
           }
-          if (from) conditions.push(gte(activities.startedAt, new Date(from)));
-          if (to) conditions.push(lte(activities.startedAt, new Date(to)));
+          if (from !== undefined || to !== undefined) {
+            const timezone = await workspaceTimezone(tx, auth.workspaceId);
+            if (from !== undefined) {
+              conditions.push(gte(activities.startedAt, dayStartSql(from, timezone)));
+            }
+            if (to !== undefined) {
+              conditions.push(lt(activities.startedAt, dayStartSql(addDays(to, 1), timezone)));
+            }
+          }
 
           if (assetId) {
             conditions.push(
@@ -365,41 +460,48 @@ export function registerActivityReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/activities/summary", module: "ACTIVITIES", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedQuery = activitySummaryQuery.safeParse(req.query);
         if (!parsedQuery.success) {
           return reply.status(400).send({ error: { code: "VALIDATION_FAILED" } });
         }
         const { branchId } = parsedQuery.data;
+        const fuelCounted = modules.has("FINANCE");
 
         const summary = await read(async (tx) => {
-          const [workspace] = await tx
-            .select({ timezone: workspaces.timezone })
-            .from(workspaces)
-            .where(eq(workspaces.id, auth.workspaceId));
-          const timezone = workspace?.timezone ?? "Africa/Douala";
-          const week = isoWeek(currentBusinessDate(new Date(), timezone));
+          const timezone = await workspaceTimezone(tx, auth.workspaceId);
+          const today = currentBusinessDate(new Date(), timezone);
+          const week = isoWeek(today);
+          const firstWeekFrom = addDays(week.from, -7 * (ACTIVITY_OVERVIEW_WEEKS - 1));
 
-          // The same scope the list applies: session branches, then the
-          // optional branch inside them, never instead of them.
-          const conditions: SQL[] = [eq(activities.workspaceId, auth.workspaceId)];
-          if (auth.branchScope !== "ALL") {
-            conditions.push(inArray(activities.branchId, auth.branchScope));
-          }
+          // The same scope the list applies: session branches and a driver's
+          // own trips, then the optional branch inside them, never instead.
+          // Started trips only, as the list lists them unasked.
+          const conditions: SQL[] = [
+            readableTripSql(auth),
+            inArray(activities.status, [...STARTED_ACTIVITY_STATUSES]),
+          ];
           if (branchId) conditions.push(eq(activities.branchId, branchId));
 
           // Week edges are local midnights, so a trip started at 00:30 Monday
-          // in Douala belongs to this week, not the last.
-          const startsAt = sql`(${week.from}::date)::timestamp at time zone ${timezone}`;
-          const endsBefore = sql`(${addDays(week.to, 1)}::date)::timestamp at time zone ${timezone}`;
+          // in Douala belongs to this week, not the last. The same edges as
+          // the list's `from` and `to`.
+          const startsAt = dayStartSql(week.from, timezone);
+          const endsBefore = dayStartSql(addDays(week.to, 1), timezone);
           const inWeek = sql`${activities.startedAt} >= ${startsAt} and ${activities.startedAt} < ${endsBefore}`;
+          const closed = sql`${activities.status} = 'CLOSED'`;
 
           const [counts] = await tx
             .select({
               thisWeek: sql<number>`count(*) filter (where ${inWeek})::int`,
+              weekClosed: sql<number>`count(*) filter (where ${inWeek} and ${closed})::int`,
               open: sql<number>`count(*) filter (where ${activities.status} = 'OPEN')::int`,
               incomplete: sql<number>`count(*) filter (where ${activities.completeness} = 'COMPLETE_WITH_EXCEPTIONS')::int`,
+              missingKm: sql<number>`count(*) filter (where ${missingSql("km")})::int`,
+              missingFuel: fuelCounted
+                ? sql<number | null>`count(*) filter (where ${missingSql("fuel")})::int`
+                : sql<number | null>`null::int`,
               weekKm: sql<number | null>`(
                 select sum(${movementLegs.distanceKm})::int
                 from ${movementLegs}
@@ -411,14 +513,69 @@ export function registerActivityReadRoutes(
               )`,
             })
             .from(activities)
+            .innerJoin(categories, activityTypeJoin())
             .where(and(...conditions));
+
+          const [oldestOpen] = await tx
+            .select({
+              id: activities.id,
+              activityNumber: activities.activityNumber,
+              startedAt: activities.startedAt,
+              assetCode: primaryAssetCodeSql(),
+            })
+            .from(activities)
+            .innerJoin(categories, activityTypeJoin())
+            .where(and(...conditions, eq(activities.status, "OPEN"), isNotNull(activities.startedAt)))
+            .orderBy(asc(activities.startedAt), asc(activities.id))
+            .limit(1);
+
+          // Each week by the Monday of its local start date, which is what
+          // `from`/`to` on the list compare against.
+          const weekRows = await tx
+            .select({
+              from: sql<string>`to_char(date_trunc('week', ${activities.startedAt} at time zone ${timezone}), 'YYYY-MM-DD')`,
+              started: sql<number>`count(*)::int`,
+              closed: sql<number>`count(*) filter (where ${closed})::int`,
+            })
+            .from(activities)
+            .innerJoin(categories, activityTypeJoin())
+            .where(
+              and(
+                ...conditions,
+                gte(activities.startedAt, dayStartSql(firstWeekFrom, timezone)),
+                lt(activities.startedAt, endsBefore),
+              ),
+            )
+            .groupBy(sql`1`);
+          const byFrom = new Map(weekRows.map((row) => [row.from, row]));
+          const weeks = Array.from({ length: ACTIVITY_OVERVIEW_WEEKS }, (_, index) => {
+            const from = addDays(firstWeekFrom, 7 * index);
+            const row = byFrom.get(from);
+            return { from, to: addDays(from, 6), started: row?.started ?? 0, closed: row?.closed ?? 0 };
+          });
 
           return {
             week,
             thisWeek: counts?.thisWeek ?? 0,
+            weekClosed: counts?.weekClosed ?? 0,
             open: counts?.open ?? 0,
+            oldestOpen:
+              oldestOpen?.startedAt == null
+                ? null
+                : {
+                    id: oldestOpen.id,
+                    activityNumber: oldestOpen.activityNumber,
+                    startedAt: oldestOpen.startedAt.toISOString(),
+                    assetCode: oldestOpen.assetCode,
+                  },
             incomplete: counts?.incomplete ?? 0,
+            closedMissing: {
+              fuel: fuelCounted ? (counts?.missingFuel ?? 0) : null,
+              km: counts?.missingKm ?? 0,
+            },
             weekKm: counts?.weekKm ?? null,
+            weeks,
+            notice: await loadOverviewNotice(tx, auth, modules, { branchId, today, timezone }),
           };
         });
 
@@ -449,13 +606,8 @@ export function registerActivityReadRoutes(
         const entriesVisible = canReadEntries(auth.role) && modules.has("FINANCE");
 
         const result = await read(async (tx) => {
-          const conditions: SQL[] = [
-            eq(activities.workspaceId, auth.workspaceId),
-            eq(activities.id, activityId),
-          ];
-          if (auth.branchScope !== "ALL") {
-            conditions.push(inArray(activities.branchId, auth.branchScope));
-          }
+          // Outside the caller's trips is the same 404 as no such trip.
+          const conditions: SQL[] = [eq(activities.id, activityId), readableTripSql(auth)];
 
           const [header] = await tx
             .select({
@@ -490,6 +642,19 @@ export function registerActivityReadRoutes(
               destinationName: legEndSql("destination"),
               distanceKm: distanceKmSql(),
               driverName: driverNameSql(),
+              plannedAssetId: activities.plannedAssetId,
+              plannedAssetCode: plannedAssetCodeSql(),
+              plannedDriverPersonId: activities.plannedDriverPersonId,
+              plannedDriverName: plannedDriverNameSql(),
+              plannedOriginName: plannedRouteEndSql("origin"),
+              plannedDestinationName: plannedRouteEndSql("destination"),
+              cancelledAt: activities.cancelledAt,
+              cancellationReason: activities.cancellationReason,
+              cancellationNote: activities.cancellationNote,
+              discrepancyCodes: activities.discrepancyCodes,
+              priceCurrency: activities.priceCurrency,
+              agreedPriceMinor: activities.agreedPriceMinor,
+              amountToCollectMinor: activities.amountToCollectMinor,
             })
             .from(activities)
             .innerJoin(
@@ -738,6 +903,20 @@ export function registerActivityReadRoutes(
               cancelledBy:
                 entry.cancelledBy === null ? null : toEntryCancellation(entry.cancelledBy, true),
             })) ?? null,
+          plannedAsset:
+            header.plannedAssetId === null || header.plannedAssetCode === null
+              ? null
+              : { id: header.plannedAssetId, assetCode: header.plannedAssetCode },
+          plannedDriver:
+            header.plannedDriverPersonId === null || header.plannedDriverName === null
+              ? null
+              : { personId: header.plannedDriverPersonId, displayName: header.plannedDriverName },
+          plannedOriginName: header.plannedOriginName,
+          plannedDestinationName: header.plannedDestinationName,
+          cancellation: cancellationOf(header),
+          discrepancyCodes: header.discrepancyCodes,
+          priceCurrency: header.priceCurrency,
+          ...tripPrices(tripPricesVisible(auth, modules), header),
         });
       } catch (error) {
         req.log.error({ err: error }, "activity detail read failed");
@@ -779,8 +958,17 @@ export function registerActivityReadRoutes(
               defaultRole: persons.defaultRole,
               branchId: persons.branchId,
               active: persons.active,
+              loginPrincipalId: memberships.principalId,
+              rowVersion: persons.rowVersion,
             })
             .from(persons)
+            .leftJoin(
+              memberships,
+              and(
+                eq(memberships.workspaceId, persons.workspaceId),
+                eq(memberships.id, persons.membershipId),
+              ),
+            )
             .where(and(...conditions))
             .orderBy(asc(persons.displayName), asc(persons.id)),
         );
@@ -856,6 +1044,9 @@ function activityFinancialRows(tx: ReadTx, auth: AuthContext, activityId: string
         eq(financialPostings.workspaceId, auth.workspaceId),
         eq(financialPostings.activityId, activityId),
         readableEntrySql(auth),
+        // A trip's revenue is its price (ADR-0012 §7, #583): withheld here,
+        // not only on the screen, from whoever may not read it.
+        tripRevenueVisible(auth.role) ? undefined : ne(financialEntries.direction, "REVENUE"),
       ),
     )
     .orderBy(

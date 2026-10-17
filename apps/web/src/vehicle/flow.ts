@@ -24,8 +24,8 @@ import {
   canResolveIssues,
 } from "../maintenance/permissions.js";
 import { isActiveWorkOrder } from "../maintenance/status.js";
+import type { NumberedRecord } from "../lib/record-number.js";
 import {
-  recordReference,
   type Lock,
   type OfferedStep,
   type PanelRef,
@@ -74,6 +74,26 @@ export function groundingFacts(asset: Pick<AssetDetail, "availability">): Ground
   return { grounded: availability, workOrder, refused };
 }
 
+/**
+ * A work order's or problem's number from what the vehicle's reads already
+ * carry (#608): the grounding and the attention items. Undefined when neither
+ * names the record, so a caller can tell "not here" from "not numbered yet".
+ */
+export function vehicleRecordNumber(
+  asset: Pick<AssetDetail, "availability">,
+  attention: readonly AssetAttentionItem[],
+  id: string,
+): number | null | undefined {
+  const availability = asset.availability;
+  if (availability.state === "GROUNDED") {
+    if (availability.issue.id === id) return availability.issue.number;
+    const known = [...availability.workOrders, ...availability.otherOpenSafetyIssues].find((row) => row.id === id);
+    if (known !== undefined) return known.number;
+  }
+  const item = attention.find((candidate) => candidate.subject.id === id);
+  return item === undefined ? undefined : (item.params.recordNumber ?? null);
+}
+
 const same = (actor: HistoryActor | null | undefined, viewer: Viewer) =>
   actor?.principalId != null && actor.principalId === viewer.principalId;
 
@@ -117,27 +137,43 @@ export function releaseLockFor(facts: GroundingFacts, viewer: Viewer): Lock | un
   return vouched ? { key: "selfReleaseForbidden" } : undefined;
 }
 
-/** What the flow still needs before anyone can release, or nothing when it is ready. */
+/**
+ * What the flow still needs before anyone can release, or nothing when it is
+ * ready. In the server's order (release-asset-to-service.ts): the repair, then
+ * every other safety-critical problem closed (SAFETY_ISSUE_OPEN).
+ */
 export function releaseBlocker(facts: GroundingFacts | undefined): Lock | undefined {
   if (facts === undefined) return { key: "notGrounded" };
   const wo = facts.workOrder;
   if (wo !== undefined) {
-    const ref = { ref: recordReference(wo.id) };
-    if (wo.status === "SUBMITTED") return { key: "needsAll", params: ref };
+    const ref = workOrderRef(wo);
+    if (wo.status === "SUBMITTED") return { key: "needsAll", ref };
     // Not "and signed off": a completion inside the auto band lands COMPLETED directly.
-    if (wo.status === "APPROVED") return { key: "needsCompletion", params: ref };
-    if (wo.status === "COMPLETION_SUBMITTED") return { key: "needsSignOff", params: ref };
-    return undefined;
+    if (wo.status === "APPROVED") return { key: "needsCompletion", ref };
+    if (wo.status === "COMPLETION_SUBMITTED") return { key: "needsSignOff", ref };
+  } else if (facts.grounded.issue.status === "OPEN") {
+    // No work order: only a signalement closed as dealt with lets a release through.
+    return { key: "needsWorkOrder" };
   }
-  // No work order: only a signalement closed as dealt with lets a release through.
-  return facts.grounded.issue.status === "OPEN" ? { key: "needsWorkOrder" } : undefined;
+  const others = facts.grounded.otherOpenSafetyIssues;
+  const [first] = others;
+  return first === undefined
+    ? undefined
+    : { key: "otherSafetyIssueOpen", params: { count: others.length, description: first.description } };
 }
 
-const reference = (id: string) => ({ ref: recordReference(id) });
+/** Everything that stops this viewer releasing now: the flow first, then who they are. */
+function releaseLock(facts: GroundingFacts, viewer: Viewer): Lock | undefined {
+  return releaseBlocker(facts) ?? releaseLockFor(facts, viewer);
+}
+
+/** A work order as a lock reason names it: by its number (#608). */
+const workOrderRef = (wo: { number: number | null }): NumberedRecord => ({ kind: "work_order", number: wo.number });
 
 /** The fields of a work order the flow reads; both the list row and the grounding carry them. */
 export interface WorkOrderFacts {
   id: string;
+  number: number | null;
   status: WorkOrderStatus;
   createdBy: HistoryActor;
   completedBy: HistoryActor | null;
@@ -173,7 +209,7 @@ export function workOrderSteps(
   switch (wo.status) {
     case "SUBMITTED": {
       const makerLock: Lock | undefined = same(wo.createdBy, viewer)
-        ? { key: "makerCannotApprove", params: reference(wo.id) }
+        ? { key: "makerCannotApprove", ref: workOrderRef(wo) }
         : undefined;
       if (approving) {
         offer("approve-work-order", makerLock);
@@ -185,13 +221,13 @@ export function workOrderSteps(
         primary = {
           kind: "locked",
           step: step("complete-work-order"),
-          lock: { key: "needsAuthorization", params: reference(wo.id) },
+          lock: { key: "needsAuthorization", ref: workOrderRef(wo) },
         };
       } else if (releasing) {
         primary = {
           kind: "locked",
           step: step("release"),
-          lock: { key: "needsAll", params: reference(wo.id) },
+          lock: { key: "needsAll", ref: workOrderRef(wo) },
         };
       }
       if (managing) offer("cancel-work-order");
@@ -205,23 +241,24 @@ export function workOrderSteps(
         primary = {
           kind: "locked",
           step: step("approve-completion"),
-          lock: { key: "needsCompletion", params: reference(wo.id) },
+          lock: { key: "needsCompletion", ref: workOrderRef(wo) },
         };
       } else if (releasing) {
         primary = {
           kind: "locked",
           step: step("release"),
-          lock: { key: "needsCompletion", params: reference(wo.id) },
+          lock: { key: "needsCompletion", ref: workOrderRef(wo) },
         };
       }
-      // Costs attach only to open work (WORK_ORDER_NOT_OPEN otherwise).
+      // Costs attach to open work, and to completed work for the late invoice
+      // (#82); WORK_ORDER_NOT_OPEN otherwise.
       if (may.addCost(viewer)) offer("add-cost");
       if (managing) offer("cancel-work-order");
       break;
     }
     case "COMPLETION_SUBMITTED": {
       const completerLock: Lock | undefined = same(wo.completedBy, viewer)
-        ? { key: "completerCannotSignOff", params: reference(wo.id) }
+        ? { key: "completerCannotSignOff", ref: workOrderRef(wo) }
         : undefined;
       if (approving) {
         offer("approve-completion", completerLock);
@@ -233,7 +270,7 @@ export function workOrderSteps(
         primary = {
           kind: "locked",
           step: step("release"),
-          lock: { key: "needsSignOff", params: reference(wo.id) },
+          lock: { key: "needsSignOff", ref: workOrderRef(wo) },
         };
       }
       if (managing) offer("cancel-work-order");
@@ -241,12 +278,14 @@ export function workOrderSteps(
     }
     case "COMPLETED": {
       if (releasing && grounding !== undefined) {
-        const lock = releaseLockFor(grounding, viewer);
+        const lock = releaseLock(grounding, viewer);
         offer("release", lock);
         primary = lock
           ? { kind: "locked", step: step("release"), lock }
           : { kind: "go", step: step("release") };
       }
+      // The invoice that arrives after the close; it always waits for review (#82).
+      if (may.addCost(viewer)) offer("add-cost");
       break;
     }
     case "REJECTED":
@@ -257,11 +296,17 @@ export function workOrderSteps(
 }
 
 /** Why the work order is stopped, from the viewer's side: who it is waiting on. */
-export type WorkOrderWaiting = "authorization" | "completion" | "signOff" | "release";
+export type WorkOrderWaiting = "authorization" | "completion" | "signOff" | "release" | "otherSafetyIssue";
 
+/**
+ * `otherSafetyIssueOpen`: another safety-critical problem on the vehicle is
+ * still open, which blocks the release before any manager can act (#588, the
+ * server's SAFETY_ISSUE_OPEN).
+ */
 export function workOrderWaiting(
   status: WorkOrderStatus,
   isGrounding: boolean,
+  otherSafetyIssueOpen = false,
 ): WorkOrderWaiting | null {
   switch (status) {
     case "SUBMITTED":
@@ -271,7 +316,8 @@ export function workOrderWaiting(
     case "COMPLETION_SUBMITTED":
       return "signOff";
     case "COMPLETED":
-      return isGrounding ? "release" : null;
+      if (!isGrounding) return null;
+      return otherSafetyIssueOpen ? "otherSafetyIssue" : "release";
     case "REJECTED":
     case "CANCELLED":
       return null;
@@ -318,7 +364,7 @@ export function issueSteps(
     may.release(viewer)
   ) {
     // Closed without a repair: the override release stands on the signalement.
-    const lock = releaseLockFor(grounding, viewer);
+    const lock = releaseLock(grounding, viewer);
     const step: Step = { key: "release", record };
     offered.push({ step, lock });
     primary = lock ? { kind: "locked", step, lock } : { kind: "go", step };
@@ -330,6 +376,7 @@ export function issueSteps(
 export interface EntryFacts {
   id: string;
   status: "SUBMITTED" | "POSTED" | "REJECTED" | "REVERSED";
+  direction: "EXPENSE" | "REVENUE";
   reversesEntryId: string | null;
   recordedBy: HistoryActor;
   evidence: { state: "SUPPLIED" | "PAYMENT_REFERENCE" | "NOT_EXPECTED" | "NOT_SUPPLIED" };
@@ -374,10 +421,8 @@ export function entrySteps(entry: EntryFacts, viewer: Viewer): RecordSteps {
       primary = { kind: "locked", step: { key: "approve-entry", record }, lock };
     }
   }
-  if (
-    canReverseEntry(viewer.role, entry) &&
-    viewer.enabledModules.includes("FINANCE")
-  ) {
+  // An entry's panel opens only while Money is on (its manifest owns the panel).
+  if (canReverseEntry(viewer.role, entry)) {
     offered.push({ step: { key: "reverse-entry", record } });
   }
   return { primary, offered };
@@ -400,7 +445,7 @@ export function groundingStep(
     const record: PanelRef =
       wo !== undefined ? { kind: "work_order", id: wo.id } : { kind: "issue", id: facts.grounded.issue.id };
     const step: Step = { key: "release", record };
-    const lock = releaseBlocker(facts) ?? releaseLockFor(facts, viewer);
+    const lock = releaseLock(facts, viewer);
     return { step: lock ? { kind: "locked", step, lock } : { kind: "go", step }, record };
   }
   if (wo !== undefined) {
@@ -434,7 +479,20 @@ export type GroundedPhase =
   | "awaitingRelease"
   /** Completed through a sign-off (COMPLETION_SUBMITTED, then approved). */
   | "awaitingReleaseSignedOff"
-  | "issueClosedAwaitingRelease";
+  | "issueClosedAwaitingRelease"
+  /**
+   * The three above, while another safety-critical problem is OPEN: nobody can
+   * release until it is closed (SAFETY_ISSUE_OPEN), so no manager is waited on.
+   */
+  | "otherIssueOpen"
+  | "otherIssueOpenSignedOff"
+  | "issueClosedOtherIssueOpen";
+
+const BLOCKED_PHASE: Partial<Record<GroundedPhase, GroundedPhase>> = {
+  awaitingRelease: "otherIssueOpen",
+  awaitingReleaseSignedOff: "otherIssueOpenSignedOff",
+  issueClosedAwaitingRelease: "issueClosedOtherIssueOpen",
+};
 
 export type Situation =
   | { kind: "disposed"; status: DisposedStatus }
@@ -456,6 +514,8 @@ export type Situation =
       repaired: boolean;
       issueId: string;
       workOrderId: string | undefined;
+      /** The first other open safety-critical problem, when it is what blocks the release. */
+      blockedBy?: { id: string; description: string; count: number };
     };
 
 const DAY_MS = 86_400_000;
@@ -535,7 +595,11 @@ export function situationOf(
   }
   const facts = groundingFacts(asset);
   if (facts !== undefined) {
-    const phase = groundedPhase(facts, attention, signedOff);
+    const ready = groundedPhase(facts, attention, signedOff);
+    const others = facts.grounded.otherOpenSafetyIssues;
+    const [first] = others;
+    const blocked = first === undefined ? undefined : BLOCKED_PHASE[ready];
+    const phase = blocked ?? ready;
     return {
       kind: "grounded",
       since: facts.grounded.since,
@@ -549,6 +613,8 @@ export function situationOf(
         ),
       issueId: facts.grounded.issue.id,
       workOrderId: (facts.workOrder ?? facts.refused)?.id,
+      ...(blocked !== undefined &&
+        first !== undefined && { blockedBy: { id: first.id, description: first.description, count: others.length } }),
     };
   }
   if (asset.lifecycleStatus === "REGISTERED") return { kind: "registered" };
@@ -565,7 +631,16 @@ export function situationOf(
 // Attention: the to-do list
 
 /** Who an item is waiting on, when it is not the viewer. */
-export type WaitingOn = "workshop" | "finance" | "manager" | "operations" | "recorder" | "team";
+export type WaitingOn =
+  | "workshop"
+  | "finance"
+  | "financePeer"
+  | "approver"
+  | "director"
+  | "manager"
+  | "operations"
+  | "recorder"
+  | "team";
 
 export interface Todo {
   item: AssetAttentionItem;
@@ -580,6 +655,7 @@ const WAITING_ON: Record<AssetAttentionItem["code"], WaitingOn> = {
   WORK_ORDER_AWAITING_AUTHORIZATION: "manager",
   WORK_ORDER_IN_PROGRESS: "workshop",
   WORK_ORDER_AWAITING_SIGN_OFF: "manager",
+  WORK_ORDER_COST_TO_COME: "workshop",
   ASSET_AWAITING_RELEASE: "manager",
   DOCUMENT_EXPIRED: "operations",
   DOCUMENT_EXPIRING: "operations",
@@ -587,7 +663,20 @@ const WAITING_ON: Record<AssetAttentionItem["code"], WaitingOn> = {
   ENTRY_EVIDENCE_MISSING: "recorder",
   // Direction's own note waits for anyone on the vehicle to say they saw it.
   DIRECTION_NOTE: "team",
+  // Closing the stale trip is done on the trip, which the row opens (#577).
+  VEHICLE_DOUBLE_BOOKED: "operations",
 };
+
+/** A waiting entry waits on whoever the read says decides it (#542). */
+function waitingOn(item: AssetAttentionItem): WaitingOn {
+  if (item.code === "ENTRY_AWAITING_REVIEW") {
+    if (item.params.approver === "DIRECTION_APPROVES") return "director";
+    if (item.params.approver === "FINANCE_PEER_APPROVES") return "financePeer";
+    // A band no role on the chain decides: name no role (#645).
+    if (item.params.approver === "WAITS") return "approver";
+  }
+  return WAITING_ON[item.code];
+}
 
 export function attentionRecord(
   item: AssetAttentionItem,
@@ -605,6 +694,8 @@ export function attentionRecord(
       return { kind: "entry", id };
     case "note":
       return { kind: "note", id };
+    case "activity":
+      return { kind: "trip", id };
     case "asset_availability_interval":
       return groundingRecord(asset);
   }
@@ -632,7 +723,7 @@ export function attentionStep(
     step: { key, record },
     lock,
   });
-  const ref = reference(item.subject.id);
+  const ref: NumberedRecord = { kind: "work_order", number: item.params.recordNumber ?? null };
 
   switch (item.code) {
     case "ISSUE_UNPLANNED":
@@ -643,15 +734,17 @@ export function attentionStep(
     case "WORK_ORDER_AWAITING_AUTHORIZATION":
       if (!may.approveWorkOrders(viewer)) return { kind: "none" };
       return maker
-        ? locked("approve-work-order", { key: "makerCannotApprove", params: ref })
+        ? locked("approve-work-order", { key: "makerCannotApprove", ref })
         : go("approve-work-order");
     case "WORK_ORDER_IN_PROGRESS":
       return may.manageWorkOrders(viewer) ? go("complete-work-order") : { kind: "none" };
     case "WORK_ORDER_AWAITING_SIGN_OFF":
       if (!may.approveWorkOrders(viewer)) return { kind: "none" };
       return maker
-        ? locked("approve-completion", { key: "completerCannotSignOff", params: ref })
+        ? locked("approve-completion", { key: "completerCannotSignOff", ref })
         : go("approve-completion");
+    case "WORK_ORDER_COST_TO_COME":
+      return may.addCost(viewer) ? go("add-cost") : { kind: "none" };
     case "ASSET_AWAITING_RELEASE": {
       if (!may.release(viewer)) return { kind: "none" };
       if (viewer.principalType !== "HUMAN") return locked("release", { key: "humanOnly" });
@@ -671,6 +764,9 @@ export function attentionStep(
     case "DIRECTION_NOTE":
       // Everyone who sees the vehicle may say they saw it, but not its author.
       return maker ? { kind: "none" } : go("acknowledge-note");
+    case "VEHICLE_DOUBLE_BOOKED":
+      // No step on the vehicle: the trip is closed from the trip itself.
+      return { kind: "none" };
   }
 }
 
@@ -689,7 +785,7 @@ export function buildTodos(
       item,
       record: attentionRecord(item, asset),
       step: attentionStep(item, viewer, asset),
-      who: WAITING_ON[item.code],
+      who: waitingOn(item),
     }));
 }
 

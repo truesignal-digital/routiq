@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { EntryEvidenceFile, FinancialEntryDetail } from "@routiq/contracts";
 import { AttachEvidenceForm } from "@/finance/AttachEvidenceForm.js";
 import { ApproveEntryForm, RejectEntryForm, ReverseEntryForm } from "@/finance/EntryDecisionForms.js";
+import { recordAgainStep } from "@/finance/permissions.js";
 import { RecordEntryForm } from "@/finance/RecordEntryForm.js";
 import { RecordText } from "@/components/record-number";
 import { SheetTitle } from "@/components/ui/sheet";
 import { useEntry } from "@/finance/useEntry.js";
-import { formatDate, formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
+import { formatDate, formatDateTime, formatMoney, localizedLabel, notRecorded } from "@/lib/format.js";
 import { useVehicle, type PanelForm } from "../context.js";
 import { entrySteps, missingReceipt } from "../flow.js";
 import { DetailHeader, DetailSection, FactList, LinkButton, Note } from "../parts.js";
@@ -34,6 +35,7 @@ export function vehicleShare(entry: Pick<FinancialEntryDetail, "postings">, asse
 export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefined }) {
   const { t, i18n } = useTranslation();
   const { asset, viewer, panel, gates, pinnedLabel } = useVehicle();
+  const navigate = useNavigate();
   // Entries are read by the roles that read some, as the server scopes them; the workshop never fetches them.
   const query = useEntry(gates.entries ? id : undefined);
   const host = useFormHost(t("vehicle.panel.entryTitle"));
@@ -70,7 +72,7 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
       case "approve-entry":
         return <ApproveEntryForm {...common} />;
       case "reject-entry":
-        return <RejectEntryForm {...common} />;
+        return <RejectEntryForm {...common} entry={entry} />;
       case "reverse-entry":
         if (recordingAgain) {
           const onThisVehicle = entry.postings[0]?.assetId === asset.id;
@@ -92,7 +94,24 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
             />
           );
         }
-        return <ReverseEntryForm {...common} onRecordAgain={() => setRecordingAgain(true)} />;
+        return (
+          <ReverseEntryForm
+            {...common}
+            // role-config: a work-order cost is recorded again by the roles that book one (#559).
+            {...recordAgainStep(viewer, entry, {
+              recordAgain: () => setRecordingAgain(true),
+              openWorkOrder: (assetId, workOrderId) => {
+                if (assetId === asset.id) panel.openRecord({ kind: "work_order", id: workOrderId });
+                else
+                  void navigate({
+                    to: "/assets/$assetId/maintenance",
+                    params: { assetId },
+                    search: { panel: `work_order:${workOrderId}` },
+                  });
+              },
+            })}
+          />
+        );
       case "edit-entry": {
         // The recording form writes one line, so it cannot write a split entry
         // back whole; that one is rejected and recorded again.
@@ -136,7 +155,7 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
   const recorder = entry.recordedBy.displayName ?? t("history.actor.unknown");
   const waiting =
     entry.status === "SUBMITTED"
-      ? t("vehicle.panel.waitingOn.entryReview")
+      ? t("vehicle.panel.waitingOn.entryReview", { approver: entry.approver ?? "WAITS" })
       : missingReceipt(entry)
         ? t("vehicle.panel.waitingOn.entryReceipt", { name: recorder })
         : null;
@@ -171,7 +190,7 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
             [t("vehicle.panel.date"), formatDate(entry.economicDate, locale)],
             [
               t("vehicle.panel.costType"),
-              entry.category.layer === null ? t("vehicle.details.notRecorded") : t(`vehicle.layers.${entry.category.layer}`),
+              entry.category.layer === null ? notRecorded() : t(`vehicle.layers.${entry.category.layer}`),
             ],
             [t("vehicle.panel.thisVehicle"), money(share)],
             [
@@ -180,7 +199,7 @@ export function EntryRecord({ id, form }: { id: string; form: PanelForm | undefi
                 ? t("vehicle.panel.notShared")
                 : t("vehicle.panel.sharedWith", { amount: money(entry.amountMinor) }),
             ],
-            [t("vehicle.panel.paidTo"), entry.counterpartyName ?? t("vehicle.details.notRecorded")],
+            [t("vehicle.panel.paidTo"), entry.counterpartyName ?? notRecorded()],
             [t("vehicle.panel.recordedBy"), recorder],
             [
               t("vehicle.panel.postingPeriod"),

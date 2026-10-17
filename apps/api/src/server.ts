@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { MODULE_CODES, type MeResponse } from "@routiq/contracts";
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import Fastify from "fastify";
 import { LocalSessionProvider } from "./auth/local.js";
 import { makeRequireAuth, registerAuthRoutes } from "./auth/plugin.js";
@@ -10,6 +10,7 @@ import "./commands/add-or-renew-document.js";
 import "./commands/module-toggle.js";
 import "./commands/update-approval-threshold.js";
 import "./commands/update-approval-threshold-v2.js";
+import "./commands/set-summary-schedule.js";
 import "./commands/asset-lifecycle.js";
 import "./commands/record-financial-entry.js";
 import "./commands/entry-decisions.js";
@@ -22,12 +23,14 @@ import "./commands/create-activity.js";
 import "./commands/activity-legs.js";
 import "./commands/substitute-asset.js";
 import "./commands/activity-close.js";
+import "./commands/planned-trips.js";
 import "./commands/record-sheet.js";
 import "./commands/provision-workspace.js";
 import "./commands/appoint-director.js";
 import "./commands/category.js";
 import "./commands/set-template-preset.js";
 import "./commands/members.js";
+import "./commands/person-login.js";
 import "./commands/report-issue.js";
 import "./commands/issue-decisions.js";
 import "./commands/change-issue-severity.js";
@@ -45,14 +48,18 @@ import { listCommands } from "./commands/dispatcher.js";
 import { commandPayloadHmacKey } from "./commands/payload-fingerprint.js";
 import { registerCommandRoutes } from "./commands/routes.js";
 import type { Db } from "./db/client.js";
-import { principals, workspaceModules, workspaces } from "./db/schema.js";
+import { principals, workspaces } from "./db/schema.js";
 import { enabledPresets } from "./templates/registry.js";
 import type { ObjectStorage } from "./storage/types.js";
 import { registerActivityReadRoutes } from "./reads/activities.js";
+import { registerPlanningReadRoutes } from "./reads/planning.js";
 import { registerAssetReadRoutes } from "./reads/assets.js";
 import { registerDashboardReadRoutes } from "./reads/dashboard.js";
 import { registerNavCountsReadRoutes } from "./reads/nav-counts.js";
+import { registerFleetAttentionReadRoutes } from "./reads/fleet-attention.js";
+import { registerFleetUsageReadRoutes } from "./reads/fleet-usage.js";
 import { registerFinanceReadRoutes } from "./reads/finance.js";
+import { registerFinanceOverviewReadRoutes } from "./reads/finance-overview.js";
 import { registerFinanceSummaryReadRoutes } from "./reads/finance-summary.js";
 import { registerMemberReadRoutes } from "./reads/members.js";
 import { registerBranchReadRoutes } from "./reads/branches.js";
@@ -60,7 +67,10 @@ import { registerHistoryReadRoutes } from "./reads/history.js";
 import { registerMaintenanceReadRoutes } from "./reads/maintenance.js";
 import { registerApprovalChainReadRoutes } from "./reads/approval-chain.js";
 import { registerApprovalThresholdsReadRoutes } from "./reads/approval-thresholds.js";
+import { registerCompanySettingsReadRoutes } from "./reads/company-settings.js";
 import { ANY_ROLE, defineRead, requireReadGates } from "./reads/define-read.js";
+import { enabledModuleSet } from "./reads/read-gate.js";
+import { workspaceTimezone } from "./reads/workspace-day.js";
 import { registerTelemetryRoutes } from "./observability/telemetry.js";
 
 export interface ServerDeps {
@@ -136,28 +146,27 @@ export function buildServer({
   registerAssetReadRoutes(app, db, requireAuth);
   registerFinanceReadRoutes(app, db, requireAuth);
   registerFinanceSummaryReadRoutes(app, db, requireAuth);
+  registerFinanceOverviewReadRoutes(app, db, requireAuth);
   registerDashboardReadRoutes(app, db, requireAuth);
   registerNavCountsReadRoutes(app, db, requireAuth);
+  registerFleetAttentionReadRoutes(app, db, requireAuth);
+  registerFleetUsageReadRoutes(app, db, requireAuth);
   registerActivityReadRoutes(app, db, requireAuth);
+  registerPlanningReadRoutes(app, db, requireAuth);
   registerMemberReadRoutes(app, db, requireAuth);
   registerBranchReadRoutes(app, db, requireAuth);
   registerHistoryReadRoutes(app, db, requireAuth);
   registerMaintenanceReadRoutes(app, db, requireAuth);
   registerApprovalChainReadRoutes(app, db, requireAuth);
   registerApprovalThresholdsReadRoutes(app, db, requireAuth);
+  registerCompanySettingsReadRoutes(app, db, requireAuth);
   if (storage) registerArtifactRoutes(app, db, storage, requireAuth);
   const readDeps = { db, requireAuth };
   defineRead(app, readDeps, { path: "/v1/me", module: "CORE", roles: ANY_ROLE, branchScope: "workspace" }, async ({ auth, read }) => {
-    const { disabled, presets, principal, workspace } = await read(async (tx) => ({
-      disabled: await tx
-        .select({ moduleCode: workspaceModules.moduleCode })
-        .from(workspaceModules)
-        .where(
-          and(
-            eq(workspaceModules.workspaceId, auth.workspaceId),
-            eq(workspaceModules.enabled, false),
-          ),
-        ),
+    const { modules, presets, principal, workspace, timezone } = await read(async (tx) => ({
+      // The read gate's rule, so the menu and the per-command check agree on
+      // modules that are off until the vendor turns them on.
+      modules: await enabledModuleSet(tx, auth.workspaceId),
       // Grandfather clause and ordering both live in the helper, so this set
       // and the dispatcher's per-command check can never disagree.
       presets: await enabledPresets(tx, auth.workspaceId),
@@ -169,6 +178,7 @@ export function buildServer({
         .select({ name: workspaces.name })
         .from(workspaces)
         .where(eq(workspaces.id, auth.workspaceId)),
+      timezone: await workspaceTimezone(tx, auth.workspaceId),
     }));
     const displayName = principal[0]?.displayName;
     const workspaceName = workspace[0]?.name;
@@ -176,12 +186,12 @@ export function buildServer({
     if (displayName === undefined || workspaceName === undefined) {
       throw new Error("me: principal or workspace row missing for a verified session");
     }
-    const disabledCodes = new Set(disabled.map((row) => row.moduleCode));
     return {
       ...auth,
       displayName,
       workspaceName,
-      enabledModules: MODULE_CODES.filter((code) => !disabledCodes.has(code)),
+      timezone,
+      enabledModules: MODULE_CODES.filter((code) => modules.has(code)),
       enabledPresets: presets,
     } satisfies MeResponse;
   });

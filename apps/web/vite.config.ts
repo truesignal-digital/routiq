@@ -15,10 +15,16 @@ function appVersion(): string {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  define: {
-    __ROUTIQ_VERSION__: JSON.stringify(appVersion()),
-  },
+  plugins: [
+    react(),
+    tailwindcss(),
+    {
+      // In index.html, not in the JS: a version baked into one file renames it, every file
+      // importing it gets renamed in turn, and the gzip totals then move with each commit.
+      name: "routiq-version",
+      transformIndexHtml: () => [{ tag: "meta", attrs: { name: "routiq-version", content: appVersion() }, injectTo: "head" }],
+    },
+  ],
   // /assets/* is the app's truck routes; built files must not share it (#124).
   build: { assetsDir: "static" },
   resolve: {
@@ -37,6 +43,12 @@ export default defineConfig({
     // file runs in parallel on a CI runner; the 5 s default made them flaky
     // (#67). Still short enough to catch a hung test.
     testTimeout: 15_000,
+    // Off CI, half the cores (#556). `pnpm test` runs the packages' suites side
+    // by side and other checkouts often run theirs too; one worker per core each
+    // starved these CPU-bound tests past their timeouts. Measured here: 7 workers
+    // instead of 13 took 45 s instead of 40 s, with a third less CPU time and the
+    // slowest form tests 30-40% faster. CI is one job on its own runner.
+    ...(process.env.CI ? {} : { maxWorkers: "50%" }),
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test-setup.ts"],

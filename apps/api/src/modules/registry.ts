@@ -1,4 +1,4 @@
-import type { ModuleCode } from "@routiq/contracts";
+import { isModuleOn, type ModuleCode } from "@routiq/contracts";
 import { and, eq } from "drizzle-orm";
 import { workspaceModules } from "../db/schema.js";
 import type { Tx } from "../commands/dispatcher.js";
@@ -6,8 +6,8 @@ import type { Tx } from "../commands/dispatcher.js";
 /**
  * Per-workspace module entitlement (§3.3a). Command ownership is declared on
  * each CommandDefinition's `module` field — there is no separate list to sync.
- * Absent row = enabled: modules are on by default and disabling is the recorded
- * act. CORE is never disableable.
+ * Absent row = the module's default: on, except the few in
+ * MODULES_OFF_BY_DEFAULT, which the vendor turns on. CORE is never disableable.
  */
 export async function isModuleEnabled(
   tx: Tx,
@@ -25,5 +25,5 @@ export async function isModuleEnabled(
       ),
     )
     .limit(1);
-  return row?.enabled ?? true;
+  return isModuleOn(moduleCode, row);
 }

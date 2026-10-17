@@ -9,6 +9,7 @@ import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
 import { router as applicationRouter } from "../router.js";
 import { entryVehicleFields } from "../test-entry-fields.js";
+import { QUERY_DEFAULTS } from "../lib/query-defaults.js";
 
 const entry: FinancialEntryDetail = {
   id: "00000000-0000-4000-8000-000000000010",
@@ -37,6 +38,7 @@ const entry: FinancialEntryDetail = {
   ...entryVehicleFields,
   evidenceFiles: [],
   directionDecides: false,
+  approver: null,
   postings: [],
 };
 
@@ -85,7 +87,7 @@ function serveFinanceReadFixtures() {
         break;
       case "/v1/finance/summary":
         body = {
-          currency: "XAF", month: "2026-09", openPeriodCode: "2026-09", lastLockedPeriodCode: null,
+          currency: "XAF", month: "2026-09", unlockedPeriodCodes: [], lastLockedPeriodCode: null,
           outMinor: 0, inMinor: 0, missingReceipt: { count: 0, oldestEconomicDate: null }, waiting: null,
         };
         break;
@@ -107,22 +109,27 @@ function serveFinanceReadFixtures() {
 const languages = [
   {
     locale: "fr-CM",
-    date: "01/01/2026",
-    chicagoPostingDate: "31/12/2025",
+    date: "1 janvier 2026",
+    chicagoPostingDate: "31 décembre 2025",
+    // The ledger is a dense table: the short month (#712).
+    tableDate: "1 janv. 2026",
+    chicagoTablePostingDate: "31 déc. 2025",
     economicLabel: "Date comptable",
     postingLabel: "Date de comptabilisation",
     fullScreen: "Ouvrir en plein écran",
-    detailHeading: "Détail de l'écriture",
+    detailHeading: "FIN-001",
     periodPlaceholder: "Période (AAAA-MM)",
   },
   {
     locale: "en",
-    date: "1/1/26",
-    chicagoPostingDate: "12/31/25",
+    date: "1 January 2026",
+    chicagoPostingDate: "31 December 2025",
+    tableDate: "1 Jan 2026",
+    chicagoTablePostingDate: "31 Dec 2025",
     economicLabel: "Economic date",
     postingLabel: "Posting date",
     fullScreen: "Open full screen",
-    detailHeading: "Entry detail",
+    detailHeading: "FIN-001",
     periodPlaceholder: "Period (YYYY-MM)",
   },
 ];
@@ -132,6 +139,7 @@ const viewers = languages.flatMap((language) =>
     ...language,
     zone,
     postingDate: zone === "America/Chicago" ? language.chicagoPostingDate : language.date,
+    tablePostingDate: zone === "America/Chicago" ? language.chicagoTablePostingDate : language.tableDate,
   })),
 );
 
@@ -143,10 +151,11 @@ it.each(viewers)("preserves financial dates through list, drawer, detail and fil
   await i18n.changeLanguage(viewer.locale);
   sessionStore.save({ ...identity, token: "disposable-test-token", expiresAt: "2099-01-01T00:00:00Z" });
   const ledgerRequests = serveFinanceReadFixtures();
-  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client = new QueryClient({ defaultOptions: { queries: { ...QUERY_DEFAULTS, retry: false } } });
   const router = createRouter({
-    routeTree: applicationRouter.routeTree,
+    ...applicationRouter.options,
     history: createMemoryHistory({ initialEntries: ["/finance/entries"] }),
+    context: { queryClient: client },
   });
   render(
     <QueryClientProvider client={client}>
@@ -164,8 +173,8 @@ it.each(viewers)("preserves financial dates through list, drawer, detail and fil
   const postingColumn = headers.indexOf(
     screen.getByRole("columnheader", { name: viewer.postingLabel }),
   );
-  expect(cells[economicColumn]?.textContent).toBe(viewer.date);
-  expect(cells[postingColumn]?.textContent).toBe(viewer.postingDate);
+  expect(cells[economicColumn]?.textContent).toBe(viewer.tableDate);
+  expect(cells[postingColumn]?.textContent).toBe(viewer.tablePostingDate);
 
   await user.type(screen.getByPlaceholderText(viewer.periodPlaceholder), "2026-01");
   await waitFor(() => {

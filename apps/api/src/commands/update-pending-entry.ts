@@ -23,7 +23,7 @@ import {
   resolvePostingOrDefer,
   type FinancialEntryFacts,
 } from "./financial-entry-writer.js";
-import { requireWorkOrderAttribution } from "./record-financial-entry.js";
+import { requireRecordRole, requireWorkOrderAttribution } from "./record-financial-entry.js";
 
 const COMMAND = "update-pending-entry";
 
@@ -83,7 +83,8 @@ function auditLines(rows: Array<PostingRow | PostingInsert>) {
  * branch, one audit event holding what it said before and after.
  *
  * Only the author, whatever their role: an approver or admin who disagrees
- * rejects it. Only while SUBMITTED, at the version the author was shown, so an
+ * rejects it. And only an author whose role may still record the entry's
+ * direction: a driver records expenses only, so never edits revenue (#572). Only while SUBMITTED, at the version the author was shown, so an
  * approver acting first turns the author's save into VERSION_CONFLICT.
  *
  * The approval rules run again on the new facts, under record-expense or
@@ -176,9 +177,10 @@ export const updatePendingEntry: CommandDefinition<UpdatePendingEntryPayload> = 
       });
     }
 
+    const direction = BY_DIRECTION[entry.direction];
+    requireRecordRole(ctx.role, direction.recordCommand);
     requireWorkOrderAttribution(ctx.role, payload, COMMAND);
 
-    const direction = BY_DIRECTION[entry.direction];
     const { entryId: _entryId, ...fields } = payload;
     const facts: FinancialEntryFacts = {
       ...fields,
@@ -187,7 +189,12 @@ export const updatePendingEntry: CommandDefinition<UpdatePendingEntryPayload> = 
       categoryRefType: direction.categoryRefType,
     };
     assertPostingsBalance(facts);
-    const category = await resolveEntryReferences(tx, ctx, facts);
+    const { category, lateWorkOrderCost } = await resolveEntryReferences(
+      tx,
+      ctx,
+      facts,
+      envelope.origin,
+    );
 
     // Under the standalone command's rules, as the sheets evaluate their
     // entries: thresholds are tenant-editable per command type, and a second
@@ -196,6 +203,8 @@ export const updatePendingEntry: CommandDefinition<UpdatePendingEntryPayload> = 
       branchId: entry.branchId,
       categoryCode: payload.categoryCode,
       amountMinor: payload.amountMinor,
+      // An edit cannot move a late repair invoice into the auto band (#82).
+      requiresReview: lateWorkOrderCost,
     });
     const posting = await resolvePostingOrDefer(tx, ctx, envelope, payload.economicDate, approval);
     const postingPeriodId = posting.period?.periodId ?? null;

@@ -107,7 +107,7 @@ vi.mock("../activities/useActivities.js", () => ({
   },
 }));
 
-vi.mock("../documents/useCategories.js", () => ({
+vi.mock("../categories/useCategories.js", () => ({
   useCategories: () => ({
     data: [
       {
@@ -119,7 +119,7 @@ vi.mock("../documents/useCategories.js", () => ({
   }),
 }));
 
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => ({
     data: {
       assetClasses: [],
@@ -252,7 +252,8 @@ describe("ActivitiesScreen", () => {
     const current = new Date();
     const rangeFrom = new Date(current.getFullYear(), current.getMonth(), 1);
     const rangeTo = new Date(current.getFullYear(), current.getMonth(), 2);
-    const fullDate = new Intl.DateTimeFormat("en-US", { dateStyle: "full" });
+    // The calendar reads each day out day first: "Thursday, 1 October 2026" (#712).
+    const fullDate = new Intl.DateTimeFormat("en-GB", { dateStyle: "full" });
     const isoDate = (date: Date) =>
       [
         String(date.getFullYear()).padStart(4, "0"),
@@ -311,10 +312,5 @@ describe("ActivitiesScreen", () => {
     expect(issuedQueries[0]?.sort).toBe("startedAt:desc");
   });
 
-  it("shows a denied surface when the module is off", async () => {
-    meValue = { role: "ADMIN", enabledModules: ["CORE"] };
-    render(<ActivitiesScreen />);
-    expect(await screen.findByText("activities.title")).toBeTruthy();
-    expect(screen.queryByText("DLA-2026-00042")).toBeNull();
-  });
+  // With Trips off the shell never opens this screen: modules/manifests.test.tsx.
 });

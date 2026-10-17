@@ -128,12 +128,15 @@ export function PanelFooter({
   );
 }
 
-/** Four honest states, none of them "verified"; a reversal row carries none. */
+/**
+ * Four honest states, none of them "verified"; a reversal row carries none, and
+ * a cancelled entry no longer asks for its receipt (#473).
+ */
 export function EvidenceMark({
   entry,
   quiet = false,
 }: {
-  entry: Pick<FinancialEntryListItem, "evidence" | "reversesEntryId">;
+  entry: Pick<FinancialEntryListItem, "evidence" | "reversesEntryId" | "status">;
   /** Rows show only the state that needs someone; the record shows all four. */
   quiet?: boolean;
 }): ReactNode {
@@ -141,6 +144,7 @@ export function EvidenceMark({
   if (entry.reversesEntryId !== null) return null;
   const state = entry.evidence.state;
   if (state === "NOT_SUPPLIED") {
+    if (entry.status === "REVERSED") return null;
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium text-warning-foreground">
         <TriangleAlert className="size-3.5" aria-hidden />

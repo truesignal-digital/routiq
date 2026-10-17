@@ -90,13 +90,14 @@ export const METRIC_LABELS: Record<keyof RunMetrics, string> = {
   apiRequests: "API requests",
   consoleErrors: "Console errors",
   failedRequests: "Failed requests",
+  expectedRefusals: "Expected refusals",
   layoutShifts: "Layout shifts",
   cumulativeLayoutShift: "Cumulative layout shift",
   domNodes: "DOM nodes at the end",
 };
 
 /**
- * Every metric is lower-is-better, so a negative delta is a win. Pass
+ * Except expected refusals (informational), every metric is lower-is-better, so a negative delta is a win. Pass
  * comparable = false when either run failed: the runs did different amounts of
  * work, so deltas are shown without a verdict.
  */
@@ -107,9 +108,9 @@ export function metricRows(
 ): Array<{ label: string; after: string; before?: string; delta?: string; tone: "ok" | "bad" | "same" }> {
   if (after === undefined) return [];
   return (Object.keys(METRIC_LABELS) as Array<keyof RunMetrics>).map((key) => {
-    const a = after[key];
-    const b = before?.[key];
-    const tone = b === undefined || a === b || !comparable ? "same" : a < b ? "ok" : "bad";
+    const a = after[key] ?? 0;
+    const b = before === undefined ? undefined : (before[key] ?? 0);
+    const tone = key === "expectedRefusals" || b === undefined || a === b || !comparable ? "same" : a < b ? "ok" : "bad";
     const round = (n: number) => String(Math.round(n * 10_000) / 10_000);
     return {
       label: METRIC_LABELS[key],
@@ -132,15 +133,27 @@ export interface Track {
 }
 
 /**
- * Beats (shot times) become anchors too, holding the last painted frame, so the
- * clock reads exactly at every shot even when nothing repainted, as when a step
- * waits out a 30 s timeout.
+ * Shots anchor the clock and hold their unhighlighted viewport capture. Numeric
+ * beats (older callers) use the first paint before the next beat, or the last
+ * earlier paint when nothing changed. Screenshot pauses never swallow a beat.
  */
-export function compressCast(cast: CastIndex, beats: readonly number[] = []): Track {
-  const hidden = (t: number) => cast.pauses.some(([from, to]) => t >= from && t <= to);
+export function compressCast(cast: CastIndex, beats: readonly (number | Frame)[] = []): Track {
+  const shots = beats.flatMap((beat) => {
+    const t = typeof beat === "number" ? beat : beat.t;
+    return t === undefined ? [] : [{ t, shot: typeof beat === "number" ? undefined : beat }];
+  }).sort((a, b) => a.t - b.t);
+  const pauses = cast.pauses.map(([from, to]) => [from, Math.min(to, shots.find((beat) => beat.t > from)?.t ?? to)] as const);
+  // Repainting (caret, hover) is not progress during a failed action's timeout.
+  const waits = shots.flatMap((beat, i) => beat.shot?.label.startsWith("failed-") ? [[shots[i - 1]?.t ?? 0, beat.t] as const] : []);
+  const hidden = (t: number) => pauses.some(([from, to]) => t >= from && t <= to) || waits.some(([from, to]) => t > from && t < to);
   const events = [
     ...cast.frames.filter((frame) => !hidden(frame.t)).map((frame) => ({ t: frame.t, file: frame.file as string | undefined })),
-    ...beats.map((t) => ({ t, file: undefined })),
+    ...shots.map(({ t, shot }, i) => ({
+      t,
+      file: shot === undefined
+        ? cast.frames.find((frame) => frame.t >= t && frame.t < (shots[i + 1]?.t ?? Infinity))?.file
+        : path.posix.join("..", shot.frame),
+    })),
   ].sort((a, b) => a.t - b.t);
   if (!events.some((event) => event.file !== undefined)) throw new Error("the cast has no frames to play");
   const anchors: Track["anchors"] = [];
@@ -235,7 +248,8 @@ export function compileTimeline(slides: readonly Slide[], tracks: readonly Track
       if (stopped[i] || beat?.t === undefined || track === undefined) return { from, to: from, beat: stopped[i] ? undefined : beat, failed: false };
       return { from, to: Math.max(from, realToReel(track, beat.t)), beat, failed: beat.label.startsWith("failed-") };
     });
-    const play = Math.max(0.3, ...panes.map((pane) => pane.to - pane.from));
+    const duration = Math.max(0.3, ...panes.map((pane) => pane.to - pane.from));
+    const play = steps.length === 0 ? Math.min(MAX_GAP, duration) : duration;
     const dwell = panes.some((pane) => pane.beat?.box !== undefined) ? DWELL_ZOOM : DWELL;
     const caption = slide.kind === "frame" ? slide.after.caption : (slide.after?.caption ?? slide.before?.caption ?? "");
     steps.push({ start: t, play, dwell, caption, panes });
@@ -297,6 +311,8 @@ export function camera(box: Box | undefined, viewport: Viewport, scale: number, 
 }
 
 export interface PaneState {
+  /** The pane's header: who is signed in on a single run, the commit on a comparison. */
+  label: string;
   src: string;
   timer: string;
   note: string;
@@ -327,7 +343,25 @@ export function failureReason(caption: string): string {
   return detail.slice(0, 56);
 }
 
-export function stateAt(time: number, timeline: Timeline, tracks: readonly Track[], viewport: Viewport, layout: Layout, srcFor: (pane: number, file: string) => string): FrameState {
+/**
+ * Who a single run's pane shows as signed in: the account at the shot the reel
+ * last reached, so a flow that signs in as someone else relabels the pane
+ * (#565). Runs recorded before shots carried an account use the drive's.
+ */
+export function paneLabel(run: RunSummary, beat: Frame | undefined): string {
+  if (beat?.account === undefined) return run.account;
+  return beat.account === "" ? "Signed out" : beat.account;
+}
+
+export function stateAt(
+  time: number,
+  timeline: Timeline,
+  tracks: readonly Track[],
+  viewport: Viewport,
+  layout: Layout,
+  srcFor: (pane: number, file: string) => string,
+  labelFor: (pane: number, beat: Frame | undefined) => string = () => "",
+): FrameState {
   const current = [...timeline.steps].reverse().find((step) => step.start <= time);
   const panes = tracks.map((track, i): PaneState => {
     let c = 0;
@@ -335,13 +369,17 @@ export function stateAt(time: number, timeline: Timeline, tracks: readonly Track
     let noteTone: PaneState["noteTone"] = "muted";
     let zoom = 0;
     let box: Box | undefined;
+    let reached: Frame | undefined;
     for (const [n, step] of timeline.steps.entries()) {
       if (step.start > time) break;
       const pane = step.panes[i];
       if (pane === undefined) continue;
+      reached = pane.beat ?? reached;
       const local = time - step.start;
-      c = local < step.play ? Math.min(pane.from + local, pane.to) : pane.to;
-      if (local >= pane.to - pane.from && pane.beat !== undefined) {
+      if (noteTone !== "bad") note = "";
+      const played = n === 0 ? (local / step.play) * (pane.to - pane.from) : local;
+      c = local < step.play ? Math.min(pane.from + played, pane.to) : pane.to;
+      if ((n === 0 ? local >= step.play : local >= pane.to - pane.from) && pane.beat !== undefined) {
         const at = seconds(reelToReal(track, pane.to));
         if (pane.failed) {
           note = `Stopped at ${at}: ${failureReason(pane.beat.caption)}`;
@@ -366,12 +404,12 @@ export function stateAt(time: number, timeline: Timeline, tracks: readonly Track
             h: layout.scale * cam.k * (box.height + pad * 2),
             opacity: zoom,
           };
-    return { src: srcFor(i, frameAt(track, c)), timer: seconds(reelToReal(track, c)), note, noteTone, ...cam, ring };
+    return { label: labelFor(i, reached), src: srcFor(i, frameAt(track, c)), timer: seconds(reelToReal(track, c)), note, noteTone, ...cam, ring };
   });
   return {
     panes,
     caption: current?.caption ?? "",
-    captionOpacity: current === undefined ? 0 : ease((time - current.start) / 0.35),
+    captionOpacity: current === undefined || time >= timeline.endStart ? 0 : ease((time - current.start - current.play) / 0.35),
     intro: time < INTRO ? 1 - ease((time - (INTRO - FADE)) / FADE) : 0,
     end: time >= timeline.endStart ? ease((time - timeline.endStart) / FADE) : 0,
   };
@@ -397,7 +435,7 @@ export function appTheme(css: string): AppTheme {
 }
 
 const escape = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-const short = (commit: string) => commit.slice(0, 7);
+const short = (commit: string) => `${commit.slice(0, 7)}${commit.endsWith("-dirty") ? "-dirty" : ""}`;
 
 export function titleOf(run: RunSummary, options: ReelOptions): string {
   if (options.title !== undefined) return options.title;
@@ -405,7 +443,7 @@ export function titleOf(run: RunSummary, options: ReelOptions): string {
   return target.charAt(0).toUpperCase() + target.slice(1);
 }
 
-function playerHtml(theme: AppTheme, layout: Layout, runs: readonly RunSummary[], labels: readonly string[], title: string, end: string): string {
+function playerHtml(theme: AppTheme, layout: Layout, runs: readonly RunSummary[], title: string, end: string): string {
   const after = runs.at(-1);
   const role = after === undefined ? "" : after.role.charAt(0) + after.role.slice(1).toLowerCase();
   const who = after === undefined ? "" : `${escape(after.account)} · ${escape(role)} · ${escape(after.lang)}`;
@@ -414,7 +452,7 @@ function playerHtml(theme: AppTheme, layout: Layout, runs: readonly RunSummary[]
     .map(
       (pane, i) => `
 <section class="pane" style="left:${pane.x}px;top:${pane.y - 76}px;width:${pane.w}px">
-  <div class="head"><span class="label">${escape(labels[i] ?? "")}</span><span class="timer" id="timer${i}"></span></div>
+  <div class="head"><span class="label" id="label${i}"></span><span class="timer" id="timer${i}"></span></div>
   <div class="note" id="note${i}"></div>
 </section>
 <div class="window" style="left:${pane.x}px;top:${pane.y}px;width:${pane.w}px;height:${pane.h}px">
@@ -464,6 +502,7 @@ window.__render = async (s) => {
     const img = document.getElementById("img" + i);
     if (img.getAttribute("src") !== p.src) { img.setAttribute("src", p.src); loads.push(img.decode().catch(() => {})); }
     img.style.transform = "translate(" + p.tx + "px," + p.ty + "px) scale(" + p.k + ")";
+    document.getElementById("label" + i).textContent = p.label;
     document.getElementById("timer" + i).textContent = p.timer;
     const note = document.getElementById("note" + i);
     note.textContent = p.note;
@@ -532,19 +571,20 @@ export async function buildReel(afterDir: string, beforeDir: string | undefined,
   if (after.frames.length === 0) throw new Error(`${afterDir} has no shots; a reel needs at least one shot()`);
 
   const viewport = casts.at(-1)?.viewport ?? { width: 1440, height: 900 };
-  const tracks = casts.map((cast, i) => compressCast(cast, (runs[i]?.frames ?? []).flatMap((frame) => (frame.t === undefined ? [] : [frame.t]))));
+  const tracks = casts.map((cast, i) => compressCast(cast, runs[i]?.frames ?? []));
   const timeline = compileTimeline(planReel(after, before), tracks);
   const layout = computeLayout(runs.length, viewport);
   const theme = appTheme(readFileSync(path.join(REPO_ROOT, "apps/web/src/styles.css"), "utf8"));
   const title = titleOf(after, options);
-  const labels = before === undefined ? [after.account] : [`Before · ${short(before.commit)}`, `After · ${short(after.commit)}`];
+  const labelFor = (pane: number, beat: Frame | undefined) =>
+    before === undefined ? paneLabel(after, beat) : pane === 0 ? `Before · ${short(before.commit)}` : `After · ${short(after.commit)}`;
 
   const name = before === undefined ? "reel" : "reel-compare";
   const work = path.join(afterDir, name);
   rmSync(work, { recursive: true, force: true });
   mkdirSync(work, { recursive: true });
   const player = path.join(work, "player.html");
-  writeFileSync(player, playerHtml(theme, layout, runs, labels, title, endHtml(after, before)));
+  writeFileSync(player, playerHtml(theme, layout, runs, title, endHtml(after, before)));
   const srcFor = (pane: number, file: string) => pathToFileURL(path.join(runs[pane]?.dir ?? "", "cast", file)).href;
 
   const browser = await chromium.launch();
@@ -556,7 +596,7 @@ export async function buildReel(afterDir: string, beforeDir: string | undefined,
     let lastKey = "";
     let lastFile = "";
     for (let n = 0; n < count; n += 1) {
-      const state = stateAt(n / FPS, timeline, tracks, viewport, layout, srcFor);
+      const state = stateAt(n / FPS, timeline, tracks, viewport, layout, srcFor, labelFor);
       const file = path.join(work, `${String(n).padStart(6, "0")}.jpg`);
       const key = JSON.stringify(state, (_, value: unknown) => (typeof value === "number" ? Math.round(value * 100) / 100 : value));
       if (key === lastKey) {

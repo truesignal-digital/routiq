@@ -25,6 +25,7 @@ import {
 } from "./approvals-queue.js";
 import { currentBusinessDate, dayWindow } from "./business-date.js";
 import { serializeMinor } from "./serialize-minor.js";
+import { workspaceTimezone } from "./workspace-day.js";
 
 /**
  * Statuses whose postings are part of the ledger. A REVERSED entry keeps its
@@ -117,17 +118,14 @@ export function registerDashboardReadRoutes(
           );
 
           const [workspace] = await tx
-            .select({
-              defaultCurrency: workspaces.defaultCurrency,
-              timezone: workspaces.timezone,
-            })
+            .select({ defaultCurrency: workspaces.defaultCurrency })
             .from(workspaces)
             .where(eq(workspaces.id, auth.workspaceId));
           const currency = workspace?.defaultCurrency ?? "XAF";
 
           const windowEnd = currentBusinessDate(
             new Date(),
-            workspace?.timezone ?? "Africa/Douala",
+            await workspaceTimezone(tx, auth.workspaceId),
           );
           const windowDates = dayWindow(windowEnd, days);
           const windowStart = windowDates[0]!;

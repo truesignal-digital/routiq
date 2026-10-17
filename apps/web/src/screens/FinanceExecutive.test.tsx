@@ -9,6 +9,8 @@ import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
 import { router as applicationRouter } from "../router.js";
 import { entryVehicleFields } from "../test-entry-fields.js";
+import { testOverview } from "../finance/dashboard/test-overview.js";
+import { QUERY_DEFAULTS } from "../lib/query-defaults.js";
 
 const identity = { username: "executive-test", workspaceSlug: "executive-test" };
 const branchId = "00000000-0000-4000-8000-000000000020";
@@ -23,7 +25,7 @@ const entry: FinancialEntryDetail = {
   description: "Vehicle fuel", paymentReference: null, sourceReference: null,
   rejectedReason: null, reversesEntryId: null, reversedByEntryId: null, cancellation: null,
   ...entryVehicleFields,
-  evidenceFiles: [], postings: [], directionDecides: false,
+  evidenceFiles: [], postings: [], directionDecides: false, approver: null,
 };
 let client: QueryClient;
 
@@ -71,7 +73,7 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
         break;
       case "/v1/finance/summary":
         body = {
-          currency: "XAF", month: "2026-09", openPeriodCode: "2026-09", lastLockedPeriodCode: null,
+          currency: "XAF", month: "2026-09", unlockedPeriodCodes: [], lastLockedPeriodCode: null,
           outMinor: 0, inMinor: 0, missingReceipt: { count: 0, oldestEconomicDate: null }, waiting: null,
         };
         break;
@@ -87,6 +89,15 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
           pendingApprovals: { count: 0, outsideBranchCount: 0 }, series: [],
         };
         break;
+      case "/v1/finance/overview":
+        body = testOverview();
+        break;
+      case "/v1/todo":
+        body = { businessDate: "2026-10-09", scope: { ambientBranch: "IGNORED", branchIds: [branchId] }, rows: [], totalCount: 0 };
+        break;
+      case "/v1/coming-up":
+        body = { businessDate: "2026-10-09", windowDays: 14, scope: { ambientBranch: "IGNORED", branchIds: [branchId] }, rows: [], totalCount: 0, notCounted: [] };
+        break;
       case `/v1/finance/entries/${entry.id}`:
         body = entry;
         break;
@@ -100,9 +111,9 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
   });
   await i18n.changeLanguage(options.locale ?? "en");
   sessionStore.save({ ...identity, token: "disposable-executive-token", expiresAt: "2099-01-01T00:00:00Z" });
-  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client = new QueryClient({ defaultOptions: { queries: { ...QUERY_DEFAULTS, retry: false } } });
   const history = createMemoryHistory({ initialEntries: [path] });
-  const router = createRouter({ routeTree: applicationRouter.routeTree, history });
+  const router = createRouter({ ...applicationRouter.options, history, context: { queryClient: client } });
   // Initial navigation is asynchronous. Flush its React updates before starting
   // DOM query deadlines; the cold CI render can exceed findBy's default wait.
   await act(async () => {
@@ -112,8 +123,8 @@ async function openFinance(path = "/finance/entries", options: { locale?: string
 }
 
 const languages = [
-  { locale: "en", money: "Money", waiting: "Waiting your approval", months: "Accounting months", fullScreen: "Open full screen", detail: "Entry detail", reverse: "Reverse", empty: "No entry recorded for this branch.", error: "We couldn't load entries. Please retry." },
-  { locale: "fr-CM", money: "Argent", waiting: "En attente de votre approbation", months: "Mois comptables", fullScreen: "Ouvrir en plein écran", detail: "Détail de l'écriture", reverse: "Contre-passer", empty: "Aucune écriture pour cette agence.", error: "Impossible de charger les écritures. Réessayez." },
+  { locale: "en", money: "Money", waiting: "Waiting for your approval", months: "Accounting months", fullScreen: "Open full screen", detail: "FIN-EXEC", reverse: "Reverse", empty: "No entry recorded for this branch.", error: "We couldn't load entries. Please retry." },
+  { locale: "fr-CM", money: "Argent", waiting: "En attente de votre approbation", months: "Mois comptables", fullScreen: "Ouvrir en plein écran", detail: "FIN-EXEC", reverse: "Contre-passer", empty: "Aucune écriture pour cette agence.", error: "Impossible de charger les écritures. Réessayez." },
 ];
 const viewers = languages.flatMap((language) => [390, 1280].map((width) => ({ ...language, width })));
 
@@ -153,7 +164,9 @@ it.each(viewers)("shows loading without a false denial or money decisions ($loca
   const pending = new Promise<void>((resolve) => { release = resolve; });
   const { requests } = await openFinance("/finance/entries", { ...viewer, waitForLedger: pending });
   await waitFor(() => expect(requests.some(({ url }) => url.pathname === "/v1/finance/entries")).toBe(true));
-  expect(screen.getByText(viewer.locale === "en" ? "Loading…" : "Chargement…")).toBeTruthy();
+  // The route's loader holds the screen until its reads answer, so the loading
+  // state is the route's own skeleton (#496).
+  expect(await screen.findByText(viewer.locale === "en" ? "Opening the page…" : "Ouverture de la page…", {}, { timeout: 3_000 })).toBeTruthy();
   expect(screen.queryByRole("link", { name: viewer.months })).toBeNull();
   await act(async () => { release(); });
   await screen.findByRole("button", { name: "FIN-EXEC" });
@@ -170,9 +183,10 @@ it("does not expose a reversal form to an Administrateur following a direct reve
 it("opens a dashboard total in its period and retains branch/period after inspecting an entry", async () => {
   const { requests, history } = await openFinance("/");
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("link", { name: "Period expense" }));
+  // The Dashboard's Expenses tile opens the posted expenses of the month on screen.
+  await user.click(await screen.findByRole("link", { name: /^Expenses/ }));
   await screen.findByRole("button", { name: "FIN-EXEC" });
-  expect(screen.getByPlaceholderText("Period (YYYY-MM)").getAttribute("value")).toBe("2026-09");
+  expect(history.location.search).toContain("economicMonth=2026-10");
   expect(history.location.search).toContain("direction=EXPENSE");
   expect(history.location.search).toContain("status=LEDGER");
   const period = screen.getByPlaceholderText("Period (YYYY-MM)");
@@ -182,20 +196,21 @@ it("opens a dashboard total in its period and retains branch/period after inspec
   await user.click(await screen.findByRole("button", { name: "FIN-EXEC" }));
   const drawer = await screen.findByRole("dialog", { name: "FIN-EXEC" });
   await user.click(within(drawer).getByRole("button", { name: "Open full screen" }));
-  await screen.findByRole("heading", { name: "Entry detail" });
-  await user.click(screen.getByRole("button", { name: "History" }));
-  await screen.findByText("No history");
+  await screen.findByRole("heading", { level: 1, name: "FIN-EXEC" });
+  // History is the record page's last tab (#662).
+  await user.click(screen.getByRole("tab", { name: "History" }));
+  expect((await screen.findAllByText("No history")).length).toBeGreaterThan(0);
   await user.keyboard("{Escape}");
   await act(async () => { history.back(); });
   await screen.findByRole("button", { name: "FIN-EXEC" });
   expect(screen.getByPlaceholderText("Period (YYYY-MM)").getAttribute("value")).toBe("2026-08");
-  await waitFor(() => expect(requests.some(({ url }) => url.pathname === "/v1/finance/entries" && url.searchParams.get("periodCode") === "2026-09")).toBe(true));
+  await waitFor(() => expect(requests.some(({ url }) => url.pathname === "/v1/finance/entries" && url.searchParams.get("periodCode") === "2026-08")).toBe(true));
   expect(requests.filter(({ url }) => url.pathname === "/v1/finance/entries").every(({ url }) => url.searchParams.get("branchId") === branchId)).toBe(true);
 });
 
 it.each(["/finance/entries", `/finance/entries/${entry.id}`])("does not fetch financial records through a disabled-module direct link: %s", async (path) => {
   const { requests } = await openFinance(path, { financeEnabled: false });
-  await screen.findByText("This module is not enabled for your workspace.");
+  await screen.findByText("This module is not enabled for your company.");
   expect(screen.queryByText("FIN-EXEC")).toBeNull();
   expect(requests.some(({ url }) => url.pathname.startsWith("/v1/finance") || url.pathname.startsWith("/v1/history"))).toBe(false);
 });

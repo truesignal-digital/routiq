@@ -10,6 +10,7 @@ import { useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { ErrorState, LoadingState } from "@/components/page";
+import { ContextBox } from "@/components/record-page.js";
 import { StatusBadge } from "@/components/status-badge.js";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,9 +27,10 @@ import {
   formatDate,
   formatDateTime,
   formatMoney,
+  notRecorded,
 } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
-import { historyNote, Timeline, timelineAct } from "@/components/timeline.js";
+import { historyNote, Timeline, timelineAct, timelineActor } from "@/components/timeline.js";
 
 /**
  * Bookkeeping columns every write touches: the row's own identity, the version
@@ -78,51 +80,21 @@ export function isLifecycleEvent(eventType: string): boolean {
 }
 
 /**
- * The member credential and the lockout state guarding it, read off the
- * set-member-pin call site in `apps/api/src/commands/members.ts`. That a PIN
- * was reset is news an operator should see, so the event keeps its place in the
- * timeline — but naming the columns it touched adds nothing and puts the word
- * "pinHash" in front of everyone who opens the sheet.
- */
-const CREDENTIAL_FIELDS = new Set(["pinHash", "failedAttempts", "lockedUntil"]);
-
-/**
- * Defence in depth for credential columns a later command introduces. Whole
- * name segments, never substrings: that catches "pinHash" and a future
- * "passwordHash" or "apiSecret" while leaving "shipping", "grouping" and
- * "lockedAt" alone. The field vocabulary is open by design, and a chip that
- * quietly disappears takes real information out of the timeline with it —
- * "lockedAt" is when a posting period was locked, which is core domain news.
- */
-const CREDENTIAL_SEGMENTS = new Set([
-  "pin",
-  "password",
-  "secret",
-  "hash",
-  "salt",
-  "token",
-]);
-
-function isCredentialField(field: string): boolean {
-  if (CREDENTIAL_FIELDS.has(field)) return true;
-  return field
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .split(/[\s_-]+/)
-    .some((segment) => CREDENTIAL_SEGMENTS.has(segment.toLowerCase()));
-}
-
-/**
- * What decides whether a row is worth showing — bookkeeping only, deliberately
- * blind to credentials. An event that touched nothing but a PIN still moved
- * something real, so it stays visible and simply renders without chips.
+ * What decides whether a row is worth showing: bookkeeping only. An event that
+ * touched nothing but a PIN still moved something real, so it stays visible
+ * and simply renders without chips.
  */
 function dataFields(changedFields: readonly string[]): string[] {
   return changedFields.filter((field) => !BOOKKEEPING_FIELDS.has(field));
 }
 
-/** What is worth naming on the row: the data fields, minus the unspeakable. */
-function chipFields(changedFields: readonly string[]): string[] {
-  return dataFields(changedFields).filter((field) => !isCredentialField(field));
+/**
+ * What is worth naming on the row: the fields its change list shows, as the
+ * server worked them out (`shownFields`), minus the bookkeeping. A chip always
+ * has its row under "Show changes" (#465).
+ */
+function chipFields(item: HistoryItem): string[] {
+  return dataFields(item.shownFields);
 }
 
 /** A row earns its place if data moved, or if its type alone is the news. */
@@ -151,26 +123,12 @@ export function RecordHistorySheet({
   entityId,
   className,
 }: RecordHistorySheetProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [showAll, setShowAll] = useState(false);
   const isMobile = useIsMobile();
-  const historyQuery = useHistory(entityType, entityId, { enabled: open });
-
-  const locale = i18n.language;
-  const items = historyQuery.data?.pages.flatMap((page) => page.items) ?? [];
-  const shown = showAll ? items : items.filter(isDataChange);
 
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(next: boolean) => {
-        setOpen(next);
-        // Someone who asked for the full trail asked it of that record, not of
-        // the next one they open.
-        if (next) setShowAll(false);
-      }}
-    >
+    <Sheet open={open} onOpenChange={(next: boolean) => setOpen(next)}>
       <SheetTrigger
         render={<Button variant="outline" className={className} />}
       >
@@ -187,82 +145,169 @@ export function RecordHistorySheet({
         </SheetHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-6">
-          {historyQuery.isPending ? (
-            <LoadingState label={t("history.loading")} rows={3} />
-          ) : historyQuery.isError ? (
-            <ErrorState
-              message={t("history.loadFailed")}
-              retryLabel={t("history.retry")}
-              onRetry={() => void historyQuery.refetch()}
-            />
-          ) : items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("history.empty")}</p>
-          ) : (
-            <>
-              <div className="flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="desktop-sm"
-                  aria-pressed={showAll}
-                  onClick={() => setShowAll((value) => !value)}
-                  className="aria-pressed:bg-muted aria-pressed:text-foreground"
-                >
-                  {t("history.showAll")}
-                </Button>
-              </div>
-
-              {shown.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {t("history.emptyChanges")}
-                </p>
-              ) : (
-                <Timeline
-                  groupByDay
-                  events={shown.map((item) => ({
-                    id: item.eventId,
-                    occurredAt: item.occurredAt,
-                    actor: item.actor,
-                    act: timelineAct(item.eventType, t),
-                    note: historyNote(item, t),
-                    // Plain web is the norm and needs no label; anything else
-                    // changes how much the line can be trusted, so it is stamped.
-                    aside:
-                      item.command.origin === "HUMAN_UI" ? undefined : (
-                        <StatusBadge tone="info" icon={null}>
-                          {t(`history.origin.${item.command.origin}`, {
-                            defaultValue: item.command.origin,
-                          })}
-                        </StatusBadge>
-                      ),
-                    children: (
-                      <HistoryRowChanges
-                        item={item}
-                        entityType={entityType}
-                        entityId={entityId}
-                        locale={locale}
-                      />
-                    ),
-                  }))}
-                />
-              )}
-            </>
-          )}
-
-          {historyQuery.hasNextPage === true && (
-            <Button
-              variant="outline"
-              className="w-full"
-              disabled={historyQuery.isFetchingNextPage}
-              onClick={() => void historyQuery.fetchNextPage()}
-            >
-              {historyQuery.isFetchingNextPage
-                ? t("history.loadingMore")
-                : t("history.loadMore")}
-            </Button>
-          )}
+          {/* Remounted on every opening: the full trail asked of one record is
+              not asked of the next one opened. */}
+          {open && <HistoryFeed entityType={entityType} entityId={entityId} />}
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+/**
+ * A record page's History tab (#662): the same trail as the sheet, in the
+ * page. History is the last tab, never a button inside a card or the header.
+ */
+export function RecordHistory({ entityType, entityId }: { entityType: HistoryEntityType; entityId: string }) {
+  const { t } = useTranslation();
+  return (
+    <section aria-label={t("history.title")} className="flex flex-col gap-4">
+      <HistoryFeed entityType={entityType} entityId={entityId} />
+    </section>
+  );
+}
+
+/**
+ * The three latest data changes for a record's context column, with a link
+ * to the History tab. Bookkeeping-only events stay out, as in the trail.
+ */
+export function LatestHistory({
+  entityType,
+  entityId,
+  onShowAll,
+}: {
+  entityType: HistoryEntityType;
+  entityId: string;
+  onShowAll: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const historyQuery = useHistory(entityType, entityId, { enabled: true });
+  const items = (historyQuery.data?.pages.flatMap((page) => page.items) ?? []).filter(isDataChange).slice(0, 3);
+
+  return (
+    <ContextBox
+      title={t("history.latest")}
+      action={
+        <button
+          type="button"
+          onClick={onShowAll}
+          className="relative text-sm font-medium text-primary underline-offset-4 after:absolute after:-inset-x-2 after:-inset-y-3 hover:underline"
+        >
+          {t("history.allHistory")}
+        </button>
+      }
+    >
+      {historyQuery.isPending ? (
+        <LoadingState label={t("history.loading")} rows={2} rowClassName="h-6 rounded-md" />
+      ) : historyQuery.isError ? (
+        <p className="text-muted-foreground">{t("history.loadFailed")}</p>
+      ) : items.length === 0 ? (
+        <p className="text-muted-foreground">{t("history.empty")}</p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {items.map((item) => (
+            <li key={item.eventId} className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0">{timelineAct(item.eventType, t)}</span>
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {[timelineActor(item.actor, t), formatDate(item.occurredAt, i18n.language)].join(" · ")}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </ContextBox>
+  );
+}
+
+/**
+ * The trail itself, fetched when mounted. It opens on the data changes only;
+ * the full trail stays one button away and is never the thing you land on.
+ */
+function HistoryFeed({ entityType, entityId }: { entityType: HistoryEntityType; entityId: string }) {
+  const { t, i18n } = useTranslation();
+  const [showAll, setShowAll] = useState(false);
+  const historyQuery = useHistory(entityType, entityId, { enabled: true });
+
+  const locale = i18n.language;
+  const items = historyQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const shown = showAll ? items : items.filter(isDataChange);
+
+  return (
+    <>
+      {historyQuery.isPending ? (
+        <LoadingState label={t("history.loading")} rows={3} />
+      ) : historyQuery.isError ? (
+        <ErrorState
+          message={t("history.loadFailed")}
+          retryLabel={t("history.retry")}
+          onRetry={() => void historyQuery.refetch()}
+        />
+      ) : items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t("history.empty")}</p>
+      ) : (
+        <>
+          <div className="flex justify-end">
+            <Button
+              variant="ghost"
+              size="desktop-sm"
+              aria-pressed={showAll}
+              onClick={() => setShowAll((value) => !value)}
+              className="aria-pressed:bg-muted aria-pressed:text-foreground"
+            >
+              {t("history.showAll")}
+            </Button>
+          </div>
+
+          {shown.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {t("history.emptyChanges")}
+            </p>
+          ) : (
+            <Timeline
+              groupByDay
+              events={shown.map((item) => ({
+                id: item.eventId,
+                occurredAt: item.occurredAt,
+                actor: item.actor,
+                act: timelineAct(item.eventType, t),
+                note: historyNote(item, t),
+                // Plain web is the norm and needs no label; anything else
+                // changes how much the line can be trusted, so it is stamped.
+                aside:
+                  item.command.origin === "HUMAN_UI" ? undefined : (
+                    <StatusBadge tone="info" icon={null}>
+                      {t(`history.origin.${item.command.origin}`, {
+                        defaultValue: item.command.origin,
+                      })}
+                    </StatusBadge>
+                  ),
+                children: (
+                  <HistoryRowChanges
+                    item={item}
+                    entityType={entityType}
+                    entityId={entityId}
+                    locale={locale}
+                  />
+                ),
+              }))}
+            />
+          )}
+        </>
+      )}
+
+      {historyQuery.hasNextPage === true && (
+        <Button
+          variant="outline"
+          className="self-center"
+          disabled={historyQuery.isFetchingNextPage}
+          onClick={() => void historyQuery.fetchNextPage()}
+        >
+          {historyQuery.isFetchingNextPage
+            ? t("history.loadingMore")
+            : t("history.loadMore")}
+        </Button>
+      )}
+    </>
   );
 }
 
@@ -280,7 +325,7 @@ function HistoryRowChanges({
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-  const changedFields = chipFields(item.changedFields);
+  const changedFields = chipFields(item);
 
   return (
     <>
@@ -423,7 +468,7 @@ function formatChangeValue(
   locale: string,
   t: TFunction,
 ): string {
-  const none = t("history.diff.none");
+  const none = notRecorded(locale);
   const list = (items: string[]) =>
     items.length === 0
       ? none

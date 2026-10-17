@@ -20,14 +20,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
+    # Anonymous Docker Hub pulls are rate-limited per runner IP and failed every
+    # run for hours (#603). Google's Docker Hub mirror serves the same images
+    # without that limit. The prefix sends every testcontainers pull through it:
+    # postgres, rustfs and testcontainers' own ryuk reaper.
+    env:
+      TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX: mirror.gcr.io
+
     services:
       # Not used by the test suite — apps/api tests start their own
-      # postgres:17-alpine via testcontainers (src/test/global-setup.ts).
+      # postgres:17-alpine via testcontainers (src/test/global-setup.ts),
+      # also through the mirror (job env above).
       # This container exists to rehearse the deploy-time migration path
       # (`pnpm db:migrate` through drizzle-kit, spec §3 step 3) against a
       # real server before a merge can reach the demo box.
       postgres:
-        image: postgres:17
+        image: mirror.gcr.io/library/postgres:17
         env:
           POSTGRES_USER: routiq
           POSTGRES_PASSWORD: routiq

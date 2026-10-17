@@ -23,7 +23,8 @@ const WORK_ORDER_ID = "1a2b3c4d-0000-4000-8000-000000000001";
 const ISSUE_ID = "5e6f7a8b-0000-4000-8000-000000000002";
 const ASSET_ID = "9c0d1e2f-0000-4000-8000-000000000003";
 const NEW_RECORD_ID = "0000aaaa-0000-4000-8000-00000000000f";
-const WORK_ORDER_REFERENCE = "1A2B3C4D";
+/** This suite's `t` returns keys: the work order's number renders as its catalog key (#608). */
+const WORK_ORDER_REFERENCE = "common.recordNumber.workOrder";
 
 const mocks = vi.hoisted(() => ({
   submit: vi.fn(),
@@ -31,10 +32,62 @@ const mocks = vi.hoisted(() => ({
   language: "en",
 }));
 
-vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => applyNavigate,
-  useSearch: () => useTestSearch(),
-}));
+/** The address the screen draws its tab from; a tab link or a navigate moves it. */
+const path = vi.hoisted(() => {
+  let current = "/maintenance/work-orders";
+  const listeners = new Set<() => void>();
+  return {
+    get: () => current,
+    set: (next: string) => {
+      current = next;
+      for (const listener of listeners) listener();
+    },
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+});
+
+vi.mock("@tanstack/react-router", async () => {
+  const { useSyncExternalStore } = await import("react");
+  return {
+    useNavigate: () => (options: { to?: string }) => {
+      if (typeof options.to === "string") path.set(options.to);
+      applyNavigate(options);
+    },
+    useSearch: () => useTestSearch(),
+    useRouterState: ({ select }: { select: (state: { location: { pathname: string } }) => unknown }) =>
+      select({ location: { pathname: useSyncExternalStore(path.subscribe, path.get) } }),
+    useMatches: ({ select }: { select: (matches: Array<{ routeId: string }>) => unknown }) =>
+      select([{ routeId: `/app${useSyncExternalStore(path.subscribe, path.get)}` }]),
+    Link: ({
+      to,
+      search: _search,
+      children,
+      onClick,
+      ...props
+    }: {
+      to: string;
+      search?: unknown;
+      children?: ReactNode;
+      onClick?: (event: { preventDefault: () => void }) => void;
+    }) => (
+      <a
+        href={to}
+        {...props}
+        onClick={(event) => {
+          event.preventDefault();
+          onClick?.(event);
+          path.set(to);
+          applyNavigate({ search: {} });
+        }}
+      >
+        {children}
+      </a>
+    ),
+  };
+});
 vi.mock("@/components/ui/toast.js", () => ({ toast: { add: mocks.toastAdd } }));
 
 vi.mock("../commands/instance.js", () => ({
@@ -61,9 +114,9 @@ vi.mock("react-i18next", async () => {
 
 // The workspace's ISSUE_TYPE list: a category travels as its code and reads
 // back as the label in the viewer's language.
-vi.mock("../documents/useCategories.js", async () => {
-  const actual = await vi.importActual<typeof import("../documents/useCategories.js")>(
-    "../documents/useCategories.js",
+vi.mock("../categories/useCategories.js", async () => {
+  const actual = await vi.importActual<typeof import("../categories/useCategories.js")>(
+    "../categories/useCategories.js",
   );
   return {
     ...actual,
@@ -150,6 +203,7 @@ const { MaintenanceScreen } = await import("./MaintenanceScreen.js");
 function makeWorkOrder(status: WorkOrderStatus): WorkOrderListItem {
   return {
     id: WORK_ORDER_ID,
+    number: 7,
     status,
     description: "Remplacement des plaquettes de frein",
     asset: {
@@ -167,8 +221,9 @@ function makeWorkOrder(status: WorkOrderStatus): WorkOrderListItem {
       status === "COMPLETED" || status === "COMPLETION_SUBMITTED" ? 45_000 : null,
     declaredCostMinor: null,
     costOutcome: status === "COMPLETED" || status === "COMPLETION_SUBMITTED" ? "LINES" : null,
+    costToCome: null,
     currency: "XAF",
-    issue: { id: ISSUE_ID, safetyCritical: true },
+    issue: { id: ISSUE_ID, number: 3, safetyCritical: true },
     createdAt: "2026-08-01T08:00:00.000Z",
     completedAt: null,
     cancelledAt: null,
@@ -215,11 +270,13 @@ function makeDetail(row: WorkOrderListItem): WorkOrderDetail {
       },
     ],
     pendingCostLines: [],
+    otherBranchesCostMinor: 0,
   };
 }
 
 const issue: IssueListItem = {
   id: ISSUE_ID,
+  number: 3,
   asset: { id: ASSET_ID, assetCode: "CMR-TR-014", registrationNumber: "LT-8842-AB" },
   branch: {
     id: "22222222-2222-4222-8222-222222222222",
@@ -235,7 +292,7 @@ const issue: IssueListItem = {
   resolutionNote: null,
   dismissedAt: null,
   dismissReason: null,
-  workOrders: [{ id: WORK_ORDER_ID, status: "APPROVED" }],
+  workOrders: [{ id: WORK_ORDER_ID, number: 7, status: "APPROVED" }],
   assetUnavailable: true,
   rowVersion: 2,
 };
@@ -251,6 +308,7 @@ const admin: MeContext = {
   branchScope: "ALL",
   enabledModules: ["CORE", "ASSETS", "MAINTENANCE"],
   enabledPresets: ["TRUCKING"],
+  timezone: "Africa/Douala",
 };
 
 function as(role: MeContext["role"]): MeContext {
@@ -290,6 +348,7 @@ function submittedEnvelope(): Record<string, unknown> {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  path.set("/maintenance/work-orders");
   issuedQueries.length = 0;
   issuedIssueQueries.length = 0;
   me = admin;
@@ -349,6 +408,42 @@ describe("MaintenanceScreen — work order queue", () => {
     renderScreen();
     await screen.findByText(WORK_ORDER_REFERENCE);
     expect(issuedQueries.at(-1)?.branchId).toBeUndefined();
+  });
+});
+
+describe("MaintenanceScreen — cost columns", () => {
+  const headers = async () => {
+    await screen.findByText(WORK_ORDER_REFERENCE);
+    return screen.getAllByRole("columnheader").map((header) => header.textContent);
+  };
+
+  it("shows Expected and Actual cost while FINANCE is on", async () => {
+    me = { ...admin, enabledModules: [...admin.enabledModules, "FINANCE"] };
+    renderScreen();
+    expect(await headers()).toEqual(
+      expect.arrayContaining([
+        "maintenance.workOrders.columns.expectedCost",
+        "maintenance.workOrders.columns.actualCost",
+      ]),
+    );
+  });
+
+  it("drops the Actual cost column while FINANCE is off, keeping the estimate (#640)", async () => {
+    workOrderRow = { ...makeWorkOrder("COMPLETED"), actualCostMinor: null, costOutcome: null };
+    renderScreen();
+    const shown = await headers();
+    expect(shown).toContain("maintenance.workOrders.columns.expectedCost");
+    expect(shown).not.toContain("maintenance.workOrders.columns.actualCost");
+    expect(screen.queryByText(/not recorded|notRecorded/i)).toBeNull();
+  });
+
+  it("drops both cost columns for a driver, who reads no work-order money (#390)", async () => {
+    me = { ...as("DRIVER"), enabledModules: [...admin.enabledModules, "FINANCE"] };
+    workOrderRow = { ...makeWorkOrder("APPROVED"), expectedCostMinor: null };
+    renderScreen();
+    const shown = await headers();
+    expect(shown).not.toContain("maintenance.workOrders.columns.expectedCost");
+    expect(shown).not.toContain("maintenance.workOrders.columns.actualCost");
   });
 });
 
@@ -555,14 +650,14 @@ describe("MaintenanceScreen — state-driven actions", () => {
     expect(screen.queryByRole("button", { name: "commands.create-work-order.label" })).toBeNull();
     expect(screen.queryByRole("button", { name: "commands.report-issue.label" })).toBeNull();
     // …and no menu on an open signalement.
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
     await screen.findByText("Freins qui sifflent en descente");
     expect(screen.queryByRole("button", { name: "dataTable.actions" })).toBeNull();
   });
 });
 
 describe("MaintenanceScreen — row sheet costs", () => {
-  it("keeps pending cost lines apart from the posted set", async () => {
+  it("lists pending lines in Costs, marked awaiting review, so the list adds up to Actual cost (#642)", async () => {
     const user = userEvent.setup();
     detail = {
       ...makeDetail(workOrderRow),
@@ -582,45 +677,67 @@ describe("MaintenanceScreen — row sheet costs", () => {
     renderScreen();
 
     const sheet = await openSheet(user);
-    const posted = within(sheet).getByText("maintenance.detail.costLines").parentElement;
-    const pending = within(sheet).getByText("maintenance.detail.pendingCostLines")
-      .parentElement;
-    if (posted === null || pending === null) throw new Error("cost sections missing");
+    const costs = within(sheet).getByText("maintenance.detail.costLines").parentElement;
+    if (costs === null) throw new Error("cost section missing");
 
-    expect(within(posted).getByText("DLA-2026-00007")).toBeTruthy();
-    expect(within(posted).queryByText("DLA-2026-00009")).toBeNull();
-    expect(within(pending).getByText("DLA-2026-00009")).toBeTruthy();
-    expect(
-      within(pending).getByText("finance.entries.status.SUBMITTED"),
-    ).toBeTruthy();
-    expect(
-      within(pending).getByText("maintenance.detail.pendingCostLinesHint"),
-    ).toBeTruthy();
+    expect(within(costs).getByText("DLA-2026-00007")).toBeTruthy();
+    expect(within(costs).getByText("DLA-2026-00009")).toBeTruthy();
+    expect(within(costs).getByText("finance.entries.status.SUBMITTED")).toBeTruthy();
+    // No second section telling the reader these are not counted.
+    expect(within(sheet).queryByText("maintenance.detail.pendingCostLines")).toBeNull();
+    expect(within(sheet).queryByText("maintenance.detail.pendingCostLinesHint")).toBeNull();
   });
 
-  it("shows a driver dashes and no cost sections when the server withholds the money (#390)", async () => {
+  it("sums the lines booked in other branches into one line, without their details (#643)", async () => {
     const user = userEvent.setup();
-    me = as("DRIVER");
-    workOrderRow = { ...makeWorkOrder("COMPLETED"), expectedCostMinor: null, actualCostMinor: null };
-    detail = { ...makeDetail(workOrderRow), costLines: null, pendingCostLines: null };
+    detail = { ...makeDetail(workOrderRow), otherBranchesCostMinor: 12_000 };
     renderScreen();
 
     const sheet = await openSheet(user);
-    const fact = (label: string) => within(sheet).getByText(label).nextElementSibling?.textContent;
-    expect(fact("maintenance.workOrders.columns.expectedCost")).toBe("—");
-    expect(fact("maintenance.workOrders.columns.actualCost")).toBe("—");
+    const costs = within(sheet).getByText("maintenance.detail.costLines").parentElement;
+    if (costs === null) throw new Error("cost section missing");
+    const other = within(costs).getByText("maintenance.detail.otherBranchesCost").closest("li");
+    if (other === null) throw new Error("other-branches line missing");
+    expect((other.textContent ?? "").replace(/[\s\u00a0\u202f,]/g, "")).toContain("12000");
+  });
+
+  it("shows no other-branches line when every line is the reader's", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    expect(within(sheet).queryByText("maintenance.detail.otherBranchesCost")).toBeNull();
+  });
+
+  it("keeps the estimate in the sheet while FINANCE is off, and drops the actual cost (#640)", async () => {
+    const user = userEvent.setup();
+    workOrderRow = { ...makeWorkOrder("COMPLETED"), actualCostMinor: null, costOutcome: null };
+    detail = { ...makeDetail(workOrderRow), costLines: null, pendingCostLines: null, otherBranchesCostMinor: null };
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    expect(within(sheet).getByText("maintenance.workOrders.columns.expectedCost")).toBeTruthy();
+    expect((sheet.textContent ?? "").replace(/[\s\u00a0\u202f,]/g, "")).toContain("40000");
+    expect(within(sheet).queryByText("maintenance.workOrders.columns.actualCost")).toBeNull();
+    expect(within(sheet).queryByText("maintenance.detail.costLines")).toBeNull();
+  });
+
+  it("shows a driver no cost facts and no cost sections when the server withholds the money (#390)", async () => {
+    const user = userEvent.setup();
+    me = as("DRIVER");
+    workOrderRow = { ...makeWorkOrder("COMPLETED"), expectedCostMinor: null, actualCostMinor: null };
+    detail = { ...makeDetail(workOrderRow), costLines: null, pendingCostLines: null, otherBranchesCostMinor: null };
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    // Withheld is not "not recorded": the cost facts are left out (#306).
+    expect(within(sheet).queryByText("maintenance.workOrders.columns.expectedCost")).toBeNull();
+    expect(within(sheet).queryByText("maintenance.workOrders.columns.actualCost")).toBeNull();
     expect(within(sheet).queryByText("maintenance.detail.costLines")).toBeNull();
     expect(within(sheet).queryByText("maintenance.detail.costLinesEmpty")).toBeNull();
     expect(within(sheet).queryByText("maintenance.detail.pendingCostLines")).toBeNull();
   });
 
-  it("shows no pending section when nothing awaits approval", async () => {
-    const user = userEvent.setup();
-    renderScreen();
-
-    const sheet = await openSheet(user);
-    expect(within(sheet).queryByText("maintenance.detail.pendingCostLines")).toBeNull();
-  });
 });
 
 describe("MaintenanceScreen — commands", () => {
@@ -832,6 +949,8 @@ describe("MaintenanceScreen — commands", () => {
 
   it("moves the header onto the refetched detail once completion is declared", async () => {
     const user = userEvent.setup();
+    // The actual cost is Finance's figure: on screen only while FINANCE is on (#640).
+    me = { ...admin, enabledModules: [...admin.enabledModules, "FINANCE"] };
     // Only the detail read learns the work order completed: the table handed
     // the drawer a row snapshot when it opened and never revises it, so a header
     // still bound to that snapshot would keep showing "Approuvé" and no cost.
@@ -941,7 +1060,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
 
     expect(
       await screen.findByText("Freins qui sifflent en descente"),
@@ -960,7 +1079,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
 
     expect(await screen.findByText(label)).toBeTruthy();
     expect(screen.queryByText("BODYWORK")).toBeNull();
@@ -970,7 +1089,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
     await screen.findByText("Freins qui sifflent en descente");
 
     await user.click(screen.getByRole("button", { name: "dataTable.actions" }));
@@ -1019,7 +1138,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     ];
     renderScreen();
 
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
     await screen.findByText("Freins qui sifflent en descente");
     expect(screen.getAllByText("maintenance.issues.status.DISMISSED").length).toBeGreaterThan(1);
     expect(screen.getByText("Doublon du signalement de lundi")).toBeTruthy();
@@ -1031,7 +1150,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
     await user.click(
       await screen.findByRole("radio", { name: "maintenance.issues.status.OPEN" }),
     );
@@ -1048,7 +1167,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     issueRows = [];
     renderScreen();
 
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
     await user.click(
       await screen.findByRole("radio", { name: "maintenance.issues.status.DISMISSED" }),
     );
@@ -1061,7 +1180,7 @@ describe("MaintenanceScreen — signalements tab", () => {
     user: ReturnType<typeof userEvent.setup>,
     name: string,
   ): Promise<void> {
-    await user.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await user.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
     await screen.findByText("Freins qui sifflent en descente");
     await user.click(screen.getByRole("button", { name: "dataTable.actions" }));
     await user.click(await screen.findByRole("menuitem", { name }));
@@ -1128,19 +1247,10 @@ describe("MaintenanceScreen — signalements tab", () => {
     me = as("DRIVER");
     renderScreen();
 
-    await userEvent.click(screen.getByRole("tab", { name: "maintenance.issues.tab" }));
+    await userEvent.click(screen.getByRole("tab", { name: /^maintenance\.page\.tabs\.problems/ }));
     await screen.findByText("Freins qui sifflent en descente");
     expect(screen.queryByRole("button", { name: "dataTable.actions" })).toBeNull();
   });
 });
 
-describe("MaintenanceScreen — module gate", () => {
-  it("shows a denied surface when the module is off", async () => {
-    me = { ...admin, enabledModules: ["CORE", "ASSETS"] };
-    renderScreen();
-
-    expect(await screen.findByText("maintenance.title")).toBeTruthy();
-    expect(screen.queryByText(WORK_ORDER_REFERENCE)).toBeNull();
-    expect(screen.queryByRole("tab", { name: "maintenance.issues.tab" })).toBeNull();
-  });
-});
+// With the module off the shell never opens this screen: modules/maintenance/manifest.test.tsx.

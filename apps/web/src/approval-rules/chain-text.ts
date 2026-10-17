@@ -17,12 +17,36 @@ export function stepText(
   return t("approvalRules.step", { bound, amount, outcome: step.outcome });
 }
 
-/** The rule beside the amount field: the band above which this entry waits, and for whom. */
-export function ruleHint(t: TFunction, chain: ApprovalChain, currency: string): string {
-  const waitsAt = chain.steps.findIndex((step) => step.outcome !== "POSTS_DIRECTLY");
-  if (waitsAt === -1) return t("approvalRules.hint.posts");
-  const approver = chain.steps[waitsAt]?.outcome;
-  const below = chain.steps[waitsAt - 1]?.upToMinor;
+/** One band's sentence: who an entry in it waits for, from the amount the band starts above. */
+function bandText(t: TFunction, steps: readonly ApprovalChainStep[], index: number, currency: string): string {
+  const approver = steps[index]?.outcome;
+  const below = steps[index - 1]?.upToMinor;
   if (below == null) return t("approvalRules.hint.always", { approver });
   return t("approvalRules.hint.above", { amount: formatMoney(below, { currency }), approver });
+}
+
+/**
+ * The rule beside the amount field, one sentence per entry. With an amount
+ * typed, the band that amount falls in; before that, every band that waits,
+ * so a large amount never reads as the first approver's (#534).
+ */
+export function ruleHint(
+  t: TFunction,
+  chain: ApprovalChain,
+  currency: string,
+  amountMinor: number | null = null,
+): string[] {
+  const { steps } = chain;
+  if (steps.every((step) => step.outcome === "POSTS_DIRECTLY")) return [t("approvalRules.hint.posts")];
+  if (amountMinor !== null && amountMinor > 0) {
+    const index = steps.findIndex((step) => step.upToMinor === null || amountMinor <= step.upToMinor);
+    if (index !== -1) {
+      return steps[index]?.outcome === "POSTS_DIRECTLY"
+        ? [t("approvalRules.hint.postsAt")]
+        : [bandText(t, steps, index, currency)];
+    }
+  }
+  return steps.flatMap((step, index) =>
+    step.outcome === "POSTS_DIRECTLY" ? [] : [bandText(t, steps, index, currency)],
+  );
 }

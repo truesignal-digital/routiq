@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "../i18n/index.js";
 import { MeCtx, type MeContext } from "../auth/me.js";
+import { TrucksFrame } from "../assets/TrucksFrame.js";
 import { AssetsStub } from "./AssetsStub.js";
 import { applyNavigate, useTestSearch } from "../test-router.js";
 
@@ -12,6 +13,10 @@ import { applyNavigate, useTestSearch } from "../test-router.js";
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => applyNavigate,
   useSearch: () => useTestSearch(),
+  useRouterState: ({ select }: { select: (state: { location: { pathname: string } }) => unknown }) =>
+    select({ location: { pathname: "/assets/list" } }),
+  // The Trucks page frame draws the list tab here.
+  Outlet: () => <AssetsStub />,
   Link: ({
     to,
     params,
@@ -34,6 +39,7 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
+/** The Trucks page as the router draws it: the frame (header, tabs) around the list tab. */
 function renderWith(
   role: MeContext["role"],
   enabledModules: MeContext["enabledModules"] = ["CORE", "ASSETS"],
@@ -49,11 +55,12 @@ function renderWith(
     branchScope: "ALL",
     enabledModules,
     enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+    timezone: "Africa/Douala",
   };
   return render(
     <QueryClientProvider client={new QueryClient()}>
       <MeCtx.Provider value={me}>
-        <AssetsStub />
+        <TrucksFrame />
       </MeCtx.Provider>
     </QueryClientProvider>,
   );
@@ -77,15 +84,7 @@ describe("register affordances by role", () => {
 });
 
 describe("module gating", () => {
-  /** A workspace without the module has no fleet to show, whatever the role. */
-  it("shows the denial instead of an empty table when ASSETS is off", () => {
-    renderWith("ADMIN", ["CORE"]);
-
-    expect(screen.getByText(/module/i)).toBeDefined();
-    expect(screen.queryByRole("searchbox")).toBeNull();
-    expect(document.querySelector('a[href="/assets/new"]')).toBeNull();
-  });
-
+  // With Assets off the shell never opens this screen: modules/manifests.test.tsx.
   it("serves the fleet to a role that may not register one", () => {
     renderWith("CASHIER");
 

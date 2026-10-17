@@ -8,7 +8,12 @@ export const TOGGLEABLE_MODULE_CODES = [
   "FINANCE",
   "ACTIVITIES",
   "MAINTENANCE",
+  /** Planned trips (ADR-0012). Depends on ACTIVITIES. */
+  "SCHEDULING",
 ] as const;
 export const MODULE_CODES = ["CORE", ...TOGGLEABLE_MODULE_CODES] as const;
 
 export type ModuleCode = (typeof MODULE_CODES)[number];
+export type ToggleableModuleCode = (typeof TOGGLEABLE_MODULE_CODES)[number];
+
+// Each module's dependencies, defaults, commands and reads: module-manifest.ts.

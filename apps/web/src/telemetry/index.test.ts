@@ -57,6 +57,27 @@ describe("telemetry", () => {
     expect(telemetryEvent.safeParse(journey).success).toBe(true);
   });
 
+  it("tags events with the version index.html names, or dev without one", async () => {
+    const meta = Object.assign(document.createElement("meta"), { name: "routiq-version", content: "9c0e874" });
+    document.head.append(meta);
+    try {
+      const fetchImpl = telemetryFetch();
+      startTelemetry({ enabled: true, getToken: () => "tok", fetchImpl, storage: localStorage });
+      reportError(new Error("boom"), "window");
+      await flushTelemetry();
+      expect(sent(fetchImpl)[0]).toMatchObject({ appVersion: "9c0e874" });
+    } finally {
+      meta.remove();
+    }
+    stopTelemetry();
+
+    const fetchImpl = telemetryFetch();
+    startTelemetry({ enabled: true, getToken: () => "tok", fetchImpl, storage: localStorage });
+    reportError(new Error("boom"), "window");
+    await flushTelemetry();
+    expect(sent(fetchImpl)[0]).toMatchObject({ appVersion: "dev" });
+  });
+
   it("reports a command that never reached the server as offline", async () => {
     const fetchImpl = telemetryFetch();
     startTelemetry({ enabled: true, getToken: () => undefined, fetchImpl, storage: localStorage });

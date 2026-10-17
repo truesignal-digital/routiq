@@ -1,10 +1,30 @@
 {
   "/.ready_ms": {
-    "ceiling": 793,
-    "kind": "time"
+    "ceiling": 1197,
+    "kind": "time",
+    "raises": [
+      {
+        "date": "2026-10-09",
+        "from": 793,
+        "to": 1197,
+        "reason": "Home's own code now arrives after sign-in (fetched while the PIN is typed; a scripted sign-in is faster than a person). Develop measured 1032 ms in the same side-by-side run (5b6dd261 vs abd53810), already over 793; sign-in plus Home is still about 1.6 s faster"
+      }
+    ]
   },
   "/.requests": {
-    "ceiling": 6,
+    "ceiling": 7,
+    "kind": "count",
+    "raises": [
+      {
+        "date": "2026-10-09",
+        "from": 6,
+        "to": 7,
+        "reason": "Develop drift, not this change: develop 5b6dd261 makes the same 7 requests on Home in the same side-by-side run (navigation counts #322)"
+      }
+    ]
+  },
+  "/.shifts": {
+    "ceiling": 2,
     "kind": "count"
   },
   "/activities.ready_ms": {
@@ -12,7 +32,19 @@
     "kind": "time"
   },
   "/activities.requests": {
-    "ceiling": 4,
+    "ceiling": 5,
+    "kind": "count",
+    "raises": [
+      {
+        "date": "2026-10-09",
+        "from": 4,
+        "to": 5,
+        "reason": "Develop drift, not this change: develop 5b6dd261 makes the same 5 requests on Trips in the same side-by-side run"
+      }
+    ]
+  },
+  "/activities.shifts": {
+    "ceiling": 0,
     "kind": "count"
   },
   "/assets.ready_ms": {
@@ -23,20 +55,28 @@
     "ceiling": 4,
     "kind": "count"
   },
+  "/assets.shifts": {
+    "ceiling": 0,
+    "kind": "count"
+  },
   "/assets/:id.ready_ms": {
-    "ceiling": 498,
+    "ceiling": 282,
     "kind": "time"
   },
   "/assets/:id.requests": {
-    "ceiling": 6,
-    "kind": "count"
+    "ceiling": 5,
+    "kind": "count",
+    "raises": [
+      {
+        "date": "2026-10-10",
+        "from": 2,
+        "to": 5,
+        "reason": "Measured on the right vehicle: since the passenger company was seeded the run opened another workspace's vehicle (a 404, two requests). From the director's own list the vehicle makes 5: detail, attention, revenue categories, the month's money and recent history. Measured at the top of the #494-#498 stack, 3 runs"
+      }
+    ]
   },
-  "/finance/approvals.ready_ms": {
-    "ceiling": 286,
-    "kind": "time"
-  },
-  "/finance/approvals.requests": {
-    "ceiling": 3,
+  "/assets/:id.shifts": {
+    "ceiling": 0,
     "kind": "count"
   },
   "/finance/entries.ready_ms": {
@@ -47,36 +87,52 @@
     "ceiling": 4,
     "kind": "count"
   },
+  "/finance/entries.shifts": {
+    "ceiling": 0,
+    "kind": "count"
+  },
   "/maintenance.ready_ms": {
     "ceiling": 275,
     "kind": "time"
   },
   "/maintenance.requests": {
-    "ceiling": 4,
+    "ceiling": 5,
+    "kind": "count",
+    "raises": [
+      {
+        "date": "2026-10-09",
+        "from": 4,
+        "to": 5,
+        "reason": "Develop drift, not this change: develop 5b6dd261 makes the same 5 requests on Maintenance in the same side-by-side run"
+      }
+    ]
+  },
+  "/maintenance.shifts": {
+    "ceiling": 0,
     "kind": "count"
   },
-  "/more.ready_ms": {
-    "ceiling": 218,
-    "kind": "time"
-  },
-  "/more.requests": {
+  "/my-settings.requests": {
     "ceiling": 1,
     "kind": "count"
   },
-  "api.p95_ms": {
-    "ceiling": 212,
-    "kind": "time"
+  "/my-settings.shifts": {
+    "ceiling": 0,
+    "kind": "count"
   },
   "login.js_bytes": {
-    "ceiling": 560822,
+    "ceiling": 281718,
     "kind": "bytes"
   },
   "login.lcp_ms": {
-    "ceiling": 4188,
+    "ceiling": 2592,
     "kind": "time"
   },
   "login.usable_ms": {
-    "ceiling": 4204,
+    "ceiling": 2648,
     "kind": "time"
+  },
+  "reload.shifts": {
+    "ceiling": 2,
+    "kind": "count"
   }
 }

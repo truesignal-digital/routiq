@@ -21,7 +21,7 @@ export const LIST_ROUTES = [
   "/activities",
   "/maintenance",
   "/finance/entries",
-  "/finance/entries?view=waiting",
+  "/finance/approve",
   "/finance/periods",
   "/my-settings",
   "/more/persons",

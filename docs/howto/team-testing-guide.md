@@ -4,7 +4,7 @@ For the team testing the October 2026 release on the demo. Read **Start here**, 
 
 ## Start here
 
-**Link:** https://routiq.178.156.253.244.nip.io
+**Link:** https://demo.truesignaldigital.com
 
 **Log in.** The login page has three fields:
 
@@ -152,7 +152,7 @@ Rules to know:
 - **Approve or reject.** Approvers open **Money** and click the count "N expenses waiting for your approval" in the sidebar. Each row has **Reject entry** and **Approve entry**. Rejecting needs a **Rejection reason**, which the author then sees.
 - **Edit while it waits.** The author can use **Edit entry** on their own entry while it is **Awaiting review**. Nobody else can.
 - **Cancel entry** [Annuler l'écriture] is for Director and Finance, on a **Posted** entry. On **Money**, use the row's **⋯** menu → **Cancel entry**, or open the entry, click **Open full screen**, then **Cancel entry**. Pick a reason: **Entered twice**, **Didn't happen**, **Wrong details, to record again**, or **Other** (with text). The entry stays in the books as **Cancelled** and a cancellation line takes its amount out of the totals. With **Wrong details**, a **Record again** button opens a prefilled form. The new entry follows the normal approval rules.
-- **Thresholds.** Direction opens **Company settings** [Paramètres de l'entreprise] → **Approvals** → **Change approval thresholds**. Two fields: **Posts directly up to** and **Finance approves up to**. **Save thresholds** applies them at once, also to entries already waiting: lowering **Finance approves up to** moves bigger waiting entries to Direction. Everyone else sees a notice, "The approval rules have changed", with a **Got it** button.
+- **Thresholds.** Direction or an Administrator opens **Company settings** [Paramètres de l'entreprise] → **Approvals** → **Change approval thresholds**. Two fields: **Posts directly up to** and **Finance approves up to**. **Save thresholds** applies them at once, also to entries already waiting: lowering **Finance approves up to** moves bigger waiting entries to Direction. Everyone else sees a notice, "The approval rules have changed", with a **Got it** button.
 - **Accounting months** [Mois comptables]. Finance and Direction can **Lock period**. Only Direction can reopen a month, with a reason. An entry dated in a locked month posts into the current month instead, keeping its own date. If the current month is locked too, the entry is refused.
 - **Receipts.** Add a file when you record (**Supporting document (optional)**) or later with **Attach receipt**. The **Missing receipt** tile on Money lists entries without one, except categories that need no receipt (parking, driver allowance, tolls). A Mobile Money, Orange Money or bank reference also counts as proof.
 
@@ -276,7 +276,7 @@ Each scenario lists the trucking user. For Littoral Voyages, swap users with the
 - **Goal:** drivers capture costs but see only their own money.
 - **Log in as:** `sali` (Transports Ngwa) / `eric` (Littoral Voyages).
 - **Steps:** **Trips** → open a trip that is **On the road** (trucking: DLA-2026-00003; passenger: the Coaster's voyage) → **Record expense**. Category Fuel, amount 45,678. Save. Then **Home** → **View all entries**.
-- ✅ **Expected:** the expense is **Posted** and linked to the trip. The entries page says "Only the entries you recorded appear here." There is no **Money** in the sidebar and no **Revenue** tab in the form.
+- ✅ **Expected:** the expense is **Posted** and linked to the trip. The entries page's first line starts with "Your expenses." There is no **Money** in the sidebar and no **Revenue** tab in the form.
 - **Try to break it:** record 150,000 (should wait for Finance). Open a work order on VH003: amounts show "—", no **Record expense**. On the vehicle, use **More actions** → **Log fuel**.
 
 ### 8. The cashier records revenue in her branch only
@@ -330,12 +330,12 @@ Each scenario lists the trucking user. For Littoral Voyages, swap users with the
 
 ### 13. Direction changes the approval thresholds
 
-- **Goal:** Direction sets the bands; everyone is told.
+- **Goal:** Direction or an Administrator sets the bands; everyone is told, with the name of who changed them.
 - **Log in as:** `emilienne`, then `clarisse`.
 - **Steps:** `emilienne`: **Company settings** → **Change approval thresholds**. **Posts directly up to** 50,000. **Save thresholds**. `clarisse`: open **Money** and **Record expense**.
 - ✅ **Expected:** Clarisse sees "The approval rules have changed" with the new amounts and **Got it**. The form hint now says "Above FCFA 50,000". An expense of 60,000 waits for Finance.
 - **Afterwards:** `emilienne` puts it back to 100,000, so others' tests still match this guide.
-- **Try to break it:** set **Finance approves up to** below **Posts directly up to**. Look for **Company settings** as `boris` or `nadege` (they should not have it).
+- **Try to break it:** set **Finance approves up to** below **Posts directly up to**. Look for **Company settings** as `nadege` (Finance should not have it). `boris` (Administrator) has it and may change the thresholds too; the notice then names Boris.
 
 ### 14. Finance locks an accounting month
 

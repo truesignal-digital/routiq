@@ -45,6 +45,26 @@
     },
     "columns": {
       "asset": "Vehicle"
+    },
+    "filters": {
+      "availabilityOptions": {
+        "IDLE": "No trip for 5+ days"
+      }
+    },
+    "overview": {
+      "tiles": {
+        "idle": "No trip for {days}+ days",
+        "onTheRoadInfo": "Vehicle-days on a trip ÷ vehicle-days recorded, last {days} days. Days nobody could record are left out."
+      },
+      "km": {
+        "some": "This month, km are known for {known, number} of {total, number} vehicles: {missing, plural, one {# trip has} other {# trips have}} no km."
+      },
+      "board": {
+        "basis": {
+          "all": "Status from trips, work orders and grounding.",
+          "noMaintenance": "Status from trips. Work orders and grounding are not counted: Maintenance is off."
+        }
+      }
     }
   },
   "documents": {
@@ -62,6 +82,11 @@
       },
       "filters": {
         "asset": "Vehicle"
+      }
+    },
+    "overview": {
+      "counted": {
+        "openTrips": "{count, plural, one {# trip is still open} other {# trips are still open}}: their money may still come."
       }
     }
   },
@@ -93,6 +118,10 @@
       "moneySummary": {
         "ownOnly": "Only the entries you recorded on this trip.",
         "branchOnly": "Only the entries of your branches on this trip."
+      },
+      "loadFailed": "We couldn't load this trip.",
+      "status": {
+        "complete": "Complete the trip"
       }
     },
     "actions": {
@@ -115,9 +144,27 @@
         "attributeLabel": "Charge to this trip",
         "rowAttribute": "Charge line {position} to this trip",
         "attributeHint": "Clear this when the money belongs to the asset rather than the trip: a repair stays off the sheet."
+      },
+      "activityTypesFailed": "Could not load trip types.",
+      "soFar": {
+        "asset": "Vehicle"
       }
     },
-    "subtitle": "Every trip your vehicles run, from start to close."
+    "subtitle": "Every trip your vehicles run, from start to close.",
+    "loadFailed": "We couldn't load trips. Please retry.",
+    "overview": {
+      "weeks": {
+        "title": "Trips per week"
+      },
+      "routes": {
+        "withoutRoute": "{count, plural, one {# closed trip has} other {# closed trips have}} no leg, so no route."
+      },
+      "summary": {
+        "sentence": "{started, plural, =0 {No trip has started this week yet.} one {# trip started this week; {closed, number} of them closed.} other {# trips started this week; {closed, number} of them closed.}}",
+        "open": "{open, plural, =0 {Nothing is still open.} one {# trip is still open.} other {# trips are still open.}}",
+        "counted": "{fuelCounted, select, yes {Closed trips missing data: {fuel, number} without fuel and {km, number} without km.} other {Closed trips missing data: {km, number} without km. Fuel is not counted: Money is off.}}"
+      }
+    }
   },
   "maintenance": {
     "workOrders": {
@@ -151,7 +198,24 @@
   "history": {
     "event": {
       "work_order-asset_released": "Vehicle returned to service",
-      "asset_availability-opened": "Vehicle grounded"
+      "asset_availability-opened": "Vehicle grounded",
+      "activity-created": "Trip created",
+      "activity-closed": "Trip closed",
+      "activity-reopened": "Trip reopened"
+    },
+    "field": {
+      "activityTypeId": "trip type",
+      "activityNumber": "trip number",
+      "activityTypeCode": "trip type",
+      "activityId": "trip"
+    },
+    "code": {
+      "module": {
+        "ACTIVITIES": "Trips"
+      },
+      "categoryKind": {
+        "ACTIVITY_TYPE": "Trip type"
+      }
     }
   },
   "vehicle": {
@@ -168,7 +232,8 @@
       "noMoney": "No entries linked to this trip yet.",
       "noOwnMoney": "You have not recorded any entry on this trip.",
       "noBranchMoney": "No entry from your branches on this trip yet.",
-      "openFull": "Open the full trip"
+      "openFull": "Open the full trip",
+      "loadFailed": "We couldn't load the trips."
     },
     "history": {
       "filters": {
@@ -208,6 +273,13 @@
       "change-custodian": {
         "description": "The person who regularly drives the vehicle. Each trip can still name another driver."
       }
+    },
+    "attention": {
+      "VEHICLE_DOUBLE_BOOKED": {
+        "title": "Trip {ref} overlaps another open trip",
+        "detail": "This vehicle is also on {numbers}. Close whichever trip has ended.",
+        "detailUnnamed": "This vehicle is also on another open trip. Close the one that has ended."
+      }
     }
   },
   "commands": {
@@ -225,6 +297,64 @@
     },
     "record-journey-sheet": {
       "short": "Trip"
+    },
+    "create-activity": {
+      "label": "Create a trip",
+      "submit": "Create trip"
+    },
+    "plan-trip": {
+      "label": "Plan a trip",
+      "submit": "Plan trip"
+    },
+    "cancel-planned-trip": {
+      "label": "Cancel the trip",
+      "submit": "Cancel trip",
+      "dismiss": "Keep trip"
+    },
+    "start-planned-trip": {
+      "label": "Start the trip",
+      "submit": "Start trip"
+    }
+  },
+  "errors": {
+    "DRIVER_INELIGIBLE": "This person cannot drive this trip: they are no longer active, or their usual job is not driver."
+  },
+  "warnings": {
+    "VEHICLE_DOUBLE_BOOKED": "This vehicle is already booked on another trip at the same time.",
+    "DRIVER_DOUBLE_BOOKED": "This driver is already booked on another trip at the same time.",
+    "TRIP_STARTED_AFTER_CANCELLATION": "This trip had been cancelled, but it was started offline. It is running again."
+  },
+  "dashboard": {
+    "counted": {
+      "postedAndTrips": "Counted: {count, plural, one {# posted entry} other {# posted entries}} and {closed, plural, one {# closed trip} other {# closed trips}}."
+    },
+    "vehicles": {
+      "columns": {
+        "trips": "Trips"
+      },
+      "tripsCount": "{count, plural, one {# trip} other {# trips}}",
+      "tripsWithoutKm": "{count, plural, one {# trip without km} other {# trips without km}}",
+      "lossDetail": "{count, plural, =0 {No trip} one {# trip} other {# trips}} · {amount} spent"
+    },
+    "comingUp": {
+      "rows": {
+        "TRIPS_PLANNED": {
+          "title": "{count, plural, one {# trip planned} other {# trips planned}}"
+        }
+      }
+    }
+  },
+  "overview": {
+    "fleetBoard": {
+      "status": {
+        "ON_TRIP": "On a trip",
+        "AVAILABLE": "Available, no trip"
+      }
+    },
+    "summary": {
+      "money": {
+        "notEnoughTrips": "{window, select, lastMonth {In {month}, only {closed, number} of {total, plural, one {# trip was} other {# trips were}} closed, so it is too early to give a profit.} other {So far in {month}, only {closed, number} of {total, plural, one {# trip is} other {# trips are}} closed, so it is too early to give a profit.}}"
+      }
     }
   }
 }

@@ -18,11 +18,30 @@ import type { CommandName } from "@/commands/labels.js";
 import { notifyCommandSuccess, type NotifyNamespace } from "@/lib/notify.js";
 import type { FormIssue } from "@/components/command-form.js";
 
-export interface UseCommandFormOptions<Values extends FieldValues> {
+/** The success toast: `<namespace>.notify.success.<message>`. */
+export interface CommandFormSuccess {
+  namespace: NotifyNamespace;
+  message: string;
+}
+
+/**
+ * What a form that sends more than its one command reports back: the outcome
+ * the toast describes, or the first refusal's code for the banner.
+ */
+export type CommandFormSent =
+  | { ok: true; outcome: CommandResult; extraLines?: readonly string[] | undefined }
+  | { ok: false; code: string };
+
+export interface UseCommandFormOptions<Values extends FieldValues, Payload> {
   /** Called once per opening: mint record ids here, so a retry replays them. */
   defaults: () => DefaultValues<Values>;
-  /** The success toast: `<namespace>.notify.success.<message>`. */
-  success: { namespace: NotifyNamespace; message: string };
+  success: CommandFormSuccess | ((outcome: CommandResult) => CommandFormSuccess);
+  /**
+   * Replaces the one command intent, for a form whose values become more than
+   * one command (Log fuel: an expense, then a reading). It keeps its own
+   * intents, so a retry replays them too.
+   */
+  send?: ((payload: Payload) => Promise<CommandFormSent>) | undefined;
   /** After the command committed, before the surface closes. */
   onDone?: ((outcome: CommandResult) => void) | undefined;
   onDismiss: () => void;
@@ -31,6 +50,8 @@ export interface UseCommandFormOptions<Values extends FieldValues> {
 
 export interface CommandFormState<Values extends FieldValues, Payload> {
   form: UseFormReturn<Values, unknown, Payload>;
+  /** The schema the form validates with: the field kit reads "required" from it. */
+  schema: z.ZodType<Payload, Values>;
   /** Spread onto `<CommandForm>`. */
   formProps: {
     command: CommandName;
@@ -54,7 +75,7 @@ export function useCommandForm<Values extends FieldValues, Payload>(
   schema: z.ZodType<Payload, Values>,
   command: CommandName,
   version: number,
-  options: UseCommandFormOptions<Values>,
+  options: UseCommandFormOptions<Values, Payload>,
 ): CommandFormState<Values, Payload> {
   const { t } = useTranslation();
   const { client = commandClient, onDismiss } = options;
@@ -71,13 +92,22 @@ export function useCommandForm<Values extends FieldValues, Payload>(
 
   const send = form.handleSubmit(async (payload) => {
     setError(undefined);
-    const result = await intent.submit(payload);
+    const result: CommandFormSent =
+      options.send === undefined ? await intent.submit(payload) : await options.send(payload);
     if (!result.ok) {
       setError(result.code);
       return;
     }
-    notifyCommandSuccess(options.success.namespace, options.success.message, result.outcome.warnings);
-    options.onDone?.(result.outcome);
+    const { outcome } = result;
+    const success = typeof options.success === "function" ? options.success(outcome) : options.success;
+    const extraLines = "extraLines" in result ? result.extraLines : undefined;
+    notifyCommandSuccess(
+      success.namespace,
+      success.message,
+      outcome.warnings,
+      extraLines === undefined || extraLines.length === 0 ? {} : { extraLines: [...extraLines] },
+    );
+    options.onDone?.(outcome);
     onDismiss();
   });
 
@@ -91,6 +121,7 @@ export function useCommandForm<Values extends FieldValues, Payload>(
 
   return {
     form,
+    schema,
     formProps: {
       command,
       error,
@@ -109,11 +140,12 @@ type Issue = Parameters<NonNullable<NonNullable<Parameters<typeof zodResolver>[1
 function issueMessage(t: TFunction, issue: Issue): string {
   const { input } = issue as { input?: unknown };
   if (input === undefined || input === null || input === "") return t("form.errors.required");
-  const bound = issue as { origin?: string; minimum?: unknown; maximum?: unknown };
+  const bound = issue as { origin?: string; minimum?: unknown; maximum?: unknown; inclusive?: boolean };
   const text = bound.origin === "string";
   switch (issue.code) {
     case "too_small":
       if (text && Number(bound.minimum) <= 1) return t("form.errors.required");
+      if (!text && bound.inclusive === false) return t("form.errors.above", { min: Number(bound.minimum) });
       return t(text ? "form.errors.tooShort" : "form.errors.min", { min: Number(bound.minimum) });
     case "too_big":
       return t(text ? "form.errors.tooLong" : "form.errors.max", { max: Number(bound.maximum) });

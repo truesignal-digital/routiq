@@ -3,24 +3,25 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, CircleDollarSign, Receipt } from "lucide-react";
 import type { AssetFinanceResponse, FinancialEntryListItem } from "@routiq/contracts";
+import { useWorkspaceMonth } from "@/auth/workspace-day.js";
 import { FilterChips } from "@/components/filter-chips";
 import { MetricStrip, moneyMetric, type MetricTile, type MetricTiles } from "@/components/metric-strip.js";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
+import { PermissionDenied } from "@/components/permission-denied.js";
 import { RecordText } from "@/components/record-number";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useCategories } from "@/documents/useCategories.js";
-import { formatDate, formatMoney, localizedLabel, type MoneySign } from "@/lib/format.js";
+import { useCategories } from "@/categories/useCategories.js";
+import { formatDate, formatMoney, formatMonth, localizedLabel, profitOrLoss, type MoneySign } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
+import { contributes } from "@/modules/manifest.js";
 import { useVehicle } from "../context.js";
 import { entrySteps } from "../flow.js";
-import { recordReference } from "../model.js";
-import { CardHead, LinkButton, RecordRow, RowIcon, RowMenu, Sep, SubHead, TabHeader } from "../parts.js";
+import { recordNumberText } from "@/lib/record-number.js";
+import { CardHead, LinkButton, RecordRow, RowIcon, RowMenu, Sep, SubHead, TabAction, TabHeader } from "../parts.js";
 import { EntryEventStatus, foldedAmountClass } from "@/finance/EntryCancellation.js";
 import { EvidenceMark } from "../panel/shared.js";
 import { useAssetFinance, useVehicleEntries, type VehicleEntriesFilter } from "../useVehicle.js";
-import { TabAction } from "./MaintenanceTab.js";
 import { periodLabel } from "./NowTab.js";
 
 type Chip = "posted" | "expenses" | "revenue" | "review" | "rejected" | "missing";
@@ -85,20 +86,15 @@ export function shiftMonth(period: string, by: number): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-function currentMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
 export function MoneyTab() {
   const { t } = useTranslation();
-  const { gates, me } = useVehicle();
+  const { gates } = useVehicle();
   if (!gates.money) {
     return (
       <PermissionDenied
         title={t("vehicle.tabs.money")}
         icon={<Receipt className="size-7" aria-hidden />}
-        code={deniedCode(me.enabledModules.includes("FINANCE"))}
+        code="ROLE_FORBIDDEN"
       />
     );
   }
@@ -112,7 +108,8 @@ function MoneySection() {
   const search = useSearch({ strict: false }) as MoneySearch;
   const { asset } = useVehicle();
   const locale = i18n.language;
-  const period = search.period ?? currentMonth();
+  const thisMonth = useWorkspaceMonth();
+  const period = search.period ?? thisMonth;
   const financeQuery = useAssetFinance(asset.id, period, true);
   const chip = chipOf(search);
   const entriesQuery = useVehicleEntries(asset.id, entriesFilter(chip, period), true);
@@ -155,7 +152,7 @@ function MoneySection() {
                 variant="ghost"
                 size="desktop-icon-sm"
                 aria-label={t("vehicle.money.periodNext")}
-                disabled={period >= currentMonth()}
+                disabled={period >= thisMonth}
                 onClick={() => go({ ...searchOf(chip), period: shiftMonth(period, 1) })}
               >
                 <ChevronRight aria-hidden />
@@ -253,7 +250,7 @@ function MoneySection() {
           {t("vehicle.money.lifetime", {
             revenue: money(lifetime.revenueMinor),
             expenses: money(lifetime.expenseMinor),
-            net: money(lifetime.netMinor, { context: "net" }),
+            result: profitOrLoss(lifetime.netMinor, { currency: asset.currency, locale }).text,
           })}
         </p>
       )}
@@ -343,9 +340,12 @@ function CategoryBars({
               </span>
               <span className="shrink-0 tabular-nums">
                 {money(category.expenseMinor)}
-                <span className="ml-2 inline-block w-9 text-right text-xs text-muted-foreground">
-                  {Math.round((category.expenseMinor / Math.max(1, total)) * 100)}%
-                </span>
+                {/* A month that nets to nothing or less has no shares (#472). */}
+                {total > 0 && (
+                  <span className="ml-2 inline-block w-9 text-right text-xs text-muted-foreground">
+                    {Math.round((category.expenseMinor / total) * 100)}%
+                  </span>
+                )}
               </span>
             </div>
             <div className="mt-1.5 h-2 overflow-hidden rounded-sm bg-muted">
@@ -379,9 +379,7 @@ function MonthlyBars({
   const current = months[selected];
   const height = (value: number) => `${Math.max(2, Math.round((Math.max(0, value) / max) * 132))}px`;
   const short = (period: string) =>
-    new Intl.DateTimeFormat(i18n.language, { month: "short", timeZone: "UTC" }).format(
-      new Date(`${period}-15T00:00:00Z`),
-    );
+    formatMonth(period, i18n.language, { month: "short", year: false });
 
   return (
     <div className="p-4">
@@ -446,6 +444,7 @@ function EntryRow({ entry }: { entry: FinancialEntryListItem }) {
   const split = share !== entry.amountMinor;
   const steps = entrySteps(entry, viewer);
   const links = entry.assetLinks;
+  const workOrderRef = recordNumberText(t, "work_order", links?.workOrderNumber ?? null);
   const money = (minor: number, sign?: MoneySign) =>
     formatMoney(minor, { currency: entry.currency, locale, ...(sign === undefined ? {} : { sign }) });
 
@@ -471,7 +470,7 @@ function EntryRow({ entry }: { entry: FinancialEntryListItem }) {
               <span>{t(`vehicle.layers.${entry.category.layer}`)}</span>
             </>
           )}
-          {links?.activityId != null && (
+          {links?.activityId != null && contributes("fields", "entry.tripLink", viewer.enabledModules) && (
             <>
               <Sep />
               <LinkButton
@@ -485,14 +484,17 @@ function EntryRow({ entry }: { entry: FinancialEntryListItem }) {
               </LinkButton>
             </>
           )}
-          {links?.workOrderId != null && (
+          {links?.workOrderId != null && contributes("fields", "entry.workOrderLink", viewer.enabledModules) && (
             <>
               <Sep />
               <LinkButton
                 className="font-normal text-muted-foreground"
                 onClick={() => panel.openRecord({ kind: "work_order", id: links.workOrderId ?? "" })}
               >
-                {t("vehicle.money.forWorkOrder", { ref: recordReference(links.workOrderId) })}
+                <RecordText
+                  text={t("vehicle.money.forWorkOrder", { ref: workOrderRef })}
+                  numbers={[workOrderRef]}
+                />
               </LinkButton>
             </>
           )}

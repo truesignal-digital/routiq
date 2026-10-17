@@ -14,7 +14,7 @@ import type { AssetDocument } from "./model.js";
 const mocks = vi.hoisted(() => ({ toastAdd: vi.fn(), useCategories: vi.fn() }));
 
 vi.mock("@/components/ui/toast.js", () => ({ toast: { add: mocks.toastAdd } }));
-vi.mock("./useCategories.js", () => ({ useCategories: mocks.useCategories }));
+vi.mock("../categories/useCategories.js", () => ({ useCategories: mocks.useCategories }));
 
 const ASSET_ID = "00000000-0000-4000-8000-000000000004";
 const OLD_DOCUMENT_ID = "00000000-0000-4000-8000-000000000070";

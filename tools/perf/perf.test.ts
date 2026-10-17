@@ -1,6 +1,7 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ceilingFor, judge, median, raise, renderReadme, tighten, tolerance, type Ceilings, type Measured, type Run } from "./perf.js";
-import { template } from "./run.js";
+import { ceilingFor, judge, median, raise, readCeilings, renderReadme, tighten, tolerance, type Ceilings, type Measured, type Run } from "./perf.js";
+import { measurableMetrics, SCREENS, template } from "./run.js";
 
 const time = (value: number) => ({ value, samples: [value], kind: "time" as const });
 const count = (value: number) => ({ value, samples: [value], kind: "count" as const });
@@ -29,6 +30,10 @@ describe("judge", () => {
     expect(verdicts({ "login.usable_ms": time(4350), "/.requests": count(6) })).toEqual([["/.requests", "ok"], ["login.usable_ms", "ok"]]);
     expect(verdicts({ "login.usable_ms": time(4450), "/.requests": count(7) })).toEqual([["/.requests", "over"], ["login.usable_ms", "over"]]);
     expect(verdicts({ "login.usable_ms": time(2500), "/.requests": count(4) })).toEqual([["/.requests", "beaten"], ["login.usable_ms", "beaten"]]);
+  });
+
+  it("does not gate the API's p95, which is noise on a shared machine", () => {
+    expect(judge({ "api.p95_ms": time(900) }, { "api.p95_ms": { ceiling: 50, kind: "time" } })).toEqual([]);
   });
 
   it("reports metrics a run added or no longer measures", () => {
@@ -84,5 +89,40 @@ describe("renderReadme", () => {
 describe("template", () => {
   it("groups screens by route, not by record", () => {
     expect(template("/assets/0f8fad5b-d9cb-469f-a165-70867728950e")).toBe("/assets/:id");
+  });
+});
+
+describe("the ceilings file", () => {
+  // A ceiling no run can produce fails every `pnpm perf run` as GONE (#574).
+  it("gates only metrics a run measures", () => {
+    const measurable = new Set(measurableMetrics());
+    expect(Object.keys(readCeilings()).filter((name) => !measurable.has(name))).toEqual([]);
+  });
+});
+
+describe("SCREENS", () => {
+  const router = readFileSync(new URL("../../apps/web/src/router.tsx", import.meta.url), "utf8");
+  const blocks = router.split("createRoute({");
+  const routeBlock = (path: string): string | undefined => {
+    const direct = blocks.find((block) => block.includes(`path: "${path}"`));
+    if (direct !== undefined) return direct;
+    // A child route names only its own segment under a parent route that names the rest (/finance → entries, #664).
+    const cut = path.lastIndexOf("/");
+    const parentIndex = blocks.findIndex((block) => block.includes(`path: "${path.slice(0, cut)}"`));
+    const parentName = parentIndex > 0 ? /const (\w+) = $/.exec(blocks[parentIndex - 1]!.trimEnd() + " ")?.[1] : undefined;
+    if (parentName === undefined) return undefined;
+    return blocks.find(
+      (block) => block.includes(`path: "${path.slice(cut + 1)}"`) && block.includes(`getParentRoute: () => ${parentName},`),
+    );
+  };
+
+  // A redirect reports its journey under the screen it lands on, so the opened path never gets a ready time.
+  it("opens screens the router renders, not redirects", () => {
+    const problems = SCREENS.flatMap((screen) => {
+      const block = routeBlock(screen.replace(/:\w+/g, "$assetId"));
+      if (block === undefined) return [`${screen}: no route`];
+      return /\bredirect\(/.test(block) ? [`${screen}: redirects`] : [];
+    });
+    expect(problems).toEqual([]);
   });
 });

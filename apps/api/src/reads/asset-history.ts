@@ -53,6 +53,7 @@ import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 import { readableEntrySql } from "./money-scope.js";
+import { readableTripSql } from "./trip-scope.js";
 
 /**
  * The vehicle timeline as ONE statement (PLAN §1.5): a CTE lists every record
@@ -101,12 +102,6 @@ interface HistorySource {
   subjects(context: SourceContext): SQL;
 }
 
-const scopeClause = (
-  auth: AuthContext,
-  column: typeof activities.branchId,
-): SQL =>
-  auth.branchScope === "ALL" ? sql`` : sql`and ${inArray(column, auth.branchScope)}`;
-
 /** The outer activity carries this vehicle on one of its segments. */
 const activityOnVehicle = (assetId: string): SQL => sql`exists (
   select 1 from ${activityAssetSegments}
@@ -117,7 +112,8 @@ const activityOnVehicle = (assetId: string): SQL => sql`exists (
 
 /**
  * Every source, with the branch rule the record history applies to its entity
- * type (#58): an activity and its legs and segments by the activity's branch, a
+ * type (#58): an activity and its legs and segments by the caller's trip scope
+ * (their branches, a driver's own trips only, #545), a
  * financial entry by its own, a reading taken during a job by the job's, and
  * everything the vehicle owns outright by the vehicle's — already checked.
  */
@@ -138,7 +134,7 @@ const SOURCES: readonly HistorySource[] = [
       from ${activities}
       where ${activities.workspaceId} = ${workspaceId}
         and ${activityOnVehicle(assetId)}
-        ${scopeClause(auth, activities.branchId)}`,
+        and ${readableTripSql(auth)}`,
   },
   {
     entityType: "movement_leg",
@@ -152,7 +148,7 @@ const SOURCES: readonly HistorySource[] = [
         and ${activities.id} = ${movementLegs.activityId}
       where ${movementLegs.workspaceId} = ${workspaceId}
         and ${activityOnVehicle(assetId)}
-        ${scopeClause(auth, activities.branchId)}`,
+        and ${readableTripSql(auth)}`,
   },
   {
     entityType: "activity_asset_segment",
@@ -166,7 +162,7 @@ const SOURCES: readonly HistorySource[] = [
         and ${activities.id} = ${activityAssetSegments.activityId}
       where ${activityAssetSegments.workspaceId} = ${workspaceId}
         and ${activityAssetSegments.assetId} = ${assetId}
-        ${scopeClause(auth, activities.branchId)}`,
+        and ${readableTripSql(auth)}`,
   },
   {
     entityType: "meter_reading",
@@ -502,22 +498,27 @@ async function pageParams(
     for (const row of await tx
       .select({
         id: operationalIssues.id,
+        number: operationalIssues.number,
         description: operationalIssues.description,
         safetyCritical: operationalIssues.safetyCritical,
       })
       .from(operationalIssues)
       .where(and(eq(operationalIssues.workspaceId, workspaceId), inArray(operationalIssues.id, issueIds)))) {
-      bySubject.set(row.id, { description: clip(row.description), safetyCritical: row.safetyCritical });
+      bySubject.set(row.id, {
+        recordNumber: row.number,
+        description: clip(row.description),
+        safetyCritical: row.safetyCritical,
+      });
     }
   }
 
   const orderIds = idsOf("work_order");
   if (orderIds.length > 0) {
     for (const row of await tx
-      .select({ id: workOrders.id, description: workOrders.description })
+      .select({ id: workOrders.id, number: workOrders.number, description: workOrders.description })
       .from(workOrders)
       .where(and(eq(workOrders.workspaceId, workspaceId), inArray(workOrders.id, orderIds)))) {
-      bySubject.set(row.id, { description: clip(row.description) });
+      bySubject.set(row.id, { recordNumber: row.number, description: clip(row.description) });
     }
   }
 

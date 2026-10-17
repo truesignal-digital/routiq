@@ -14,6 +14,7 @@ import { buildServer } from "../server.js";
 import type { ObjectStorage } from "../storage/types.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
+import { setModule } from "../test/vendor.js";
 
 /**
  * Review P1: a file linked to a record is that record's, so its URL is only
@@ -236,7 +237,7 @@ describe("record-scoped downloads", () => {
     it("answers MODULE_DISABLED when DOCUMENTS is off", async () => {
       const gated = await seedWorkspace(db);
       const gatedAdmin = await seedActor(db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
-      await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "DOCUMENTS" });
+      await setModule(db, gated.workspace.id, "DOCUMENTS", false);
       const response = await api.get(
         gatedAdmin.token,
         route(randomUUID(), randomUUID(), randomUUID()),
@@ -296,7 +297,7 @@ describe("record-scoped downloads", () => {
     it("answers MODULE_DISABLED when MAINTENANCE is off", async () => {
       const gated = await seedWorkspace(db);
       const gatedAdmin = await seedActor(db, { workspaceId: gated.workspace.id, role: "DIRECTOR" });
-      await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "MAINTENANCE" });
+      await setModule(db, gated.workspace.id, "MAINTENANCE", false);
       const response = await api.get(gatedAdmin.token, route(randomUUID(), randomUUID()));
       expect(response.status).toBe(403);
       expect(response.body).toEqual({

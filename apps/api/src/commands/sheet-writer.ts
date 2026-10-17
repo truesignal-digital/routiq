@@ -19,6 +19,8 @@ import {
   movementLegs,
   persons,
 } from "../db/schema.js";
+import { currentBusinessDate } from "../reads/business-date.js";
+import { workspaceTimezone } from "../reads/workspace-day.js";
 import { evaluateApproval } from "./approvals.js";
 import { resolveTargetBranch } from "./branch-authorization.js";
 import { activityRequirements, evaluateCompleteness } from "./completeness.js";
@@ -30,6 +32,7 @@ import {
   type Tx,
 } from "./dispatcher.js";
 import { writeFinancialEntry } from "./financial-entry-writer.js";
+import { requireRecordRole } from "./record-financial-entry.js";
 import { nextActivityNumber } from "./numbering.js";
 import { resolveOrCreatePlace } from "./places.js";
 import { validateCustomValues } from "./templates.js";
@@ -118,6 +121,12 @@ export async function writeSheet(
   envelope: CommandEnvelope,
   write: SheetWrite,
 ): Promise<SheetResult> {
+  // Each money line passes the role gate of its standalone command, as it passes
+  // that command's approval rules below: a driver records expenses, never
+  // revenue (#532, docs/business-rules.md §10). Refused before anything is written.
+  for (const direction of new Set(write.entries.map((entry) => entry.direction))) {
+    requireRecordRole(ctx.role, direction === "EXPENSE" ? "record-expense" : "record-revenue");
+  }
   const { branch, warnings: branchWarnings } = await resolveTargetBranch(
     tx,
     ctx,
@@ -197,7 +206,12 @@ export async function writeSheet(
     }
   }
 
-  const activityNumber = await nextActivityNumber(tx, ctx, branch, write.startedAt.slice(0, 10));
+  const activityNumber = await nextActivityNumber(
+    tx,
+    ctx,
+    branch,
+    currentBusinessDate(startedAt, await workspaceTimezone(tx, ctx.workspaceId)),
+  );
 
   await tx.insert(activities).values({
     id: write.activityId,

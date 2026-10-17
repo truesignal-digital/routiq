@@ -3,8 +3,9 @@ import { and, eq, isNull } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { financeSummaryResponse, type Role } from "@routiq/contracts";
 import { createSession } from "../auth/local.js";
-import { approvalRules } from "../db/schema.js";
+import { approvalRules, commands, postingPeriods } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedMember, seedWorkspace } from "../test/seed.js";
 import { currentBusinessDate } from "./business-date.js";
 
@@ -123,7 +124,8 @@ describe("GET /v1/finance/summary", () => {
     expect(after.outMinor).toBe(550_000);
     expect(after.inMinor).toBe(0);
     expect(after.waiting?.count).toBe(0);
-    expect(after.openPeriodCode).toBe(month);
+    // The current month is open, but it is what the tiles count, not a month left unlocked.
+    expect(after.unlockedPeriodCodes).toEqual([]);
     expect(after.lastLockedPeriodCode).toBeNull();
 
     // A driver's figures are their own entries, as their list is.
@@ -131,9 +133,37 @@ describe("GET /v1/finance/summary", () => {
     expect(driver.outMinor).toBe(150_000);
   });
 
+  // #526: the lead names every earlier month still open, not only the latest.
+  it("lists every earlier month still open, oldest first, and the last locked one", async () => {
+    const [command] = await ctx.db
+      .select({ id: commands.id })
+      .from(commands)
+      .where(eq(commands.workspaceId, workspaceId))
+      .limit(1);
+    if (!command) throw new Error("seed command not found");
+    const one = previousPeriodCode(month);
+    const two = previousPeriodCode(one);
+    const three = previousPeriodCode(two);
+    const period = (periodCode: string, status: "OPEN" | "LOCKED") => ({
+      workspaceId,
+      periodCode,
+      status,
+      lockedAt: status === "LOCKED" ? new Date() : null,
+      createdByCommandId: command.id,
+    });
+    await ctx.db
+      .insert(postingPeriods)
+      .values([period(one, "OPEN"), period(two, "LOCKED"), period(three, "OPEN")])
+      .onConflictDoNothing();
+
+    const read = await summary("director");
+    expect(read.month).toBe(month);
+    expect(read.unlockedPeriodCodes).toEqual([three, one]);
+    expect(read.lastLockedPeriodCode).toBe(two);
+  });
+
   it("is refused when the books are off", async () => {
-    const off = await command(tokens.get("director")!, "disable-module", { moduleCode: "FINANCE" });
-    expect(off.statusCode, off.body).toBe(200);
+    await setModule(ctx.db, workspaceId, "FINANCE", false);
     const response = await ctx.app.inject({
       method: "GET",
       url: "/v1/finance/summary",
@@ -143,3 +173,9 @@ describe("GET /v1/finance/summary", () => {
     expect(response.json()).toEqual({ error: { code: "MODULE_DISABLED", metadata: { module: "FINANCE" } } });
   });
 });
+
+function previousPeriodCode(periodCode: string): string {
+  const [year, month] = periodCode.split("-").map(Number) as [number, number];
+  const prior = new Date(Date.UTC(year, month - 2, 1));
+  return `${prior.getUTCFullYear()}-${String(prior.getUTCMonth() + 1).padStart(2, "0")}`;
+}

@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 583829,
+    "ceiling": 788742,
     "raises": [
       {
         "date": "2026-10-06",
@@ -139,11 +139,185 @@
         "from": 581936,
         "to": 583829,
         "reason": "Navigation counts (#322): the server-count hook, useQueries, the sidebar count link and dot, the bottom bar's counts, fr/en plural strings (re-recorded on develop 702f6a57)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 583829,
+        "to": 583959,
+        "reason": "#306: NotRecorded component and notRecorded() helper replace bare dashes across ~30 list, panel and timeline sites, plus the withheld-value branch in MetricStrip (+130 B gzip)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 583959,
+        "to": 584923,
+        "reason": "B4 (#501 #500 #143 #515 #534): new fr/en strings (release lock, reject description, hint), French agreement overlays per preset, safety-issue lock in the vehicle flow"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 584923,
+        "to": 590845,
+        "reason": "Field kit and the six form layouts (#292), same growth as web.initial-js-gzip: about 5.7 kB gzip with no lazy split yet"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 590845,
+        "to": 681280,
+        "reason": "Screens load on demand (#488): one file became 150, and separately gzipped files compress worse in total; a phone now downloads 250 kB before sign-in instead of 571 kB and the rest in the background after Home settles. Includes the screen loader that retries a failed file and its translated error with Try again (about 1 kB). Measured on Linux (node:24) as CI builds it; macOS gives the same number"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 681280,
+        "to": 682090,
+        "reason": "Wording batch 2 (#562 #563 #564 #573 #585): fr+en strings for the blocked-release sentence, the driver's empty sheet, the current-month lock, and preset history overlays; the catalogs ship in the initial chunk, the screens' code in their lazy routes (re-recorded on develop ce206d11)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 682090,
+        "to": 682663,
+        "reason": "Planned-trip command labels and messages (#334)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 682663,
+        "to": 683412,
+        "reason": "Late repair invoices (#82): cost-to-come strings in fr and en and the late-invoice form state on the vehicle panel"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 683412,
+        "to": 684216,
+        "reason": "Hand-off text for work-order costs Finance can't record again (#559)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 684216,
+        "to": 684895,
+        "reason": "Planned-trip and cancelled status words for the planning read (#336)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 684895,
+        "to": 686158,
+        "reason": "Module manifests (#326): the manifest contract and slot lookups, the Maintenance manifest, the page gate, and the two module-dependency error messages in fr and en"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 686158,
+        "to": 687197,
+        "reason": "#589 #542 trip-noun overlays and approver strings in the catalogs"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 687197,
+        "to": 687376,
+        "reason": "Driver views (#584, #619): a driver's entry crumb under their truck and the driver lead on the Money page, in fr and en"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 687376,
+        "to": 688043,
+        "reason": "#622 empty-Home state and sentences (fr+en); #617 module-off crumb"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 688043,
+        "to": 688223,
+        "reason": "Fall back to the first visible sortable column when the sorted and default columns are hidden (#548)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 688223,
+        "to": 688723,
+        "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 688723,
+        "to": 689328,
+        "reason": "#577 fr/en strings and preset overlays for the vehicle double-booking flag"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 689328,
+        "to": 692894,
+        "reason": "#569 link-person-login: People screen login column and forms, plus their fr/en strings"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 692894,
+        "to": 694047,
+        "reason": "#608 work order and problem numbers on the vehicle, maintenance and finance screens"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694047,
+        "to": 694679,
+        "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694679,
+        "to": 694831,
+        "reason": "#653 trucking overlays for the grounded-vehicle warning"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 694831,
+        "to": 703751,
+        "reason": "The shell's loading frame, its loader and the sidebar logo row as their own chunks (#495)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 703751,
+        "to": 710828,
+        "reason": "Route loaders and queryOptions factories for Home, Trucks, a vehicle, Trips, Money and Maintenance (#496)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 710828,
+        "to": 713353,
+        "reason": "Intent preloading and the sidebar preloader (#497)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 713353,
+        "to": 713902,
+        "reason": "Page-type skeletons for each screen route (#498)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 713902,
+        "to": 764827,
+        "reason": "Summary notice on every Overview (#667) and Dashboard summary setting (#669): notice component, money sentence helper, verdict badge, fr/en words across the catalogs and the five Overview chunks, plus the Company settings section, form and read hook, about 6.9 kB gzip. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666) and module Overviews (#665) until they merge (re-recorded on develop 4dee04a4)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 764827,
+        "to": 776490,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop b7d22560)"
+      },
+      {
+        "date": "2026-10-11",
+        "from": 776490,
+        "to": 776559,
+        "reason": "Measured on develop after #701: #712 fixed en/fr month and weekday tables (dates read the same on every ICU version) and #699 one can-drive count, net of the formatters #712 removed"
+      },
+      {
+        "date": "2026-10-11",
+        "from": 776559,
+        "to": 781435,
+        "reason": "#663 FormPage (section cards, So far, Still missing, phone steps and review) plus the sheet's live totals and Register a truck's sections (re-recorded on develop 2946600c)"
+      },
+      {
+        "date": "2026-10-11",
+        "from": 781435,
+        "to": 788742,
+        "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 22212,
+    "ceiling": 23462,
     "raises": [
       {
         "date": "2026-10-06",
@@ -186,11 +360,53 @@
         "from": 22136,
         "to": 22212,
         "reason": "#322: navigation count badge and rail dot styles on the sidebar and phone bottom bar, about 80 B gzip (re-recorded on develop 6444c6bf)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 22212,
+        "to": 22508,
+        "reason": "Field kit and form layouts (#292): layout measures, segmented choice and fold classes, about 300 B gzip"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22508,
+        "to": 22832,
+        "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 22941,
+        "reason": "Money module page (#664): five-tile strip and the Overview's two-column grid add Tailwind classes"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 23091,
+        "reason": "Dashboard (#666): the two chart series tokens (blue, orange) and the bridge and branch-bar classes; the rest is #664's 109 B until #680 merges"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 22832,
+        "to": 23261,
+        "reason": "Summary notice (#667): its card and closed-line classes, 23 B; counted from develop's ceiling, so it also covers #666's 259 B and #665's overview parts until they merge"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 23261,
+        "to": 23330,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop b7d22560)"
+      },
+      {
+        "date": "2026-10-11",
+        "from": 23330,
+        "to": 23462,
+        "reason": "#663 FormPage: container-query grid for the 760 px form column and 300 px So far column, sticky footer above the phone bottom bar (re-recorded on develop 2946600c)"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 583829,
+    "ceiling": 285204,
     "raises": [
       {
         "date": "2026-10-06",
@@ -329,6 +545,144 @@
         "from": 581936,
         "to": 583829,
         "reason": "Navigation counts (#322): the server-count hook, useQueries, the sidebar count link and dot, the bottom bar's counts, fr/en plural strings (re-recorded on develop 702f6a57)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 583829,
+        "to": 583959,
+        "reason": "#306: NotRecorded component and notRecorded() helper replace bare dashes across ~30 list, panel and timeline sites, plus the withheld-value branch in MetricStrip (+130 B gzip)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 583959,
+        "to": 584923,
+        "reason": "B4 (#501 #500 #143 #515 #534): new fr/en strings (release lock, reject description, hint), French agreement overlays per preset, safety-issue lock in the vehicle flow"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 584923,
+        "to": 590845,
+        "reason": "Field kit and the six form layouts (#292): FormLayout, FormGroup/FormPair/FormOptional and ten kit fields with required read from the schema, about 5.7 kB gzip (a Base UI combobox was dropped for the existing popover pattern to save about 14 kB); about 29 ms on a pilot phone at about 5 ms per kB; #294 moves the other forms onto it and drops their own markup"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 256115,
+        "to": 256557,
+        "reason": "Wording batch 2 (#562 #563 #564 #573 #585): fr+en strings for the blocked-release sentence, the driver's empty sheet, the current-month lock, and preset history overlays; the catalogs ship in the initial chunk, the screens' code in their lazy routes (re-recorded on develop ce206d11)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 256557,
+        "to": 257700,
+        "reason": "Planned-trip command labels and messages (#334)"
+      },
+      {
+        "date": "2026-10-09",
+        "from": 257700,
+        "to": 258261,
+        "reason": "Late repair invoices (#82): cost-to-come strings in fr and en and the late-invoice form state on the vehicle panel"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 258261,
+        "to": 258556,
+        "reason": "Hand-off text for work-order costs Finance can't record again (#559)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 258556,
+        "to": 259125,
+        "reason": "Planned-trip and cancelled status words for the planning read (#336)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 259125,
+        "to": 259326,
+        "reason": "#589 #542 trip-noun overlays and approver strings in the catalogs"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 259326,
+        "to": 259547,
+        "reason": "#622 empty-Home sentences (fr+en) in the core catalog; #617 module-off crumb"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 259547,
+        "to": 260139,
+        "reason": "#576 offline notice + offline loading state (fr/en words, online hook), #600 read retry rule"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 260139,
+        "to": 260358,
+        "reason": "#577 fr/en strings and preset overlays for the vehicle double-booking flag"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 260358,
+        "to": 261228,
+        "reason": "#569 link-person-login: fr/en strings for the Login column, link/change/unlink login forms and history labels (catalogs load up front until #602)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261228,
+        "to": 261338,
+        "reason": "#608 work order and problem numbers (formatter and catalog strings)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261338,
+        "to": 261561,
+        "reason": "Money lead lock-state strings in fr and en, and the workspace-day helper (#526, #639, #645)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 261561,
+        "to": 263756,
+        "reason": "Router context and the shell's loader (#495): the shared i18n and icon modules split into their own preloaded chunks once the shell loader also imports them; no shell or sidebar code is in the first load"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 263756,
+        "to": 264506,
+        "reason": "Route loaders (#496): the router's loader wiring, the offline and module-off guards and the read defaults"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 264506,
+        "to": 265616,
+        "reason": "Intent preloading (#497): the router's hover, focus and touch preload paths and the quiet-window sidebar preloader"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 265616,
+        "to": 266200,
+        "reason": "Page-type skeletons (#498): drawn the moment a screen is pending, so they ship with the router rather than on demand"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 266200,
+        "to": 280366,
+        "reason": "Summary notice on every Overview (#667) and Dashboard summary setting (#669): the notice's fr/en ICU sentences (money templates, module Overview sentences, trip-word overlays for both presets), the notice component, the summary setting's fr/en words and the schedule list in contracts, about 2.9 kB gzip. Counted from develop's ceiling, so it also covers the stacked Dashboard (#666, about 7 kB) and module Overviews (#665, about 4.3 kB net of the shared #659/#664/#676 parts) until they merge (re-recorded on develop 4dee04a4)"
+      },
+      {
+        "date": "2026-10-10",
+        "from": 280366,
+        "to": 283191,
+        "reason": "Km and daily status (#668): its fr and en words (fleet board, statuses, per-km cards, To do fuel row) ship in the first-load i18n catalog, about 3.0 kB gzip measured against the merged #665 + #666 build; the rest is #665's and #666's catalog and routes until they merge (re-recorded on develop b7d22560)"
+      },
+      {
+        "date": "2026-10-11",
+        "from": 283191,
+        "to": 283840,
+        "reason": "#663 FormPage: the So far, section-state, step and review words in the fr/en catalogs (initial bundle), about 0.6 kB gzip (re-recorded on develop 2946600c)"
+      },
+      {
+        "date": "2026-10-11",
+        "from": 283840,
+        "to": 285204,
+        "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
       }
     ]
   }

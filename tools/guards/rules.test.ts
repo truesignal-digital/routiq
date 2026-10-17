@@ -195,6 +195,16 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     good: [file("apps/web/src/x.ts", "queryClient.invalidateQueries({ queryKey: key });")],
   },
   {
+    id: "C1",
+    bad: [file(".github/workflows/ci.yml", "        image: postgres:17")],
+    good: [file(".github/workflows/ci.yml", "        image: mirror.gcr.io/library/postgres:17")],
+  },
+  {
+    id: "C2",
+    bad: [file("apps/web/vite.config.ts", "  define: { __APP_VERSION__: JSON.stringify(sha) },")],
+    good: [file("apps/web/vite.config.ts", '  plugins: [{ name: "routiq-version" }],')],
+  },
+  {
     id: "H6",
     bad: [file("apps/web/src/screens/X.tsx", 'import { toast } from "@/components/ui/toast.js";')],
     good: [file("apps/web/src/lib/notify.ts", 'import { toast } from "@/components/ui/toast.js";')],
@@ -246,6 +256,28 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "H19",
+    // Thirty lines printed a bare "—" for a missing plate, counterparty or cost (#306).
+    bad: [
+      file("apps/web/src/assets/assetColumns.tsx", '{row.original.registrationNumber ?? "—"}'),
+      file("apps/web/src/maintenance/columns.tsx", '<span className="text-muted-foreground">—</span>'),
+      file("apps/web/src/vehicle/tabs/TripsTab.tsx", "time: trip.startedAt === null ? '—' : formatDateTime(trip.startedAt, locale),"),
+      // Home's KPI error state, as Prettier wrapped it: the dash alone on its line.
+      file(
+        "apps/web/src/dashboard/SectionCards.tsx",
+        'return (\n    <div className="font-mono text-2xl tabular-nums text-muted-foreground">\n      —\n    </div>\n  );',
+      ),
+      file("apps/web/src/screens/X.tsx", "<span>\n  —\n</span>"),
+    ],
+    good: [
+      file("apps/web/src/assets/assetColumns.tsx", "{row.original.registrationNumber ?? <NotRecorded />}"),
+      file("apps/web/src/components/metric-strip.tsx", '<span role="img" aria-label={t("common.readFailed")}>—</span>'),
+      file("apps/web/src/assets/assetColumns.test.tsx", 'expect(cell.textContent).not.toBe("—");'),
+      file("apps/web/src/finance/EntrySummary.tsx", '{t("finance.entry.title", { number })} — {name}'),
+      file("apps/web/src/finance/EntrySummary.tsx", "<span>\n  {number} — {name}\n</span>"),
+    ],
+  },
+  {
     id: "H15",
     bad: [
       file(
@@ -274,6 +306,21 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
       file("apps/web/src/lib/format.ts", 'new Intl.NumberFormat(locale, { signDisplay: "exceptZero" })'),
       file("apps/web/src/finance/entryColumns.tsx", 'formatMoney(minor, { sign: { context: "ledger", direction } })'),
       file("packages/domain/src/money.ts", "export function formatXAF(minor: MoneyMinor) {}"),
+    ],
+  },
+  {
+    id: "H20",
+    // English screens showed "7/29/26": each screen built its own Intl.DateTimeFormat (#712).
+    bad: [
+      file("apps/web/src/activities/TripsOverview.tsx", 'new Intl.DateTimeFormat(language, { month: "short", day: "numeric" })'),
+      file("apps/web/src/components/ui/calendar.tsx", "const label = day.toLocaleDateString(locale);"),
+      file("apps/web/src/finance/X.tsx", "{new Date(entry.postedAt).toLocaleString()}"),
+    ],
+    good: [
+      file("apps/web/src/lib/format.ts", 'new Intl.DateTimeFormat(dateLocale(locale), { day: "numeric", month })'),
+      file("apps/web/src/lib/workspace-day.ts", 'new Intl.DateTimeFormat("en-CA", { timeZone })'),
+      file("apps/web/src/activities/TripsOverview.tsx", 'formatDayMonth(iso, language, { month: "short" })'),
+      file("apps/api/src/reads/business-date.ts", 'new Intl.DateTimeFormat("en-CA", { timeZone })'),
     ],
   },
   {
@@ -351,6 +398,44 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     ],
   },
   {
+    id: "DS-5",
+    // #658: money entry, trip and register-a-truck each picked a width (736, 1 120, 544 px at 1920).
+    bad: [
+      file("apps/web/src/screens/AssetRegisterScreen.tsx", '<section className="mx-auto w-full max-w-xl px-4 py-6">'),
+      file("apps/web/src/screens/ActivityDetailScreen.tsx", '<div className="grid gap-4 lg:max-w-[840px]">'),
+      file("apps/web/src/screens/X.tsx", '<p className="mt-2 max-w-lg text-sm text-muted-foreground">{description}</p>'),
+      file("apps/web/src/screens/X.tsx", "<div style={{ maxWidth: 736 }}>"),
+    ],
+    good: [
+      file("apps/web/src/screens/AssetRegisterScreen.tsx", "<PageContainer>"),
+      // The frame and a part's own measure live in components/, not in a screen.
+      file("apps/web/src/components/page-container.tsx", 'className={cn("mx-auto w-full max-w-[1248px] px-4 py-6 sm:px-6", className)}'),
+      file("apps/web/src/components/page.tsx", '{description && <p className="mt-2 max-w-lg text-sm">{description}</p>}'),
+      file("apps/web/src/screens/MaintenanceScreen.test.tsx", 'expect(panel.className).toContain("max-w-[560px]");'),
+      file("apps/web/src/screens/X.tsx", '<div className="min-w-0 flex-1">'),
+      // Sign-in is outside the shell and its frame.
+      file("apps/web/src/screens/LoginScreen.tsx", '<main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col">'),
+    ],
+  },
+  {
+    id: "DS-6",
+    // #662: Edit and Cancel entry were full-width buttons under the money entry's card.
+    bad: [
+      file(
+        "apps/web/src/screens/FinanceEntryDetailScreen.tsx",
+        '<Button\n  variant="outline"\n  onClick={() => setEditOpen(true)}\n  className="w-full"\n>',
+      ),
+      file("apps/web/src/activities/detail/TripPage.tsx", '<Button className="w-full" onClick={close}>'),
+      file("apps/web/src/vehicle/tabs/NowTab.tsx", '<Button variant="outline" className="mt-4 w-full">'),
+    ],
+    good: [
+      file("apps/web/src/screens/FinanceEntryDetailScreen.tsx", '<Button variant="outline" onClick={onEdit}>'),
+      // A full-width control that is not a button, and a form panel that is not a record page.
+      file("apps/web/src/screens/FinanceEntryDetailScreen.tsx", '<SelectTrigger className="w-full">'),
+      file("apps/web/src/finance/RecordEntryForm.tsx", '<Button className="w-full" onClick={submit}>'),
+    ],
+  },
+  {
     id: "J1",
     bad: [file("apps/web/src/x.ts", "const ability = rules as any;")],
     good: [file("apps/web/src/x.test.ts", "const payload = good as any;"), file("apps/web/src/x.ts", "const count: number = 1;")],
@@ -409,6 +494,27 @@ const CASES: { id: string; bad: SourceFile[]; good: SourceFile[] }[] = [
     good: [
       file("tools/verify/flows/trips.ts", 'await shot("trips-list", { caption: "Trips list" });'),
       file("tools/verify/browser.ts", 'await shot("home");'),
+    ],
+  },
+  {
+    id: "D1",
+    bad: [
+      file("apps/api/src/reads/dashboard.ts", "const [workspace] = await tx.select({ timezone: workspaces.timezone }).from(workspaces);"),
+      file("apps/api/src/commands/periods.ts", "sql`select ${workspaces.timezone} from ${workspaces}`"),
+    ],
+    good: [
+      file("apps/api/src/reads/workspace-day.ts", "const [workspace] = await tx.select({ timezone: workspaces.timezone }).from(workspaces);"),
+      file("apps/api/src/reads/dashboard.ts", "const timezone = await workspaceTimezone(tx, auth.workspaceId);"),
+      file("apps/api/src/reads/branches.ts", "timezone: branches.timezone,"),
+      file("apps/api/src/reads/dashboard.test.ts", "await ctx.db.update(workspaces).set({ timezone: \"Asia/Tokyo\" }); expect(workspaces.timezone).toBeDefined();"),
+    ],
+  },
+  {
+    id: "B1",
+    bad: [file("apps/web/src/dashboard/x.ts", 'import { canReadFinance } from "../finance/permissions.js";')],
+    good: [
+      file("apps/web/src/modules/index.ts", 'import { financeManifest } from "./finance/manifest.js";'),
+      file("apps/web/src/finance/x.ts", 'import { useMeContext } from "@/auth/me.js";'),
     ],
   },
   {
@@ -611,6 +717,68 @@ describe("comments", () => {
       '/** `<input type="datetime-local">` values — no offset. */\n// never use type="date" here\n * type="date"',
     );
     expect(rule("H9").check([documented])).toEqual([]);
+  });
+});
+
+describe("B1 module boundaries", () => {
+  const manifest = file("apps/web/src/modules/finance/manifest.ts", 'export const m = { code: "FINANCE", uses: ["ASSETS"] };');
+
+  it("flags core importing a module and a module importing one it does not declare", () => {
+    const core = file("apps/web/src/dashboard/x.ts", 'import { canReadFinance } from "../finance/permissions.js";');
+    const finance = file("apps/web/src/finance/y.ts", 'import { useWorkOrders } from "../maintenance/useMaintenance.js";');
+    expect(rule("B1").check([manifest, core, finance]).map((v) => v.path)).toEqual([
+      "apps/web/src/dashboard/x.ts",
+      "apps/web/src/finance/y.ts",
+    ]);
+  });
+
+  it("accepts composition, and a module's declared use", () => {
+    const composition = file("apps/web/src/modules/index.ts", 'import { m } from "./finance/manifest.js";');
+    const declared = file("apps/web/src/finance/z.ts", 'import { useAssetOptions } from "../assets/useAssetOptions.js";');
+    expect(rule("B1").check([manifest, composition, declared])).toEqual([]);
+  });
+});
+
+describe("C1 CI images off Docker Hub", () => {
+  const ci = (lines: string[]) => file(".github/workflows/ci.yml", lines.join("\n"));
+
+  it("flags a service image with no registry, and a test step without the testcontainers mirror", () => {
+    const violations = rule("C1").check([ci(["    services:", "      postgres:", "        image: postgres:17", "      - run: pnpm test"])]);
+    expect(violations.map((v) => [v.line, v.text])).toEqual([
+      [3, "image: postgres:17"],
+      [4, "- run: pnpm test"],
+    ]);
+  });
+
+  it("accepts a mirrored image and a test step that sets the prefix", () => {
+    const mirrored = ci([
+      "    env:",
+      "      TESTCONTAINERS_HUB_IMAGE_NAME_PREFIX: mirror.gcr.io",
+      "        image: mirror.gcr.io/library/postgres:17",
+      "        image: ghcr.io/owner/thing:1",
+      "        image: localhost:5000/thing",
+      "      - run: pnpm test",
+    ]);
+    expect(rule("C1").check([mirrored])).toEqual([]);
+  });
+
+  it("leaves compose files and Dockerfiles alone", () => {
+    expect(rule("C1").check([file("docker-compose.yml", "    image: postgres:17-alpine")])).toEqual([]);
+  });
+});
+
+describe("C2 no define in the web build", () => {
+  it("flags a define block in the Vite config", () => {
+    const config = file("apps/web/vite.config.ts", "export default defineConfig({\n  define: { __APP_VERSION__: JSON.stringify(sha) },\n});");
+    expect(rule("C2").check([config]).map((v) => v.line)).toEqual([2]);
+  });
+
+  it("accepts the meta-tag plugin and defineConfig itself", () => {
+    const config = file(
+      "apps/web/vite.config.ts",
+      'export default defineConfig({\n  plugins: [{ name: "routiq-version", transformIndexHtml: () => [] }],\n});',
+    );
+    expect(rule("C2").check([config])).toEqual([]);
   });
 });
 

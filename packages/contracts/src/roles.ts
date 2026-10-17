@@ -58,7 +58,8 @@ export const legacyRoleInput = z
  * - BRANCH_ENTRIES: the entries of the role's branches, no totals or periods.
  * - WORK_ORDER_COSTS: the cost lines of work orders, through the work-order
  *   reads, and the receipts and history of entries that are only such lines.
- * - OWN_ENTRIES: the entries the member recorded, nothing summed over others.
+ * - OWN_ENTRIES: the expenses the member recorded, nothing summed over others.
+ *   Never revenue: it is a trip's price, which a driver does not see (#593).
  */
 export const MONEY_READ_SCOPES = [
   "LEDGER",
@@ -80,6 +81,24 @@ export const MONEY_READ_SCOPE = {
 
 export function moneyReadScope(role: Role): MoneyReadScope {
   return MONEY_READ_SCOPE[role];
+}
+
+/**
+ * Which trips a role reads (roles-and-access.md, Trips): every trip of its
+ * branches, or only its own (ADR-0012 §3: recorded by them, planned for them,
+ * or crewed by them as a driver). Branch scope applies on top of both.
+ */
+export const TRIP_READ_SCOPE = {
+  DIRECTOR: "BRANCH_TRIPS",
+  ADMIN: "BRANCH_TRIPS",
+  FINANCE: "BRANCH_TRIPS",
+  CASHIER: "BRANCH_TRIPS",
+  TECHNICIAN: "BRANCH_TRIPS",
+  DRIVER: "OWN_TRIPS",
+} as const satisfies Record<Role, "BRANCH_TRIPS" | "OWN_TRIPS">;
+
+export function readsOwnTripsOnly(role: Role): boolean {
+  return TRIP_READ_SCOPE[role] === "OWN_TRIPS";
 }
 
 /**
@@ -120,6 +139,19 @@ export function canReadLedger(role: Role): boolean {
 }
 
 /**
+ * Who opens the money Overview (`GET /v1/finance/overview`, #660): the ledger
+ * readers with profit, and the cashier with their branch's revenue and
+ * expenses only (dashboards.html, "Who sees what"). Profit follows
+ * `canReadLedger`.
+ */
+export const MONEY_OVERVIEW_READER_ROLES = [
+  "DIRECTOR",
+  "ADMIN",
+  "FINANCE",
+  "CASHIER",
+] as const satisfies readonly Role[];
+
+/**
  * The roles that open the entries list and an entry's detail, each filtered by
  * its scope. The workshop reaches its cost lines through work orders instead.
  */
@@ -146,6 +178,19 @@ export const DOCUMENT_READER_ROLES = [
 
 export function canReadDocuments(role: Role): boolean {
   return (DOCUMENT_READER_ROLES as readonly Role[]).includes(role);
+}
+
+/**
+ * Who changes the company settings: the approval thresholds and the Dashboard
+ * summary schedule (owner decision 2026-10-10, ADR-0013, #711). Each setting
+ * is one rule for the whole workspace, so an Administrator scoped to one
+ * branch still changes the company's rule, never a branch copy. Branches,
+ * categories and reopening a period stay Direction's.
+ */
+export const COMPANY_SETTINGS_ROLES = ["DIRECTOR", "ADMIN"] as const satisfies readonly Role[];
+
+export function canManageCompanySettings(role: Role | undefined): boolean {
+  return role !== undefined && (COMPANY_SETTINGS_ROLES as readonly Role[]).includes(role);
 }
 
 /** Who may open member administration at all. */

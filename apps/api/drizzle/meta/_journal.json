@@ -316,6 +316,55 @@
       "when": 1791326609734,
       "tag": "0044_change_issue_severity_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1791510512406,
+      "tag": "0045_planned_trips",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1791512798565,
+      "tag": "0046_platform_scope_entitlement_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1791604216616,
+      "tag": "0047_person_logins",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1791606347235,
+      "tag": "0048_maintenance_numbers",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1791645745442,
+      "tag": "0049_document_types_visite_carte_grise",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1791671447466,
+      "tag": "0050_company_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1791674211880,
+      "tag": "0051_admins_company_settings",
+      "breakpoints": true
     }
   ]
 }

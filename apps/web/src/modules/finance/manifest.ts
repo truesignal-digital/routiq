@@ -1,0 +1,65 @@
+import { Banknote, Calendar, SlidersHorizontal } from "lucide-react";
+import { moneyReadScope } from "@routiq/contracts";
+import { canManagePeriods, canReadFinanceEntries } from "../../finance/permissions.js";
+import { canManageCompanySettings } from "../../settings/permissions.js";
+import type { WebModuleManifest } from "../manifest.js";
+
+/**
+ * Money: entries, their approval, accounting months and every total or cost
+ * built from them (contract: `MODULE_MANIFESTS` in `@routiq/contracts`).
+ */
+export const financeManifest: WebModuleManifest = {
+  code: "FINANCE",
+  // Entries are charged to vehicles; logging fuel records the odometer reading with it.
+  uses: ["ASSETS", "ACTIVITIES"],
+  navRows: [
+    {
+      key: "finances",
+      group: "daily",
+      place: { after: "maintenance" },
+      labelKey: "finance.entries.title",
+      // The Money page opens on its Overview; a role without one lands on Entries.
+      to: "/finance",
+      match: "/finance",
+      icon: Banknote,
+      // A driver reads only the entries they recorded, on their truck and trips.
+      reads: (role, enabledModules) =>
+        canReadFinanceEntries(role, enabledModules) && moneyReadScope(role) !== "OWN_ENTRIES",
+      // The count opens the To approve tab (#664), across every branch it covers.
+      count: {
+        key: "moneyWaiting",
+        labelKey: "shell.counts.moneyWaiting",
+        to: "/finance/approve",
+        search: { branch: "all" },
+      },
+    },
+    {
+      key: "accountingMonths",
+      group: "company",
+      place: { after: "branches" },
+      labelKey: "finance.periods.title",
+      to: "/finance/periods",
+      icon: Calendar,
+      // The roles that lock a month; the page is theirs alone (#314).
+      reads: canManagePeriods,
+    },
+    {
+      key: "companySettings",
+      group: "company",
+      place: { after: "accountingMonths" },
+      labelKey: "settings.title",
+      to: "/more/company",
+      icon: SlidersHorizontal,
+      // The approval chain (#354) and the Dashboard summary schedule (#669).
+      reads: canManageCompanySettings,
+    },
+  ],
+  navCounts: [{ key: "moneyWaiting", listKey: (slug) => ["ws", slug, "finance", "approvals"] }],
+  homeCards: ["pendingApprovals", "openPeriodExpense", "openPeriodRevenue", "moneyChart", "recentEntries", "overview"],
+  vehicleTabs: ["money"],
+  vehicleActions: ["log-fuel", "record-expense", "attach-evidence", "record-revenue", "review-entry", "reverse-entry"],
+  recordPanels: ["entry"],
+  historyKinds: ["MONEY"],
+  fields: ["trip.money"],
+  pageTabs: [],
+};

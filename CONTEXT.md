@@ -49,9 +49,21 @@ _Avoid_: user, person
 Whether a vehicle may take on work, read from its availability intervals: **Grounded** while one is open, available otherwise. Not assessed when the maintenance module is off. Distinct from lifecycle and physical location.
 _Avoid_: lifecycle status, absence of recorded problems, absence of work orders
 
+**Can drive**:
+A vehicle in service and not **Grounded** (in service alone while the maintenance module is off). Counted out of the fleet not disposed (not sold, retired or written off), in the caller's branch scope. The Dashboard and the Trucks Overview show this one count.
+_Avoid_: available (alone), active
+
 **Grounded**:
 A vehicle with an open availability interval. A safety-critical issue opens one the moment it is reported; only a release to service closes it. Resolving the issue or completing the work does not.
 _Avoid_: out of service (a lifecycle word), broken down, unavailable flag
+
+**Known Km** (fr: **Km connus**):
+The km of a vehicle's trips closed in a period, each trip from its legs, else from the odometer readings taken on it, never both added. Known when every one of those trips has km; otherwise the vehicle's km are **not known**, and it is left out of every cost or fuel per km.
+_Avoid_: mileage, estimated km, distance (alone)
+
+**Daily Status** (fr: **État du jour**):
+What a vehicle did on a day, the most serious fact first: grounded, in the workshop (an approved work order), on a trip, available, or not recorded when nothing can tell. Derived on read from grounding, work orders and trips, never stored. "On the road" is the share of recorded days on a trip.
+_Avoid_: availability (the grounded / available fact alone), utilisation
 
 **Attention Item**:
 A fact about one vehicle that needs someone's next step: an issue with no work order, work awaiting authorization or sign-off, a vehicle awaiting release, a document expired or expiring, an entry awaiting review or its paperwork. Derived on read, never stored; it names who may not take the step, not who must.
@@ -60,6 +72,10 @@ _Avoid_: task, alert, notification
 **Evidence State**:
 What stands behind a financial entry: supplied (a file is linked), payment reference (paid by mobile money or bank with a reference), not expected (the category needs no receipt) or not supplied (evidence missing). It says what is attached, never that anyone checked it.
 _Avoid_: verified, receipt status
+
+**Work order number / problem number**:
+A per-workspace sequence the server gives a work order or a problem when the command creating it commits, shown with a prefix from the language ("OT-0007" / "WO-0007", "PB-0003" / "PRB-0003"). The uuid stays the key; the number never changes. A record not yet on the server shows "number pending".
+_Avoid_: id fragment, reference code
 
 **Actual Cost (of a work order)**:
 The sum of the work order's non-rejected cost lines, pending ones included and reversals netted. Derived on read once the work is declared complete, never typed. An amount typed by an old client at close is kept apart as the **declared cost**.
@@ -75,6 +91,7 @@ _Avoid_: comment thread, description, edit
 
 **Correction**:
 What saving "Modifier" does to approved or posted money, a meter reading or stock. One command reverses the original and records the replacement, so the original stays. Lists show the current value with a "corrigé" badge; history shows the old value struck through. A changed amount goes back for approval. Users never choose between an edit and a correction; the **Edit Level** decides (ADR-0008).
+Not built yet for money (#86). Today a posted entry is corrected in two steps: **Cancel entry** with the reason "wrong details", then **Record again** with the form filled in from the cancelled entry (see **Cancellation**).
 _Avoid_: edit (for approved money), reversal (in the interface), void, overwrite
 
 **Cancellation (of an entry)**:
@@ -92,6 +109,30 @@ _Avoid_: timeline ledger, activity log table
 **Recorded Vehicle Expenses**:
 The signed posted expenses attributed to a vehicle across the stated cost layers, period and currency; not proof of cash paid or complete ownership cost.
 _Avoid_: profit, savings, total ownership cost
+
+**Revenue** (fr: **Recettes**):
+Money the company earns for its work (freight, fares), recorded as revenue entries.
+_Avoid_: money in, entrées, income, sales
+
+**Expense** (fr: **Dépense**):
+Money spent to run the company, recorded as an expense entry, on a vehicle or not.
+_Avoid_: money out, sorties, cost entry
+
+**Profit** (fr: **Bénéfice**; below zero **Loss** / **Perte**):
+Revenue minus expenses recorded in ROUTIQ for the period and scope on screen. Not the accountant's profit: taxes, loan repayments and depreciation are not in it. A negative profit is shown as a Loss, never as a negative profit. Shown only when the company records revenue; an Internal Fleet sees expenses and cost per km instead.
+_Avoid_: contribution, margin, marge, net income, gross profit
+
+**Vehicle Profit** (fr: **Bénéfice du véhicule**; the preset word on screen, e.g. Bénéfice du camion):
+Revenue recorded on one vehicle minus the expenses recorded on it. Company Costs are never spread across vehicles, so the vehicle profits add up to more than the company's Profit.
+_Avoid_: contribution, vehicle margin
+
+**Company Costs** (fr: **Frais généraux**):
+Expenses not recorded on any vehicle: office rent, office staff, phones. Company profit = the sum of Vehicle Profits − Company Costs (+ any revenue recorded with no vehicle).
+_Avoid_: overheads, shared costs, indirect costs (in the UI)
+
+**Dashboard** (fr: **Tableau de bord**) and **Overview** (fr: **Vue d'ensemble**):
+The Dashboard is Home. Every module page and record page opens on an Overview tab (that page's dashboard: summary, tiles, why, To do), followed by its work tabs.
+_Avoid_: driver, pilotage, cockpit
 
 **Template Preset**:
 A named bundle of terminology, categories, required fields, and custom-field definitions that shapes ROUTIQ for one kind of asset-operating business (e.g. TRUCKING, PASSENGER_TRANSPORT).
@@ -114,8 +155,16 @@ Which role may execute which command and see which form sections at each point o
 _Avoid_: permission set, profile
 
 **Lifecycle**:
-The fixed, code-defined status sequence of a record (e.g. activity DRAFT → OPEN → CLOSED → LOCKED); invariants hang off it. Tenants may relabel statuses, never restructure them.
+The fixed, code-defined status sequence of a record (e.g. a trip: PLANNED → OPEN → CLOSED, or PLANNED → CANCELLED, ADR-0012); invariants hang off it. Tenants may relabel statuses, never restructure them.
 _Avoid_: workflow (lifecycles are not workflows), custom status
+
+**Planned Trip** (fr: **Trajet planifié** / **Voyage planifié**, by preset):
+A trip booked for a date before it starts: the same trip record in status PLANNED, with a planned start, and a vehicle and driver that may wait. Starting it on the day sets its actual start and makes it the running trip (shown "En cours" / "In progress"); cancelling it keeps it with a reason (ADR-0012). Part of the Scheduling module.
+_Avoid_: booking, reservation, order (as a separate record), draft trip
+
+**Delivery** (fr: **Livraison**):
+The recorded fact that goods were handed over on a trip: when, who received them, an optional photo of the signed note, on the trip or one of its stages. Append-only; it never changes the trip's status. A trip stays In progress until it is closed (ADR-0012).
+_Avoid_: delivered status, proof of delivery (as a status), completion
 
 **Starter Pack**:
 A versioned data file of categories and approval defaults for one Template Preset, replayed through ordinary commands when a Workspace is provisioned — never applied retroactively to existing Workspaces.
@@ -166,4 +215,6 @@ _Avoid_: feature flag (implies tenant- or dev-toggleable), plan/tier (no billing
 - **Template binding (resolved 2026-07-29; server enforcement shipped 2026-07-30):** a Workspace enables a SET of Template Presets (mixed fleets are real in Cameroon); single-preset tenants see single-preset UX. Enforced server-side like module flags — `workspace_templates` rows written at Provisioning, checked in the command pipeline (`PRESET_DISABLED`). Workspaces with zero rows (pre-provisioning pilots) are grandfathered all-enabled with a `preset.unenforced` warning until backfilled. Remaining gap: web UX still shows both presets to single-preset tenants.
 - **Roles and people (resolved 2026-09-27; roles built 2026-10, people not yet):** six fixed Roles named in the pilot team's words replace ADMIN/OPS_MANAGER/FIELD_SUBMITTER/MAINTENANCE/FINANCE_APPROVER/EXECUTIVE_VIEWER (ADR-0009). Persons and App Access stay separate records shown as one Personnel list; every App Access belongs to one Person; Custodian becomes Assigned Driver (ADR-0010). Feature map: [roles and access](docs/reference/roles-and-access.md).
 - **Vehicle workspace terms (2026-09-25):** Grounded, Attention Item, Evidence State, Note and Vehicle History, and the refined Custodian and Availability, describe behaviour implemented on `feat/maintenance-on-develop` (#44), not yet merged to `develop`. See [the vehicle workspace reference](docs/reference/vehicle-workspace-v1.md).
+- **Planned trips and delivery (decided 2026-10-08, not built):** a booking is the trip record in status PLANNED, not a second record; delivery is a fact, not a status; drivers see the trip price only when the company turns it on (ADR-0012, #332, #344).
+- **Money words and dashboards (decided 2026-10-10):** the UI uses Revenue, Expense, Profit / Loss, Vehicle Profit and Company Costs only; "contribution", "margin" and Entrées/Sorties go. Home is the Dashboard and every page opens on an Overview tab; the summary sentence on an Overview is a closable notice on a company-set schedule (`docs/design/consistency/dashboards.html`).
 - **Terminology variance (resolved 2026-07-29):** a tenant's words come from its enabled **Template Presets** (preset-level string overlays merged over base locale) plus its own category labels. Per-tenant renames of UI terms are NOT built — market survey: 4 of 5 mature vertical SaaS offer at most a two-value toggle. Revisit only if a paying tenant refuses the preset's word.

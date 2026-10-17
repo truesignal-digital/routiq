@@ -1,17 +1,18 @@
 import {
   setTemplatePresetPayload,
+  setTemplatePresetV2Payload,
   TEMPLATE_CODES,
-  type SetTemplatePresetPayload,
+  type SetTemplatePresetV2Payload,
   type TemplateCode,
 } from "@routiq/contracts";
 import { eq } from "drizzle-orm";
 import { workspaceTemplates } from "../db/schema.js";
 import {
-  appendAuditEvent,
+  appendPlatformAuditEvent,
   CommandError,
-  registerCommand,
-  type CommandDefinition,
+  registerPlatformCommand,
 } from "./dispatcher.js";
+import { requiresWorkspaceTarget, workspaceBySlug } from "./platform-target.js";
 
 type TemplateRow = typeof workspaceTemplates.$inferSelect;
 
@@ -37,22 +38,22 @@ function templateState(row: TemplateRow): Record<string, unknown> {
 
 /**
  * The writer `workspace_templates` never had: provisioning seeds the rows for a
- * new tenant, and until now nothing could change them afterwards. Mirrors
- * `enable-module`/`disable-module`, with two rules modules do not need.
+ * new tenant, and nothing else changes them afterwards. Vendor-set like modules
+ * (ADR-0005), so it mirrors `enable-module`/`disable-module` at platform scope,
+ * with two rules modules do not need.
  */
-const setTemplatePreset: CommandDefinition<SetTemplatePresetPayload> = {
+registerPlatformCommand<SetTemplatePresetV2Payload>({
+  scope: "platform",
   name: "set-template-preset",
-  version: 1,
-  module: "CORE",
-  allowedRoles: ["DIRECTOR"],
-  payloadSchema: setTemplatePresetPayload,
-  branchAuthorization: { kind: "workspace" },
+  version: 2,
+  payloadSchema: setTemplatePresetV2Payload,
+  resolveWorkspace: (tx, _ctx, _envelope, payload) => workspaceBySlug(tx, payload.workspaceSlug),
 
-  async execute(tx, ctx, envelope, payload) {
+  async execute(tx, ctx, envelope, payload, workspaceId) {
     const rows = await tx
       .select()
       .from(workspaceTemplates)
-      .where(eq(workspaceTemplates.workspaceId, ctx.workspaceId));
+      .where(eq(workspaceTemplates.workspaceId, workspaceId));
 
     /**
      * Grandfather clause (templates/registry.ts): a workspace with zero rows
@@ -100,7 +101,7 @@ const setTemplatePreset: CommandDefinition<SetTemplatePresetPayload> = {
       : await tx
           .insert(workspaceTemplates)
           .values({
-            workspaceId: ctx.workspaceId,
+            workspaceId,
             presetCode: payload.presetCode,
             ...patch,
           })
@@ -114,7 +115,7 @@ const setTemplatePreset: CommandDefinition<SetTemplatePresetPayload> = {
           .insert(workspaceTemplates)
           .values(
             others.map((presetCode) => ({
-              workspaceId: ctx.workspaceId,
+              workspaceId,
               presetCode,
               enabled: true,
               updatedByCommandId: envelope.commandId,
@@ -122,7 +123,7 @@ const setTemplatePreset: CommandDefinition<SetTemplatePresetPayload> = {
           )
           .returning();
         for (const row of materialized) {
-          await appendAuditEvent(tx, ctx, envelope, {
+          await appendPlatformAuditEvent(tx, ctx, workspaceId, envelope, {
             eventType: "template_preset.materialized",
             entityType: "workspace_template",
             entityId: row.id,
@@ -133,7 +134,7 @@ const setTemplatePreset: CommandDefinition<SetTemplatePresetPayload> = {
       }
     }
 
-    await appendAuditEvent(tx, ctx, envelope, {
+    await appendPlatformAuditEvent(tx, ctx, workspaceId, envelope, {
       eventType: payload.enabled ? "template_preset.enabled" : "template_preset.disabled",
       entityType: "workspace_template",
       entityId: target.id,
@@ -144,6 +145,13 @@ const setTemplatePreset: CommandDefinition<SetTemplatePresetPayload> = {
 
     return { recordId: target.id, rowVersion: target.rowVersion };
   },
-};
+});
 
-registerCommand(setTemplatePreset);
+registerPlatformCommand({
+  scope: "platform",
+  name: "set-template-preset",
+  version: 1,
+  payloadSchema: setTemplatePresetPayload,
+  resolveWorkspace: requiresWorkspaceTarget,
+  execute: requiresWorkspaceTarget,
+});

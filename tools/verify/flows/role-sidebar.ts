@@ -9,7 +9,7 @@ import { openSidebar, type DriveScript } from "../browser.js";
  */
 const EXPECTED: Record<string, { daily: readonly [string, string][]; company: readonly [string, string][] }> = {
   DIRECTOR: {
-    daily: [["Accueil", "Home"], ["Camions", "Trucks"], ["Trajets", "Trips"], ["Maintenance", "Maintenance"], ["Argent", "Money"]],
+    daily: [["Tableau de bord", "Dashboard"], ["Camions", "Trucks"], ["Trajets", "Trips"], ["Maintenance", "Maintenance"], ["Argent", "Money"]],
     company: [
       ["Personnel", "People"],
       ["Utilisateurs", "Users"],
@@ -19,16 +19,16 @@ const EXPECTED: Record<string, { daily: readonly [string, string][]; company: re
     ],
   },
   ADMIN: {
-    daily: [["Accueil", "Home"], ["Camions", "Trucks"], ["Trajets", "Trips"], ["Maintenance", "Maintenance"], ["Argent", "Money"]],
-    company: [["Personnel", "People"], ["Utilisateurs", "Users"]],
+    daily: [["Tableau de bord", "Dashboard"], ["Camions", "Trucks"], ["Trajets", "Trips"], ["Maintenance", "Maintenance"], ["Argent", "Money"]],
+    company: [["Personnel", "People"], ["Utilisateurs", "Users"], ["Paramètres de l'entreprise", "Company settings"]],
   },
   FINANCE: {
-    daily: [["Accueil", "Home"], ["Camions", "Trucks"], ["Trajets", "Trips"], ["Argent", "Money"]],
+    daily: [["Tableau de bord", "Dashboard"], ["Camions", "Trucks"], ["Trajets", "Trips"], ["Argent", "Money"]],
     company: [["Personnel", "People"], ["Mois comptables", "Accounting months"]],
   },
-  CASHIER: { daily: [["Accueil", "Home"], ["Camions", "Trucks"], ["Argent", "Money"]], company: [] },
-  TECHNICIAN: { daily: [["Accueil", "Home"], ["Camions", "Trucks"], ["Maintenance", "Maintenance"]], company: [] },
-  DRIVER: { daily: [["Accueil", "Home"], ["Camions", "Trucks"], ["Trajets", "Trips"]], company: [] },
+  CASHIER: { daily: [["Tableau de bord", "Dashboard"], ["Camions", "Trucks"], ["Argent", "Money"]], company: [] },
+  TECHNICIAN: { daily: [["Tableau de bord", "Dashboard"], ["Camions", "Trucks"], ["Maintenance", "Maintenance"]], company: [] },
+  DRIVER: { daily: [["Tableau de bord", "Dashboard"], ["Camions", "Trucks"], ["Trajets", "Trips"]], company: [] },
 };
 
 const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
@@ -78,7 +78,7 @@ const flow: DriveScript = async ({ page, account, shot, quiet, t, log }) => {
     const title = page.getByRole("heading", { level: 1, name: label, exact: true });
     const titled = await title.waitFor({ timeout: 10_000 }).then(() => true, () => false);
     check(titled, `${label}: page title repeats the row label`);
-    if (label !== t("Accueil", "Home") && !phone) {
+    if (label !== t("Tableau de bord", "Dashboard") && !phone) {
       const crumbs = await page.locator("[data-slot='breadcrumb-list'] li").allTextContents();
       const named = crumbs.map((crumb) => crumb.trim()).filter((crumb) => crumb !== "");
       check(named[1] === label, `${label}: first crumb after Home is "${named[1] ?? ""}"`);

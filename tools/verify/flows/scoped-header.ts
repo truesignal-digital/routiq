@@ -153,7 +153,7 @@ const flow: DriveScript = async ({ page, nav, shot, quiet, t, log, evidenceDir }
   const size = phone ? "phone" : "desktop";
 
   const setTheme = async (theme: "light" | "dark") => {
-    await header.getByRole("button", { name: t("Thème", "Theme"), exact: true }).click();
+    await header.getByRole("button", { name: t("Apparence", "Appearance"), exact: true }).click();
     await page.getByRole("menuitemradio", { name: theme === "dark" ? t("Sombre", "Dark") : t("Clair", "Light") }).click();
     await page.waitForFunction((dark) => document.documentElement.classList.contains("dark") === dark, theme === "dark");
     await page.getByRole("menu").waitFor({ state: "hidden" });

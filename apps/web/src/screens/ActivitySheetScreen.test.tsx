@@ -4,7 +4,7 @@ import {
   recordHaulageJobSheetPayload,
   recordJourneySheetPayload,
 } from "@routiq/contracts";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement, type ReactNode } from "react";
 import {
@@ -20,6 +20,7 @@ import {
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
+import { formatMoney } from "../lib/format.js";
 import { BranchProvider, branchStorageKey } from "../shell/branch-context.js";
 import { BranchSwitcher } from "../shell/BranchSwitcher.js";
 import { openSelect } from "../test-select.js";
@@ -55,11 +56,11 @@ vi.mock("../commands/instance.js", () => ({
   commandClient: { submit: mocks.submit },
 }));
 
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: mocks.useAssetRegistrationReference,
 }));
 
-vi.mock("../documents/useCategories.js", () => ({
+vi.mock("../categories/useCategories.js", () => ({
   useCategories: mocks.useCategories,
 }));
 
@@ -86,7 +87,11 @@ const clerk: MeContext = {
   branchScope: "ALL",
   enabledModules: ["CORE", "ACTIVITIES", "FINANCE"],
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+  timezone: "Africa/Douala",
 };
+
+/** The office side: records the fares and freight a driver does not (#532). */
+const manager: MeContext = { ...clerk, displayName: "Boris Ekane", role: "ADMIN" };
 
 function renderScreen(me: MeContext = clerk): void {
   const queryClient = new QueryClient({
@@ -242,7 +247,7 @@ const FULL_SHEET_TIMEOUT_MS = 20_000;
 describe("activity sheet capture", () => {
   it("dispatches a journey sheet the contract accepts", async () => {
     const user = userEvent.setup({ delay: 1 });
-    renderScreen();
+    renderScreen(manager);
     await fillMinimalSheet(user);
 
     // Crew: the driver named on the sheet, picked from the branch's people.
@@ -313,6 +318,23 @@ describe("activity sheet capture", () => {
     expect(parsed.data?.legs).toEqual([]);
   }, FULL_SHEET_TIMEOUT_MS);
 
+  // #573: a driver records expenses only (#532), so their empty sheet does not
+  // mention revenue; a manager's still does.
+  it("words the empty money section for who may add revenue", async () => {
+    const user = userEvent.setup({ delay: 1 });
+    // A driver's sheet opens with no money line at all (#570).
+    renderScreen();
+    expect(await screen.findByText("No expense on this sheet yet.")).toBeTruthy();
+    expect(screen.queryByText(/revenue or expense/)).toBeNull();
+    cleanup();
+
+    // A manager's passenger sheet opens with one revenue line; removing it empties the section.
+    renderScreen(manager);
+    await user.click(await screen.findByRole("button", { name: "Remove line 1" }));
+    expect(await screen.findByText("No revenue or expense on this sheet.")).toBeTruthy();
+    expect(screen.queryByText("No expense on this sheet yet.")).toBeNull();
+  });
+
   it("names the money lines still waiting for an approver", async () => {
     mocks.submit.mockResolvedValue({
       ok: true,
@@ -330,7 +352,7 @@ describe("activity sheet capture", () => {
       },
     });
     const user = userEvent.setup({ delay: 1 });
-    renderScreen();
+    renderScreen(manager);
     await fillMinimalSheet(user);
     await pickFirstOption(user, "Category of line 1");
     await user.type(screen.getByLabelText("Amount of line 1"), "480000");
@@ -373,6 +395,57 @@ describe("activity sheet capture", () => {
     expect(mocks.navigate).toHaveBeenCalledWith({
       to: "/activities/$activityId",
       params: { activityId: UUID },
+    });
+  });
+
+  describe("a driver's money lines (#532)", () => {
+    it("titles the money card by who may add revenue (#594)", async () => {
+      // The So far column also has an "Expenses" line, so look at section headings only.
+      const sectionTitle = (name: string) => ({ level: 2, name });
+      renderScreen();
+      expect(await screen.findByRole("heading", sectionTitle("Expenses"))).toBeTruthy();
+      expect(screen.queryByRole("heading", sectionTitle("Revenue and expenses"))).toBeNull();
+      cleanup();
+
+      renderScreen(manager);
+      expect(await screen.findByRole("heading", sectionTitle("Revenue and expenses"))).toBeTruthy();
+      expect(screen.queryByRole("heading", sectionTitle("Expenses"))).toBeNull();
+    });
+
+    it("opens a driver's journey with no revenue line, and offers expenses only", async () => {
+      const user = userEvent.setup({ delay: 1 });
+      renderScreen();
+      await screen.findByRole("button", { name: "Add expense" });
+
+      expect(screen.queryByRole("button", { name: "Add revenue" })).toBeNull();
+      expect(screen.queryByLabelText("Category of line 1")).toBeNull();
+
+      await user.click(screen.getByRole("button", { name: "Add expense" }));
+      // An expense line with nothing to flip it to revenue.
+      expect(screen.queryByRole("tablist", { name: "Direction of line 1" })).toBeNull();
+      expect(screen.queryByRole("tab", { name: "Revenue" })).toBeNull();
+
+      await fillMinimalSheet(user);
+      await pickFirstOption(user, "Category of line 1");
+      await user.type(screen.getByLabelText("Amount of line 1"), "25000");
+      await user.click(screen.getByRole("button", { name: "Record sheet" }));
+
+      await waitFor(() => expect(mocks.submit).toHaveBeenCalledOnce());
+      const parsed = recordJourneySheetPayload.safeParse(submittedPayload());
+      expect(parsed.error?.issues ?? []).toEqual([]);
+      expect(parsed.data?.entries).toEqual([
+        expect.objectContaining({ direction: "EXPENSE", categoryCode: "FUEL", amountMinor: 25_000 }),
+      ]);
+    }, FULL_SHEET_TIMEOUT_MS);
+
+    it.each([
+      ["an Administrateur", manager],
+      ["Direction", { ...manager, role: "DIRECTOR" } satisfies MeContext],
+    ])("still gives %s a revenue line and the button to add one", async (_who, me) => {
+      renderScreen(me);
+      await screen.findByRole("button", { name: "Add revenue" });
+      expect(screen.getByRole("tablist", { name: "Direction of line 1" })).toBeTruthy();
+      expect(screen.getByRole("tab", { name: "Revenue", selected: true })).toBeTruthy();
     });
   });
 
@@ -510,5 +583,75 @@ describe("activity sheet capture", () => {
     await waitFor(() =>
       expect((screen.getByLabelText("Cargo") as HTMLInputElement).value).toBe(""),
     );
+  });
+});
+
+describe("Record a sheet in the form page frame (#663)", () => {
+  const soFar = () => screen.getByRole("complementary", { name: "So far" });
+  const footer = () => {
+    const element = document.querySelector<HTMLElement>("[data-slot=form-page-footer]");
+    if (element === null) throw new Error("no footer");
+    return element;
+  };
+  const money = (minor: number) => formatMoney(minor).replace(/\s/g, " ");
+  const line = (label: string) =>
+    within(soFar()).getByText(label).closest("div") as HTMLElement;
+
+  it("keeps the footer's count and the section states up with the clerk", async () => {
+    const user = userEvent.setup({ delay: 1 });
+    renderScreen(manager);
+
+    // The branch comes from the shell; the type, the vehicle and both times are the clerk's.
+    expect(within(footer()).getByText("4 missing")).toBeTruthy();
+    const vehicle = screen
+      .getByRole("heading", { level: 2, name: "Vehicle and meters" })
+      .closest("[data-section]") as HTMLElement;
+    expect(within(vehicle).getByText("3 missing")).toBeTruthy();
+
+    await fillMinimalSheet(user);
+
+    await waitFor(() => expect(within(footer()).getByText("Nothing missing")).toBeTruthy());
+    expect(within(vehicle).getByText("Done")).toBeTruthy();
+    const crew = screen.getByRole("heading", { level: 2, name: "Crew" }).closest("[data-section]") as HTMLElement;
+    expect(within(crew).getByText("Not started")).toBeTruthy();
+    expect(within(footer()).getAllByRole("button").map((button) => button.textContent)).toEqual([
+      "Record and close",
+      "Record sheet",
+    ]);
+  }, FULL_SHEET_TIMEOUT_MS);
+
+  it("sums up the truck, route, distance and money as they are typed", async () => {
+    const user = userEvent.setup({ delay: 1 });
+    renderScreen(manager);
+
+    expect(within(line("Revenue")).getByText("Not recorded")).toBeTruthy();
+    expect(within(line("Profit")).getByText("Not recorded")).toBeTruthy();
+
+    await pickFirstOption(user, "Primary asset");
+    await user.type(screen.getByLabelText("Origin of leg 1"), "Douala");
+    await user.type(screen.getByLabelText("Destination of leg 1"), "Edea");
+    await user.type(screen.getByLabelText("Distance of leg 1"), "240");
+    await pickFirstOption(user, "Category of line 1");
+    await user.type(screen.getByLabelText("Amount of line 1"), "450000");
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+    await pickFirstOption(user, "Category of line 2");
+    await user.type(screen.getByLabelText("Amount of line 2"), "500000");
+
+    expect(within(line("Asset")).getByText(/BUS-001/)).toBeTruthy();
+    expect(within(line("Route")).getByText("Douala → Edea")).toBeTruthy();
+    expect(within(line("Distance")).getByText("240 km")).toBeTruthy();
+    expect(within(line("Revenue")).getByText(money(450_000))).toBeTruthy();
+    expect(within(line("Expenses")).getByText(money(500_000))).toBeTruthy();
+    // Below zero it is a loss, never a negative profit.
+    expect(within(line("Loss")).getByText(money(50_000))).toBeTruthy();
+  }, FULL_SHEET_TIMEOUT_MS);
+
+  it("shows a driver the expenses and no revenue or profit", async () => {
+    renderScreen(clerk);
+
+    await screen.findByRole("button", { name: "Add expense" });
+    expect(within(soFar()).getByText("Expenses")).toBeTruthy();
+    expect(within(soFar()).queryByText("Revenue")).toBeNull();
+    expect(within(soFar()).queryByText("Profit")).toBeNull();
   });
 });

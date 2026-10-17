@@ -56,6 +56,17 @@ export interface ReadContext {
   read<T>(execute: (tx: ReadTx) => Promise<T>): Promise<T>;
 }
 
+const declaredReads = new Map<string, ReadGate>();
+
+/**
+ * Every read registered so far, by path, with its gate: the read-side twin of
+ * `listCommandDefinitions`, for checks that compare reads with the module
+ * manifests. Filled as a server is built.
+ */
+export function listReadGates(): ReadonlyMap<string, ReadGate> {
+  return declaredReads;
+}
+
 /**
  * Registers a GET route behind its gate (`passReadGate`: role, then module).
  * A `ReadRefusal` thrown from the handler answers with its code; anything
@@ -68,6 +79,7 @@ export function defineRead(
   handler: (ctx: ReadContext) => Promise<unknown>,
 ): void {
   const { path, ...gate } = route;
+  declaredReads.set(path, gate);
   app.get(path, { preHandler: deps.requireAuth, config: { readGate: gate } }, async (req, reply) => {
     const auth = req.auth;
     if (auth === undefined) return reply.status(401).send({ error: { code: "AUTH_REQUIRED" } });

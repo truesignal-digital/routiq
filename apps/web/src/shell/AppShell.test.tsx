@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nextProvider } from "react-i18next";
@@ -40,7 +40,7 @@ const branches: { current: Array<{ id: string; code: string; name: string }> } =
   current: [],
 };
 
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => ({
     data: { assetClasses: [], branches: branches.current },
     isError: false,
@@ -48,7 +48,21 @@ vi.mock("../assets/reference.js", () => ({
   }),
 }));
 
+/** The notice's own behaviour has its own test; here only where it sits. */
+/** The real notice only where a test reads the approval chain through it (#496). */
+const realNotice = { current: false };
+vi.mock("../approval-rules/ApprovalRulesNotice.js", async () => {
+  const actual = await vi.importActual<typeof import("../approval-rules/ApprovalRulesNotice.js")>(
+    "../approval-rules/ApprovalRulesNotice.js",
+  );
+  return {
+    ApprovalRulesNotice: () =>
+      realNotice.current ? <actual.ApprovalRulesNotice /> : <div data-testid="rules-notice" />,
+  };
+});
+
 const { AppShell } = await import("./AppShell.js");
+const { PageContainer } = await import("../components/page-container.js");
 
 function membership(enabledModules: ModuleCode[]): MeContext {
   return {
@@ -62,6 +76,7 @@ function membership(enabledModules: ModuleCode[]): MeContext {
     branchScope: "ALL",
     enabledModules,
     enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+    timezone: "Africa/Douala",
   };
 }
 
@@ -90,11 +105,12 @@ const SCREEN_PATHS = [
   "/assets/new",
   "/finance/entries",
   "/finance/periods",
+  "/maintenance",
 ] as const;
 
 let client = new QueryClient();
 
-async function renderShell(initialPath: string) {
+async function renderShell(initialPath: string, ready = () => screen.findByTestId("screen")) {
   const rootRoute = createRootRoute();
   const shellRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -113,9 +129,20 @@ async function renderShell(initialPath: string) {
       component: () => <div data-testid="screen">{path}</div>,
     }),
   );
+  const pageRoute = createRoute({
+    getParentRoute: () => shellRoute,
+    path: "/framed-page",
+    component: () => (
+      <PageContainer>
+        <h1 data-testid="screen">Framed page</h1>
+        {/* A tab's permission screen is a container inside the page. */}
+        <PageContainer>inner</PageContainer>
+      </PageContainer>
+    ),
+  });
   const routeTree = rootRoute.addChildren([
     loginRoute,
-    shellRoute.addChildren(screenRoutes),
+    shellRoute.addChildren([...screenRoutes, pageRoute]),
   ]);
   const router = createRouter({
     routeTree,
@@ -130,7 +157,7 @@ async function renderShell(initialPath: string) {
       </I18nextProvider>
     </QueryClientProvider>,
   );
-  await screen.findByTestId("screen");
+  await ready();
   return router;
 }
 
@@ -158,6 +185,33 @@ beforeEach(async () => {
 });
 
 afterEach(cleanup);
+
+describe("AppShell offline notice (#576)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  function setOnline(online: boolean) {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(online);
+    act(() => {
+      window.dispatchEvent(new Event(online ? "online" : "offline"));
+    });
+  }
+
+  const notice = "You're offline. Pages will load when the connection is back.";
+
+  it("says the app is offline under the site header while the connection is down", async () => {
+    await renderShell("/assets");
+    expect(screen.queryByText(notice)).toBeNull();
+
+    setOnline(false);
+    const shown = screen.getByText(notice);
+    const header = document.querySelector("[data-slot='sidebar-inset'] header");
+    expect(header?.compareDocumentPosition(shown) ?? 0).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(shown.closest("[role='status']")).not.toBeNull();
+
+    setOnline(true);
+    expect(screen.queryByText(notice)).toBeNull();
+  });
+});
 
 describe("AppShell (sidebar frame)", () => {
   it("renders every screen inside the sidebar inset, under the site header", async () => {
@@ -193,7 +247,7 @@ describe("AppShell (sidebar frame)", () => {
 
   it("shows one nav item per enabled module", async () => {
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "Users"]);
+    expect(navLinkNames()).toEqual(["Dashboard", "Assets", "Money", "Users", "Company settings"]);
   });
 
   it("groups the rows under Daily work and Company", async () => {
@@ -206,13 +260,14 @@ describe("AppShell (sidebar frame)", () => {
   it("drops the section of a disabled module entirely", async () => {
     me.current = membership(["CORE", "ASSETS"]);
     await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Home", "Assets", "Users"]);
+    expect(navLinkNames()).toEqual(["Dashboard", "Assets", "Users"]);
   });
 
   it("renders only module-less sections while membership is still loading", async () => {
     me.current = undefined;
-    await renderShell("/assets");
-    expect(navLinkNames()).toEqual(["Home"]);
+    // A core page: a module's page waits for membership (ModulePageGate).
+    await renderShell("/");
+    expect(navLinkNames()).toEqual(["Dashboard"]);
   });
 
   it("marks the section owning the route active, and only that one", async () => {
@@ -222,7 +277,7 @@ describe("AppShell (sidebar frame)", () => {
 
   it("highlights Home on the landing route without swallowing the others", async () => {
     await renderShell("/");
-    expect(activeNavName()).toBe("Home");
+    expect(activeNavName()).toBe("Dashboard");
 
     cleanup();
     await renderShell("/assets/new");
@@ -238,6 +293,13 @@ describe("AppShell (sidebar frame)", () => {
     await renderShell("/finance/entries");
     const header = document.querySelector("[data-slot='sidebar-inset'] header");
     expect(header?.textContent).toContain("Money");
+  });
+
+  it("names a switched-off module's page in the site header, not just Home (#617)", async () => {
+    await renderShell("/maintenance", () => screen.findByText("This module is not enabled for your company."));
+    const header = document.querySelector("[data-slot='sidebar-inset'] header");
+    expect(header?.querySelector("[data-slot='breadcrumb-page']")?.textContent).toBe("Maintenance");
+    expect(screen.queryByTestId("screen")).toBeNull();
   });
 
   it("overrides the English labels the vendored trigger and rail ship with", async () => {
@@ -305,15 +367,55 @@ describe("AppShell (sidebar frame)", () => {
     expect(live?.textContent).toBe("You are viewing: Yaoundé");
   });
 
-  it("asks for the approval rules again on every new screen (#422)", async () => {
-    const router = await renderShell("/assets");
-    const invalidate = vi.spyOn(client, "invalidateQueries");
-    await router.navigate({ to: "/finance/entries" });
-    await waitFor(() =>
-      expect(invalidate).toHaveBeenCalledWith({
-        queryKey: ["ws", session.workspaceSlug, "approval-chain"],
+  it("shows the approval-rules notice another member's change raised, on the next screen once a minute has passed (#422, #496)", async () => {
+    const { APPROVAL_CHAIN_RECHECK_MS } = await import("../approval-rules/useApprovalChain.js");
+    let notice: { changeId: string; changedAt: string; changedBy: string } | null = null;
+    const chainReads = vi.fn();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (new URL(String(input), "http://app.test").pathname !== "/v1/approval-chain") return new Response(null, { status: 404 });
+        chainReads();
+        return Response.json({ currency: "XAF", chains: [], notice });
       }),
     );
+    realNotice.current = true;
+    try {
+      // The notice sits in the page's own column (#467), so only a page container shows it.
+      const router = await renderShell("/framed-page");
+      await waitFor(() => expect(chainReads).toHaveBeenCalledTimes(1));
+
+      // Direction changes the rules; within the minute, moving screens asks nothing.
+      notice = { changeId: "change-1", changedAt: "2026-10-05T09:00:00.000Z", changedBy: "Mme Ngo" };
+      await router.navigate({ to: "/finance/entries" });
+      await screen.findByText("/finance/entries");
+      await router.navigate({ href: "/framed-page" });
+      await screen.findByText("Framed page");
+      expect(chainReads).toHaveBeenCalledTimes(1);
+      expect(document.querySelector("[data-slot='approval-rules-notice']")).toBeNull();
+
+      // A minute later, the next screen asks again and the notice appears.
+      const key = ["ws", session.workspaceSlug, "approval-chain"];
+      client.setQueryData(key, client.getQueryData(key), { updatedAt: Date.now() - APPROVAL_CHAIN_RECHECK_MS });
+      await router.navigate({ to: "/assets" });
+      await screen.findByText("/assets");
+      await router.navigate({ href: "/framed-page" });
+      await waitFor(() => expect(document.querySelector("[data-slot='approval-rules-notice']")).not.toBeNull());
+      expect(chainReads).toHaveBeenCalledTimes(2);
+    } finally {
+      realNotice.current = false;
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("puts the approval-rules notice in the page's own column, once (#467)", async () => {
+    await renderShell("/framed-page");
+
+    const notices = screen.getAllByTestId("rules-notice");
+    expect(notices).toHaveLength(1);
+    const column = screen.getByTestId("screen").closest("section");
+    expect(column?.hasAttribute("data-page-frame")).toBe(true);
+    expect(notices[0]?.parentElement).toBe(column);
   });
 
   it("logs out from the sidebar footer, forgetting every read made under the session", async () => {
@@ -330,13 +432,13 @@ describe("AppShell (sidebar frame)", () => {
     it("renames the chrome of a single-preset workspace", async () => {
       me.current = { ...membership(["CORE", "ASSETS", "FINANCE"]), enabledPresets: ["TRUCKING"] };
       await renderShell("/assets");
-      expect(navLinkNames()).toEqual(["Home", "Trucks", "Money", "Users"]);
+      expect(navLinkNames()).toEqual(["Dashboard", "Trucks", "Money", "Users", "Company settings"]);
     });
 
     // Runs after the overlay above: also proves unmounting clears it.
     it("keeps the base vocabulary for a mixed fleet", async () => {
       await renderShell("/assets");
-      expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "Users"]);
+      expect(navLinkNames()).toEqual(["Dashboard", "Assets", "Money", "Users", "Company settings"]);
     });
   });
 
@@ -360,7 +462,7 @@ describe("AppShell (sidebar frame)", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "Show or hide the menu" }));
 
-      expect(navLinkNames()).toEqual(["Home", "Assets", "Money", "Users"]);
+      expect(navLinkNames()).toEqual(["Dashboard", "Assets", "Money", "Users", "Company settings"]);
     });
 
     it("closes the sheet after navigating", async () => {
@@ -369,7 +471,7 @@ describe("AppShell (sidebar frame)", () => {
       await userEvent.click(screen.getByRole("button", { name: "Show or hide the menu" }));
       await userEvent.click(screen.getByRole("link", { name: "Money" }));
 
-      expect(router.state.location.pathname).toBe("/finance/entries");
+      expect(router.state.location.pathname).toBe("/finance");
       expect(screen.queryByRole("navigation", { name: "Navigation" })).toBeNull();
     });
 

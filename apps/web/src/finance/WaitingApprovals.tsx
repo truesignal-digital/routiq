@@ -32,9 +32,10 @@ import { useAmbientBranchId, useCurrentBranch } from "@/shell/branch-context.js"
 import { BranchScopeLine } from "@/shell/BranchScopeNotices.js";
 import { formatDate, formatMoney, localizedLabel } from "@/lib/format.js";
 import type { PendingApprovalItem } from "@routiq/contracts";
+import { NotRecorded } from "@/components/not-recorded.js";
 
 /** Only Reject asks anything first; Approve is one tap. */
-type RejectDialogState = { open: false } | { open: true; entryId: string; rowVersion: number };
+type RejectDialogState = { open: false } | { open: true; entry: PendingApprovalItem };
 
 /** Mirrors the read's own default — oldest first is the queue's honest order. */
 const DEFAULT_SORTING: SortingState = [{ id: "submittedAt", desc: false }];
@@ -43,7 +44,7 @@ const DEFAULT_SORTING: SortingState = [{ id: "submittedAt", desc: false }];
 const APPROVALS_PAGE_SIZE = 100;
 
 /**
- * The Money page's "Waiting your approval" view (#314): the entries this
+ * The Money page's "Waiting for your approval" view (#314): the entries this
  * viewer may decide, oldest first, with Reject and Approve on each row. It
  * replaced the separate Approvals page; `/finance/approvals` redirects here.
  */
@@ -98,7 +99,7 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
   );
 
   const openReject = (entry: PendingApprovalItem) =>
-    setRejectDialog({ open: true, entryId: entry.id, rowVersion: entry.rowVersion });
+    setRejectDialog({ open: true, entry });
 
   const filters = useMemo<DataTableFilter[]>(
     () => [
@@ -135,7 +136,7 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
         header: t("finance.entries.detail.date"),
         enableSorting: false,
         meta: { phone: "meta", label: t("finance.entries.detail.date") },
-        cell: ({ row }) => formatDate(row.original.economicDate),
+        cell: ({ row }) => formatDate(row.original.economicDate, undefined, "short"),
       },
       {
         accessorKey: "submittedAt",
@@ -144,7 +145,7 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
         // A phone row shows values without headings, so a second bare date
         // there would read as the economic one.
         meta: { phone: "hidden", label: t("finance.approvals.columns.submittedAt") },
-        cell: ({ row }) => formatDate(row.original.submittedAt),
+        cell: ({ row }) => formatDate(row.original.submittedAt, undefined, "short"),
       },
       {
         // The queue spans branches by default, so each row has to say which one
@@ -158,12 +159,16 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
           phoneText: (item) =>
             branchOptions.find((branch) => branch.id === item.branchId)?.name ?? null,
         },
-        cell: ({ row }) => (
-          <StatusBadge tone="neutral" icon={Building2}>
-            {branchOptions.find((branch) => branch.id === row.original.branchId)
-              ?.name ?? "—"}
-          </StatusBadge>
-        ),
+        cell: ({ row }) => {
+          // Every entry has a branch; a name not in the loaded options is
+          // unknown here, not unrecorded, so the cell stays empty.
+          const name = branchOptions.find((branch) => branch.id === row.original.branchId)?.name;
+          return name === undefined ? null : (
+            <StatusBadge tone="neutral" icon={Building2}>
+              {name}
+            </StatusBadge>
+          );
+        },
       },
       {
         id: "category",
@@ -222,7 +227,7 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
           label: t("finance.entries.detail.counterparty"),
         },
         cell: ({ row }) => (
-          <span className="whitespace-normal">{row.original.counterpartyName ?? "—"}</span>
+          <span className="whitespace-normal">{row.original.counterpartyName ?? <NotRecorded />}</span>
         ),
       },
       {
@@ -285,6 +290,7 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
           columnVisibility={columnVisibility}
           onColumnVisibilityChange={setColumnVisibility}
           sorting={sorting}
+          defaultSorting={DEFAULT_SORTING}
           onSortingChange={setSorting}
           primaryColumn={{ columnId: "entryNumber" }}
           rowViewer={{
@@ -350,7 +356,7 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
       {rejectDialog.open && (
         <RejectEntryForm
           surface="dialog"
-          entry={{ id: rejectDialog.entryId, rowVersion: rejectDialog.rowVersion }}
+          entry={rejectDialog.entry}
           onDismiss={() => setRejectDialog({ open: false })}
         />
       )}

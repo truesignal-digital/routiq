@@ -5,7 +5,7 @@ import { useActivity } from "@/activities/useActivities.js";
 import { RecordText } from "@/components/record-number";
 import { RecordEntryForm } from "@/finance/RecordEntryForm.js";
 import { entriesScope } from "@/finance/permissions.js";
-import { formatDateTime, formatMoney, localizedLabel } from "@/lib/format.js";
+import { formatDateTime, formatMoney, localizedLabel, notRecorded } from "@/lib/format.js";
 import { useVehicle, type PanelForm } from "../context.js";
 import type { RecordSteps } from "../flow.js";
 import { DetailHeader, DetailSection, FactList, Note } from "../parts.js";
@@ -81,9 +81,9 @@ function TripRecordBody({ id, form }: { id: string; form: PanelForm | undefined 
         <FactList
           rows={[
             [t("vehicle.trips.customer"), trip.customerName ?? t("vehicle.trips.none")],
-            [t("vehicle.trips.driver"), driver ?? t("vehicle.details.notRecorded")],
-            [t("vehicle.trips.started"), trip.startedAt === null ? t("vehicle.details.notRecorded") : formatDateTime(trip.startedAt, locale)],
-            [t("vehicle.trips.ended"), trip.endedAt === null ? "—" : formatDateTime(trip.endedAt, locale)],
+            [t("vehicle.trips.driver"), driver ?? notRecorded(locale)],
+            [t("vehicle.trips.started"), trip.startedAt === null ? notRecorded(locale) : formatDateTime(trip.startedAt, locale)],
+            [t("vehicle.trips.ended"), trip.endedAt === null ? notRecorded(locale) : formatDateTime(trip.endedAt, locale)],
             [
               t("vehicle.trips.distance"),
               trip.distanceKm === null ? t("vehicle.trips.distanceUnknown") : t("vehicle.trips.km", { value: trip.distanceKm }),

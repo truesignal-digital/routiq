@@ -10,16 +10,18 @@ describe("whole amounts, as an input shows and reads them", () => {
       const shown = symbolFirst ? `${symbol} ${amount}` : `${amount} ${symbol}`;
       expect(plain(shown)).toBe(plain(formatMoney(45_000_000, { locale })));
     }
+    // The same in English since #712: grouped by spaces, FCFA after.
     expect(moneyAmountParts(45_000_000, { locale: "en" })).toEqual({
-      amount: "45,000,000",
+      amount: "45 000 000",
       symbol: "FCFA",
-      symbolFirst: true,
+      symbolFirst: false,
     });
     expect(moneyAmountParts(null, { locale: "fr-CM" }).amount).toBe("");
   });
 
   it("reads each language's grouping, and the dots people write in French", () => {
     expect(parseWholeAmount("45,000,000", "en")).toEqual({ kind: "amount", minor: 45_000_000 });
+    expect(parseWholeAmount("45 000 000", "en")).toEqual({ kind: "amount", minor: 45_000_000 });
     expect(parseWholeAmount("45 000 000", "fr-CM")).toEqual({ kind: "amount", minor: 45_000_000 });
     expect(parseWholeAmount("45 000 000", "fr-CM")).toEqual({ kind: "amount", minor: 45_000_000 });
     expect(parseWholeAmount("45.000.000", "fr-CM")).toEqual({ kind: "amount", minor: 45_000_000 });

@@ -36,7 +36,7 @@ vi.mock("../auth/store.js", () => ({
   useActiveSession: () => session,
 }));
 
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: () => ({
     data: {
       assetClasses: [],
@@ -65,6 +65,7 @@ function member(role: Role, branchScope: BranchScope = [DOUALA]): MeContext {
     branchScope,
     enabledModules: ["CORE", "ASSETS", "ACTIVITIES", "FINANCE", "MAINTENANCE"],
     enabledPresets: ["TRUCKING"],
+    timezone: "Africa/Douala",
   };
 }
 

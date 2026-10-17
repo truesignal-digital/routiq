@@ -13,7 +13,7 @@ import { demoKit, demoUtcOffset, type AddedMember, type DemoUser } from "./seed-
  */
 const demoWorkspaceSlug = "littoral-voyages";
 const kit = demoKit(demoWorkspaceSlug);
-const { id, actor, runCommand, assetState, activityState, workOrderRowVersion } = kit;
+const { id, actor, runCommand, assetState, activityState, workOrderRowVersion, linkPersonLogin } = kit;
 
 const DLA = "DLA";
 const YDE = "YDE";
@@ -322,6 +322,8 @@ export async function seedLittoralVoyages() {
       defaultRole: "DRIVER",
     }),
   ]);
+  // Éric's login is his Person's, linked as the People screen does it (#569).
+  await linkPersonLogin(paul, "link-person-login:eric", ids.crewEric, eric.principalId);
 
   const today = await kit.storyToday(storyAnchorOperation);
   const day = (offset: number) => addDays(today, offset);
@@ -330,9 +332,11 @@ export async function seedLittoralVoyages() {
   const yaounde = { kind: "place", placeId: ids.placeYaounde, name: "Yaoundé" } as const;
 
   // ── The closed voyage ──────────────────────────────────────────────────────
-  // Paul copies the coach's sheet: readings, crew, the leg and the seats sold.
+  // Éric files the coach's sheet: readings, crew, the leg and the seats sold.
   // The money comes from the people who handle it, then Paul closes the trip.
-  await runCommand(paul, storyAnchorOperation, {
+  // The trip is Éric's twice over: he records it, and his linked Person drives
+  // it, so the fuel he books on it is on his own trip (#592, #569).
+  await runCommand(eric, storyAnchorOperation, {
     activityId: ids.closedVoyage,
     branchCode: DLA,
     activityTypeCode: "SCHEDULED_JOURNEY",
@@ -340,7 +344,7 @@ export async function seedLittoralVoyages() {
     primaryAssetId: ids.coach,
     startedAt: at(-2, "06:30"),
     endedAt: at(-2, "11:10"),
-    description: "Départ 06h30 Douala → Yaoundé",
+    description: "06:30 departure Douala → Yaoundé",
     seatsSold: 64,
     seatsAvailable: 70,
     startReading: {
@@ -378,7 +382,7 @@ export async function seedLittoralVoyages() {
     branchCode: DLA,
     categoryCode: "TICKET_REVENUE",
     economicDate: day(-2),
-    description: "Billets — départ 06h30 Douala → Yaoundé (64 places)",
+    description: "Tickets: 06:30 departure Douala → Yaoundé (64 seats)",
     amountMinor: 64 * FARE,
     paymentMethod: "BANK",
     paymentReference: "VERS-DLA-0612",
@@ -388,7 +392,7 @@ export async function seedLittoralVoyages() {
     await runCommand(
       aline,
       "approve-entry:voyage:closed:tickets",
-      { entryId: ids.closedTickets, note: "Versement vérifié sur le relevé" },
+      { entryId: ids.closedTickets, note: "Deposit checked against the bank statement" },
       { expectedVersion: closedTickets.rowVersion },
     );
   }
@@ -400,7 +404,7 @@ export async function seedLittoralVoyages() {
       branchCode: DLA,
       categoryCode: "FUEL",
       economicDate: day(-2),
-      description: "Gasoil — départ 06h30 Douala → Yaoundé",
+      description: "Diesel: 06:30 departure Douala → Yaoundé",
       counterpartyName: "Tradex Bonabéri",
       amountMinor: 92_400,
       paymentMethod: "OM",
@@ -412,7 +416,7 @@ export async function seedLittoralVoyages() {
       branchCode: DLA,
       categoryCode: "TOLLS",
       economicDate: day(-2),
-      description: "Péages Edéa et Boumnyebel",
+      description: "Tolls at Edéa and Boumnyebel",
       amountMinor: 5_000,
       paymentMethod: "CASH",
       postings: [{ assetId: ids.coach, activityId: ids.closedVoyage, amountMinor: 5_000 }],
@@ -424,14 +428,15 @@ export async function seedLittoralVoyages() {
     await runCommand(
       paul,
       "close-activity:voyage:closed",
-      { activityId: ids.closedVoyage, note: "Feuille de route complète" },
+      { activityId: ids.closedVoyage, note: "Trip sheet complete" },
       { expectedVersion: closedState.rowVersion },
     );
   }
 
   // ── The voyage on the road ─────────────────────────────────────────────────
+  // Éric starts his own departure, so the fuel he buys below is on his trip (#592).
   await runCommand(
-    paul,
+    eric,
     "create-activity:voyage:road",
     {
       activityId: ids.roadVoyage,
@@ -442,14 +447,14 @@ export async function seedLittoralVoyages() {
       primaryAssetId: ids.coaster,
       startedAt: at(0, "07:00"),
       plannedEndAt: at(0, "11:45"),
-      description: "Départ 07h00 Douala → Yaoundé",
+      description: "07:00 departure Douala → Yaoundé",
       startReading: {
         readingId: ids.roadStartReading,
         readingType: "ODOMETER",
         value: 186_040,
         observedAt: at(0, "06:50"),
       },
-      crew: [{ activityPersonId: ids.roadCrew, personId: ids.crewJoseph, role: "DRIVER" }],
+      crew: [{ activityPersonId: ids.roadCrew, personId: ids.crewEric, role: "DRIVER" }],
     },
     { clientOccurredAt: at(0, "06:55") },
   );
@@ -471,7 +476,7 @@ export async function seedLittoralVoyages() {
     branchCode: DLA,
     categoryCode: "TICKET_REVENUE",
     economicDate: day(0),
-    description: "Billets — départ 07h00 Douala → Yaoundé (27 places)",
+    description: "Tickets: 07:00 departure Douala → Yaoundé (27 seats)",
     amountMinor: 27 * FARE,
     paymentMethod: "MOMO",
     paymentReference: "MOMO-LV-7731904",
@@ -485,7 +490,7 @@ export async function seedLittoralVoyages() {
     branchCode: DLA,
     categoryCode: "FUEL",
     economicDate: day(0),
-    description: "Gasoil — départ 07h00 Douala → Yaoundé",
+    description: "Diesel: 07:00 departure Douala → Yaoundé",
     amountMinor: 58_800,
     paymentMethod: "CASH",
     postings: [{ assetId: ids.coaster, activityId: ids.roadVoyage, amountMinor: 58_800 }],
@@ -498,8 +503,8 @@ export async function seedLittoralVoyages() {
     branchCode: DLA,
     categoryCode: "INSURANCE",
     economicDate: day(-5),
-    description: "Assurance annuelle — Yutong LT 731 CE",
-    counterpartyName: "Activa Assurances",
+    description: "Annual insurance: Yutong LT 731 CE",
+    counterpartyName: "Littoral Insurance Brokers",
     amountMinor: 1_850_000,
     paymentMethod: "BANK",
     paymentReference: "VIR-ACTIVA-2611",
@@ -514,7 +519,7 @@ export async function seedLittoralVoyages() {
     {
       issueId: ids.coasterDoor,
       assetId: ids.coaster,
-      description: "Joint de porte passagers décollé : la pluie entre à la marche avant",
+      description: "Passenger door seal has come loose: rain gets in at the front step",
       safetyCritical: false,
       category: "BODYWORK",
     },
@@ -528,7 +533,7 @@ export async function seedLittoralVoyages() {
     {
       issueId: ids.minibusSteering,
       assetId: ids.minibus,
-      description: "Jeu dans la direction et claquement du train avant sur le contournement de Yaoundé",
+      description: "Play in the steering and a knock from the front axle on the Yaoundé bypass",
       safetyCritical: true,
       category: "STEERING",
     },
@@ -544,7 +549,7 @@ export async function seedLittoralVoyages() {
       workOrderId: ids.minibusSteeringOrder,
       assetId: ids.minibus,
       issueId: ids.minibusSteering,
-      description: "Remplacer les rotules de direction et contrôler le parallélisme",
+      description: "Replace the steering ball joints and check the wheel alignment",
       expectedCostMinor: 240_000,
     },
     { clientOccurredAt: at(-3, "17:40") },
@@ -553,7 +558,7 @@ export async function seedLittoralVoyages() {
     await runCommand(
       josiane,
       "approve-work-order:minibus:steering",
-      { workOrderId: ids.minibusSteeringOrder, note: "Sécurité d'abord : approuvé" },
+      { workOrderId: ids.minibusSteeringOrder, note: "Safety first: approved" },
       { expectedVersion: await workOrderRowVersion(ids.minibusSteeringOrder) },
     );
   }
@@ -581,7 +586,7 @@ export async function seedLittoralVoyages() {
       branchCode: YDE,
       categoryCode: "REPAIRS",
       economicDate: day(-2),
-      description: "Rotules de direction et main-d'œuvre — CE 908 YD",
+      description: "Steering ball joints and labour: CE 908 YD",
       counterpartyName: "Garage Mvan Auto",
       amountMinor: 185_000,
       paymentMethod: "OM",

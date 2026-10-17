@@ -34,9 +34,10 @@ would bury the approver. Human judgment is concentrated on large amounts.
 
 **The number:** pilot placeholder is **100 000 XAF**, stored per tenant in
 `approval_rules` — it is data, not code. Each business gets its own threshold
-(can be 0 = "approve everything"). Direction changes it, together with the
-amount up to which Finance decides (1 000 000 XAF by default), under Company →
-Company settings → Approvals, which sends `update-approval-threshold` v2 —
+(can be 0 = "approve everything"). Direction or an Administrator (ADR-0013)
+changes it, together with the amount up to which Finance decides (1 000 000
+XAF by default), under Company → Company settings → Approvals, which sends
+`update-approval-threshold` v2 —
 audited like everything else. The amount that posts directly must stay below
 Finance's. Real per-tenant values are an open
 onboarding decision (mtp-pilot 06).
@@ -64,9 +65,16 @@ at most once. Reversal requires a reason and an approver role.
 - **Locking** a period is the deliberate act (Finance or Direction): after the
   lock, that month's figures are final.
 - Reopening is Direction's, requires a reason, and the reason is audited.
-- An entry approved after its month locked **late-posts** into the current open
-  month, flagged (`is_late_posting`) — recorded honestly rather than blocked or
-  backdated.
+- An entry that posts after its month locked **late-posts** into the current
+  calendar month (workspace time zone), flagged (`is_late_posting`): recorded
+  honestly rather than backdated. It never looks for some other open month.
+- If the current month is locked too, nothing posts. An entry that would post
+  directly is kept waiting for approval instead, with a warning that its month
+  is locked, and approving it is refused until its month or the current
+  month reopens.
+- A lock covers the whole company's month, every branch. Whether a Finance
+  member limited to some branches may lock it is an open question
+  ([roles and access](reference/roles-and-access.md#open-for-the-pilot-team)).
 
 ## 7. Warn, don't block
 

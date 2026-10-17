@@ -323,6 +323,91 @@
       "dependencies": []
     },
     {
+      "name": "module-page",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/module-page.tsx",
+          "type": "registry:file",
+          "target": "components/module-page.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "page",
+        "page-container",
+        "tabs"
+      ],
+      "dependencies": [
+        "@tanstack/react-router"
+      ]
+    },
+    {
+      "name": "overview",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/overview/compare-bars.tsx",
+          "type": "registry:file",
+          "target": "components/overview/compare-bars.tsx"
+        },
+        {
+          "path": "src/components/overview/to-do-list.tsx",
+          "type": "registry:file",
+          "target": "components/overview/to-do-list.tsx"
+        },
+        {
+          "path": "src/components/overview/profit-bars.tsx",
+          "type": "registry:file",
+          "target": "components/overview/profit-bars.tsx"
+        },
+        {
+          "path": "src/components/overview/week-columns.tsx",
+          "type": "registry:file",
+          "target": "components/overview/week-columns.tsx"
+        },
+        {
+          "path": "src/components/overview/chart-view-toggle.tsx",
+          "type": "registry:file",
+          "target": "components/overview/chart-view-toggle.tsx"
+        },
+        {
+          "path": "src/components/overview/fleet-board.tsx",
+          "type": "registry:file",
+          "target": "components/overview/fleet-board.tsx"
+        },
+        {
+          "path": "src/components/overview/ranked-bars.tsx",
+          "type": "registry:file",
+          "target": "components/overview/ranked-bars.tsx"
+        },
+        {
+          "path": "src/components/overview/month-columns.tsx",
+          "type": "registry:file",
+          "target": "components/overview/month-columns.tsx"
+        },
+        {
+          "path": "src/components/overview/overview-summary.tsx",
+          "type": "registry:file",
+          "target": "components/overview/overview-summary.tsx"
+        },
+        {
+          "path": "src/components/overview/summary-notice.ts",
+          "type": "registry:file",
+          "target": "components/overview/summary-notice.ts"
+        }
+      ],
+      "registryDependencies": [
+        "button",
+        "data-table",
+        "not-recorded"
+      ],
+      "dependencies": [
+        "@tanstack/react-router",
+        "lucide-react",
+        "react-i18next"
+      ]
+    },
+    {
       "name": "utils",
       "type": "registry:lib",
       "files": [
@@ -716,6 +801,48 @@
       "dependencies": ["@tanstack/react-router", "lucide-react", "react-i18next"]
     },
     {
+      "name": "form-page",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/form-page.tsx",
+          "type": "registry:file",
+          "target": "components/form-page.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "page",
+        "page-container",
+        "status-badge",
+        "not-recorded",
+        "button",
+        "card",
+        "utils"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "react-hook-form",
+        "react-i18next"
+      ]
+    },
+    {
+      "name": "not-recorded",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/not-recorded.tsx",
+          "type": "registry:file",
+          "target": "components/not-recorded.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
+      "dependencies": [
+        "react-i18next"
+      ]
+    },
+    {
       "name": "provenance-stamp",
       "type": "registry:component",
       "files": [
@@ -742,19 +869,14 @@
           "target": "screens/ActivityDetailScreen.tsx"
         },
         {
-          "path": "src/activities/detail/ActivityOverview.tsx",
+          "path": "src/activities/detail/TripPage.tsx",
           "type": "registry:file",
-          "target": "activities/detail/ActivityOverview.tsx"
+          "target": "activities/detail/TripPage.tsx"
         },
         {
           "path": "src/activities/detail/ActivityTimeline.tsx",
           "type": "registry:file",
           "target": "activities/detail/ActivityTimeline.tsx"
-        },
-        {
-          "path": "src/activities/detail/ActivityAssetsPanel.tsx",
-          "type": "registry:file",
-          "target": "activities/detail/ActivityAssetsPanel.tsx"
         },
         {
           "path": "src/activities/detail/ActivityLegs.tsx",
@@ -777,6 +899,8 @@
         "page-container",
         "permission-denied",
         "provenance-stamp",
+        "record-page",
+        "status-block",
         "utils"
       ],
       "dependencies": [
@@ -1060,6 +1184,135 @@
         "react-hook-form",
         "react-i18next",
         "zod"
+      ]
+    },
+    {
+      "name": "money-input",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/money-input.tsx",
+          "type": "registry:file",
+          "target": "components/money-input.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "input",
+        "utils"
+      ],
+      "dependencies": [
+        "react-i18next"
+      ]
+    },
+    {
+      "name": "form-kit",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/form/form-layout.tsx",
+          "type": "registry:file",
+          "target": "components/form/form-layout.tsx"
+        },
+        {
+          "path": "src/components/form/field.tsx",
+          "type": "registry:file",
+          "target": "components/form/field.tsx"
+        },
+        {
+          "path": "src/components/form/fields.tsx",
+          "type": "registry:file",
+          "target": "components/form/fields.tsx"
+        },
+        {
+          "path": "src/components/form/date-fields.tsx",
+          "type": "registry:file",
+          "target": "components/form/date-fields.tsx"
+        },
+        {
+          "path": "src/components/form/search-field.tsx",
+          "type": "registry:file",
+          "target": "components/form/search-field.tsx"
+        },
+        {
+          "path": "src/components/form/schema-fields.ts",
+          "type": "registry:file",
+          "target": "components/form/schema-fields.ts"
+        }
+      ],
+      "registryDependencies": [
+        "command-form",
+        "use-command-form",
+        "date-field",
+        "money-input",
+        "file-upload",
+        "input",
+        "select",
+        "textarea",
+        "popover",
+        "button",
+        "form"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "react-hook-form",
+        "react-i18next",
+        "zod"
+      ]
+    },
+    {
+      "name": "page-skeletons",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/page-skeletons.tsx",
+          "type": "registry:file",
+          "target": "components/page-skeletons.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "skeleton"
+      ],
+      "dependencies": [
+        "react-i18next"
+      ]
+    },
+    {
+      "name": "record-page",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/record-page.tsx",
+          "type": "registry:file",
+          "target": "components/record-page.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "card",
+        "tabs",
+        "not-recorded",
+        "record-number",
+        "utils"
+      ],
+      "dependencies": [
+        "react-i18next"
+      ]
+    },
+    {
+      "name": "status-block",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/status-block.tsx",
+          "type": "registry:file",
+          "target": "components/status-block.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "record-page",
+        "utils"
+      ],
+      "dependencies": [
+        "lucide-react"
       ]
     }
   ]

@@ -13,6 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createSession } from "../auth/local.js";
 import { auditEvents, branches, categories, commands, principals } from "../db/schema.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 import { diffStates } from "./history.js";
 
@@ -247,6 +248,57 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       command: { name: "close-activity", version: "1", origin: "HUMAN_UI" },
     });
     expect(closed?.changedFields).toContain("status");
+  });
+
+  it("names in shownFields exactly the fields the event's change list shows (#465)", async () => {
+    // The demo's DLA-2026-00002: a trip created with a customer and a
+    // description and nothing else. The audit row lists every column the
+    // insert wrote, empty ones and the custom-field bag included.
+    const tripAssetId = await seedAsset(ctx.app, token, { assetCode: "HIST-CHIPS" });
+    const tripId = randomUUID();
+    await command("create-activity", {
+      activityId: tripId,
+      branchCode: "DLA",
+      activityTypeCode: "HAULAGE_JOB",
+      templateCode: "TRUCKING",
+      primarySegmentId: randomUUID(),
+      primaryAssetId: tripAssetId,
+      startedAt: "2026-07-14T06:00:00Z",
+      customerName: "Brasseries du Cameroun",
+      description: "Casiers vides vers Yaoundé",
+    });
+
+    const body = historyListResponse.parse((await history("activity", tripId)).json());
+    const created = body.items.find((item) => item.eventType === "activity.created");
+    if (created === undefined) throw new Error("no activity.created event");
+    expect(created.changedFields).toEqual(
+      expect.arrayContaining(["customValues", "plannedEndAt", "endedAt", "clientReference", "crew", "completenessCodes"]),
+    );
+    expect(created.shownFields).toEqual(expect.arrayContaining(["status", "customerName", "description", "startedAt"]));
+    for (const field of ["customValues", "plannedEndAt", "endedAt", "clientReference", "crew", "completenessCodes"]) {
+      expect(created.shownFields, field).not.toContain(field);
+    }
+
+    // Every event on the trip and on the long activity: the chips' source and
+    // the change list name the same fields, in the same order.
+    // A driver may not see a work order's amounts, so they are not chipped for one.
+    const driver = await seedMember(ctx.db, { workspaceId, role: "DRIVER", allBranches: true });
+    const driverToken = (await createSession(ctx.db, { workspaceId, principalId: driver.principal.id })).token;
+    for (const [entityType, entityId, reader] of [
+      ["activity", tripId, token],
+      ["activity", activityId, token],
+      ["work_order", workOrderId, token],
+      ["work_order", workOrderId, driverToken],
+    ] as const) {
+      const listResponse = await history(entityType, entityId, "", reader);
+      expect(listResponse.statusCode).toBe(200);
+      const list = historyListResponse.parse(listResponse.json());
+      for (const item of list.items) {
+        const diff = historyEventDiff.parse((await history(entityType, entityId, `/${item.eventId}`, reader)).json());
+        expect(item.shownFields, `${entityType} ${item.eventType}`).toEqual(diff.changes.map((change) => change.field));
+        if (reader === driverToken) expect(item.shownFields).not.toContain("expectedCostMinor");
+      }
+    }
   });
 
   it("lifts the reopen motif into `note`, and leaves other events without one", async () => {
@@ -1249,11 +1301,7 @@ describe("GET /v1/history/:entityType/:entityId", () => {
         })
       ).token;
 
-      await command(
-        "disable-module",
-        { moduleCode: "ACTIVITIES" },
-        { token: gatedToken },
-      );
+      await setModule(ctx.db, seeded.workspace.id, "ACTIVITIES", false);
 
       const response = await diff(
         "activity",
@@ -1282,11 +1330,7 @@ describe("GET /v1/history/:entityType/:entityId", () => {
       })
     ).token;
 
-    await command(
-      "disable-module",
-      { moduleCode: "ACTIVITIES" },
-      { token: gatedToken },
-    );
+    await setModule(ctx.db, seeded.workspace.id, "ACTIVITIES", false);
 
     const response = await history("activity", randomUUID(), "", gatedToken);
     expect(response.statusCode).toBe(403);

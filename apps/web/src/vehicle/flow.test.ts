@@ -13,6 +13,7 @@ import {
   situationOf,
   tabMarkers,
   workOrderSteps,
+  workOrderWaiting,
   type EntryFacts,
 } from "./flow.js";
 import type { RoleStep } from "./model.js";
@@ -160,6 +161,50 @@ describe("a work order's next step, per role", () => {
     );
     expect(workOrderSteps(submitted, viewer("FINANCE")).offered).toEqual([]);
   });
+
+  it("keeps the cost on a completed order for the late invoice, to the same roles (#82)", () => {
+    const completed = groundingWorkOrder("COMPLETED");
+    const keys = (role: Role) =>
+      workOrderSteps(completed, viewer(role)).offered.map((offered) => offered.step.key);
+    expect(keys("TECHNICIAN")).toEqual(["add-cost"]);
+    expect(keys("ADMIN")).toEqual(["add-cost"]);
+    expect(keys("DIRECTOR")).toEqual(["add-cost"]);
+    expect(keys("FINANCE")).toEqual([]);
+    expect(keys("CASHIER")).toEqual([]);
+    expect(keys("DRIVER")).toEqual([]);
+    for (const status of ["REJECTED", "CANCELLED", "COMPLETION_SUBMITTED"] as const) {
+      expect(
+        workOrderSteps(groundingWorkOrder(status), viewer("TECHNICIAN")).offered.map((o) => o.step.key),
+        status,
+      ).not.toContain("add-cost");
+    }
+  });
+
+  it("sends a cost still to come to whoever books work-order cost (#82)", () => {
+    const item = attention("WORK_ORDER_COST_TO_COME");
+    for (const role of ["TECHNICIAN", "ADMIN", "DIRECTOR"] as const) {
+      expect(token(attentionStep(item, viewer(role), asset())), role).toBe("go:add-cost");
+    }
+    for (const role of ["FINANCE", "CASHIER", "DRIVER"] as const) {
+      expect(token(attentionStep(item, viewer(role), asset())), role).toBe("none");
+    }
+  });
+});
+
+describe("who a work order waits on (#588)", () => {
+  it("waits on a manager's release once the grounding repair is done", () => {
+    expect(workOrderWaiting("COMPLETED", true)).toBe("release");
+    expect(workOrderWaiting("COMPLETED", false)).toBeNull();
+  });
+
+  it("waits on the other safety-critical problem when one still blocks the release", () => {
+    expect(workOrderWaiting("COMPLETED", true, true)).toBe("otherSafetyIssue");
+    // Not the grounding order: it waits on nothing, whatever else is open.
+    expect(workOrderWaiting("COMPLETED", false, true)).toBeNull();
+    // Before the close, the order's own next step still comes first.
+    expect(workOrderWaiting("APPROVED", true, true)).toBe("completion");
+    expect(workOrderWaiting("COMPLETION_SUBMITTED", true, true)).toBe("signOff");
+  });
 });
 
 describe("the step beside the status sentence", () => {
@@ -271,6 +316,43 @@ describe("the step beside the status sentence", () => {
     expect(token(groundingStep(vehicle, viewer("CASHIER")).step)).toBe("none");
   });
 
+  describe("another safety-critical problem still open (#501, server SAFETY_ISSUE_OPEN)", () => {
+    const steering = { id: OTHER_ID, number: 5, description: "Steering locks on the left" };
+    const completed = () => groundingWorkOrder("COMPLETED");
+
+    it("locks the release beside the status sentence, naming the other problem", () => {
+      const vehicle = asset({ availability: grounded([completed()], {}, [steering]) });
+      const { step } = groundingStep(vehicle, viewer("ADMIN"));
+      expect(token(step)).toBe("locked:release:otherSafetyIssueOpen");
+      expect(step.kind === "locked" && step.lock.params).toEqual({
+        count: 1,
+        description: steering.description,
+      });
+    });
+
+    it("locks it on the work order, in the actions sheet's blocker and on the override path", () => {
+      const wo = completed();
+      const facts = groundingFacts(asset({ availability: grounded([wo], {}, [steering]) }));
+      expect(token(workOrderSteps(wo, viewer("ADMIN"), facts).primary)).toBe(
+        "locked:release:otherSafetyIssueOpen",
+      );
+      expect(releaseBlocker(facts)?.key).toBe("otherSafetyIssueOpen");
+
+      const closed = asset({
+        availability: grounded([], { status: "RESOLVED", closedBy: actor(OTHER_ID) }, [steering]),
+      });
+      const issue = { id: ISSUE_ID, status: "RESOLVED" as const, safetyCritical: true, planned: false };
+      expect(token(issueSteps(issue, viewer("ADMIN"), groundingFacts(closed)).primary)).toBe(
+        "locked:release:otherSafetyIssueOpen",
+      );
+    });
+
+    it("still names an unfinished repair first, as the server checks it first", () => {
+      const vehicle = asset({ availability: grounded([groundingWorkOrder("APPROVED")], {}, [steering]) });
+      expect(token(groundingStep(vehicle, viewer("ADMIN")).step)).toBe("locked:release:needsCompletion");
+    });
+  });
+
   it("names what a release still needs", () => {
     expect(releaseBlocker(undefined)?.key).toBe("notGrounded");
     const at = (status: WorkOrderStatus) =>
@@ -341,6 +423,22 @@ describe("the status sentence", () => {
     };
     expect(phase(false)).toBe("awaitingRelease");
     expect(phase(true)).toBe("awaitingReleaseSignedOff");
+  });
+
+  // #562: the server refuses the release while another safety-critical problem
+  // is open (SAFETY_ISSUE_OPEN), so the sentence names it instead of a manager.
+  it("names another open safety-critical problem instead of waiting on a release", () => {
+    const steering = { id: OTHER_ID, number: 5, description: "Steering locks on the left" };
+    const read = (workOrders: Parameters<typeof grounded>[0], issue = {}, signedOff = false) => {
+      const situation = situationOf(asset({ availability: grounded(workOrders, issue, [steering]) }), [], now, signedOff);
+      return situation.kind === "grounded" ? { phase: situation.phase, blockedBy: situation.blockedBy } : null;
+    };
+    const blockedBy = { id: OTHER_ID, description: steering.description, count: 1 };
+    expect(read([groundingWorkOrder("COMPLETED")])).toEqual({ phase: "otherIssueOpen", blockedBy });
+    expect(read([groundingWorkOrder("COMPLETED")], {}, true)).toEqual({ phase: "otherIssueOpenSignedOff", blockedBy });
+    expect(read([], { status: "DISMISSED" })).toEqual({ phase: "issueClosedOtherIssueOpen", blockedBy });
+    // An unfinished repair is still the first thing the sentence says.
+    expect(read([groundingWorkOrder("APPROVED")])?.phase).toBe("inProgress");
   });
 
   it("reads the sign-off off the work order's timeline, the last settling event deciding", () => {
@@ -450,6 +548,23 @@ describe("to-dos from the attention read", () => {
     expect(approver[0]?.record).toEqual({ kind: "entry", id: ENTRY_ID });
   });
 
+  // #542: every waiting entry said "Finance", even above Finance's band and on
+  // a Finance member's own entry. The read names who decides it.
+  it("names who decides a waiting entry", () => {
+    const review = (approver?: "FINANCE_APPROVES" | "FINANCE_PEER_APPROVES" | "DIRECTION_APPROVES" | "WAITS") =>
+      attention("ENTRY_AWAITING_REVIEW", {
+        makerPrincipalIds: [ME_ID],
+        ...(approver === undefined ? {} : { params: { approver } }),
+      });
+    const who = buildTodos(
+      [review("FINANCE_APPROVES"), review("FINANCE_PEER_APPROVES"), review("DIRECTION_APPROVES"), review("WAITS"), review()],
+      vehicle,
+      viewer("FINANCE"),
+    ).map((todo) => todo.who);
+    // #645: WAITS is a band no role decides, so it names no role.
+    expect(who).toEqual(["finance", "financePeer", "director", "approver", "finance"]);
+  });
+
   it("locks the review, and leaves it out of the to-do count, above Finance's band (#393)", () => {
     const above = attention("ENTRY_AWAITING_REVIEW", { params: { directionDecides: true } });
     const within = attention("ENTRY_AWAITING_REVIEW");
@@ -486,6 +601,7 @@ describe("an entry's steps", () => {
   const entry = (overrides: Partial<EntryFacts> = {}): EntryFacts => ({
     id: ENTRY_ID,
     status: "SUBMITTED",
+    direction: "EXPENSE",
     reversesEntryId: null,
     recordedBy: actor(OTHER_ID),
     evidence: { state: "NOT_SUPPLIED" },
@@ -513,6 +629,12 @@ describe("an entry's steps", () => {
     for (const status of ["POSTED", "REJECTED", "REVERSED"] as const) {
       expect(keys(entry({ status, recordedBy: actor(ME_ID) }), "DRIVER")).not.toContain("edit-entry");
     }
+  });
+
+  it("offers a driver no edit on their own pending revenue entry (#572)", () => {
+    const revenue = entry({ direction: "REVENUE", recordedBy: actor(ME_ID) });
+    expect(keys(revenue, "DRIVER")).toEqual(["attach-evidence"]);
+    expect(keys(revenue, "CASHIER")).toEqual(["attach-evidence", "edit-entry"]);
   });
 
   it("asks no receipt of a reversal and offers reverse on posted entries only", () => {

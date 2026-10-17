@@ -43,8 +43,7 @@ Re-checked 2026-10-04 on `origin/develop`, which is still `6399529` (no merges s
 
 
 - Trip statuses are `OPEN` and `CLOSED` only, and `create-activity` requires `startedAt`. Scheduling needs a lifecycle change (needs an ADR).
-- `enable-module` / `disable-module` run as tenant `ADMIN` (`apps/api/src/commands/module-toggle.ts:29`). ADR-0005 says they must be platform scope; this is not implemented.
-- `set-template-preset` runs as tenant `ADMIN`.
+- `enable-module`, `disable-module` and `set-template-preset` are platform scope (ADR-0005, #362): only a vendor operator runs them, from `apps/api/scripts/entitlement.ts`. There is no console screen yet (#366).
 - These are backend only, with no screen: categories (`create-category`, `relabel-category`, `deactivate-category`, `reactivate-category`), `update-approval-threshold`, `provision-workspace` (platform scope, CLI at `apps/api/scripts/provision.ts`), and `create-activity`.
 - The six team roles (Direction, Administrator, Finance, Cashier, Technician, Driver) were decided on 2026-09-27 but are not in the code. The code still has `ADMIN`, `OPS_MANAGER`, `FIELD_SUBMITTER`, `MAINTENANCE`, `FINANCE_APPROVER`, `EXECUTIVE_VIEWER`. The docs are on branch `docs/roles-and-access` (uncommitted, in another worktree).
 - The customer on a trip is free text (`customerName`). "Party" is named in ARCHITECTURE.md but has no table.
@@ -89,7 +88,7 @@ Each epic is a parent issue with slices underneath. Every slice is one PR with a
    - phone bottom bar
 5. **Module manifest:** one manifest per existing module (nav rows, tabs, Home cards, commands, reads, roles, off-state test) replacing the scattered flag checks. Port `features/catalog.ts` and its test from `feat/brand-identity` as the feature map.
 6. **Scheduling module:**
-   - ADR for the PLANNED and CANCELLED statuses (and optionally DELIVERED)
+   - ADR for the PLANNED and CANCELLED statuses. No DELIVERED status: delivery is a recorded fact (decided 2026-10-08)
    - `plan-trip`, `assign-trip`, `reschedule-trip`, `cancel-planned-trip`, `start-planned-trip`
    - planning read
    - Book a trip
@@ -101,8 +100,8 @@ Each epic is a parent issue with slices underneath. Every slice is one PR with a
    - `workspace_settings`, logo upload (S3), accent colour applied through tokens
    - screens for Approvals and Categories (backend already exists)
    - language stored on the account (#127)
-8. **Platform console** (`console.` subdomain):
-   - move module and preset commands to platform scope (ADR-0005)
+8. **Platform console** (`console.` subdomain; the host is configuration, not code):
+   - move module and preset commands to platform scope (ADR-0005; done in #362)
    - operator sign-in with a second factor
    - pages: Tenants, Tenant (module toggles), Set up a tenant wizard over `provision-workspace`
    - health reads
@@ -116,12 +115,15 @@ Each epic is a parent issue with slices underneath. Every slice is one PR with a
 
 Realistic for Wednesday: epic 1 and the epic 2 bug slices. Epics 3–5 are the next block. Scheduling (6) is the first new module.
 
-## Open questions for the owners
+## Owner decisions (2026-10-08)
 
-- Can drivers see the agreed price on their trips? Hidden by default in the designs.
-- The console domain: `console.routiq.app` is a placeholder until the domain is confirmed.
-- Stock: purchase orders with approval, or receipts only for the pilot? Who approves, and from what amount? Is fuel stock (a tank)?
-- Prices per module in the console are placeholders; billing isn't designed.
+- **Trip price for drivers:** hidden. The company setting "Show trip price to drivers" is off by default. When the driver collects cash from the customer, that trip shows "Amount to collect".
+- **Console domain:** `console.` on the product domain, read from configuration. Until a ROUTIQ domain is bought, it sits beside the demo host (wiring lives in the box env files, not the repo). The console must run under any host name, because on-prem installs need one too.
+- **Stock:** receipts only for the pilot; no purchase orders. The supplier invoice is an expense in Money and uses the existing approval thresholds. Adjustments are approved by someone other than the counter (#27). Fuel is not stock; a company's own tank becomes a magasin holding litres in a later slice.
+- **Prices and billing:** none in the console. ROUTIQ invoices by hand; revisit at about 3 to 5 paying companies. Candidate shape for that day: a base price per active vehicle per month, modules as add-ons.
+- **Delivered:** not a status. Trips stay Planned → In progress → Closed (or Cancelled). Recording delivery stores the time, who received it and an optional photo on the trip or its last stage. Revisit only if the receivables ADR needs a "delivered, not invoiced" queue.
+
+Still to ask the owners: do drivers ever collect cash, does either pilot company own a fuel tank, and will they buy a ROUTIQ domain?
 
 ## Files
 

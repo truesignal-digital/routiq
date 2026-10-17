@@ -1,10 +1,11 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { queryOptions, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type {
   ActivityDetail,
   ActivityListResponse,
   ActivitySummary,
 } from "@routiq/contracts";
 import { sessionStore, useActiveSession } from "../auth/store.js";
+import { authed, listQueryOptions } from "../lib/list-query.js";
 import { useBranchScopedParams } from "../shell/branch-scope.js";
 
 export async function fetchActivities(
@@ -15,8 +16,11 @@ export async function fetchActivities(
     branchId?: string;
     assetId?: string;
     activityTypeCode?: string;
+    /** ISO dates; the server reads them as workspace days (#511). */
     from?: string;
     to?: string;
+    /** Closed trips missing fuel or km (#665). */
+    missing?: string;
     sort?: string;
     cursor?: string;
   } = {},
@@ -26,13 +30,7 @@ export async function fetchActivities(
   const url = new URL("/v1/activities", window.location.origin);
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined || value === "") continue;
-    const normalizedValue =
-      key === "from" && /^\d{4}-\d{2}-\d{2}$/.test(value)
-        ? `${value}T00:00:00.000Z`
-        : key === "to" && /^\d{4}-\d{2}-\d{2}$/.test(value)
-          ? `${value}T23:59:59.999Z`
-          : value;
-    url.searchParams.append(key, normalizedValue);
+    url.searchParams.append(key, value);
   }
 
   const response = await fetchImpl(url.pathname + url.search, {
@@ -51,6 +49,8 @@ export interface UseActivitiesParams {
   activityTypeCode?: string;
   from?: string;
   to?: string;
+  /** Closed trips missing fuel or km (#665). */
+  missing?: string;
   /** `field:asc|desc`; the cursor is keyed on it, so a change starts a new query. */
   sort?: string;
 }
@@ -58,20 +58,12 @@ export interface UseActivitiesParams {
 /** Branch-scoped: the shell's current agency narrows it (`branch-scope.ts`). */
 export function useActivities(callerParams: UseActivitiesParams = {}) {
   const session = useActiveSession();
-  const params = useBranchScopedParams(callerParams);
+  return useInfiniteQuery(activitiesQueryOptions(session?.workspaceSlug, useBranchScopedParams(callerParams)));
+}
 
-  return useInfiniteQuery<ActivityListResponse>({
-    queryKey: ["ws", session?.workspaceSlug, "activities", params],
-    enabled: session !== undefined,
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage: ActivityListResponse) => lastPage.nextCursor ?? undefined,
-    queryFn: ({ signal, pageParam }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      const cursor = pageParam as string | undefined;
-      return fetchActivities(token, { ...params, ...(cursor ? { cursor } : {}) }, signal);
-    },
-  });
+/** `params` already carries the branch: `useBranchScopedParams` in a hook, `scopedParams` in a loader. */
+export function activitiesQueryOptions(workspaceSlug: string | undefined, params: UseActivitiesParams) {
+  return listQueryOptions(["ws", workspaceSlug, "activities", params], workspaceSlug, params, fetchActivities);
 }
 
 export async function fetchActivity(
@@ -115,6 +107,10 @@ function isActivitySummary(value: unknown): value is ActivitySummary {
     typeof record["thisWeek"] === "number" &&
     typeof record["open"] === "number" &&
     typeof record["incomplete"] === "number" &&
+    typeof record["weekClosed"] === "number" &&
+    typeof record["closedMissing"] === "object" &&
+    record["closedMissing"] !== null &&
+    Array.isArray(record["weeks"]) &&
     (km === null || typeof km === "number")
   );
 }
@@ -142,15 +138,14 @@ export async function fetchActivitySummary(
  */
 export function useActivitySummary() {
   const session = useActiveSession();
-  const params = useBranchScopedParams({});
+  return useQuery(activitySummaryQueryOptions(session?.workspaceSlug, useBranchScopedParams({})));
+}
 
-  return useQuery<ActivitySummary>({
-    queryKey: ["ws", session?.workspaceSlug, "activities", "summary", params],
-    enabled: session !== undefined,
-    queryFn: ({ signal }) => {
-      const token = sessionStore.getToken();
-      if (token === undefined) throw new Error("AUTH_REQUIRED");
-      return fetchActivitySummary(token, params, signal);
-    },
+/** `params` already carries the branch: `useBranchScopedParams` in a hook, `scopedParams` in a loader. */
+export function activitySummaryQueryOptions(workspaceSlug: string | undefined, params: { branchId?: string }) {
+  return queryOptions<ActivitySummary>({
+    queryKey: ["ws", workspaceSlug, "activities", "summary", params],
+    enabled: workspaceSlug !== undefined,
+    queryFn: authed((token, signal) => fetchActivitySummary(token, params, signal)),
   });
 }

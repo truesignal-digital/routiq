@@ -104,18 +104,18 @@ describe("ApprovalSettings (#354)", () => {
 
     const summary = screen.getByRole("list", { name: "The approval chain" });
     expect(within(summary).getAllByRole("listitem").map((item) => plain(item.textContent))).toEqual([
-      "Up to FCFA 100,000: posts directly",
-      "Up to FCFA 1,000,000: Finance approves",
-      "Above FCFA 1,000,000: Direction approves",
+      "Up to 100 000 FCFA: posts directly",
+      "Up to 1 000 000 FCFA: Finance approves",
+      "Above 1 000 000 FCFA: the Director approves",
     ]);
 
     const finance = screen.getByRole("list", { name: "Finance" });
     expect(within(finance).getAllByRole("listitem").map((item) => plain(item.textContent))).toEqual([
-      "Up to FCFA 100,000: posts directly",
-      "Up to FCFA 1,000,000: another Finance member or Direction approves",
-      "Above FCFA 1,000,000: Direction approves",
+      "Up to 100 000 FCFA: posts directly",
+      "Up to 1 000 000 FCFA: another Finance member or the Director approves",
+      "Above 1 000 000 FCFA: the Director approves",
     ]);
-    expect(screen.getByText("Emilienne Mbarga changed them on October 5, 2026.")).toBeTruthy();
+    expect(screen.getByText("Emilienne Mbarga changed them on 5 October 2026.")).toBeTruthy();
   });
 
   it("sends both bands through update-approval-threshold v2, against the bands it read", async () => {

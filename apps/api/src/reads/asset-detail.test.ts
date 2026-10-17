@@ -6,6 +6,7 @@ import { createSession } from "../auth/local.js";
 import { assetAvailabilityIntervals, auditEvents, branches } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 
 /**
@@ -488,8 +489,8 @@ describe("GET /v1/assets/:assetId header facts", () => {
       value: 1000,
       observedAt: "2026-08-01T08:00:00Z",
     });
-    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "MAINTENANCE" });
-    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "ACTIVITIES" });
+    await setModule(ctx.db, gated.workspace.id, "MAINTENANCE", false);
+    await setModule(ctx.db, gated.workspace.id, "ACTIVITIES", false);
   });
 
   afterAll(async () => {
@@ -597,6 +598,7 @@ describe("GET /v1/assets/:assetId header facts", () => {
       intervalRowVersion: 1,
       issue: {
         id: issueId,
+        number: expect.any(Number),
         description: "Fuite de liquide de frein",
         safetyCritical: true,
         category: "BRAKES",
@@ -610,6 +612,7 @@ describe("GET /v1/assets/:assetId header facts", () => {
       workOrders: [
         {
           id: workOrderId,
+          number: expect.any(Number),
           status: "COMPLETED",
           rowVersion: expect.any(Number),
           createdAt: expect.any(String),
@@ -621,6 +624,7 @@ describe("GET /v1/assets/:assetId header facts", () => {
           },
         },
       ],
+      otherOpenSafetyIssues: [],
     });
 
     // Released by someone other than the completer: available again, since

@@ -1,4 +1,4 @@
-import { MODULE_CODES, type ModuleCode, type Role } from "@routiq/contracts";
+import { isModuleOn, MODULE_CODES, type ModuleCode, type Role } from "@routiq/contracts";
 import { eq } from "drizzle-orm";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { AuthContext } from "../auth/types.js";
@@ -40,8 +40,8 @@ export const notFound = (): ReadRefusal => new ReadRefusal(404, "REFERENCE_NOT_F
 export const invalidRequest = (): ReadRefusal => new ReadRefusal(400, "VALIDATION_FAILED");
 
 /**
- * Enabled modules in one query, by the same rule as `isModuleEnabled`: no row
- * means enabled, and CORE is always on. A read that gates several sections
+ * Enabled modules in one query, by the same rule as `isModuleEnabled`
+ * (`isModuleOn`: no row means the module's default, and CORE is always on). A read that gates several sections
  * (availability, readings, money) asks once instead of once per section.
  */
 export async function enabledModuleSet(
@@ -52,8 +52,8 @@ export async function enabledModuleSet(
     .select({ moduleCode: workspaceModules.moduleCode, enabled: workspaceModules.enabled })
     .from(workspaceModules)
     .where(eq(workspaceModules.workspaceId, workspaceId));
-  const disabled = new Set(rows.filter((row) => !row.enabled).map((row) => row.moduleCode));
-  return new Set(MODULE_CODES.filter((code) => code === "CORE" || !disabled.has(code)));
+  const byCode = new Map(rows.map((row) => [row.moduleCode, row]));
+  return new Set(MODULE_CODES.filter((code) => isModuleOn(code, byCode.get(code))));
 }
 
 /**

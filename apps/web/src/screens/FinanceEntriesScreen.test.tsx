@@ -89,15 +89,16 @@ vi.mock("../auth/me.js", () => ({
   useMeContext: () => ({
     principalId: "test-user",
     role: "MANAGER",
-    enabledModules: ["FINANCE"],
+    // Maintenance adds the work order an entry belongs to (#87).
+    enabledModules: ["FINANCE", "MAINTENANCE"],
   }),
 }));
 
 const summary = {
   currency: "XAF",
   month: "2026-10",
-  openPeriodCode: "2026-10",
-  lastLockedPeriodCode: "2026-09",
+  unlockedPeriodCodes: ["2026-08"],
+  lastLockedPeriodCode: "2026-07",
   outMinor: 412_500,
   inMinor: 450_000,
   missingReceipt: { count: 1, oldestEconomicDate: "2026-10-01" },
@@ -151,7 +152,8 @@ vi.mock("../finance/useApprovals.js", async (importOriginal) => ({
   }),
 }));
 
-vi.mock("../finance/permissions.js", () => ({
+vi.mock("../finance/permissions.js", async (importOriginal) => ({
+  recordAgainStep: (await importOriginal<typeof import("../finance/permissions.js")>()).recordAgainStep,
   canReadFinance: vi.fn(() => true),
   canReadFinanceEntries: vi.fn(() => true),
   canRecordFinance: vi.fn(() => true),
@@ -183,6 +185,7 @@ const entry = {
     activityNumber: null,
     workOrderId: "00000000-0000-4000-8000-0000000000c1",
     workOrderAssetId: "00000000-0000-4000-8000-0000000000a1",
+    workOrderDescription: "Replace brake pads",
   },
 };
 
@@ -268,12 +271,12 @@ const DEBOUNCE_MS = 300;
 const DEFAULT_SORT = "postedAt:desc";
 
 /** jsdom never matches a width query; the table needs a nudge to render desktop. */
-function mockDesktop() {
+function mockDesktop(matches: (query: string) => boolean = () => true) {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
-      matches: true,
+      matches: matches(query),
       media: query,
       onchange: null,
       addEventListener: vi.fn(),
@@ -426,34 +429,17 @@ describe("FinanceEntriesScreen", () => {
     }
   });
 
-  it("offers the view menu, and Record an expense as the page's one primary action", () => {
+  it("puts the view menu in the toolbar, and leaves the header to the Money page (#664)", () => {
     render(<FinanceEntriesScreen />);
 
     expect(screen.getByRole("button", { name: "dataTable.view" })).toBeTruthy();
-
-    const action = screen.getByRole("link", { name: /record-expense/ });
-    expect(action.getAttribute("href")).toBe("/finance/record");
-    // No section tabs: Money is one page (#314).
-    expect(screen.queryByRole("tablist")).toBeNull();
+    // Title, sentence, Record an expense and the tabs belong to FinanceScreen.
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+    expect(screen.queryByRole("link", { name: /record-expense/ })).toBeNull();
   });
 
-  it("drops the record action along with the screen when finance reading is denied", () => {
-    vi.mocked(canReadFinanceEntries).mockReturnValue(false);
-    render(<FinanceEntriesScreen />);
-
-    expect(
-      screen.queryByRole("link", { name: /record-expense/ }),
-    ).toBeNull();
-    expect(screen.queryByRole("table")).toBeNull();
-  });
-
-  it("tells a driver the list holds only what they recorded (#264)", () => {
+  it("leaves the driver's scope to the Money header, which already says it (#264, #664)", () => {
     vi.mocked(entriesScope).mockReturnValue("OWN_ENTRIES");
-    render(<FinanceEntriesScreen />);
-    expect(screen.getByText("finance.entries.ownScope")).toBeTruthy();
-  });
-
-  it("says nothing about scope to a ledger reader", () => {
     render(<FinanceEntriesScreen />);
     expect(screen.queryByText("finance.entries.ownScope")).toBeNull();
   });
@@ -495,6 +481,58 @@ describe("FinanceEntriesScreen", () => {
     );
     expect(items).not.toContain("finance.entries.detail.entryNumber");
     expect(items).toContain("finance.entries.detail.category");
+  });
+
+  it("shows every column, counterparty included, on a 1440 px screen (#436)", () => {
+    render(<FinanceEntriesScreen />);
+    expect(
+      screen.getByRole("columnheader", { name: /finance\.entries\.detail\.postingDate/ }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("columnheader", { name: /finance\.entries\.detail\.counterparty/ }),
+    ).toBeTruthy();
+  });
+
+  it("keeps the sorted column on a narrower screen and drops counterparty instead (#436)", async () => {
+    mockDesktop((query) => !query.includes("1440px"));
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    // A list is never sorted by a column the viewer can't see.
+    const sorted = screen
+      .getAllByRole("columnheader")
+      .filter((header) => header.getAttribute("aria-sort") === "descending");
+    expect(sorted.map((header) => header.textContent)).toEqual([
+      expect.stringContaining("finance.entries.detail.postingDate"),
+    ]);
+    expect(
+      screen.queryByRole("columnheader", { name: /finance\.entries\.detail\.counterparty/ }),
+    ).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "dataTable.view" }));
+    await user.click(
+      await screen.findByRole("menuitemcheckbox", { name: "finance.entries.detail.counterparty" }),
+    );
+
+    expect(
+      screen.getByRole("columnheader", { name: /finance\.entries\.detail\.counterparty/ }),
+    ).toBeTruthy();
+  });
+
+  it("sorts by entry number, not the hidden default, once Posting date is hidden (#548)", async () => {
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    await user.click(screen.getByRole("button", { name: "dataTable.view" }));
+    await user.click(
+      await screen.findByRole("menuitemcheckbox", { name: "finance.entries.detail.postingDate" }),
+    );
+
+    // An empty sort would send no param, and the read's default is postedAt:desc.
+    await waitFor(() => expect(issuedQueries.at(-1)).toEqual({ sort: "entryNumber:asc" }));
+    expect(
+      screen.getByRole("columnheader", { name: /finance\.entries\.detail\.entryNumber/ }).getAttribute("aria-sort"),
+    ).toBe("ascending");
   });
 
   it("names the work order an entry belongs to and links to it (#87)", () => {
@@ -617,6 +655,39 @@ describe("FinanceEntriesScreen", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  it("offers Cancel entry on the record panel, opening the same dialog as the full page (#525)", async () => {
+    vi.mocked(canReverseEntry).mockReturnValue(true);
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <FinanceEntriesScreen />
+      </QueryClientProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "FIN-001" }));
+    const drawer = await screen.findByRole("dialog");
+    await user.click(
+      within(drawer).getByRole("button", { name: "commands.reverse-entry.label" }),
+    );
+
+    const form = await screen.findByRole("dialog", { name: "commands.reverse-entry.label" });
+    expect(within(form).getByText("finance.entries.reversal.description")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "FIN-001" })).toBeNull();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("leaves Cancel entry off the record panel for a role that may not cancel", async () => {
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+
+    await user.click(screen.getByRole("button", { name: "FIN-001" }));
+    const drawer = await screen.findByRole("dialog");
+
+    expect(
+      within(drawer).queryByRole("button", { name: "commands.reverse-entry.label" }),
+    ).toBeNull();
+  });
+
   it("signs an expense with a minus in the list and leaves it unsigned on the entry itself (E2.8)", async () => {
     const user = userEvent.setup();
     render(<FinanceEntriesScreen />);
@@ -664,71 +735,59 @@ describe("FinanceEntriesScreen", () => {
   });
 });
 
-describe("Money page (#314)", () => {
-  it("opens on the four tiles and the month lead line", () => {
-    vi.mocked(canApproveEntries).mockReturnValue(true);
+describe("Entries tab (#664)", () => {
+  it("starts with its search and filters: no tiles above the list", () => {
     render(<FinanceEntriesScreen />);
 
-    expect(screen.getByText("finance.money.lead.both")).toBeTruthy();
-    const tiles = document.querySelectorAll('[data-slot="metric-tile"]');
-    expect(tiles).toHaveLength(4);
-    expect(screen.getByRole("button", { name: "finance.money.tiles.waiting" })).toBeTruthy();
+    expect(document.querySelector('[data-slot="metric-strip"]')).toBeNull();
+    expect(screen.getByPlaceholderText("finance.entries.filters.periodPlaceholder")).toBeTruthy();
+    // The count the Overview tile used to repeat rides on the filter itself.
+    const missing = screen.getByRole("button", { name: /finance\.money\.lens\.missing/ });
+    expect(missing.textContent).toContain("1");
+    expect(missing.getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("filters the list from a tile, and clears it from the same tile", async () => {
+  it("filters to missing receipts and clears it from the same button", async () => {
     const user = userEvent.setup();
     render(<FinanceEntriesScreen />);
 
-    await user.click(screen.getByRole("button", { name: "finance.money.tiles.missing" }));
+    await user.click(screen.getByRole("button", { name: /finance\.money\.lens\.missing/ }));
     expect(navigate).toHaveBeenLastCalledWith(
-      expect.objectContaining({ to: "/finance/entries", search: { evidence: "MISSING" } }),
+      expect.objectContaining({ to: "/finance/entries", search: expect.objectContaining({ evidence: "MISSING" }) }),
     );
 
     cleanup();
     routeSearch.current = { evidence: "MISSING" };
     render(<FinanceEntriesScreen />);
     expect(issuedQueries.at(-1)).toMatchObject({ evidence: "MISSING" });
-    await user.click(screen.getByRole("button", { name: "finance.money.tiles.missing" }));
-    expect(navigate).toHaveBeenLastCalledWith(expect.objectContaining({ search: {} }));
-  });
-
-  it("shows an approver Reject and Approve on each waiting row, never on their own submission", () => {
-    vi.mocked(canApproveEntries).mockReturnValue(true);
-    routeSearch.current = { view: "waiting" };
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <FinanceEntriesScreen />
-      </QueryClientProvider>,
+    const pressed = screen.getByRole("button", { name: /finance\.money\.lens\.missing/ });
+    expect(pressed.getAttribute("aria-pressed")).toBe("true");
+    await user.click(pressed);
+    expect(navigate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: expect.objectContaining({ evidence: undefined }) }),
     );
-
-    const row = screen.getByRole("row", { name: /FIN-014/ });
-    expect(within(row).getByRole("button", { name: "commands.reject-entry.label FIN-014" })).toBeTruthy();
-    expect(within(row).getByRole("button", { name: "commands.approve-entry.label FIN-014" })).toBeTruthy();
-    expect(within(row).getByText(/finance\.approvals\.noReceipt/)).toBeTruthy();
-    expect(screen.queryByText("FIN-015")).toBeNull();
   });
 
-  it("gives a non-approver no waiting view and no decisions", () => {
+  it("names the month an Overview tile opened it on, and drops it on request", async () => {
+    const user = userEvent.setup();
+    routeSearch.current = { status: "LEDGER", direction: "EXPENSE", economicMonth: "2026-10" };
+    render(<FinanceEntriesScreen />);
+
+    expect(issuedQueries.at(-1)).toMatchObject({ status: "LEDGER", direction: "EXPENSE", economicMonth: "2026-10" });
+    await user.click(screen.getByRole("button", { name: "finance.money.lens.clear" }));
+    expect(navigate).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        search: expect.objectContaining({ economicMonth: undefined, status: "LEDGER", direction: "EXPENSE" }),
+      }),
+    );
+  });
+
+  it("never renders the approval queue: that is the To approve tab", () => {
+    vi.mocked(canApproveEntries).mockReturnValue(true);
     routeSearch.current = { view: "waiting" };
     render(<FinanceEntriesScreen />);
 
     expect(screen.queryByRole("button", { name: /approve-entry/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /reject-entry/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: "finance.money.tiles.waiting" })).toBeNull();
-    // The plain list instead: FIN-001 is the ledger fixture.
     expect(screen.getByText("FIN-001")).toBeTruthy();
-  });
-
-  it("links Accounting months from the header for the roles that lock them", () => {
-    vi.mocked(canManagePeriods).mockReturnValue(true);
-    render(<FinanceEntriesScreen />);
-    expect(
-      screen.getByRole("link", { name: /finance\.periods\.title/ }).getAttribute("href"),
-    ).toBe("/finance/periods");
-  });
-
-  it("hides Accounting months from everyone else", () => {
-    render(<FinanceEntriesScreen />);
-    expect(screen.queryByRole("link", { name: /finance\.periods\.title/ })).toBeNull();
   });
 });

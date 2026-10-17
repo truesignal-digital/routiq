@@ -1,12 +1,13 @@
 import { appointDirectorPayload, type AppointDirectorPayload } from "@routiq/contracts";
 import { and, eq, sql } from "drizzle-orm";
-import { credentials, memberships, workspaces } from "../db/schema.js";
+import { credentials, memberships } from "../db/schema.js";
 import {
   appendPlatformAuditEvent,
   CommandError,
   registerPlatformCommand,
 } from "./dispatcher.js";
 import { MEMBER_ADMIN_LOCK_CLASS } from "./members.js";
+import { workspaceBySlug } from "./platform-target.js";
 
 /**
  * The vendor operator's way to give a workspace its DIRECTOR (ADR-0009). No
@@ -24,20 +25,7 @@ registerPlatformCommand<AppointDirectorPayload>({
   version: 1,
   payloadSchema: appointDirectorPayload,
 
-  async resolveWorkspace(tx, _ctx, _envelope, payload) {
-    const [workspace] = await tx
-      .select({ id: workspaces.id })
-      .from(workspaces)
-      .where(eq(workspaces.slug, payload.workspaceSlug))
-      .limit(1);
-    if (!workspace) {
-      throw new CommandError(422, "REFERENCE_NOT_FOUND", {
-        referenceType: "workspace",
-        referenceCode: payload.workspaceSlug,
-      });
-    }
-    return workspace.id;
-  },
+  resolveWorkspace: (tx, _ctx, _envelope, payload) => workspaceBySlug(tx, payload.workspaceSlug),
 
   async execute(tx, ctx, envelope, payload, workspaceId) {
     await tx.execute(

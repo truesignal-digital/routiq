@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
   assetListResponse,
+  assetOverview,
   assetSummary,
   type AssetLifecycleStatus,
 } from "@routiq/contracts";
@@ -10,6 +11,7 @@ import { createSession } from "../auth/local.js";
 import { assets, branches } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedAsset, seedMember, seedWorkspace } from "../test/seed.js";
 
 describe("GET /v1/assets", () => {
@@ -735,6 +737,17 @@ describe("GET /v1/assets/summary counts grounded vehicles", () => {
     return assetSummary.parse(response.body);
   }
 
+  /**
+   * Can drive, out of the fleet not disposed: the Dashboard tile and the Trucks
+   * Overview both show this one read's numbers (#699). The summary counts none.
+   */
+  async function canDrive(token: string) {
+    const response = await api.get(token, "/v1/assets/overview");
+    expect(response.status).toBe(200);
+    const { canDrive: count, total } = assetOverview.parse(response.body);
+    return { count, total };
+  }
+
   async function attentionCodes(token: string) {
     const response = await api.get(token, "/v1/assets?attention=true");
     expect(response.status).toBe(200);
@@ -749,6 +762,7 @@ describe("GET /v1/assets/summary counts grounded vehicles", () => {
 
   it("counts an IN_SERVICE vehicle with an open availability interval, once", async () => {
     expect(await summary(admin.token)).toEqual({ total: 4, inService: 3, attention: 3 });
+    expect(await canDrive(admin.token)).toEqual({ count: 1, total: 4 });
     await expectTileMatchesFilter(admin.token, ["VH002", "VH003", "VH004"]);
   });
 
@@ -759,16 +773,19 @@ describe("GET /v1/assets/summary counts grounded vehicles", () => {
 
   it("never counts a grounded vehicle outside the caller's branch scope", async () => {
     expect(await summary(doualaOnly.token)).toEqual({ total: 3, inService: 2, attention: 2 });
+    expect(await canDrive(doualaOnly.token)).toEqual({ count: 1, total: 3 });
     await expectTileMatchesFilter(doualaOnly.token, ["VH002", "VH003"]);
   });
 
   it("counts lifecycle statuses only while MAINTENANCE is off", async () => {
-    await api.ok(admin.token, "disable-module", { moduleCode: "MAINTENANCE" });
+    await setModule(ctx.db, workspaceId, "MAINTENANCE", false);
     try {
       expect(await summary(admin.token)).toEqual({ total: 4, inService: 3, attention: 1 });
+      // Nothing grounds a vehicle without MAINTENANCE: every one in service can drive.
+      expect(await canDrive(admin.token)).toEqual({ count: 3, total: 4 });
       await expectTileMatchesFilter(admin.token, ["VH003"]);
     } finally {
-      await api.ok(admin.token, "enable-module", { moduleCode: "MAINTENANCE" });
+      await setModule(ctx.db, workspaceId, "MAINTENANCE", true);
     }
   });
 
@@ -778,6 +795,7 @@ describe("GET /v1/assets/summary counts grounded vehicles", () => {
       workOrderId,
     });
     expect(await summary(admin.token)).toEqual({ total: 4, inService: 3, attention: 2 });
+    expect(await canDrive(admin.token)).toEqual({ count: 2, total: 4 });
     await expectTileMatchesFilter(admin.token, ["VH003", "VH004"]);
   });
 });

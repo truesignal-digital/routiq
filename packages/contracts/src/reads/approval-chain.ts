@@ -19,6 +19,19 @@ export const APPROVAL_CHAIN_OUTCOMES = [
   "WAITS",
 ] as const;
 
+/**
+ * Who decides an entry that waits (#542): the outcomes a pending entry can
+ * have, which is every chain outcome but posting directly. The same words for
+ * every viewer: they name the chain, not what the viewer may do.
+ */
+export const ENTRY_APPROVERS = [
+  "FINANCE_APPROVES",
+  "FINANCE_PEER_APPROVES",
+  "DIRECTION_APPROVES",
+  "WAITS",
+] as const satisfies ReadonlyArray<(typeof APPROVAL_CHAIN_OUTCOMES)[number]>;
+export const entryApprover = z.enum(ENTRY_APPROVERS);
+
 /** One band, from the previous step's `upToMinor` (exclusive) up to this one (inclusive). */
 export const approvalChainStep = z.object({
   /** Null on the last step: every amount above the previous one. */
@@ -52,6 +65,7 @@ export const approvalChainResponse = z.object({
 
 export type ApprovalChainCommandType = (typeof APPROVAL_CHAIN_COMMAND_TYPES)[number];
 export type ApprovalChainOutcome = (typeof APPROVAL_CHAIN_OUTCOMES)[number];
+export type EntryApprover = z.infer<typeof entryApprover>;
 export type ApprovalChainStep = z.infer<typeof approvalChainStep>;
 export type ApprovalChain = z.infer<typeof approvalChain>;
 export type ApprovalRulesNotice = z.infer<typeof approvalRulesNotice>;

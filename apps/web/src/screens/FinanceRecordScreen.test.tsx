@@ -54,11 +54,11 @@ vi.mock("../artifacts/upload.js", () => ({
   uploadArtifact: mocks.uploadArtifact,
 }));
 
-vi.mock("../assets/reference.js", () => ({
+vi.mock("../reference/asset-registration.js", () => ({
   useAssetRegistrationReference: mocks.useAssetRegistrationReference,
 }));
 
-vi.mock("../documents/useCategories.js", () => ({
+vi.mock("../categories/useCategories.js", () => ({
   useCategories: mocks.useCategories,
 }));
 
@@ -86,6 +86,7 @@ const recorder: MeContext = {
   branchScope: "ALL",
   enabledModules: ["CORE", "FINANCE"],
   enabledPresets: ["TRUCKING", "PASSENGER_TRANSPORT"],
+  timezone: "Africa/Douala",
 };
 
 function renderScreen(me: MeContext = recorder) {
@@ -217,7 +218,7 @@ describe("finance record form", () => {
     await user.type(amount, "125000");
     await user.tab();
     // Grouped the way English reads money, as the rest of the screen shows it.
-    expect((amount as HTMLInputElement).value).toBe("125,000");
+    expect((amount as HTMLInputElement).value).toBe("125 000");
     await user.type(screen.getByLabelText("Counterparty (optional)"), "Fuel Station");
     await user.type(screen.getByLabelText("Description (optional)"), "Diesel");
     await user.type(screen.getByLabelText("Payment reference (optional)"), "R-42");
@@ -302,8 +303,8 @@ describe("finance record form", () => {
         type: "success",
         title: "Entry sent for approval",
         description:
-          "Missing evidence: this category requires supporting documentation or a photo.\n" +
-          "This entry was posted to a previous accounting period.",
+          "Attach the receipt when you have it.\n" +
+          "The month of this date is locked, so the entry was posted in the current month. It keeps its own date.",
       }),
     );
   });

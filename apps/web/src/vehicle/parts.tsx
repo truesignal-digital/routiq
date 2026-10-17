@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   ChevronRight,
   Ellipsis,
+  Hourglass,
   Info,
   Lock,
   OctagonAlert,
@@ -22,8 +23,11 @@ import {
 import { SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useCommandLabel } from "../commands/labels.js";
+import { recordNumberText } from "../lib/record-number.js";
 import { DESTRUCTIVE_STEPS, STEP_COMMANDS, STEP_ICONS } from "./steps.js";
-import type { Lock as LockReason, OfferedStep, Step } from "./model.js";
+import { actionDef } from "./actions.js";
+import { useVehicle } from "./context.js";
+import type { Lock as LockReason, OfferedStep, Step, VehicleActionKey } from "./model.js";
 
 export type Tone = "neutral" | "success" | "warning" | "info" | "danger";
 
@@ -300,7 +304,11 @@ export function RecordRow({
 /** A locked step's reason, in words. */
 export function useLockText() {
   const { t } = useTranslation();
-  return (lock: LockReason) => t(`vehicle.locked.${lock.key}`, lock.params ?? {});
+  return (lock: LockReason) =>
+    t(`vehicle.locked.${lock.key}`, {
+      ...lock.params,
+      ...(lock.ref === undefined ? {} : { ref: recordNumberText(t, lock.ref.kind, lock.ref.number) }),
+    });
 }
 
 /** A step's name, from its command's words; `short` is the quick bar's. */
@@ -311,6 +319,20 @@ export function useStepLabel() {
     step.key === "review-entry"
       ? t(`vehicle.actions.review-entry.${part}`)
       : label(STEP_COMMANDS[step.key], part);
+}
+
+/** The one primary button a tab carries; it starts the action the way the catalogue says. */
+export function TabAction({ actionKey }: { actionKey: VehicleActionKey }) {
+  const stepLabel = useStepLabel();
+  const { can, availability, runAction } = useVehicle();
+  if (!can(actionKey) || availability(actionKey).state !== "enabled") return null;
+  const Icon = actionDef(actionKey).icon;
+  return (
+    <Button className="self-start sm:self-auto desktop:h-9" onClick={() => runAction(actionKey)}>
+      <Icon aria-hidden />
+      {stepLabel({ key: actionKey })}
+    </Button>
+  );
 }
 
 /** The row's "…": its open steps first, then the locked ones with what they wait for. */
@@ -434,27 +456,24 @@ export function FactList({ rows }: { rows: ReadonlyArray<readonly [string, React
   );
 }
 
+const noteStyles = {
+  muted: { className: "bg-muted/60 text-muted-foreground", Icon: Info },
+  // Amber with an hourglass, as the vehicle header says "waiting for release" (#92, #500).
+  warning: { className: "bg-warning/10 text-warning-foreground ring-1 ring-warning/30", Icon: Hourglass },
+  danger: { className: "bg-destructive/5 text-destructive dark:bg-destructive/10", Icon: ShieldAlert },
+} satisfies Record<string, { className: string; Icon: LucideIcon }>;
+
 export function Note({
   children,
   tone = "muted",
 }: {
   children: ReactNode;
-  tone?: "muted" | "danger";
+  tone?: keyof typeof noteStyles;
 }) {
+  const { className, Icon } = noteStyles[tone];
   return (
-    <p
-      className={cn(
-        "flex gap-2 rounded-lg px-3 py-2.5 text-sm",
-        tone === "danger"
-          ? "bg-destructive/5 text-destructive dark:bg-destructive/10"
-          : "bg-muted/60 text-muted-foreground",
-      )}
-    >
-      {tone === "danger" ? (
-        <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-      ) : (
-        <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
-      )}
+    <p data-tone={tone} className={cn("flex gap-2 rounded-lg px-3 py-2.5 text-sm", className)}>
+      <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />
       <span>{children}</span>
     </p>
   );

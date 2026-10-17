@@ -22,6 +22,7 @@ import {
 } from "./cursor.js";
 import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
+import { readableTripSql } from "./trip-scope.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 
 const readingSort: ListSort<"observedAt"> = { field: "observedAt", direction: "desc" };
@@ -95,7 +96,9 @@ export function registerAssetReadingReadRoutes(
               observedAt: meterReadings.observedAt,
               observedAtKey: microsecondKey(meterReadings.observedAt),
               source: meterReadings.source,
-              activityId: meterReadings.activityId,
+              // From the joined trip, so both are null when the reader may
+              // not read it (#594): a driver sees their own trips' numbers only.
+              activityId: activities.id,
               activityNumber: activities.activityNumber,
               supersededById: meterReadings.supersededById,
               supersedeReason: meterReadings.supersedeReason,
@@ -117,6 +120,7 @@ export function registerAssetReadingReadRoutes(
               and(
                 eq(activities.workspaceId, meterReadings.workspaceId),
                 eq(activities.id, meterReadings.activityId),
+                readableTripSql(auth),
               ),
             )
             .leftJoin(principals, eq(principals.id, commands.tenantActorPrincipalId))

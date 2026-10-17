@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card.js";
 import { Skeleton } from "@/components/ui/skeleton.js";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip.js";
-import { moneyAmountParts } from "@/lib/format.js";
+import { moneyFigure, notRecorded } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
 /** Neutral states a count; warning marks the bucket that wants someone's attention. */
@@ -22,10 +22,15 @@ export interface MetricTile {
   /** Already translated — the strip carries no copy of its own. */
   label: string;
   /**
-   * Formatted by the caller. `null` means "not known", and renders as a dash:
-   * the strip never invents a number, and a zero would be a claim (§3.4).
+   * Formatted by the caller. `null` means "not known", and reads "Not
+   * recorded": the strip never invents a number, and a zero would be a claim (§3.4).
    */
   value: string | null;
+  /**
+   * The API withholds this figure from the viewer. The value is left out, not
+   * called unrecorded: nobody failed to enter it (apps/web/AGENTS.md, Missing values).
+   */
+  withheld?: boolean;
   /** Small text after the value, such as a currency, so long amounts fit a phone tile. */
   unit?: string;
   tone?: MetricTone;
@@ -50,27 +55,30 @@ export interface MetricTile {
 }
 
 /**
- * Two to four tiles. A fifth stops fitting a phone row without shrinking the
- * numbers past reading size. One is not a strip, but Home gates its tiles by
- * role and module, so a role that sees one module gets one tile.
+ * Two to five tiles. A phone shows them two to a row; five is the Overview's
+ * limit (dashboards.html: 4–5 tiles), past which the strip stops being a
+ * glance. One is not a strip, but Home gates its tiles by role and module, so
+ * a role that sees one module gets one tile.
  */
 export type MetricTiles =
   | readonly [MetricTile]
   | readonly [MetricTile, MetricTile]
   | readonly [MetricTile, MetricTile, MetricTile]
-  | readonly [MetricTile, MetricTile, MetricTile, MetricTile];
+  | readonly [MetricTile, MetricTile, MetricTile, MetricTile]
+  | readonly [MetricTile, MetricTile, MetricTile, MetricTile, MetricTile];
 
 /** Literal class strings so the Tailwind scanner can see every column count. */
-const COLUMNS: Record<1 | 2 | 3 | 4, string> = {
+const COLUMNS: Record<1 | 2 | 3 | 4 | 5, string> = {
   1: "grid-cols-2 sm:grid-cols-4",
   2: "grid-cols-2",
   3: "grid-cols-2 sm:grid-cols-3",
   4: "grid-cols-2 sm:grid-cols-4",
+  5: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5",
 };
 
 /** A list built at run time, as a strip: none when there is nothing to show. */
 export function metricTiles(list: readonly MetricTile[]): MetricTiles | undefined {
-  if (list.length === 0 || list.length > 4) return undefined;
+  if (list.length === 0 || list.length > 5) return undefined;
   return list as unknown as MetricTiles;
 }
 
@@ -84,8 +92,8 @@ export function moneyMetric(
   currency = "XAF",
 ): Pick<MetricTile, "value" | "unit"> {
   if (minor == null) return { value: null };
-  const parts = moneyAmountParts(Math.abs(minor), { currency });
-  return { value: `${minor < 0 ? "\u2212" : ""}${parts.amount}`, unit: parts.symbol };
+  const { figure, unit } = moneyFigure(minor, { currency });
+  return { value: figure, unit };
 }
 
 const TONE_VALUE: Record<MetricTone, string> = {
@@ -211,11 +219,24 @@ function Tile({
                 showValue ? TONE_VALUE[tone] : "text-muted-foreground",
               )}
             >
-              {showValue ? tile.value : "—"}
-              {showValue && tile.unit !== undefined && (
-                <small className="ms-1 font-sans text-xs font-medium text-muted-foreground">
-                  {tile.unit}
-                </small>
+              {state === "error" ? (
+                // The one dash left in the app (guard no-bare-dash): a read
+                // that failed has no value to name, so the label says why.
+                <span role="img" aria-label={t("common.readFailed")}>—</span>
+              ) : showValue ? (
+                tile.unit === undefined ? (
+                  tile.value
+                ) : (
+                  <>
+                    {/* The figure and its unit each stay whole; on a narrow phone tile the unit drops below (#695). */}
+                    <span className="whitespace-nowrap">{tile.value}</span>{" "}
+                    <small className="whitespace-nowrap font-sans text-xs font-medium text-muted-foreground">
+                      {tile.unit}
+                    </small>
+                  </>
+                )
+              ) : tile.withheld === true ? null : (
+                <span className="text-base">{notRecorded()}</span>
               )}
             </span>
           )}

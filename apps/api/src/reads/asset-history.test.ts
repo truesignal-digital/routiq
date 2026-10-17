@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { auditEvents, branches, commands, principals, sourceArtifacts } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
+import { setModule } from "../test/vendor.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
 
 /**
@@ -564,11 +565,11 @@ describe("GET /v1/assets/:assetId/history", () => {
       new Set((await all(gatedAdmin.token, truck)).map((item) => item.kind as VehicleHistoryKind));
     expect(await kinds()).toEqual(new Set(["LIFECYCLE", "MAINTENANCE", "MONEY"]));
 
-    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "FINANCE" });
-    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "MAINTENANCE" });
+    await setModule(ctx.db, gated.workspace.id, "FINANCE", false);
+    await setModule(ctx.db, gated.workspace.id, "MAINTENANCE", false);
     expect(await kinds()).toEqual(new Set(["LIFECYCLE"]));
 
-    await api.ok(gatedAdmin.token, "disable-module", { moduleCode: "ASSETS" });
+    await setModule(ctx.db, gated.workspace.id, "ASSETS", false);
     const refused = await api.get(gatedAdmin.token, `/v1/assets/${truck}/history`);
     expect(refused.status).toBe(403);
     expect(refused.body).toEqual({ error: { code: "MODULE_DISABLED", metadata: { module: "ASSETS" } } });

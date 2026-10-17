@@ -11,9 +11,9 @@ Several skills in this directory are adapted from pstack, a skill pack by Lauren
 | Skill here | pstack source | Changes |
 |---|---|---|
 | `create-verification-skill` | `pstack/skills/create-verification-skill/` (with `references/feature-map-example/`, copied unchanged) | Writes to `.agents/skills/` with a `.claude/skills` symlink; points at `verify-routiq` and the `tools` package |
-| `maintain-verification-skill` | `pstack/skills/maintain-verification-skill/` | Uses the Agent tool or `codex-worker` for the source wave, `pnpm verify` for the live pass, GitHub issues for product regressions |
+| `maintain-verification-skill` | `pstack/skills/maintain-verification-skill/` | Uses the Agent tool (Explore or Opus) for the source wave, `pnpm verify` for the live pass, GitHub issues for product regressions |
 | `correct` | `pstack/skills/correct/` | Mapped onto the trust rungs in `AGENTS.md`, `tools/guards` and the baseline ratchet |
-| `show-me-your-work` | `pstack/skills/show-me-your-work/` (with `scripts/log.sh` and `references/decision-log-template.tsv`, copied unchanged) | Logs live in `.audit/`; transcript paths for Claude Code and Codex; cross-model review through `codex-worker` or a Claude subagent |
+| `show-me-your-work` | `pstack/skills/show-me-your-work/` (with `scripts/log.sh` and `references/decision-log-template.tsv`, copied unchanged) | Logs live in `.audit/`; transcript paths for Claude Code and Codex; cross-model review through a Claude subagent of a different model (Fable reviews Opus) |
 | `principle-prove-it-works` | `pstack/skills/principle-prove-it-works/` | Added how to match the check to the change with `pnpm verify` |
 | `principle-encode-lessons-in-structure` | `pstack/skills/principle-encode-lessons-in-structure/` | Mechanisms named as this repo's guards, ADRs and issues |
 | `triage-issue-reports` | `pstack/automations/benny/skills/triage-issue-reports/` | Slack replaced by GitHub Issues through `gh` on `truesignal-digital/routiq`, with this repo's triage labels; no routing map |

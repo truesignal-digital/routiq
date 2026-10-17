@@ -104,7 +104,15 @@ export const historyItem = z.object({
   occurredAt: z.iso.datetime(),
   actor: historyActor,
   command: historyCommandRef,
+  /** Every column the write touched, as the audit row recorded it. */
   changedFields: z.array(z.string()),
+  /**
+   * The fields this event's change list shows, in its order: allowlisted,
+   * shown in the sheet, moved, and money only for a reader who may see it.
+   * The sheet's chips come from here, so they never name a field the list
+   * leaves out (#465).
+   */
+  shownFields: z.array(z.string()),
   /**
    * Reopen motifs and correction reasons, lifted server-side from an allowlist
    * of state keys; null when the event carries none. `before_state` and

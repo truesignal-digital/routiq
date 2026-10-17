@@ -2,14 +2,6 @@
   "A16": {
     "apps/api/src/artifacts/routes.ts": 1
   },
-  "E1": {
-    "apps/web/src/components/money-input.tsx": 1
-  },
-  "H16": {
-    "apps/web/src/activities/detail/ActivityAssetsPanel.tsx": 3,
-    "apps/web/src/activities/detail/ActivityOverview.tsx": 1,
-    "apps/web/src/components/ui/file-upload.tsx": 1
-  },
   "A18": {
     "apps/api/src/artifacts/artifacts.test.ts": 2,
     "apps/api/src/auth/auth.test.ts": 1,
@@ -18,7 +10,6 @@
     "apps/api/src/commands/documents.test.ts": 1,
     "apps/api/src/commands/entry-decisions.test.ts": 1,
     "apps/api/src/commands/lifecycle.test.ts": 2,
-    "apps/api/src/commands/modules.test.ts": 1,
     "apps/api/src/commands/period-commands.test.ts": 1,
     "apps/api/src/commands/pipeline.test.ts": 2,
     "apps/api/src/commands/preset-enforcement.test.ts": 2,
@@ -33,6 +24,22 @@
     "apps/api/src/reads/read-gates.test.ts": 1,
     "apps/api/src/test/seed.ts": 1
   },
+  "B1": {
+    "apps/web/src/components/form/search-field.tsx": 3,
+    "apps/web/src/dashboard/cards.ts": 1,
+    "apps/web/src/screens/DashboardScreen.tsx": 2,
+    "apps/web/src/vehicle/flow.ts": 4,
+    "apps/web/src/vehicle/forms/AddNoteForm.tsx": 1,
+    "apps/web/src/vehicle/header/StatusBlock.tsx": 1,
+    "apps/web/src/vehicle/panel/RecordPanel.tsx": 6,
+    "apps/web/src/vehicle/panel/StandaloneForm.tsx": 7,
+    "apps/web/src/vehicle/tabs/DetailsTab.tsx": 1,
+    "apps/web/src/vehicle/useVehicle.ts": 1,
+    "apps/web/src/vehicle/VehicleWorkspaceScreen.tsx": 5
+  },
+  "H16": {
+    "apps/web/src/components/ui/file-upload.tsx": 1
+  },
   "H17": {
     "apps/web/src/activities/ReadingForm.tsx": 1,
     "apps/web/src/activities/RegisterPersonDialog.tsx": 1,
@@ -45,7 +52,6 @@
     "apps/web/src/maintenance/MaintenanceDialogs.tsx": 1,
     "apps/web/src/members/AddMemberDialog.tsx": 1,
     "apps/web/src/members/MemberActionDialog.tsx": 1,
-    "apps/web/src/vehicle/forms/LogFuelForm.tsx": 1,
     "apps/web/src/vehicle/panel/StandaloneForm.tsx": 1
   }
 }

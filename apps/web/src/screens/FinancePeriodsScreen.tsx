@@ -13,7 +13,7 @@ import {
 } from "@/components/data-table";
 import { EmptyState, ErrorState, LoadingState, PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
-import { deniedCode, PermissionDenied } from "@/components/permission-denied.js";
+import { PermissionDenied } from "@/components/permission-denied.js";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,7 +76,11 @@ export function FinancePeriodsScreen() {
   const reopenIntentRef = useRef<CommandIntent<ReopenPeriodPayloadType> | undefined>(undefined);
   const [actionError, setActionError] = useState<string>();
 
-  const periods = mergeImplicitCurrentPeriod(periodsQuery.data?.periods ?? []);
+  const currentPeriod = periodsQuery.data?.currentPeriodCode;
+  const periods =
+    periodsQuery.data === undefined
+      ? []
+      : mergeImplicitCurrentPeriod(periodsQuery.data.periods, periodsQuery.data.currentPeriodCode);
 
   // ADR-0001: the period list re-renders from the server's answer, never from a
   // locally patched cache.
@@ -84,6 +88,19 @@ export function FinancePeriodsScreen() {
     queryClient.invalidateQueries({
       queryKey: ["ws", session?.workspaceSlug, "finance", "periods"],
     });
+
+  // Both period commands version-check the stored row (§5.3), so they carry
+  // the version this screen shows. The current month may have no row yet; its
+  // implicit version 0 is ignored by lock-period until a row exists (#571).
+  const shownVersion = (periodCode: string) =>
+    periods.find((period) => period.periodCode === periodCode)?.rowVersion ?? 0;
+
+  // A conflict means the shown version is stale: reload the months so a
+  // second try sends the fresh one.
+  const failAction = async (code: string) => {
+    setActionError(code);
+    if (code === "VERSION_CONFLICT") await invalidatePeriods();
+  };
 
   // Every column sorts. `/v1/finance/periods` is unpaginated — the whole list
   // is in memory — so ordering it client-side reorders all of the data, not a
@@ -166,10 +183,13 @@ export function FinancePeriodsScreen() {
       1,
     );
 
-    const result = await lockIntentRef.current.submit({ periodCode });
+    const result = await lockIntentRef.current.submit(
+      { periodCode },
+      { expectedVersion: shownVersion(periodCode) },
+    );
 
     if (!result.ok) {
-      setActionError(result.code);
+      await failAction(result.code);
       return;
     }
 
@@ -186,10 +206,13 @@ export function FinancePeriodsScreen() {
       1,
     );
 
-    const result = await reopenIntentRef.current.submit({ periodCode, reason });
+    const result = await reopenIntentRef.current.submit(
+      { periodCode, reason },
+      { expectedVersion: shownVersion(periodCode) },
+    );
 
     if (!result.ok) {
-      setActionError(result.code);
+      await failAction(result.code);
       return;
     }
 
@@ -203,13 +226,13 @@ export function FinancePeriodsScreen() {
       <PermissionDenied
         title={t("finance.periods.title")}
         icon={<CalendarRange className="size-7" aria-hidden />}
-        code={deniedCode(me.enabledModules.includes("FINANCE"))}
+        code="ROLE_FORBIDDEN"
       />
     );
   }
 
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader
         title={t("finance.periods.title")}
       />
@@ -263,6 +286,7 @@ export function FinancePeriodsScreen() {
       {actionDialog.open && (
         <ActionDialog
           action={actionDialog.action}
+          current={actionDialog.periodCode === currentPeriod}
           onLock={() => handleLock(actionDialog.periodCode)}
           onReopen={(reason) => handleReopen(actionDialog.periodCode, reason)}
           onCancel={() => setActionDialog({ open: false })}
@@ -276,12 +300,15 @@ export function FinancePeriodsScreen() {
 
 function ActionDialog({
   action,
+  current,
   onLock,
   onReopen,
   onCancel,
   error,
 }: {
   action: "lock" | "reopen";
+  /** Locking the current month stops posting; any other month sends late entries to the current one. */
+  current: boolean;
   onLock: () => Promise<void>;
   onReopen: (reason: string) => Promise<void>;
   onCancel: () => void;
@@ -312,7 +339,7 @@ function ActionDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>{label("lock-period")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("finance.periods.lockExplanation")}
+              {t(current ? "finance.periods.lockCurrentExplanation" : "finance.periods.lockExplanation")}
             </AlertDialogDescription>
           </AlertDialogHeader>
 

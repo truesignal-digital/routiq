@@ -15,6 +15,11 @@ COPY packages/contracts packages/contracts
 COPY packages/domain packages/domain
 COPY apps/web apps/web
 
+# The version meta tag (vite.config.ts) falls back to git, and .git is
+# dockerignored, so without this every image reports "dev" (#601). Declared
+# here, after the install, so a new commit only rebuilds the layers below.
+ARG ROUTIQ_VERSION
+
 # Invoked through vite rather than the package's "build" script so the image
 # builds on both sides of the CI branch that adds that script.
 RUN pnpm --filter @routiq/web exec vite build

@@ -18,7 +18,7 @@ import { PageContainer } from "@/components/page-container";
 import { PermissionDenied } from "@/components/permission-denied.js";
 import { MemberStatusBadge } from "@/members/MemberStatusBadge.js";
 import { useMeContext } from "@/auth/me.js";
-import { useAssetRegistrationReference } from "@/assets/reference.js";
+import { useAssetRegistrationReference } from "@/reference/asset-registration.js";
 import { toSortParam } from "@/lib/sort-param.js";
 import { AddMemberDialog } from "@/members/AddMemberDialog.js";
 import { branchScopeLabel } from "@/members/BranchScopeField.js";
@@ -30,8 +30,10 @@ import {
 } from "@/members/MemberActionDialog.js";
 import { canAdministerMembers, type MemberActor } from "@/members/permissions.js";
 import { useMembers } from "@/members/useMembers.js";
+import { NotRecorded } from "@/components/not-recorded.js";
 
 const PRIMARY_COLUMN = { columnId: "displayName" } as const;
+const DEFAULT_SORTING: SortingState = [{ id: "displayName", desc: false }];
 const DEACTIVATED_FILTER_ID = "includeDeactivated";
 
 const ACTION_ICONS: Record<MemberActionKey, typeof ShieldCheck> = {
@@ -61,9 +63,7 @@ export function UsersScreen() {
 
   const [filterValues, setFilterValues] = useState<DataTableFilterValues>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "displayName", desc: false },
-  ]);
+  const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   const [adding, setAdding] = useState(false);
   const [acting, setActing] = useState<{
     member: MemberListItem;
@@ -72,10 +72,14 @@ export function UsersScreen() {
 
   const includeDeactivated = filterValues[DEACTIVATED_FILTER_ID] === "true";
   const sort = toSortParam(sorting);
-  const membersQuery = useMembers({
-    ...(includeDeactivated ? { includeDeactivated: true } : {}),
-    ...(sort === undefined ? {} : { sort }),
-  });
+  // Other roles are refused (#600), so the read waits for the role.
+  const membersQuery = useMembers(
+    {
+      ...(includeDeactivated ? { includeDeactivated: true } : {}),
+      ...(sort === undefined ? {} : { sort }),
+    },
+    { enabled: canAdminister },
+  );
   const members = useMemo(
     () => membersQuery.data?.pages.flatMap((page) => page.items) ?? [],
     [membersQuery.data],
@@ -122,7 +126,7 @@ export function UsersScreen() {
         meta: { phone: "meta", label: t("users.columns.username") },
         cell: ({ row }) => (
           <span className="tabular-nums whitespace-nowrap">
-            {row.original.username ?? "—"}
+            {row.original.username ?? <NotRecorded />}
           </span>
         ),
       },
@@ -156,7 +160,6 @@ export function UsersScreen() {
   if (me !== undefined && !canAdminister) {
     return (
       <PermissionDenied
-        width="wide"
         title={t("users.title")}
         icon={<Users className="size-7" aria-hidden />}
         code="ROLE_FORBIDDEN"
@@ -165,9 +168,10 @@ export function UsersScreen() {
   }
 
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader
         title={t("users.title")}
+        description={t("users.lead")}
         actions={
           <Button type="button" onClick={() => setAdding(true)}>
             <UserPlus className="size-4" aria-hidden />
@@ -175,7 +179,6 @@ export function UsersScreen() {
           </Button>
         }
       />
-      <p className="mt-2 max-w-lg text-sm text-muted-foreground">{t("users.lead")}</p>
 
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
         <DataTableViewOptions
@@ -205,6 +208,7 @@ export function UsersScreen() {
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}
             sorting={sorting}
+            defaultSorting={DEFAULT_SORTING}
             onSortingChange={setSorting}
             primaryColumn={PRIMARY_COLUMN}
             rowActions={(member) =>

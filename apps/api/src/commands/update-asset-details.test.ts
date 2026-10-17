@@ -6,6 +6,7 @@ import { assets, auditEvents, branches } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedAsset, seedWorkspace } from "../test/seed.js";
+import { setModule } from "../test/vendor.js";
 
 describe("update-asset-details.v1", () => {
   let ctx: Awaited<ReturnType<typeof createTestApp>>;
@@ -271,9 +272,7 @@ describe("update-asset-details.v1", () => {
     const otherAdmin = await seedActor(ctx.db, { workspaceId: other.workspace.id, role: "DIRECTOR" });
     const id = await seedAsset(ctx.app, otherAdmin.token);
     await ctx.db.update(assets).set({ acquisitionDate: "2024-03-01" }).where(eq(assets.id, id));
-    expect(
-      (await api.send(otherAdmin.token, "disable-module", { moduleCode: "FINANCE" })).status,
-    ).toBe(200);
+    await setModule(ctx.db, other.workspace.id, "FINANCE", false);
 
     const money = await edit(otherAdmin, id, { acquisitionAmountMinor: 30_000_000 });
     expect(money.status).toBe(403);

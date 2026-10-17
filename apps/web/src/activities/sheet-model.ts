@@ -7,7 +7,7 @@ import type {
   recordHaulageJobSheetPayload,
   recordJourneySheetPayload,
 } from "@routiq/contracts";
-import { parseMoneyXaf } from "../finance/model.js";
+import { parseMoneyXaf } from "../lib/format.js";
 
 export type JourneySheetPayload = z.infer<typeof recordJourneySheetPayload>;
 export type HaulageSheetPayload = z.infer<typeof recordHaulageJobSheetPayload>;

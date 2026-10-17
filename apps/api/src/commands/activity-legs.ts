@@ -1,6 +1,7 @@
 import {
   recordMeterReadingPayload,
   recordMovementLegPayload,
+  type CommandOrigin,
   type CommandWarningCode,
   type LegEndpoint,
 } from "@routiq/contracts";
@@ -22,6 +23,7 @@ import {
   type CommandDefinition,
   type Tx,
 } from "./dispatcher.js";
+import { assertOwnTrip } from "./own-records.js";
 import { resolveOrCreatePlace } from "./places.js";
 
 type RecordMovementLegPayload = z.infer<typeof recordMovementLegPayload>;
@@ -30,13 +32,14 @@ type RecordMeterReadingPayload = z.infer<typeof recordMeterReadingPayload>;
 interface OpenActivity {
   id: string;
   branchId: string;
-  status: "OPEN" | "CLOSED";
+  status: (typeof activities.$inferSelect)["status"];
 }
 
 async function loadOpenActivity(
   tx: Tx,
   ctx: CommandContext,
   activityId: string,
+  origin: CommandOrigin,
 ): Promise<OpenActivity> {
   const [activity] = await tx
     .select({
@@ -53,9 +56,13 @@ async function loadOpenActivity(
       referenceCode: activityId,
     });
   }
-  if (activity.status === "CLOSED") {
+  // A driver writes legs onto their own trips only (#592).
+  await assertOwnTrip(tx, ctx, ["DRIVER"], activity, origin);
+  if (activity.status !== "OPEN") {
     // Reopening is the ceremony (§5.1: ReopenActivity costs one approval);
     // silently appending to a closed job would make its completeness a lie.
+    // A planned trip has not started and a cancelled one never will
+    // (ADR-0012 §3): legs wait for start-planned-trip.
     throw new CommandError(409, "INVALID_STATE_TRANSITION", {
       entityType: "activity",
       status: activity.status,
@@ -111,7 +118,7 @@ const recordMovementLeg: CommandDefinition<RecordMovementLegPayload> = {
   },
 
   async execute(tx, ctx, envelope, payload) {
-    await loadOpenActivity(tx, ctx, payload.activityId);
+    await loadOpenActivity(tx, ctx, payload.activityId, envelope.origin);
 
     if (payload.segmentId !== undefined) {
       const [segment] = await tx
@@ -246,50 +253,53 @@ async function readingBranchIds(
  * branch (#58), so any other job would file it where the caller has no reach
  * or where the truck never ran. Out of scope and not carrying the truck answer
  * as an unknown activity, so the refusal says nothing about other branches.
+ *
+ * A planned or cancelled trip carries no vehicle yet, so it is refused for its
+ * status first (ADR-0012 §3): the reading waits for start-planned-trip.
+ * Before any of that, a driver files readings on their own trips only (#592).
  */
 async function loadReadingActivity(
   tx: Tx,
   ctx: CommandContext,
   activityId: string,
   assetId: string,
+  origin: CommandOrigin,
 ): Promise<void> {
   const [activity] = await tx
-    .select({ branchId: activities.branchId, status: activities.status })
-    .from(activities)
-    .where(
-      and(
-        eq(activities.workspaceId, ctx.workspaceId),
-        eq(activities.id, activityId),
-        exists(
-          tx
-            .select({ one: sql`1` })
-            .from(activityAssetSegments)
-            .where(
-              and(
-                eq(activityAssetSegments.workspaceId, activities.workspaceId),
-                eq(activityAssetSegments.activityId, activities.id),
-                eq(activityAssetSegments.assetId, assetId),
-              ),
+    .select({
+      branchId: activities.branchId,
+      status: activities.status,
+      carriesAsset: exists(
+        tx
+          .select({ one: sql`1` })
+          .from(activityAssetSegments)
+          .where(
+            and(
+              eq(activityAssetSegments.workspaceId, activities.workspaceId),
+              eq(activityAssetSegments.activityId, activities.id),
+              eq(activityAssetSegments.assetId, assetId),
             ),
-        ),
+          ),
       ),
-    )
+    })
+    .from(activities)
+    .where(and(eq(activities.workspaceId, ctx.workspaceId), eq(activities.id, activityId)))
     .limit(1);
-  if (
-    !activity ||
-    (ctx.branchScope !== "ALL" && !ctx.branchScope.includes(activity.branchId))
-  ) {
-    throw new CommandError(422, "REFERENCE_NOT_FOUND", {
-      referenceType: "activity",
-      referenceCode: activityId,
-    });
+  const notFound = new CommandError(422, "REFERENCE_NOT_FOUND", {
+    referenceType: "activity",
+    referenceCode: activityId,
+  });
+  if (!activity || (ctx.branchScope !== "ALL" && !ctx.branchScope.includes(activity.branchId))) {
+    throw notFound;
   }
-  if (activity.status === "CLOSED") {
-    throw new CommandError(409, "INVALID_STATE_TRANSITION", {
-      entityType: "activity",
-      status: activity.status,
-    });
-  }
+  await assertOwnTrip(tx, ctx, ["DRIVER"], { id: activityId }, origin);
+  const notRunning = new CommandError(409, "INVALID_STATE_TRANSITION", {
+    entityType: "activity",
+    status: activity.status,
+  });
+  if (activity.status === "PLANNED" || activity.status === "CANCELLED") throw notRunning;
+  if (!activity.carriesAsset) throw notFound;
+  if (activity.status !== "OPEN") throw notRunning;
 }
 
 const recordMeterReading: CommandDefinition<RecordMeterReadingPayload> = {
@@ -313,7 +323,7 @@ const recordMeterReading: CommandDefinition<RecordMeterReadingPayload> = {
 
   async execute(tx, ctx, envelope, payload) {
     if (payload.activityId !== undefined) {
-      await loadReadingActivity(tx, ctx, payload.activityId, payload.assetId);
+      await loadReadingActivity(tx, ctx, payload.activityId, payload.assetId, envelope.origin);
     }
 
     // A correction replaces an observation of the same meter on the same

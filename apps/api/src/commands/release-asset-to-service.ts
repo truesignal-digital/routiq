@@ -1,5 +1,5 @@
 import { releaseAssetToServicePayload, type CommandWarningCode } from "@routiq/contracts";
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
 import {
   assetAvailabilityIntervals,
@@ -18,6 +18,7 @@ import {
   ISSUE_CLOSURE_EVENTS,
   loadWorkOrderForUpdate,
   openAvailabilityInterval,
+  otherOpenSafetyIssues,
   requireAsset,
   WORK_ORDER_COMPLETION_EVENTS,
   type WorkOrderRow,
@@ -154,23 +155,11 @@ export const releaseAssetToService: CommandDefinition<ReleaseAssetToServicePaylo
         });
       }
 
-      const otherOpenSafetyIssues = await tx
-        .select({ id: operationalIssues.id })
-        .from(operationalIssues)
-        .where(
-          and(
-            eq(operationalIssues.workspaceId, ctx.workspaceId),
-            eq(operationalIssues.assetId, payload.assetId),
-            eq(operationalIssues.safetyCritical, true),
-            eq(operationalIssues.status, "OPEN"),
-            ne(operationalIssues.id, issue.id),
-          ),
-        )
-        .orderBy(asc(operationalIssues.id));
-      if (otherOpenSafetyIssues.length > 0) {
+      const otherOpen = await otherOpenSafetyIssues(tx, ctx.workspaceId, payload.assetId, issue.id);
+      if (otherOpen.length > 0) {
         throw new CommandError(409, "SAFETY_ISSUE_OPEN", {
           assetId: payload.assetId,
-          openIssueIds: otherOpenSafetyIssues.map((row) => row.id),
+          openIssueIds: otherOpen.map((row) => row.id),
         });
       }
 

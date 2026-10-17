@@ -2,8 +2,8 @@ import { isDeepStrictEqual } from "node:util";
 import {
   canReadDocuments,
   canReadLedger,
-  canReadWorkOrderCosts,
   moneyReadScope,
+  readsOwnTripsOnly,
   HISTORY_ENTITY_MODULE,
   HISTORY_MONEY_STATE_KEYS,
   HISTORY_STATE_KEYS,
@@ -14,6 +14,7 @@ import {
   type HistoryEntityType,
   type HistoryFieldChange,
   type ListSort,
+  type ModuleCode,
 } from "@routiq/contracts";
 import { and, eq, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
@@ -40,9 +41,11 @@ import {
   workspaces,
 } from "../db/schema.js";
 import type { TenantTx } from "../db/tenant.js";
-import { presentChanges } from "./history-present.js";
+import { presentChanges, shownChanges, type MoneyShown } from "./history-present.js";
+import { workOrderMoneyVisibility } from "./work-order-cost.js";
 import { isModuleEnabled } from "../modules/registry.js";
 import { canReadEntry } from "./money-scope.js";
+import { canReadTrip } from "./trip-scope.js";
 import {
   afterKeyset,
   bindTimestampText,
@@ -169,6 +172,26 @@ function projectState(
     projected[key] = stripCredentials(snapshot[key] ?? null);
   }
   return projected;
+}
+
+/**
+ * A vehicle's purchase price is a ledger figure (#121): the same rule as the
+ * vehicle's own detail and its History tab. A work order's amounts follow the
+ * work-order reads: the estimate for every role that reads work-order costs
+ * (#390, #640), the rest only while FINANCE is on too (#328). Posting-line
+ * totals are money too, under the same rule.
+ */
+function showsHistoryMoney(
+  entityType: HistoryEntityType,
+  auth: AuthContext,
+  modules: ReadonlySet<ModuleCode>,
+): MoneyShown {
+  if (entityType === "asset") return canReadLedger(auth.role) && modules.has("FINANCE");
+  if (entityType === "work_order") {
+    const visible = workOrderMoneyVisibility(auth, modules);
+    return (field) => (field === "expectedCostMinor" ? visible.estimate : visible.actual);
+  }
+  return true;
 }
 
 /**
@@ -352,7 +375,8 @@ const HISTORY_BRANCH_SCOPE: Record<HistoryEntityType, BranchOf | "WORKSPACE"> = 
  * An entry's snapshots carry its amounts, so its timeline follows the
  * caller's money scope (`readableEntrySql`): a driver's own entries, the
  * workshop's work-order costs; any other entry is the same 404. A document's
- * timeline is for the roles that read documents.
+ * timeline is for the roles that read documents. A trip's timeline, and its
+ * legs' and segments', follows the trip scope: a driver's own trips only.
  */
 async function canReadHistory(
   tx: TenantTx,
@@ -373,8 +397,35 @@ async function canReadHistory(
     }
   }
   if (entityType === "document") return canReadDocuments(auth.role);
+  const tripOf = HISTORY_TRIP_OF[entityType];
+  if (tripOf !== undefined && readsOwnTripsOnly(auth.role)) {
+    // A driver's own trips only (#545), by the rule the trip reads apply.
+    const tripId = await tripOf(tx, auth.workspaceId, entityId);
+    return tripId !== undefined && (await canReadTrip(tx, auth, tripId));
+  }
   return true;
 }
+
+/** The trip a trip-scoped record belongs to: itself, or its parent. */
+type TripOf = (tx: TenantTx, workspaceId: string, entityId: string) => Promise<string | undefined>;
+
+function childTrip(table: typeof activityAssetSegments | typeof movementLegs): TripOf {
+  return async (tx, workspaceId, entityId) =>
+    (
+      await tx
+        .select({ activityId: table.activityId })
+        .from(table)
+        .where(and(eq(table.workspaceId, workspaceId), eq(table.id, entityId)))
+        .limit(1)
+    )[0]?.activityId;
+}
+
+/** The entity types whose history is a trip's: they follow the trip scope. */
+const HISTORY_TRIP_OF: Partial<Record<HistoryEntityType, TripOf>> = {
+  activity: async (_tx, _workspaceId, entityId) => entityId,
+  activity_asset_segment: childTrip(activityAssetSegments),
+  movement_leg: childTrip(movementLegs),
+};
 
 export function registerHistoryReadRoutes(
   app: FastifyInstance,
@@ -391,7 +442,7 @@ export function registerHistoryReadRoutes(
     app,
     { db, requireAuth },
     { path: "/v1/history/:entityType/:entityId", module: "CORE", roles: ANY_ROLE, branchScope: "per-record" },
-    async ({ req, reply, auth, read }) => {
+    async ({ req, reply, auth, modules, read }) => {
       try {
         const parsedParams = z
           .object({ entityType: historyEntityType, entityId: z.uuid() })
@@ -458,6 +509,9 @@ export function registerHistoryReadRoutes(
               origin: commands.origin,
               clientOccurredAt: commands.clientOccurredAt,
               changedFields: auditEvents.changedFields,
+              // Read here, never sent: they decide `shownFields` (#465).
+              beforeState: auditEvents.beforeState,
+              afterState: auditEvents.afterState,
               note: noteSql(),
               noteCode: noteCodeSql(),
             })
@@ -497,6 +551,7 @@ export function registerHistoryReadRoutes(
             : reply.status(400).send({ error: { code: result.error } });
         }
 
+        const showMoney = showsHistoryMoney(entityType, auth, modules);
         const hasNextPage = result.rows.length > limit;
         const pageRows = result.rows.slice(0, limit);
         const items = pageRows.map((row) => ({
@@ -516,6 +571,11 @@ export function registerHistoryReadRoutes(
             clientOccurredAt: row.clientOccurredAt?.toISOString() ?? null,
           },
           changedFields: row.changedFields ?? [],
+          shownFields: shownChanges(
+            entityType,
+            diffStates(entityType, row.beforeState, row.afterState),
+            { showMoney },
+          ).map((change) => change.field),
           note: row.note,
           noteCode: row.noteCode,
         }));
@@ -590,19 +650,12 @@ export function registerHistoryReadRoutes(
             .limit(1);
           if (!row) return { row };
 
-          // A vehicle's purchase price is a ledger figure (#121): the same rule
-          // as the vehicle's own detail and its History tab. A work order's
-          // amounts follow the work-order reads (#390). Posting-line totals are
-          // money too, under the same rule.
-          const hidesMoney =
-            (entityType === "asset" && !(canReadLedger(auth.role) && modules.has("FINANCE"))) ||
-            (entityType === "work_order" && !canReadWorkOrderCosts(auth.role));
           const changes = await presentChanges(
             tx,
             auth.workspaceId,
             entityType,
             diffStates(entityType, row.beforeState, row.afterState),
-            { showMoney: !hidesMoney },
+            { showMoney: showsHistoryMoney(entityType, auth, modules) },
           );
           return { row, changes };
         });

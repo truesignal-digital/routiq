@@ -134,14 +134,15 @@ function endpointFilled(endpoint: LegEndpoint | undefined): boolean {
   return (endpoint.kind === "place" ? endpoint.name : endpoint.text).trim() !== "";
 }
 
-export function ActivityActions({
-  activity,
-  client = commandClient,
-}: {
-  activity: ActivityDetail;
-  client?: CommandClient;
-}) {
-  const { t } = useTranslation();
+export type ActivityPanel = Exclude<Panel, "none">;
+
+/**
+ * The trip's actions as parts the record page places (#662): each button the
+ * viewer may use, keyed, and the one form or dialog that is open. The close
+ * and the reopen are the decisions the status block holds; the captures go in
+ * the header.
+ */
+export function useActivityActions(activity: ActivityDetail, client: CommandClient = commandClient) {
   const label = useCommandLabel();
   const me = useMeContext();
   const [panel, setPanel] = useState<Panel>("none");
@@ -160,60 +161,29 @@ export function ActivityActions({
   // and where it happens rather than making the clerk hoard it until the sheet.
   const showCapture = activity.status === "OPEN" && canRecord;
   const assets = assetChoices(activity);
-  if (!showClose && !showReopen && !showSubstitute && !showCapture) return null;
 
   const dismiss = () => setPanel("none");
+  const outline = (key: ActivityPanel, command: Parameters<typeof label>[0]) => (
+    <Button key={key} variant="outline" onClick={() => setPanel(key)}>
+      {label(command)}
+    </Button>
+  );
 
-  return (
+  const buttons = {
+    close: showClose ? (
+      <Button key="close" onClick={() => setPanel("close")}>
+        {label("close-activity")}
+      </Button>
+    ) : null,
+    leg: showCapture ? outline("leg", "record-movement-leg") : null,
+    reading: showCapture && assets.length > 0 ? outline("reading", "record-meter-reading") : null,
+    expense: showCapture && assets.length > 0 ? outline("expense", "record-expense") : null,
+    substitute: showSubstitute ? outline("substitute", "substitute-asset") : null,
+    reopen: showReopen ? outline("reopen", "reopen-activity") : null,
+  };
+
+  const forms = (
     <>
-      <div className="flex flex-wrap gap-2">
-        {showClose && (
-          <Button onClick={() => setPanel("close")}>
-            {label("close-activity")}
-          </Button>
-        )}
-        {showCapture && (
-          <Button
-            variant="outline"
-            onClick={() => setPanel("leg")}
-          >
-            {label("record-movement-leg")}
-          </Button>
-        )}
-        {showCapture && assets.length > 0 && (
-          <Button
-            variant="outline"
-            onClick={() => setPanel("reading")}
-          >
-            {label("record-meter-reading")}
-          </Button>
-        )}
-        {showCapture && assets.length > 0 && (
-          <Button
-            variant="outline"
-            onClick={() => setPanel("expense")}
-          >
-            {label("record-expense")}
-          </Button>
-        )}
-        {showSubstitute && (
-          <Button
-            variant="outline"
-            onClick={() => setPanel("substitute")}
-          >
-            {label("substitute-asset")}
-          </Button>
-        )}
-        {showReopen && (
-          <Button
-            variant="outline"
-            onClick={() => setPanel("reopen")}
-          >
-            {label("reopen-activity")}
-          </Button>
-        )}
-      </div>
-
       {panel === "close" && (
         <CloseTripDialog activity={activity} client={client} onDismiss={dismiss} />
       )}
@@ -254,6 +224,32 @@ export function ActivityActions({
           onDismiss={dismiss}
         />
       )}
+    </>
+  );
+
+  return {
+    buttons,
+    forms,
+    open: (next: ActivityPanel) => setPanel(next),
+    can: { reopen: showReopen },
+  };
+}
+
+export function ActivityActions({
+  activity,
+  client = commandClient,
+}: {
+  activity: ActivityDetail;
+  client?: CommandClient;
+}) {
+  const { buttons, forms } = useActivityActions(activity, client);
+  const shown = [buttons.close, buttons.leg, buttons.reading, buttons.expense, buttons.substitute, buttons.reopen];
+  if (shown.every((button) => button === null)) return null;
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-2">{shown}</div>
+      {forms}
     </>
   );
 }

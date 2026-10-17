@@ -203,7 +203,7 @@ describe("named controls follow the app language", () => {
 
   it.each([
     ["fr-CM", ["Année précédente", "Mois précédent", "Mois suivant", "Année suivante"], "lundi 6 octobre 2025"],
-    ["en", ["Previous year", "Previous month", "Next month", "Next year"], "Monday, October 6, 2025"],
+    ["en", ["Previous year", "Previous month", "Next month", "Next year"], "Monday, 6 October 2025"],
   ])("calendar navigation is named in %s without a locale prop", async (language, names, day) => {
     await i18n.changeLanguage(language)
     render(<Calendar mode="single" defaultMonth={new Date(2025, 9, 1)} />)

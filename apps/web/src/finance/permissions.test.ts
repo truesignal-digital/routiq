@@ -5,10 +5,12 @@ import {
   canApproveEntries,
   canEditPendingEntry,
   canManagePeriods,
+  canRecordAgain,
   canRecordFinance,
   canRecordRevenue,
   canReopenPeriod,
   canReverseEntry,
+  recordAgainStep,
 } from "./permissions.js";
 
 const FINANCE_ON = ["CORE", "FINANCE"] as const;
@@ -73,6 +75,44 @@ describe("a cost on a work order (#410, #414)", () => {
   });
 });
 
+describe("Record again after a wrong-details cancellation (#559)", () => {
+  const onWorkOrder = { links: { workOrderId: "wo-1", workOrderAssetId: "asset-1" } };
+  const ownExpense = { links: { workOrderId: null, workOrderAssetId: null } };
+  const handlers = () => {
+    const calls: string[] = [];
+    return {
+      calls,
+      recordAgain: () => calls.push("record-again"),
+      openWorkOrder: (assetId: string, workOrderId: string) => calls.push(`open ${assetId} ${workOrderId}`),
+    };
+  };
+  const viewer = (role: Role) => ({ role, enabledModules: FINANCE_ON });
+
+  it("is offered on a work-order cost only to the roles that book one", () => {
+    // The two roles that cancel entries: Direction books work-order costs, Finance does not.
+    expect(ROLES.filter((role) => canRecordAgain(role, FINANCE_ON, onWorkOrder))).toEqual(["DIRECTOR", "ADMIN"]);
+    expect(canRecordAgain("FINANCE", FINANCE_ON, ownExpense)).toBe(true);
+  });
+
+  it("hands Finance the way to the work order instead", () => {
+    const h = handlers();
+    const step = recordAgainStep(viewer("FINANCE"), onWorkOrder, h);
+    expect(step.onRecordAgain).toBeUndefined();
+    step.onOpenWorkOrder?.();
+    expect(h.calls).toEqual(["open asset-1 wo-1"]);
+  });
+
+  it("keeps Record again for Direction, and for Finance on an entry with no work order", () => {
+    for (const [role, entry] of [["DIRECTOR", onWorkOrder], ["FINANCE", ownExpense]] as const) {
+      const h = handlers();
+      const step = recordAgainStep(viewer(role), entry, h);
+      expect(step.onOpenWorkOrder).toBeUndefined();
+      step.onRecordAgain?.();
+      expect(h.calls).toEqual(["record-again"]);
+    }
+  });
+});
+
 describe("finance permissions", () => {
   it("allows writes only to roles accepted by record-expense and record-revenue", () => {
     for (const role of ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER", "DRIVER"] as const) {
@@ -98,8 +138,13 @@ describe("finance permissions", () => {
   describe("canEditPendingEntry", () => {
     const AUTHOR = "00000000-0000-4000-8000-00000000a001";
     const OTHER = "00000000-0000-4000-8000-00000000a002";
-    const entry = (status: string, principalId: string | null = AUTHOR) => ({
+    const entry = (
+      status: string,
+      principalId: string | null = AUTHOR,
+      direction: "EXPENSE" | "REVENUE" = "EXPENSE",
+    ) => ({
       status,
+      direction,
       recordedBy: { principalId },
     });
     const viewer = (principalId: string, role: Role | undefined = "DRIVER") => ({
@@ -110,6 +155,16 @@ describe("finance permissions", () => {
 
     it("offers the edit to the author while the entry waits", () => {
       expect(canEditPendingEntry(entry("SUBMITTED"), viewer(AUTHOR))).toBe(true);
+    });
+
+    // #572: a driver records expenses only, so their pending revenue entry
+    // offers no edit; the roles that record revenue keep it.
+    it("not on a revenue entry for a role that does not record revenue", () => {
+      expect(canEditPendingEntry(entry("SUBMITTED", AUTHOR, "REVENUE"), viewer(AUTHOR))).toBe(false);
+      expect(canEditPendingEntry(entry("SUBMITTED", AUTHOR, "REVENUE"), viewer(AUTHOR, "TECHNICIAN"))).toBe(false);
+      for (const role of ["DIRECTOR", "ADMIN", "FINANCE", "CASHIER"] as const) {
+        expect(canEditPendingEntry(entry("SUBMITTED", AUTHOR, "REVENUE"), viewer(AUTHOR, role))).toBe(true);
+      }
     });
 
     it("never to anyone else, an admin included", () => {

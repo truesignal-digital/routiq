@@ -21,7 +21,10 @@ import {
 } from "../commands/work-order-lookup.js";
 import type { Db } from "../db/client.js";
 import {
+  activities,
+  activityAssetSegments,
   assetAvailabilityIntervals,
+  assets,
   categories,
   commands,
   documents,
@@ -31,7 +34,6 @@ import {
   postingPeriods,
   principals,
   workOrders,
-  workspaces,
 } from "../db/schema.js";
 import type { TenantTx } from "../db/tenant.js";
 import { commandActors, eventPrincipalIds, lastEvents, toActor } from "./actors.js";
@@ -40,20 +42,20 @@ import { addDays, currentBusinessDate } from "./business-date.js";
 import { entryEvidenceMissingSql } from "./entry-evidence.js";
 import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
-import { workOrderActualCostSql } from "./work-order-cost.js";
-import { directionDecidesEntries } from "./approvals-queue.js";
+import { costToCome, workOrderActualCostSql, workOrderCostToComeColumns } from "./work-order-cost.js";
+import { dayStartSql, workspaceTimezone } from "./workspace-day.js";
+import { directionDecidesEntries, entryApprovers } from "./approvals-queue.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 import { directionNoteItems } from "./notes.js";
+import { readableTripSql } from "./trip-scope.js";
 
 const SEVERITY_RANK: Record<AttentionSeverity, number> = { CRITICAL: 0, WARNING: 1, INFO: 2 };
 
 /** Descriptions travel as params, bounded so a long report cannot flood the list. */
 const clip = (text: string): string => (text.length > 140 ? `${text.slice(0, 139)}…` : text);
 
-const utcMidnight = (isoDate: string): string => `${isoDate}T00:00:00.000Z`;
-
 /** Whole days from `from` to `to`, both ISO dates. */
-function daysBetween(from: string, to: string): number {
+export function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 }
 
@@ -88,10 +90,16 @@ async function lastReleases(
   return new Map(rows.map((row) => [row.issueId, row.closedAt]));
 }
 
-async function maintenanceItems(
+/**
+ * `books`: FINANCE is on, so a cost still to come can be booked (#82). The
+ * fleet To do (fleet-attention.ts) runs this per vehicle too, so a problem is
+ * "unplanned" by one rule on the truck page and on every Overview.
+ */
+export async function maintenanceItems(
   tx: TenantTx,
   auth: AuthContext,
   assetId: string,
+  books: boolean,
 ): Promise<{ items: AssetAttentionItem[]; grounding: Grounding | undefined }> {
   const ws = auth.workspaceId;
   const items: AssetAttentionItem[] = [];
@@ -117,6 +125,7 @@ async function maintenanceItems(
   const issues = await tx
     .select({
       id: operationalIssues.id,
+      number: operationalIssues.number,
       description: operationalIssues.description,
       safetyCritical: operationalIssues.safetyCritical,
       status: operationalIssues.status,
@@ -151,11 +160,15 @@ async function maintenanceItems(
   const orders = await tx
     .select({
       id: workOrders.id,
+      number: workOrders.number,
       issueId: workOrders.issueId,
       status: workOrders.status,
       description: workOrders.description,
       expectedCostMinor: workOrders.expectedCostMinor,
       actualCostMinor: workOrderActualCostSql(),
+      costOutcome: workOrders.costOutcome,
+      declaredCostMinor: workOrders.declaredCostMinor,
+      ...workOrderCostToComeColumns(),
       currency: workOrders.currency,
       completionRejectReason: workOrders.completionRejectReason,
       completedAt: workOrders.completedAt,
@@ -226,6 +239,7 @@ async function maintenanceItems(
       partOfGrounding: grounding?.issueId === issue.id,
       makerPrincipalIds: [],
       params: {
+        recordNumber: issue.number,
         description: clip(issue.description),
         safetyCritical: issue.safetyCritical,
         hasCompletedWorkOrder,
@@ -235,7 +249,10 @@ async function maintenanceItems(
     });
   }
 
-  const costsVisible = canReadWorkOrderCosts(auth.role);
+  // The estimate is the workshop's quote (#640); the actual cost is Finance's
+  // (#328). Both are hidden from a driver (#390).
+  const estimateVisible = canReadWorkOrderCosts(auth.role);
+  const costsVisible = books && estimateVisible;
   for (const order of orders) {
     const subject = {
       entityType: "work_order" as const,
@@ -245,13 +262,13 @@ async function maintenanceItems(
     };
     // Absent for a caller who may not read work-order costs (#390): the
     // sentence without an amount, never a zero.
-    const costs = !costsVisible
+    const costs = !estimateVisible
       ? {}
       : {
           ...(order.expectedCostMinor === null
             ? {}
             : { expectedCostMinor: serializeMinor(order.expectedCostMinor) }),
-          ...(order.actualCostMinor === null
+          ...(order.actualCostMinor === null || !costsVisible
             ? {}
             : { actualCostMinor: serializeMinor(BigInt(order.actualCostMinor)) }),
           currency: order.currency,
@@ -265,7 +282,7 @@ async function maintenanceItems(
         since: order.createdAt.toISOString(),
         partOfGrounding: inGrounding(order),
         makerPrincipalIds: maker ? [maker] : [],
-        params: { description: clip(order.description), ...costs },
+        params: { recordNumber: order.number, description: clip(order.description), ...costs },
       });
     } else if (order.status === "APPROVED") {
       items.push({
@@ -276,6 +293,7 @@ async function maintenanceItems(
         partOfGrounding: inGrounding(order),
         makerPrincipalIds: [],
         params: {
+          recordNumber: order.number,
           description: clip(order.description),
           ...costs,
           ...(order.completionRejectReason === null
@@ -293,8 +311,33 @@ async function maintenanceItems(
         since: (completion?.occurredAt ?? order.createdAt).toISOString(),
         partOfGrounding: inGrounding(order),
         makerPrincipalIds: maker ? [maker] : [],
-        params: { description: clip(order.description), ...costs },
+        params: { recordNumber: order.number, description: clip(order.description), ...costs },
       });
+    } else if (order.status === "COMPLETED" && costsVisible) {
+      const toCome = costToCome(order);
+      // A line awaiting review is already on the list as ENTRY_AWAITING_REVIEW.
+      if (toCome !== null && !toCome.awaitingApproval) {
+        items.push({
+          code: "WORK_ORDER_COST_TO_COME",
+          severity: "WARNING",
+          subject,
+          since: (order.completedAt ?? order.createdAt).toISOString(),
+          // The grounding sentence speaks of the release, never of the invoice.
+          partOfGrounding: false,
+          makerPrincipalIds: [],
+          params: {
+            recordNumber: order.number,
+            description: clip(order.description),
+            currency: order.currency,
+            ...(toCome.reason === "DECLARED_NOT_RECORDED"
+              ? {
+                  declaredCostMinor: toCome.declaredCostMinor,
+                  recordedCostMinor: toCome.recordedCostMinor,
+                }
+              : {}),
+          },
+        });
+      }
     }
   }
 
@@ -355,23 +398,45 @@ async function maintenanceItems(
   return { items, grounding };
 }
 
-async function documentItems(
+export interface VehicleAttention<T> {
+  asset: { id: string; assetCode: string; branchId: string };
+  item: T;
+}
+
+/**
+ * Current documents of the vehicles `vehicles` selects (a condition on
+ * `assets`) that expire within `horizonDays`, or already have. The truck page
+ * asks for one vehicle; the fleet To do and Coming up for the caller's branches.
+ */
+export async function documentAttentionRows(
   tx: TenantTx,
   workspaceId: string,
-  assetId: string,
+  vehicles: SQL,
   businessDate: string,
-): Promise<AssetAttentionItem[]> {
+  timezone: string,
+  horizonDays: number = DOCUMENT_EXPIRING_WINDOW_DAYS,
+): Promise<Array<VehicleAttention<AssetAttentionItem>>> {
   const superseding = alias(documents, "superseding");
+  // The workspace's midnight, so the edge sits where the business date turns.
+  const dayStart = (date: SQL) => dayStartSql(date, timezone).mapWith(documents.createdAt);
   const rows = await tx
     .select({
       id: documents.id,
       documentNumber: documents.documentNumber,
       documentTypeCode: documents.documentTypeCode,
       expiresAt: documents.expiresAt,
+      expiredSince: dayStart(sql`${documents.expiresAt}`),
+      expiringSince: dayStart(
+        sql`${documents.expiresAt} - ${DOCUMENT_EXPIRING_WINDOW_DAYS}::int`,
+      ),
       labelFr: categories.labelFr,
       labelEn: categories.labelEn,
+      assetId: assets.id,
+      assetCode: assets.assetCode,
+      branchId: assets.branchId,
     })
     .from(documents)
+    .innerJoin(assets, and(eq(assets.workspaceId, documents.workspaceId), eq(assets.id, documents.assetId)))
     .leftJoin(
       superseding,
       and(eq(superseding.workspaceId, documents.workspaceId), eq(superseding.supersedesDocumentId, documents.id)),
@@ -387,11 +452,11 @@ async function documentItems(
     .where(
       and(
         eq(documents.workspaceId, workspaceId),
-        eq(documents.assetId, assetId),
+        vehicles,
         // Current documents only: a renewal supersedes the old row.
         isNull(superseding.id),
         isNotNull(documents.expiresAt),
-        lte(documents.expiresAt, addDays(businessDate, DOCUMENT_EXPIRING_WINDOW_DAYS)),
+        lte(documents.expiresAt, addDays(businessDate, horizonDays)),
       ),
     );
 
@@ -399,20 +464,48 @@ async function documentItems(
     const expiresAt = row.expiresAt!;
     const expired = expiresAt < businessDate;
     return {
-      code: expired ? "DOCUMENT_EXPIRED" : "DOCUMENT_EXPIRING",
-      severity: expired ? "CRITICAL" : "WARNING",
-      subject: { entityType: "document", id: row.id, number: row.documentNumber, rowVersion: null },
-      since: utcMidnight(expired ? expiresAt : addDays(expiresAt, -DOCUMENT_EXPIRING_WINDOW_DAYS)),
-      partOfGrounding: false,
-      makerPrincipalIds: [],
-      params: {
-        documentTypeLabelFr: row.labelFr ?? row.documentTypeCode,
-        documentTypeLabelEn: row.labelEn ?? row.documentTypeCode,
-        expiresAt,
-        daysLeft: daysBetween(businessDate, expiresAt),
-      },
-    } satisfies AssetAttentionItem;
+      asset: { id: row.assetId, assetCode: row.assetCode, branchId: row.branchId },
+      item: {
+        code: expired ? "DOCUMENT_EXPIRED" : "DOCUMENT_EXPIRING",
+        severity: expired ? "CRITICAL" : "WARNING",
+        subject: { entityType: "document", id: row.id, number: row.documentNumber, rowVersion: null },
+        since: (expired ? row.expiredSince : row.expiringSince).toISOString(),
+        partOfGrounding: false,
+        makerPrincipalIds: [],
+        params: {
+          documentTypeLabelFr: row.labelFr ?? row.documentTypeCode,
+          documentTypeLabelEn: row.labelEn ?? row.documentTypeCode,
+          expiresAt,
+          daysLeft: daysBetween(businessDate, expiresAt),
+        },
+      } satisfies AssetAttentionItem,
+    };
   });
+}
+
+/**
+ * Still owes its paperwork: waiting for a decision, or posted while its month
+ * is open, with no receipt where one is expected (ENTRY_EVIDENCE_MISSING).
+ * Over the outer `financial_entries` row.
+ */
+export function evidenceStillDueSql(): SQL {
+  return and(
+    or(
+      eq(financialEntries.status, "SUBMITTED"),
+      and(
+        eq(financialEntries.status, "POSTED"),
+        // Every column written with its table: drizzle leaves the outer one
+        // bare when the select reads financial_entries alone (#483).
+        sql`exists (
+          select 1 from ${postingPeriods} open_period
+          where open_period.workspace_id = ${sql.identifier("financial_entries")}.workspace_id
+            and open_period.id = ${sql.identifier("financial_entries")}.posting_period_id
+            and open_period.status = 'OPEN'
+        )`,
+      ),
+    ),
+    entryEvidenceMissingSql(),
+  )!;
 }
 
 async function entryItems(
@@ -429,15 +522,8 @@ async function entryItems(
   const conditions: SQL[] = [
     eq(financialEntries.workspaceId, auth.workspaceId),
     onVehicle,
-    or(
-      eq(financialEntries.status, "SUBMITTED"),
-      // Posted paperwork can still be completed while its month is open.
-      and(
-        eq(financialEntries.status, "POSTED"),
-        eq(postingPeriods.status, "OPEN"),
-        entryEvidenceMissingSql(),
-      ),
-    )!,
+    // Posted paperwork can still be completed while its month is open.
+    or(eq(financialEntries.status, "SUBMITTED"), evidenceStillDueSql())!,
   ];
   if (auth.branchScope !== "ALL") {
     conditions.push(inArray(financialEntries.branchId, auth.branchScope));
@@ -452,6 +538,7 @@ async function entryItems(
       amountMinor: financialEntries.amountMinor,
       rowVersion: financialEntries.rowVersion,
       createdAt: financialEntries.createdAt,
+      createdByCommandId: financialEntries.createdByCommandId,
       currency: financialEntries.currency,
       categoryLabelFr: categories.labelFr,
       categoryLabelEn: categories.labelEn,
@@ -477,13 +564,10 @@ async function entryItems(
       and(eq(commands.workspaceId, financialEntries.workspaceId), eq(commands.id, financialEntries.createdByCommandId)),
     )
     .leftJoin(principals, eq(principals.id, commands.tenantActorPrincipalId))
-    .leftJoin(
-      postingPeriods,
-      and(eq(postingPeriods.workspaceId, financialEntries.workspaceId), eq(postingPeriods.id, financialEntries.postingPeriodId)),
-    )
     .where(and(...conditions));
 
   const directionDecides = await directionDecidesEntries(tx, auth, rows);
+  const approvers = await entryApprovers(tx, auth.workspaceId, rows);
   const items: AssetAttentionItem[] = [];
   for (const [index, row] of rows.entries()) {
     const recordedBy = toActor({
@@ -512,7 +596,11 @@ async function entryItems(
         since: row.createdAt.toISOString(),
         partOfGrounding: false,
         makerPrincipalIds: row.recorderPrincipalId ? [row.recorderPrincipalId] : [],
-        params: { ...params, directionDecides: directionDecides[index] ?? false },
+        params: {
+          ...params,
+          directionDecides: directionDecides[index] ?? false,
+          ...(approvers[index] ? { approver: approvers[index] } : {}),
+        },
       });
     }
     if (row.evidenceMissing) {
@@ -530,20 +618,77 @@ async function entryItems(
   return items;
 }
 
+/**
+ * The vehicle on two unfinished trips at once (#577): two OPEN trips holding
+ * it on open segments are the fact, whatever their windows say. One item per
+ * trip the caller may read, naming the others the caller may read, since the
+ * moment the vehicle came to be on both. A start is accepted with
+ * VEHICLE_DOUBLE_BOOKED; this is what stays until someone closes the stale trip.
+ */
+async function tripItems(tx: TenantTx, auth: AuthContext, assetId: string): Promise<AssetAttentionItem[]> {
+  const holding = await tx
+    .selectDistinct({
+      id: activities.id,
+      activityNumber: activities.activityNumber,
+      rowVersion: activities.rowVersion,
+      startedAt: activities.startedAt,
+      readable: sql<boolean>`${readableTripSql(auth)}`,
+    })
+    .from(activities)
+    .innerJoin(
+      activityAssetSegments,
+      and(
+        eq(activityAssetSegments.workspaceId, activities.workspaceId),
+        eq(activityAssetSegments.activityId, activities.id),
+      ),
+    )
+    .where(
+      and(
+        eq(activities.workspaceId, auth.workspaceId),
+        eq(activities.status, "OPEN"),
+        eq(activityAssetSegments.assetId, assetId),
+        isNull(activityAssetSegments.endedAt),
+      ),
+    )
+    .orderBy(activities.activityNumber, activities.id);
+  if (holding.length < 2) return [];
+
+  const items: AssetAttentionItem[] = [];
+  for (const trip of holding) {
+    if (!trip.readable) continue;
+    const others = holding.filter((other) => other.id !== trip.id);
+    const since = [trip, ...others]
+      .map((each) => each.startedAt)
+      .filter((at): at is Date => at !== null)
+      .reduce((latest, at) => (at > latest ? at : latest), new Date(0));
+    items.push({
+      code: "VEHICLE_DOUBLE_BOOKED",
+      severity: "WARNING",
+      subject: { entityType: "activity", id: trip.id, number: trip.activityNumber, rowVersion: trip.rowVersion },
+      since: since.toISOString(),
+      partOfGrounding: false,
+      makerPrincipalIds: [],
+      params: { tripNumbers: others.filter((other) => other.readable).map((other) => other.activityNumber) },
+    });
+  }
+  return items;
+}
+
 async function loadAttention(tx: TenantTx, auth: AuthContext, assetId: string, modules: ReadonlySet<ModuleCode>) {
-  const [workspace] = await tx
-    .select({ timezone: workspaces.timezone })
-    .from(workspaces)
-    .where(eq(workspaces.id, auth.workspaceId));
-  const businessDate = currentBusinessDate(new Date(), workspace?.timezone ?? "Africa/Douala");
+  const timezone = await workspaceTimezone(tx, auth.workspaceId);
+  const businessDate = currentBusinessDate(new Date(), timezone);
 
   // Notes are CORE: whoever sees the vehicle sees Direction's notes on it (#98).
   const items: AssetAttentionItem[] = await directionNoteItems(tx, auth, assetId);
   if (modules.has("MAINTENANCE")) {
-    items.push(...(await maintenanceItems(tx, auth, assetId)).items);
+    items.push(...(await maintenanceItems(tx, auth, assetId, modules.has("FINANCE"))).items);
   }
   if (modules.has("DOCUMENTS") && canReadDocuments(auth.role)) {
-    items.push(...(await documentItems(tx, auth.workspaceId, assetId, businessDate)));
+    const rows = await documentAttentionRows(tx, auth.workspaceId, eq(assets.id, assetId), businessDate, timezone);
+    items.push(...rows.map((row) => row.item));
+  }
+  if (modules.has("ACTIVITIES")) {
+    items.push(...(await tripItems(tx, auth, assetId)));
   }
   // Ledger facts only for the roles that read the books (DECISIONS 1).
   if (modules.has("FINANCE") && canReadLedger(auth.role)) {
