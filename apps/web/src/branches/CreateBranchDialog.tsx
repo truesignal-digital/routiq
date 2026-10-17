@@ -154,10 +154,7 @@ export function CreateBranchDialog({
 
   return (
     <FormPanel open={open} onClose={() => onOpenChange(false)}>
-        <FormPanelHeader
-          title={label("create-branch")}
-          description={t("branches.add.description")}
-        />
+        <FormPanelHeader title={label("create-branch")} />
 
         <Form {...form}>
           <form

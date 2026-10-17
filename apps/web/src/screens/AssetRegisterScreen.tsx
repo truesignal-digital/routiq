@@ -555,8 +555,8 @@ export function AssetRegisterScreen() {
       fields: ["papers"],
       state: { missing: 0, started: artifactIds.length > 0 },
       children: (
+        // The section is titled Papers and shows its own state; the dropzone names itself.
         <div data-field="papers" className="flex flex-col gap-2">
-          <span className="text-sm font-medium">{t("finance.record.evidenceLabel")}</span>
           <FileUpload onChange={setArtifactIds} accept="image/jpeg,image/png,image/webp,application/pdf" />
         </div>
       ),

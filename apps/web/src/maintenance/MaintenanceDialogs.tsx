@@ -275,7 +275,6 @@ export function ReportIssueForm({
     <CommandForm
       {...chrome}
       title={label("report-issue")}
-      description={t("maintenance.issues.newHint")}
       error={submission.error}
       command="report-issue"
       ready={ready}
@@ -444,7 +443,6 @@ function CreateWorkOrderFields({
     <CommandForm
       {...chrome}
       title={label("create-work-order")}
-      description={t("maintenance.workOrders.newHint")}
       error={submission.error}
       command="create-work-order"
       ready={ready}
@@ -811,7 +809,6 @@ export function CompleteWorkOrderForm({
       <CommandForm
         {...chrome}
         title={label("complete-work-order")}
-        description={t("maintenance.close.hint")}
         width="line-items"
         error={submission.error}
         command="complete-work-order"

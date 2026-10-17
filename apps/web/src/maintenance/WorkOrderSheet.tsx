@@ -9,6 +9,7 @@ import type {
   WorkOrderListItem,
   WorkOrderPendingCostLine,
 } from "@routiq/contracts";
+import { InfoPopover } from "@/components/info-popover.js";
 import { ErrorState, LoadingState } from "@/components/page";
 import { historyNote, Timeline, timelineAct } from "@/components/timeline.js";
 import { StatusBadge } from "@/components/status-badge.js";
@@ -22,6 +23,7 @@ import type {
 } from "./MaintenanceDialogs.js";
 import { IssueStatusBadge } from "./IssueStatusBadge.js";
 import type { WorkOrderMoneyShown } from "./permissions.js";
+import { isActiveWorkOrder } from "./status.js";
 import { useWorkOrder } from "./useMaintenance.js";
 import { WorkOrderStatusBadge } from "./WorkOrderStatusBadge.js";
 import { useCommandLabel } from "../commands/labels.js";
@@ -300,20 +302,15 @@ export function WorkOrderSheet({
     <div className="flex flex-col gap-5">
       {/* Availability, not lifecycle status: a grounded truck stays IN_SERVICE
           and only a release re-opens the interval (§3.4). */}
+      {/* The grounding stays at rest; the rule behind it is one tap away and
+          again in the release dialog, where it is acted on. */}
       {linkedIssue?.assetUnavailable === true && (
-        <div className="flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm">
-          <TriangleAlert
-            className="mt-0.5 size-4 shrink-0 text-destructive"
-            aria-hidden
-          />
-          <span>
-            <span className="block font-semibold text-destructive">
-              {t("maintenance.detail.unavailableTitle")}
-            </span>
-            <span className="block text-muted-foreground">
-              {t("maintenance.detail.unavailableHint")}
-            </span>
-          </span>
+        <div className="flex items-center gap-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm">
+          <TriangleAlert className="size-4 shrink-0 text-destructive" aria-hidden />
+          <span className="font-semibold text-destructive">{t("maintenance.detail.unavailableTitle")}</span>
+          <InfoPopover label={t("maintenance.detail.unavailableInfoLabel")} className="ms-auto desktop:ms-auto">
+            {t("maintenance.detail.unavailableHint")}
+          </InfoPopover>
         </div>
       )}
 
@@ -362,9 +359,11 @@ export function WorkOrderSheet({
             ) : (
               <span key="issue" className="flex flex-wrap items-center gap-1.5">
                 <span>{linkedIssue?.description ?? t("maintenance.detail.linkedIssue")}</span>
-                {linkedIssue !== undefined && (
-                  <IssueStatusBadge issue={linkedIssue} />
-                )}
+                {/* "In a work order" says nothing inside that work order; the other states do. */}
+                {linkedIssue !== undefined &&
+                  !(linkedIssue.status === "OPEN" && linkedIssue.workOrders.some((order) => isActiveWorkOrder(order.status))) && (
+                    <IssueStatusBadge issue={linkedIssue} />
+                  )}
                 {safetyCritical && (
                   <StatusBadge tone="danger" icon={ShieldAlert}>
                     {t("maintenance.issues.safetyCritical")}
@@ -375,13 +374,6 @@ export function WorkOrderSheet({
           ],
         ]}
       />
-
-      <div>
-        <h3 className="text-xs text-muted-foreground">
-          {t("maintenance.fields.description")}
-        </h3>
-        <p className="mt-1 text-sm">{header.description}</p>
-      </div>
 
       <LabelledText label={t("maintenance.fields.summary")} text={detail?.summary} />
       <LabelledText label={t("maintenance.fields.cancelReason")} text={detail?.cancelReason} />

@@ -6,7 +6,7 @@ describe("styles.css semantic tokens", () => {
   const stylesCssPath = resolve(__dirname, "styles.css");
   const stylesCss = readFileSync(stylesCssPath, "utf-8");
 
-  const semanticTokens = ["success", "warning", "info", "signal"];
+  const semanticTokens = ["success", "warning", "info", "signal", "destructive"];
 
   semanticTokens.forEach((token) => {
     it(`should define --${token} in :root`, () => {

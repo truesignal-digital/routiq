@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { StatusBlock as RecordStatusBlock, type StatusNote, type StatusTone } from "@/components/status-block.js";
 import { Button } from "@/components/ui/button";
-import { formatDate, formatMonth, formatRelativeTime, localizedLabel } from "@/lib/format.js";
+import { formatDate, formatRelativeTime, localizedLabel } from "@/lib/format.js";
 import { contributes } from "@/modules/manifest.js";
 import { useWorkOrder } from "@/maintenance/useMaintenance.js";
 import { useVehicle } from "../context.js";
@@ -35,19 +35,21 @@ import { STEP_ICONS } from "../steps.js";
 
 const REPORT_MAX = 140;
 
+/**
+ * The block's sentences are short now, so a link in them is a tap target of
+ * its own: 44 px on a phone, its negative margin keeping the line's height.
+ */
+const TARGET = "inline-flex min-h-11 items-center -my-2.5 desktop:my-0 desktop:min-h-6";
+
 function truncate(text: string): string {
   return text.length > REPORT_MAX ? `${text.slice(0, REPORT_MAX - 1).trimEnd()}…` : text;
 }
 
-function monthYear(iso: string, locale: string): string {
-  return formatMonth(iso, locale);
-}
-
 /**
- * One sentence that says whether the vehicle may be used and what it waits
- * for, the one step this role takes next beside it, and any other hard stop
- * underneath. The report is quoted, never paraphrased into a grammar only
- * English has.
+ * One short sentence that says whether the vehicle may be used and what it
+ * waits for, with the record that holds it, the one step this role takes next
+ * beside it, and any other hard stop underneath. A quoted description is never
+ * paraphrased into a grammar only English has.
  */
 export function VehicleStatusBlock({ now = new Date() }: { now?: Date }) {
   const { t, i18n } = useTranslation();
@@ -61,7 +63,7 @@ export function VehicleStatusBlock({ now = new Date() }: { now?: Date }) {
 
   const refLink = (kind: "work_order" | "issue", id: string | undefined) =>
     id === undefined ? null : (
-      <LinkButton onClick={() => openRef({ kind, id })}>
+      <LinkButton className={TARGET} onClick={() => openRef({ kind, id })}>
         <RecordNumber>{recordNumberText(t, kind, vehicleRecordNumber(asset, attention, id) ?? null)}</RecordNumber>
       </LinkButton>
     );
@@ -77,12 +79,10 @@ export function VehicleStatusBlock({ now = new Date() }: { now?: Date }) {
       // Amber, not red, once the repair is done and only the release is left (#92).
       tone = situation.repaired ? "waiting" : "critical";
       Icon = situation.repaired ? Hourglass : ShieldAlert;
+      // The state and its age only: the record the follow links names the problem.
       lead = situation.repaired
         ? t("vehicle.status.repairedLead")
-        : t("vehicle.status.grounded.lead", {
-            days: situation.days,
-            report: truncate(situation.report),
-          });
+        : t("vehicle.status.grounded.lead", { days: situation.days });
       follow = withNodes(
         (slots) =>
           t(`vehicle.status.grounded.${situation.phase}`, {
@@ -114,13 +114,12 @@ export function VehicleStatusBlock({ now = new Date() }: { now?: Date }) {
       lead = t("vehicle.status.notAssessed.lead");
       follow = t("vehicle.status.notAssessed.follow");
       break;
+    // The lead says it; the actions it rules out are locked with their reason.
     case "registered":
       lead = t("vehicle.status.registered.lead");
-      follow = t("vehicle.status.registered.follow");
       break;
     case "disposed":
       lead = t("vehicle.status.disposed.lead", { status: situation.status });
-      follow = t("vehicle.status.disposed.follow");
       break;
   }
 
@@ -143,7 +142,7 @@ export function VehicleStatusBlock({ now = new Date() }: { now?: Date }) {
           }),
         {
           document: (
-            <LinkButton onClick={() => openRef({ kind: "document", id: item.subject.id })}>
+            <LinkButton className={TARGET} onClick={() => openRef({ kind: "document", id: item.subject.id })}>
               {label}
             </LinkButton>
           ),
@@ -174,17 +173,13 @@ function availableFollow(
   t: TFunction,
   tripsShown: boolean,
 ): string {
-  const since = situation.commissionedAt === null ? null : monthYear(situation.commissionedAt, locale);
   // Trips' field on the vehicle (`vehicle.lastTrip`): with the module off the
-  // sentence says nothing about trips rather than "none yet".
-  if (!tripsShown) return since === null ? "" : t("vehicle.status.available.sinceOnly", { since });
-  const lastTrip = situation.lastTripAt === null ? null : formatRelativeTime(situation.lastTripAt, locale);
-  if (since !== null && lastTrip !== null) {
-    return t("vehicle.status.available.sinceAndTrip", { since, lastTrip });
-  }
-  if (since !== null) return t("vehicle.status.available.sinceNoTrips", { since });
-  if (lastTrip !== null) return t("vehicle.status.available.lastTripOnly", { lastTrip });
-  return t("vehicle.status.available.noTrips");
+  // sentence says nothing about trips rather than "none yet". Since when it is
+  // in service is in Details.
+  if (!tripsShown) return "";
+  return situation.lastTripAt === null
+    ? t("vehicle.status.available.noTrips")
+    : t("vehicle.status.available.lastTripOnly", { lastTrip: formatRelativeTime(situation.lastTripAt, locale) });
 }
 
 function StatusAction({ step, record }: { step: RoleStep; record: PanelRef | null }) {
@@ -217,7 +212,7 @@ function StatusAction({ step, record }: { step: RoleStep; record: PanelRef | nul
           <StepIcon aria-hidden />
           {stepLabel(step.step)}
         </Button>
-        <p id={reasonId} className="text-xs text-muted-foreground md:text-right">
+        <p id={reasonId} className="text-xs text-foreground/80 md:text-right">
           <Lock className="mr-1 inline size-3 align-[-1px]" aria-hidden />
           {lockText(step.lock)}
         </p>
@@ -237,7 +232,7 @@ function StatusAction({ step, record }: { step: RoleStep; record: PanelRef | nul
         })}
         <ArrowRight aria-hidden />
       </Button>
-      <p className="text-xs text-muted-foreground md:text-right">
+      <p className="text-xs text-foreground/80 md:text-right">
         <Lock className="mr-1 inline size-3 align-[-1px]" aria-hidden />
         {t("vehicle.status.lockedCaption", {
           step: stepLabel(step.step),

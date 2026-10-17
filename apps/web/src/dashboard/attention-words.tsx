@@ -82,20 +82,17 @@ export function todoItem(row: TodoRow, t: TFunction, locale: string | undefined)
   // Which facts exist picks the whole sentence.
   const title =
     row.code === "ISSUE_UNPLANNED" && p.safetyCritical === true ? `${key}.titleSafety` : `${key}.title`;
-  const detail =
-    row.code === "VEHICLE_GROUNDED"
-      ? p.readyForRelease === true
-        ? `${key}.detailReady`
-        : p.workOrderPlanned === true
-          ? `${key}.detailPlanned`
-          : `${key}.detail`
-      : `${key}.detail`;
+  // A grounded vehicle's row names the step that is next: plan, follow or release the repair.
+  const groundedStage =
+    row.code !== "VEHICLE_GROUNDED" ? "" : p.readyForRelease === true ? "Ready" : p.workOrderPlanned === true ? "Planned" : "";
+  const detail = `${key}.detail${groundedStage}`;
+  const action = `${key}.action${groundedStage}`;
   return {
     key: `${row.code}:${row.link.id ?? row.link.kind}:${p.currency ?? ""}`,
     icon: <TodoIcon row={row} />,
     title: t(title, values),
     detail: t(detail, values),
-    action: { label: t(`${key}.action`), ...todoTarget(row) },
+    action: { label: t(action), ...todoTarget(row) },
   };
 }
 

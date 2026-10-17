@@ -65,7 +65,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
 
   await cancelFromPanel(repair.entryNumber, repair.id, "2026-09");
   await nav(`/assets/${truck.id}/money?period=2026-10`);
-  await page.getByRole("heading", { name: t("Argent · octobre 2026", "Money · October 2026") }).waitFor();
+  await page.getByRole("heading", { name: t("octobre 2026", "October 2026") }).waitFor();
   await quiet();
   const categories = page.locator('[data-slot="card"]').filter({ hasText: t("Dépenses par catégorie", "Expenses by category") });
   await categories.waitFor();
@@ -77,7 +77,7 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   if (share.includes("%")) wrong.push(`October's category card shows a share: ${share}`);
 
   await nav(`/assets/${truck.id}/money?period=2026-07`);
-  await page.getByRole("heading", { name: t("Argent · juillet 2026", "Money · July 2026") }).waitFor();
+  await page.getByRole("heading", { name: t("juillet 2026", "July 2026") }).waitFor();
   await quiet();
   const fuelRow = page.getByRole("listitem").filter({ hasText: fuel.entryNumber });
   const missingTile = page.locator('[data-slot="metric-tile"][data-metric="missing"]');

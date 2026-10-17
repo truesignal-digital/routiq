@@ -20,7 +20,6 @@
       }
     },
     "title": "Trucks",
-    "subtitle": "Track every truck from registration through retirement.",
     "searchLabel": "Search trucks",
     "filterLabel": "Filter trucks",
     "emptyTitle": "Register your first truck",
@@ -50,18 +49,17 @@
     },
     "overview": {
       "profit": {
-        "title": "Profit by truck"
+        "title": "Profit by truck",
+        "periodBasis": "{period} · revenue − expenses on each truck"
       },
       "tiles": {
         "idle": "No trip for {days}+ days",
-        "onTheRoadInfo": "Truck-days on a trip ÷ truck-days recorded, last {days} days. Days nobody could record are left out."
+        "onTheRoadInfo": "Truck-days on a trip ÷ truck-days recorded, last {days} days, against the {days} days before. Days nobody could record are left out."
       },
       "km": {
-        "all": "This month, km are known for every truck ({count, number}).",
         "some": "This month, km are known for {known, number} of {total, number} trucks: {missing, plural, one {# trip has} other {# trips have}} no km."
       },
       "board": {
-        "question": "What did each truck do, day by day? Last {days} days.",
         "basis": {
           "all": "Status from trips, work orders and grounding.",
           "noMaintenance": "Status from trips. Work orders and grounding are not counted: Maintenance is off."
@@ -102,15 +100,13 @@
       },
       "fuel": {
         "title": "Fuel per km by truck",
-        "question": "Is any truck spending more on fuel than it should? {period}, {currency} per km. Line = fleet median.",
-        "questionShort": "Is any truck spending more on fuel than it should?",
         "more": "{count, plural, one {# more truck} other {# more trucks}}",
         "notCounted": {
           "kmUnknown": "Not counted: {count, plural, one {# truck whose km are not known} other {# trucks whose km are not known}}.",
           "noKm": "Not counted: {count, plural, one {# truck with no km in this period} other {# trucks with no km in this period}}.",
           "noFuel": "Not counted: {count, plural, one {# truck with no fuel recorded} other {# trucks with no fuel recorded}}."
         },
-        "empty": "No truck has both km and fuel recorded in this period.",
+        "empty": "No truck with both km and fuel.",
         "open": "See all trucks"
       }
     }
@@ -179,7 +175,6 @@
         "asset": "Truck"
       }
     },
-    "subtitle": "Every trip your trucks run, from start to close.",
     "loadFailed": "We couldn't load trips. Please retry.",
     "overview": {
       "weeks": {
@@ -190,20 +185,17 @@
       },
       "summary": {
         "sentence": "{started, plural, =0 {No trip has started this week yet.} one {# trip started this week; {closed, number} of them closed.} other {# trips started this week; {closed, number} of them closed.}}",
-        "open": "{open, plural, =0 {Nothing is still open.} one {# trip is still open.} other {# trips are still open.}}",
-        "counted": "{fuelCounted, select, yes {Closed trips missing data: {fuel, number} without fuel and {km, number} without km.} other {Closed trips missing data: {km, number} without km. Fuel is not counted: Money is off.}}"
+        "open": "{open, plural, =0 {Nothing is still open.} one {# trip is still open.} other {# trips are still open.}}"
       }
     }
   },
   "maintenance": {
     "workOrders": {
-      "newHint": "Open a work order on a truck, with or without a problem behind it.",
       "columns": {
         "asset": "Truck"
       }
     },
     "issues": {
-      "newHint": "Describe the fault found on the truck. A safety-critical problem grounds the truck immediately.",
       "columns": {
         "asset": "Truck"
       }
@@ -225,7 +217,7 @@
     },
     "overview": {
       "offRoad": {
-        "question": "Are repairs keeping trucks off the road longer? Truck-days in the workshop or grounded.",
+        "counted": "Truck-days in the workshop or grounded, per month.",
         "column": "{month}: {days, plural, one {# truck-day} other {# truck-days}} off the road",
         "columnPartial": "{month} (so far): {days, plural, one {# truck-day} other {# truck-days}} off the road"
       },
@@ -265,10 +257,7 @@
       "trips": "Trips"
     },
     "trips": {
-      "title": "Trips",
-      "description": "Trips with this truck",
-      "descriptionWithKm": "Trips with this truck · {km, number} km recorded",
-      "empty": "No trips yet. Start one when the truck leaves the depot.",
+      "empty": "No trips yet.",
       "tripNumber": "Trip {number}",
       "wholeTrip": "Whole-trip amounts",
       "noMoney": "No entries linked to this trip yet.",
@@ -294,8 +283,6 @@
     },
     "status": {
       "available": {
-        "sinceAndTrip": "In service since {since}; last trip {lastTrip}.",
-        "sinceNoTrips": "In service since {since}; no trips yet.",
         "lastTripOnly": "Last trip {lastTrip}.",
         "noTrips": "No trips yet."
       }
@@ -391,7 +378,7 @@
         "costs": "{period} · expenses recorded on each truck · costliest first"
       },
       "atALossTitle": "Trucks at a loss",
-      "noneAtALoss": "No truck made a loss in this period.",
+      "noneAtALoss": "No truck at a loss.",
       "empty": "No truck in this period.",
       "lines": {
         "allVehicles": "Profit of all trucks ({count})",

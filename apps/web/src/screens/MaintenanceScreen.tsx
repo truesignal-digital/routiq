@@ -209,7 +209,6 @@ export function MaintenanceScreen() {
   return (
     <ModulePage
       title={t("maintenance.title")}
-      description={t("maintenance.subtitle")}
       tabsLabel={t("maintenance.page.tabs.label")}
       tabs={tabs}
       active={tab}
@@ -412,15 +411,17 @@ function WorkOrdersTab({
         />
       </div>
       {openOnly && (
-        <p data-slot="work-orders-open-only" className="mt-2 text-sm text-muted-foreground">
-          {t("maintenance.workOrders.openOnly")}{" "}
-          <button
+        <p data-slot="work-orders-open-only" className="mt-2 flex items-center gap-3 text-sm text-muted-foreground">
+          {t("maintenance.workOrders.openOnly")}
+          <Button
             type="button"
-            className="font-medium text-foreground underline-offset-4 hover:underline"
+            variant="link"
+            size="desktop-sm"
+            className="px-0 text-sm font-medium text-foreground"
             onClick={() => setStatus(status)}
           >
             {t("maintenance.workOrders.showAll")}
-          </button>
+          </Button>
         </p>
       )}
 

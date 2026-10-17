@@ -26,6 +26,8 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   open: vi.fn(),
   search: { current: {} as { tab?: "legs" | "money" | "history" } },
+  // Whether the viewer may close: canCloseActivity's answer (ActivityActions.test.tsx covers the roles).
+  canClose: { current: true },
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -66,7 +68,7 @@ vi.mock("../activities/ActivityActions.js", async () => {
   return {
     useActivityActions: (activity: ActivityDetail) => ({
       buttons: {
-        close: activity.status === "OPEN" ? <Button>Close the activity</Button> : null,
+        close: activity.status === "OPEN" && mocks.canClose.current ? <Button>Close the activity</Button> : null,
         leg: activity.status === "OPEN" ? <Button variant="outline">Record a leg</Button> : null,
         reading: null,
         expense: null,
@@ -333,6 +335,7 @@ afterAll(async () => {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.search.current = {};
+  mocks.canClose.current = true;
   showing(fullHaulage());
 });
 
@@ -348,9 +351,12 @@ describe("the trip's record header (#662)", () => {
     expect(within(header).getByRole("heading", { level: 1 }).textContent).toBe("DLA-2026-00042");
     expect(within(header).getByText("Closed")).toBeTruthy();
     const facts = header.querySelector('[data-slot="record-facts"]')?.textContent ?? "";
-    expect(facts).toContain("Haulage job");
+    // Who and when; the type reads once, in Overview's Job section, and the close in History.
     expect(facts).toContain("Cimencam");
-    expect(facts).toContain("Closed ");
+    expect(facts).toContain("18 July 2026");
+    expect(facts).not.toContain("Haulage job");
+    expect(facts).not.toContain("Closed ");
+    expect(screen.getByText("Type").nextElementSibling?.textContent).toBe("Haulage job");
   });
 
   it("holds at most one filled button, and History is a tab, never a button", () => {
@@ -363,9 +369,13 @@ describe("the trip's record header (#662)", () => {
     expect(screen.getByRole("tab", { name: "History" })).toBeTruthy();
   });
 
-  it("stamps where the record came from", () => {
+  it("stamps where the record came from, with its history", () => {
     renderScreen();
+    expect(screen.queryByText(/TRUCKING v2/)).toBeNull();
+    cleanup();
 
+    mocks.search.current = { tab: "history" };
+    renderScreen();
     const stamp = screen.getByText(/TRUCKING v2/);
     expect(stamp.textContent).toContain("command 3f1a9c40");
   });
@@ -387,6 +397,20 @@ describe("the trip's status block (#662)", () => {
     expect(block?.textContent).toContain("On the road");
     expect(within(block as HTMLElement).getByRole("button", { name: "Close the activity" })).toBeTruthy();
     expect(within(recordHeader()).queryByRole("button", { name: "Close the activity" })).toBeNull();
+    // The button is the next step for a viewer who can close it: no sentence about who closes.
+    expect(block?.textContent).not.toContain("closes it on its return");
+  });
+
+  it("tells a viewer who cannot close the trip who does, truly: its driver or a manager", () => {
+    showing(sparseJourney());
+    mocks.canClose.current = false;
+    renderScreen({ ...manager, role: "FINANCE" });
+
+    const block = statusBlock();
+    expect(block?.textContent).toContain("On the road");
+    expect(within(block as HTMLElement).queryByRole("button", { name: "Close the activity" })).toBeNull();
+    expect(block?.textContent).toContain("Its driver or a manager closes it on its return.");
+    expect(block?.textContent).not.toContain("whoever recorded it");
   });
 
   it("says what a trip closed with gaps misses and offers to complete it", async () => {
@@ -398,7 +422,12 @@ describe("the trip's status block (#662)", () => {
     renderScreen();
 
     const block = statusBlock() as HTMLElement;
-    expect(block.textContent).toContain("Closed, but 2 things are missing");
+    expect(block.textContent).toContain("2 things are missing");
+    // Closed reads once, on the header's badge.
+    expect(within(recordHeader()).getByText("Closed, 2 gaps")).toBeTruthy();
+    // The trust warning stays at rest, beside the checklist (§9).
+    expect(block.textContent).toContain("Its profit can't be trusted without them.");
+    expect(block.querySelectorAll("[data-slot=trip-missing-fact]")).toHaveLength(2);
     expect(within(block).getByText("No crew recorded")).toBeTruthy();
     expect(within(block).getByText("No revenue attributed")).toBeTruthy();
     await userEvent.click(within(block).getByRole("button", { name: "Complete the activity" }));
@@ -471,6 +500,9 @@ describe("the trip's Overview (#662)", () => {
     for (const label of ["Crew", "Meter at departure", "Customer", "Notes"]) {
       expect(screen.getByText(label).nextElementSibling?.textContent, label).toBe("Not recorded");
     }
+    cleanup();
+    mocks.search.current = { tab: "history" };
+    renderScreen();
     expect(screen.getByText(/PASSENGER_TRANSPORT v1/)).toBeTruthy();
   });
 });

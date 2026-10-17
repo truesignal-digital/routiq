@@ -1,4 +1,4 @@
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Check, Monitor, Moon, Sun } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -41,11 +41,12 @@ export function ThemeToggle({ className }: { className?: string }) {
           <Button
             key={option.mode}
             type="button"
-            variant={selected ? "default" : "outline"}
+            // As the language buttons: the current choice is a state, never the filled button.
+            variant={selected ? "secondary" : "outline"}
             aria-pressed={selected}
             onClick={() => setMode(option.mode)}
           >
-            <Icon aria-hidden />
+            {selected ? <Check aria-hidden /> : <Icon aria-hidden />}
             {t(option.labelKey)}
           </Button>
         );

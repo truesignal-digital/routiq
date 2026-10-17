@@ -7,7 +7,7 @@ import type {
   OverviewRange,
   PeriodRead,
 } from "@routiq/contracts";
-import { CalendarCheck, ClipboardCheck, ReceiptText } from "lucide-react";
+import { CalendarCheck, CircleCheck, ClipboardCheck, ReceiptText, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMeContext } from "@/auth/me.js";
 import { FilterChips } from "@/components/filter-chips";
@@ -16,24 +16,25 @@ import { CompareBars } from "@/components/overview/compare-bars.js";
 import { RankedBars } from "@/components/overview/ranked-bars.js";
 import { OverviewSummary } from "@/components/overview/overview-summary.js";
 import { ToDoList, type ToDoItem } from "@/components/overview/to-do-list.js";
+import { InfoPopover } from "@/components/info-popover.js";
 import { ErrorState } from "@/components/page";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CountedPopover } from "@/finance/CountedPopover.js";
 import { canApproveEntries, canManagePeriods, canReadFinance, canReadMoneyOverview } from "@/finance/permissions.js";
 import { useFinanceSummary } from "@/finance/useFinanceSummary.js";
 import { useFleetUsage } from "@/overview/useFleetUsage.js";
 import { useMoneyOverview } from "@/overview/useMoneyOverview.js";
 import { windowLabel } from "@/overview/window-label.js";
 import { usePeriods } from "@/finance/usePeriods.js";
-import { moneySummaryText } from "@/overview/money-summary.js";
+import { monthName, moneySummaryText } from "@/overview/money-summary.js";
 import { SummaryStatusBadge } from "@/overview/SummaryStatusBadge.js";
 import {
-  currencyUnit,
   formatDate,
+  formatDayMonth,
   formatMoney,
   formatMonth,
   formatPercent,
-  formatRelativeTime,
   localizedLabel,
 } from "@/lib/format.js";
 
@@ -55,8 +56,10 @@ const RANGE_CHIPS = [
 type RangeChip = (typeof RANGE_CHIPS)[number]["key"];
 
 /**
- * Money › Overview (#664, dashboards.html#money): how the period went, where
- * spending changed and what waits. Tiles open their tab already filtered.
+ * Money › Overview (#664, dashboards.html#money), journey-first like the Dashboard
+ * (tools/verify/journeys/director-reads-money.ts): what waits comes first, then the
+ * period's figures and what they leave out, then where spending moved. Tiles open
+ * their tab already filtered.
  */
 export function FinanceOverviewScreen() {
   const navigate = useNavigate();
@@ -107,7 +110,7 @@ function MoneyOverview() {
         />
         {windows !== undefined && (
           <p data-slot="money-overview-period" className="text-sm text-muted-foreground">
-            {t("finance.overview.period", { period: windows.period, comparison: windows.comparison })}
+            {t("finance.overview.periodShort", { period: windows.periodShort, comparison: windows.comparisonShort })}
           </p>
         )}
       </div>
@@ -120,50 +123,93 @@ function MoneyOverview() {
         />
       )}
 
+      {/* What waits leads; each row is one kind of work with its count and the verb that does it. */}
+      <Card data-slot="money-todo">
+        <CardHeader>
+          <CardTitle>{t("finance.overview.todo.title")}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          {summaryQuery.isPending ? (
+            <Skeleton className="h-24 w-full" />
+          ) : (
+            <ToDoList
+              items={toDoItems({
+                summary,
+                canApprove,
+                close: canClose ? { month: lastMonth, period: lastPeriod } : undefined,
+                t,
+                language: i18n.resolvedLanguage,
+              })}
+              empty={t("finance.overview.todo.empty")}
+              limit={3}
+            />
+          )}
+          {/* A locked month is a passed check: one line, so the closers know it is done (§9, locked periods). */}
+          {canClose && lastMonth !== undefined && lastPeriod?.status === "LOCKED" && (
+            <p data-slot="money-month-locked" className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <CircleCheck className="size-4 shrink-0 text-success-foreground" aria-hidden />
+              {t("finance.overview.todo.monthLocked", { month: formatMonth(lastMonth, i18n.resolvedLanguage) })}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/*
+        The summary notice (#667) above the tiles when it is due. Its verdict
+        (month, badge, reason) and what the figures leave out are its counted
+        line: inside the notice when open, under the tiles when closed, so the
+        completeness warning is at rest either way.
+      */}
       <OverviewSummary
         page="money"
         notice={overview?.notice}
         sentence={words?.sentence}
-        details={words?.details}
-        badge={words === undefined ? undefined : <SummaryStatusBadge {...words.badge} />}
         expensesUp={words?.expensesUp}
-        counted={overview === undefined ? null : <CountedLine overview={overview} />}
+        counted={
+          overview === undefined || words === undefined ? null : (
+            <div data-slot="money-verdict" className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 desktop:min-h-8">
+              {/* The summary reads its own month whatever the range, so the verdict names it (§9, period basis). */}
+              <span data-slot="money-verdict-month" className="text-sm font-semibold text-foreground">
+                {verdictMonth(overview.summary.period.from, i18n.resolvedLanguage)}
+              </span>
+              <SummaryStatusBadge {...words.badge} />
+              {words.details.map((detail) => (
+                <span key={detail} className="text-sm text-foreground">
+                  {detail}
+                </span>
+              ))}
+              {/*
+                The period's pending total for every reader (§9, approval pending). An approver's To do
+                row counts only what they may decide, so the line goes only when that row says the same.
+              */}
+              {overview.notCounted.waitingApproval.count > 0 &&
+                !sameAsApproveRow(overview.notCounted.waitingApproval, canApprove ? summary?.waiting : undefined) && (
+                <span data-slot="money-waiting" className="inline-flex items-center gap-1.5 text-sm font-medium text-warning-foreground">
+                  <ClipboardCheck className="size-4" aria-hidden />
+                  {t("finance.overview.counted.waitingShort", {
+                    count: overview.notCounted.waitingApproval.count,
+                    amount: formatMoney(overview.notCounted.waitingApproval.amountMinor, { currency: overview.currency }),
+                  })}
+                </span>
+              )}
+              <CountedPopover overview={overview} sentence={words.sentence} />
+            </div>
+          )
+        }
       >
         <OverviewTiles
           overview={overview}
           summary={summary}
           isPending={overviewQuery.isPending || summaryQuery.isPending}
           isError={overviewQuery.isError || summaryQuery.isError}
-          canApprove={canApprove}
-          close={canClose ? { month: lastMonth, period: lastPeriod, isPending: periodsQuery.isPending } : undefined}
           comparisonShort={windows?.comparisonShort}
         />
       </OverviewSummary>
+      {/* The line holds its height while the read loads, so nothing below it jumps when it lands. */}
+      {overviewQuery.isPending && <Skeleton className="-mt-1 h-11 w-72 desktop:h-8" />}
 
-      <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
+      <div className="grid gap-4 lg:grid-cols-2">
         <CategoryCard overview={overview} isPending={overviewQuery.isPending} windows={windows} />
-        {/* On a phone people act first: To do comes before the chart. */}
-        <Card className="order-first lg:order-none">
-          <CardHeader>
-            <CardTitle>{t("finance.overview.todo.title")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {summaryQuery.isPending ? (
-              <Skeleton className="h-24 w-full" />
-            ) : (
-              <ToDoList
-                items={toDoItems({
-                  summary,
-                  canApprove,
-                  close: canClose ? { month: lastMonth, period: lastPeriod } : undefined,
-                  t,
-                  language: i18n.resolvedLanguage,
-                })}
-                empty={t("finance.overview.todo.empty")}
-              />
-            )}
-          </CardContent>
-        </Card>
         {fuelShown && (usageQuery.isPending || usageQuery.data?.money != null) && (
           <FuelPerKmCard usage={usageQuery.data} />
         )}
@@ -171,6 +217,23 @@ function MoneyOverview() {
     </div>
   );
 }
+
+/** The To do approve row shows this very count and amount, so a second line would repeat it. */
+function sameAsApproveRow(
+  waiting: FinanceOverviewResponse["notCounted"]["waitingApproval"],
+  approveRow: FinanceSummaryResponse["waiting"] | undefined,
+): boolean {
+  return approveRow != null && approveRow.count === waiting.count && approveRow.amountMinor === waiting.amountMinor;
+}
+
+/** "October" / "Octobre": the month leads its line, so French capitalises it in the string, not in CSS (DS-4). */
+function verdictMonth(isoDate: string, language: string | undefined): string {
+  const month = monthName(isoDate, language);
+  return month.charAt(0).toLocaleUpperCase(language) + month.slice(1);
+}
+
+/** A card header's link to the list behind it: 44 px on a phone, compact with a mouse. */
+const CARD_LINK = "inline-flex min-h-11 items-center text-sm font-medium whitespace-nowrap underline-offset-4 hover:underline desktop:min-h-6";
 
 type FuelNotCounted = "kmUnknown" | "noKm" | "noFuel";
 
@@ -221,12 +284,18 @@ function FuelPerKmCard({ usage }: { usage: FleetUsageResponse | undefined }) {
   return (
     <Card data-slot="fuel-per-km-by-truck">
       <CardHeader>
-        <CardTitle>{t("finance.overview.fuel.title")}</CardTitle>
-        <CardDescription>
-          {usage === undefined
-            ? t("finance.overview.fuel.questionShort")
-            : t("finance.overview.fuel.question", { period: windowLabel(usage.period, usage.range, language), currency: currencyUnit(currency) })}
-        </CardDescription>
+        <CardTitle className="flex items-center gap-1.5">
+          {t("finance.overview.fuel.title")}
+          <InfoPopover label={t("finance.overview.fuel.basisLabel")}>
+            {usage !== undefined && <p className="font-medium">{windowLabel(usage.period, usage.range, language)}</p>}
+            <p>{t("finance.overview.fuel.basis")}</p>
+          </InfoPopover>
+        </CardTitle>
+        <CardAction>
+          <Link to="/assets/list" className={CARD_LINK}>
+            {t("finance.overview.fuel.open")}
+          </Link>
+        </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {usage === undefined ? (
@@ -244,17 +313,23 @@ function FuelPerKmCard({ usage }: { usage: FleetUsageResponse | undefined }) {
             moreLabel={(hidden) => t("finance.overview.fuel.more", { count: hidden })}
           />
         )}
+        {/* Vehicles left out are a warning at rest; which ones, one tap away. */}
         {notes.length > 0 && (
-          <p data-slot="fuel-not-counted" className="text-xs text-muted-foreground">
-            {notes.join(" ")}
-          </p>
+          <div data-slot="fuel-not-counted">
+            <InfoPopover
+              label={t("finance.overview.counted.incomplete")}
+              trigger="text"
+              className="text-warning-foreground"
+              icon={<TriangleAlert className="size-4" aria-hidden />}
+            >
+              <ul className="flex list-disc flex-col gap-1 pl-4">
+                {notes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            </InfoPopover>
+          </div>
         )}
-        <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs text-muted-foreground">
-          <span>{t("finance.overview.fuel.basis")}</span>
-          <Link to="/assets/list" className="text-sm font-medium text-foreground underline-offset-4 hover:underline">
-            {t("finance.overview.fuel.open")}
-          </Link>
-        </div>
       </CardContent>
     </Card>
   );
@@ -277,6 +352,7 @@ function useWindowLabels(overview: FinanceOverviewResponse | undefined) {
   return {
     period: windowLabel(overview.period, overview.range, language),
     comparison: windowLabel(overview.comparison, overview.range, language),
+    periodShort: windowLabel(overview.period, overview.range, language, "short"),
     comparisonShort: windowLabel(overview.comparison, overview.range, language, "short"),
   };
 }
@@ -310,21 +386,21 @@ interface CloseState {
   period: PeriodRead | undefined;
 }
 
+/**
+ * The period's two figures. What waits (approvals, receipts, the month close) is
+ * the To do above, never a second tile that says the same.
+ */
 function OverviewTiles({
   overview,
   summary,
   isPending,
   isError,
-  canApprove,
-  close,
   comparisonShort,
 }: {
   overview: FinanceOverviewResponse | undefined;
   summary: FinanceSummaryResponse | undefined;
   isPending: boolean;
   isError: boolean;
-  canApprove: boolean;
-  close: (CloseState & { isPending: boolean }) | undefined;
   comparisonShort: string | undefined;
 }) {
   const { t, i18n } = useTranslation();
@@ -349,65 +425,17 @@ function OverviewTiles({
     };
   };
 
-  const waiting = summary?.waiting ?? undefined;
-  const tiles: MetricTile[] = [ledgerTile("EXPENSE"), ledgerTile("REVENUE")];
-  if (canApprove) {
-    tiles.push({
-      id: "approve",
-      label: t("finance.overview.tiles.approve"),
-      value: waiting === undefined ? null : String(waiting.count),
-      tone: waiting !== undefined && waiting.count > 0 ? "warning" : "neutral",
-      ...(waiting !== undefined && waiting.count > 0
-        ? {
-            hint: t("finance.money.tiles.waitingHint", {
-              amount: formatMoney(waiting.amountMinor, { currency }),
-              age: formatRelativeTime(waiting.oldestSubmittedAt),
-            }),
-          }
-        : {}),
-      link: { to: "/finance/approve" },
-    });
-  }
-  const missing = summary?.missingReceipt;
-  tiles.push({
-    id: "missing",
-    label: t("finance.money.tiles.missing"),
-    value: missing === undefined ? null : String(missing.count),
-    ...(missing?.oldestEconomicDate
-      ? { hint: t("finance.money.tiles.missingHint", { date: formatDate(missing.oldestEconomicDate) }) }
-      : {}),
-    link: { to: "/finance/entries", search: { evidence: "MISSING" } },
-  });
-  if (close !== undefined && close.month !== undefined) {
-    const period = close.period;
-    tiles.push({
-      id: "close",
-      label: t("finance.overview.tiles.monthClose", { month: formatMonth(close.month, i18n.resolvedLanguage) }),
-      value: close.isPending
-        ? null
-        : t(
-            period === undefined
-              ? "finance.overview.monthClose.none"
-              : period.status === "LOCKED"
-                ? "finance.overview.monthClose.locked"
-                : "finance.overview.monthClose.open",
-          ),
-      ...closeHint(close.month, period, summary?.unlockedPeriodCodes, t, i18n.resolvedLanguage),
-      link: { to: "/finance/entries", search: { periodCode: close.month } },
-    });
-  }
-
-  const strip = metricTiles(tiles);
+  const strip = metricTiles([ledgerTile("EXPENSE"), ledgerTile("REVENUE")]);
   if (strip === undefined) return null;
   return <MetricStrip tiles={strip} isPending={isPending} isError={isError} />;
 }
 
-/** Past this many, the close tile counts the earlier unlocked months instead of naming each. */
+/** Past this many, the close row counts the earlier unlocked months instead of naming each. */
 const NAMED_UNLOCKED_MAX = 3;
 
 /**
- * Under the close: the earlier months still not locked when there are any
- * (#526), the month's entry count otherwise.
+ * Under the month close: the earlier months still not locked when there are
+ * any (#526), the month's entry count otherwise.
  */
 export function closeHint(
   month: string,
@@ -427,36 +455,6 @@ export function closeHint(
     return { hint: t("finance.overview.monthClose.earlier", { count: earlier.length, months }) };
   }
   return period === undefined ? {} : { hint: t("finance.periods.entryCount", { count: period.entryCount }) };
-}
-
-/**
- * What the figures are made of and what they leave out, one sentence each, so
- * a missing receipt or an open trip never passes for a complete month.
- */
-function CountedLine({ overview }: { overview: FinanceOverviewResponse }) {
-  const { t } = useTranslation();
-  const { counted, notCounted, currency } = overview;
-  const sentences = [
-    t("finance.overview.counted.posted", { count: counted.postedEntries }),
-    notCounted.waitingApproval.count > 0
-      ? t("finance.overview.counted.waiting", {
-          count: notCounted.waitingApproval.count,
-          amount: formatMoney(notCounted.waitingApproval.amountMinor, { currency }),
-        })
-      : null,
-    notCounted.missingReceipt.count > 0
-      ? t("finance.overview.counted.missingReceipt", { count: notCounted.missingReceipt.count })
-      : null,
-    notCounted.openTrips !== null && notCounted.openTrips > 0
-      ? t("finance.overview.counted.openTrips", { count: notCounted.openTrips })
-      : null,
-    notCounted.otherCurrencyEntries > 0
-      ? t("finance.overview.counted.otherCurrency", { count: notCounted.otherCurrencyEntries })
-      : null,
-  ].filter((sentence): sentence is string => sentence !== null);
-  return (
-    <span data-slot="money-counted">{sentences.join(" ")}</span>
-  );
 }
 
 function CategoryCard({
@@ -482,14 +480,11 @@ function CategoryCard({
     <Card data-slot="money-categories">
       <CardHeader>
         <CardTitle>{t("finance.overview.categories.title")}</CardTitle>
-        <CardDescription>
-          {windows === undefined
-            ? t("finance.overview.categories.question")
-            : t("finance.overview.categories.description", {
-                period: windows.period,
-                comparison: windows.comparison,
-              })}
-        </CardDescription>
+        <CardAction>
+          <Link to="/finance/entries" search={{ status: "LEDGER", direction: "EXPENSE", economicMonth }} className={CARD_LINK}>
+            {t("finance.overview.categories.open")}
+          </Link>
+        </CardAction>
       </CardHeader>
       <CardContent>
         {isPending ? (
@@ -506,21 +501,12 @@ function CategoryCard({
             otherLabel={(count) => t("finance.overview.categories.other", { count })}
           />
         )}
-        <div className="mt-4 flex justify-end">
-          <Link
-            to="/finance/entries"
-            search={{ status: "LEDGER", direction: "EXPENSE", economicMonth }}
-            className="text-sm font-medium underline-offset-4 hover:underline"
-          >
-            {t("finance.overview.categories.open")}
-          </Link>
-        </div>
       </CardContent>
     </Card>
   );
 }
 
-/** Ranked by money: the approvals carry an amount, then receipts, then the month close. */
+/** Ranked by money: the approvals carry an amount, then receipts, then the month close. Each verb does the work. */
 function toDoItems({
   summary,
   canApprove,
@@ -541,11 +527,14 @@ function toDoItems({
       key: "approve",
       icon: <ClipboardCheck className="size-4" aria-hidden />,
       title: t("finance.overview.todo.approve", { count: waiting.count }),
-      detail: t("finance.money.tiles.waitingHint", {
-        amount: formatMoney(waiting.amountMinor, { currency: summary?.currency ?? "XAF" }),
-        age: formatRelativeTime(waiting.oldestSubmittedAt),
-      }),
-      action: { label: t("finance.overview.todo.openApprove"), to: "/finance/approve" },
+      detail:
+        waiting.oldestSubmittedAt === null
+          ? formatMoney(waiting.amountMinor, { currency: summary?.currency ?? "XAF" })
+          : t("finance.money.tiles.waitingHint", {
+              amount: formatMoney(waiting.amountMinor, { currency: summary?.currency ?? "XAF" }),
+              date: formatDayMonth(waiting.oldestSubmittedAt, language),
+            }),
+      action: { label: t("finance.overview.todo.review"), to: "/finance/approve" },
     });
   }
   const missing = summary?.missingReceipt;
@@ -557,17 +546,24 @@ function toDoItems({
       ...(missing.oldestEconomicDate
         ? { detail: t("finance.money.tiles.missingHint", { date: formatDate(missing.oldestEconomicDate) }) }
         : {}),
-      action: { label: t("finance.overview.todo.openEntries"), to: "/finance/entries", search: { evidence: "MISSING" } },
+      action: { label: t("finance.overview.todo.addReceipts"), to: "/finance/entries", search: { evidence: "MISSING" } },
     });
   }
-  if (close?.month !== undefined && close.period?.status === "OPEN") {
-    items.push({
-      key: "close",
-      icon: <CalendarCheck className="size-4" aria-hidden />,
-      title: t("finance.overview.todo.closeMonth", { month: formatMonth(close.month, language) }),
-      detail: t("finance.periods.entryCount", { count: close.period.entryCount }),
-      action: { label: t("finance.overview.todo.review"), to: "/finance/periods" },
-    });
+  // Last month still open, or an earlier one never locked (#526): either way the books are not closed.
+  const closeMonthCode = close?.month;
+  if (closeMonthCode !== undefined) {
+    const open = close?.period?.status === "OPEN";
+    const earlier = (summary?.unlockedPeriodCodes ?? []).filter((code) => code < closeMonthCode);
+    const { hint } = closeHint(closeMonthCode, close?.period, summary?.unlockedPeriodCodes, t, language);
+    if (open || earlier.length > 0) {
+      items.push({
+        key: "close",
+        icon: <CalendarCheck className="size-4" aria-hidden />,
+        title: open ? t("finance.overview.todo.monthOpen", { month: formatMonth(closeMonthCode, language) }) : hint,
+        ...(open && hint !== undefined ? { detail: hint } : {}),
+        action: { label: t("finance.overview.todo.closeAction"), to: "/finance/periods" },
+      });
+    }
   }
   return items;
 }

@@ -5,7 +5,7 @@ import {
   type ApprovalThresholdsResponse,
   type UpdateApprovalThresholdV2Payload,
 } from "@routiq/contracts";
-import { useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
@@ -14,7 +14,6 @@ import { MoneyInput } from "@/components/money-input.js";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -69,7 +68,8 @@ export function ChangeThresholdsForm({
   onReload: () => Promise<void>;
   client?: CommandClient;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const toldId = useId();
   const label = useCommandLabel();
   const intent = useRef<CommandIntent<UpdateApprovalThresholdV2Payload> | undefined>(undefined);
   const [error, setError] = useState<string>();
@@ -117,9 +117,6 @@ export function ChangeThresholdsForm({
     bands.recordingThresholdMinor === recordingThresholdMinor &&
     bands.financeCeilingMinor === financeCeilingMinor;
 
-  const roles = new Intl.ListFormat(i18n.resolvedLanguage, { type: "conjunction" }).format(
-    current.affectedRoles.map((role) => t(`users.roles.${role}`)),
-  );
   const preview = bands !== undefined && thresholdBandsProblem(bands) === undefined ? companyChain(bands) : undefined;
 
   async function send(valid: BandValues) {
@@ -176,7 +173,6 @@ export function ChangeThresholdsForm({
                   onBlur={field.onBlur}
                 />
               </FormControl>
-              <FormDescription>{t("settings.approvals.form.recordingHint")}</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -196,7 +192,6 @@ export function ChangeThresholdsForm({
                   onBlur={field.onBlur}
                 />
               </FormControl>
-              <FormDescription>{t("settings.approvals.form.ceilingHint")}</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -217,7 +212,20 @@ export function ChangeThresholdsForm({
               </>
             )
           )}
-          <p className="text-muted-foreground">{t("settings.approvals.form.whoIsTold", { roles })}</p>
+          <p id={toldId} className="text-muted-foreground">
+            {t("settings.approvals.form.whoIsTold")}
+          </p>
+          <ul aria-labelledby={toldId} className="flex flex-wrap gap-x-3 gap-y-1">
+            {current.affectedRoles.map((role) => (
+              <li key={role}>{t(`users.roles.${role}`)}</li>
+            ))}
+          </ul>
+          {/* Said where the bands move: exceptions keep their own amounts (#354). */}
+          {current.overrides.length > 0 && (
+            <p className="text-muted-foreground">
+              {t("settings.approvals.form.overridesKept", { count: current.overrides.length })}
+            </p>
+          )}
         </div>
       </CommandForm>
     </Form>

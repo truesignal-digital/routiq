@@ -26,6 +26,7 @@ import { useActiveSession } from "@/auth/store.js";
 import { useWorkspaceToday } from "@/auth/workspace-day.js";
 import { applyTemplateFieldMetadata } from "@/commands/field-errors";
 import { formatDate, formatDateTime, formatMoney, localizedLabel, notRecorded } from "@/lib/format.js";
+import { InfoPopover } from "@/components/info-popover.js";
 import { NotRecorded } from "@/components/not-recorded.js";
 import { notifyCommandSuccess, notifyInfo } from "@/lib/notify.js";
 import { cn } from "@/lib/utils";
@@ -196,7 +197,7 @@ function useNowRows(): Row[] {
             date: formatDate(asset.commissionedAt, locale),
           }),
     ],
-    [t("vehicle.details.homeBranch"), t("vehicle.details.homeBranchValue", { branch: asset.branch.name })],
+    [t("vehicle.details.homeBranch"), asset.branch.name],
     [
       t("vehicle.details.custodian"),
       asset.custodian === null ? (
@@ -217,7 +218,15 @@ function useNowRows(): Row[] {
         </>
       ),
     ],
-    [t("vehicle.details.reportedLocation"), t("vehicle.details.reportedLocationNone")],
+    [
+      t("vehicle.details.reportedLocation"),
+      <span className="inline-flex items-center gap-1.5">
+        {t("vehicle.details.reportedLocationNone")}
+        <InfoPopover label={t("vehicle.details.reportedLocationInfoLabel")}>
+          {t("vehicle.details.reportedLocationInfo")}
+        </InfoPopover>
+      </span>,
+    ],
   ];
   if (gates.trips) {
     now.push([

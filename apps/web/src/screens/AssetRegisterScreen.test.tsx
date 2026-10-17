@@ -401,6 +401,7 @@ describe("Register a truck in the form page frame (#663)", () => {
     return element;
   };
   const soFar = () => screen.getByRole("complementary", { name: "So far" });
+  const missingCard = () => document.querySelector<HTMLElement>("[data-slot=form-page-missing]")!;
 
   it("ends on one footer: Cancel, then the main button, neither stretched", () => {
     render(<AssetRegisterScreen />);
@@ -430,14 +431,14 @@ describe("Register a truck in the form page frame (#663)", () => {
     const user = userEvent.setup();
     render(<AssetRegisterScreen />);
 
-    expect(screen.getByRole("button", { name: "Go to Asset code" })).toBeTruthy();
+    expect(within(missingCard()).getByRole("button", { name: /^Asset code/ })).toBeTruthy();
     await user.type(screen.getByLabelText("Asset code"), "TR-021");
     await user.type(screen.getByLabelText("Make"), "Iveco");
     await user.type(screen.getByLabelText("Model"), "Stralis");
 
     expect(within(soFar()).getByText("TR-021")).toBeTruthy();
     expect(within(soFar()).getByText("Iveco Stralis")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Go to Asset code" })).toBeNull();
+    expect(within(missingCard()).queryByRole("button", { name: /^Asset code/ })).toBeNull();
     // Nobody attached the papers: said in words, not left blank.
     expect(within(soFar()).getAllByText("Not recorded").length).toBeGreaterThan(0);
   });

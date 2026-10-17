@@ -794,11 +794,28 @@
       ],
       "registryDependencies": [
         "card",
+        "info-popover",
         "skeleton",
-        "tooltip",
         "utils"
       ],
-      "dependencies": ["@tanstack/react-router", "lucide-react", "react-i18next"]
+      "dependencies": ["@tanstack/react-router", "react-i18next"]
+    },
+    {
+      "name": "info-popover",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/info-popover.tsx",
+          "type": "registry:file",
+          "target": "components/info-popover.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "button",
+        "popover",
+        "utils"
+      ],
+      "dependencies": ["lucide-react"]
     },
     {
       "name": "form-page",

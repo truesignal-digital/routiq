@@ -2,6 +2,7 @@ import type { ApprovalChainStep, ApprovalRuleOverride, RoleApprovalChain } from 
 import type { TFunction } from "i18next";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { InfoPopover } from "@/components/info-popover.js";
 import { ErrorState, LoadingState } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { stepText } from "../approval-rules/chain-text.js";
@@ -80,14 +81,20 @@ function overrideText(t: TFunction, override: ApprovalRuleOverride, currency: st
   });
 }
 
+/** True when every chain the role meets is the company's own. */
+const meetsCompanyChain = (entry: RoleApprovalChain, company: readonly ApprovalChainStep[]) =>
+  entry.chains.every((chain) => sameSteps(chain.steps, company));
+
 /**
  * Company settings → Approvals (#354): the money chain's two bands, what each
  * role's own entries meet, the branch and category exceptions the bands leave
  * alone, and the last change. The Director or an Administrator changes the
  * bands here (#711); the change reaches members as the rules notice (#422).
+ * Roles that meet the company chain as it stands fold into one line; only the
+ * roles that differ spell out their own chain.
  */
 export function ApprovalSettings({ client = commandClient }: { client?: CommandClient }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const label = useCommandLabel();
   const headingId = useId();
   const { data, isPending, isError, refetch } = useApprovalThresholds();
@@ -96,15 +103,24 @@ export function ApprovalSettings({ client = commandClient }: { client?: CommandC
 
   const recording = data?.recordingThresholdMinor ?? null;
   const ceiling = data?.financeCeilingMinor ?? null;
+  const company =
+    recording !== null && ceiling !== null
+      ? companyChain({ recordingThresholdMinor: recording, financeCeilingMinor: ceiling })
+      : undefined;
+  const sameRoles = company === undefined ? [] : (data?.roles ?? []).filter((entry) => meetsCompanyChain(entry, company));
+  const ownRoles = (data?.roles ?? []).filter((entry) => !sameRoles.includes(entry));
 
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-1.5">
           <h2 id={headingId} className="text-lg font-semibold">
             {t("settings.approvals.title")}
           </h2>
-          <p className="text-sm text-muted-foreground">{t("settings.approvals.description")}</p>
+          <InfoPopover label={t("settings.approvals.about")}>
+            <p>{t("settings.approvals.description")}</p>
+            <p className="mt-2">{t("settings.description")}</p>
+          </InfoPopover>
         </div>
         {data !== undefined && recording !== null && ceiling !== null && (
           <Button className="shrink-0" onClick={() => setEditing(true)}>
@@ -125,9 +141,9 @@ export function ApprovalSettings({ client = commandClient }: { client?: CommandC
       {data !== undefined && (
         <>
           <div className="flex flex-col gap-2 rounded-xl border px-4 py-3">
-            {recording !== null && ceiling !== null ? (
+            {company !== undefined ? (
               <StepList
-                steps={companyChain({ recordingThresholdMinor: recording, financeCeilingMinor: ceiling })}
+                steps={company}
                 currency={data.currency}
                 label={t("settings.approvals.chainLabel")}
               />
@@ -149,19 +165,29 @@ export function ApprovalSettings({ client = commandClient }: { client?: CommandC
           </div>
 
           <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-medium">{t("settings.approvals.byRole")}</h3>
-            <p className="text-sm text-muted-foreground">{t("settings.approvals.byRoleHint")}</p>
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-sm font-medium">{t("settings.approvals.byRole")}</h3>
+              <InfoPopover label={t("settings.approvals.byRole")}>{t("settings.approvals.byRoleHint")}</InfoPopover>
+            </div>
             <div className="divide-y overflow-hidden rounded-xl border">
-              {data.roles.map((entry) => (
+              {ownRoles.map((entry) => (
                 <RoleChain key={entry.role} entry={entry} currency={data.currency} />
               ))}
+              {sameRoles.length > 0 && (
+                <p data-slot="roles-same-as-company" className="px-4 py-3 text-sm">
+                  {t("settings.approvals.sameAsCompany", {
+                    roles: new Intl.ListFormat(i18n.resolvedLanguage, { type: "conjunction" }).format(
+                      sameRoles.map((entry) => t(`users.roles.${entry.role}`)),
+                    ),
+                  })}
+                </p>
+              )}
             </div>
           </div>
 
           {data.overrides.length > 0 && (
             <div className="flex flex-col gap-2">
               <h3 className="text-sm font-medium">{t("settings.approvals.overrides")}</h3>
-              <p className="text-sm text-muted-foreground">{t("settings.approvals.overridesHint")}</p>
               <ul className="divide-y overflow-hidden rounded-xl border text-sm tabular-nums">
                 {data.overrides.map((override, index) => (
                   <li key={index} className="px-4 py-3">

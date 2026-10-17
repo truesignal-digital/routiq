@@ -16,6 +16,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -172,10 +173,7 @@ export function AddMemberDialog({
 
   return (
     <FormPanel open={open} onClose={() => onOpenChange(false)}>
-        <FormPanelHeader
-          title={label("add-member")}
-          description={t("users.add.description")}
-        />
+        <FormPanelHeader title={label("add-member")} />
 
         <Form {...form}>
           <form
@@ -267,6 +265,8 @@ export function AddMemberDialog({
                       {...field}
                     />
                   </FormControl>
+                  {/* Said where the PIN is typed: there is no email flow to send it (§6a guard 1). */}
+                  <FormDescription>{t("users.form.pinHint")}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

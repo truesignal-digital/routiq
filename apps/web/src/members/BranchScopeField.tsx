@@ -36,6 +36,9 @@ export function BranchScopeField({
 }) {
   const { t } = useTranslation();
   const selected = value === "ALL" ? [] : value;
+  // The whole row is the target: the box's ::after stretches over its label (44 px on a phone).
+  const row = "relative flex min-h-11 items-center gap-2 text-sm font-normal desktop:min-h-6";
+  const box = "static after:inset-0";
 
   function toggleBranch(branchId: string, checked: boolean) {
     const next = checked
@@ -51,12 +54,13 @@ export function BranchScopeField({
   }
 
   return (
-    <fieldset className="flex flex-col gap-3" disabled={disabled}>
+    <fieldset className="flex flex-col gap-1" disabled={disabled}>
       <legend className="text-sm font-medium">{t("users.form.branchScope")}</legend>
 
       {allowAll && (
-        <Label className="flex items-center gap-2 text-sm font-normal">
+        <Label className={row}>
           <Checkbox
+            className={box}
             checked={value === "ALL"}
             onCheckedChange={(checked) =>
               onChange(checked ? "ALL" : (branches[0] ? [branches[0].id] : "ALL"))
@@ -69,13 +73,11 @@ export function BranchScopeField({
       {hint !== undefined && <p className="text-sm text-muted-foreground">{hint}</p>}
 
       {value !== "ALL" && (
-        <div className={allowAll ? "flex flex-col gap-2 pl-6" : "flex flex-col gap-2"}>
+        <div className={allowAll ? "flex flex-col pl-6" : "flex flex-col"}>
           {branches.map((branch) => (
-            <Label
-              key={branch.id}
-              className="flex items-center gap-2 text-sm font-normal"
-            >
+            <Label key={branch.id} className={row}>
               <Checkbox
+                className={box}
                 checked={selected.includes(branch.id)}
                 onCheckedChange={(checked) => toggleBranch(branch.id, checked)}
               />

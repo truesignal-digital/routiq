@@ -353,8 +353,9 @@ describe("finance period command routing", () => {
 
     await chooseRowAction(user, 1, "Lock period");
     const past = screen.getByRole("alertdialog", { name: "Lock period" });
+    // The decision names the month it locks.
     expect(past.textContent).toContain(
-      "Entries already posted in this month can no longer change. A late entry dated in this month posts in the current month and keeps its date.",
+      "Posted entries in May 2026 can no longer change. A late entry posts in the current month, keeping its date.",
     );
     expect(past.textContent).not.toMatch(/no entries can be created/);
     await user.click(within(past).getByRole("button", { name: "Cancel" }));
@@ -363,7 +364,7 @@ describe("finance period command routing", () => {
     await chooseRowAction(user, 0, "Lock period");
     // #595: an entry dated in an earlier, still-open month still posts there.
     expect(screen.getByRole("alertdialog", { name: "Lock period" }).textContent).toContain(
-      "Entries already posted in this month can no longer change, and entries dated this month can't post until it is reopened.",
+      "can no longer change, and entries dated in it can't post until it is reopened.",
     );
   });
 
@@ -392,13 +393,13 @@ describe("finance period command routing", () => {
 
       await chooseRowAction(user, 1, "Lock period");
       const october = screen.getByRole("alertdialog", { name: "Lock period" });
-      expect(october.textContent).toContain("A late entry dated in this month posts in the current month");
+      expect(october.textContent).toContain("Posted entries in October 2026 can no longer change. A late entry posts in the current month");
       await user.click(within(october).getByRole("button", { name: "Cancel" }));
       await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 
       await chooseRowAction(user, 0, "Lock period");
       expect(screen.getByRole("alertdialog", { name: "Lock period" }).textContent).toContain(
-        "entries dated this month can't post until it is reopened",
+        "Posted entries in November 2026 can no longer change, and entries dated in it can't post until it is reopened",
       );
     } finally {
       vi.useRealTimers();

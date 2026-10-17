@@ -1,7 +1,8 @@
+import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import type { AssetOverview, AssetSummary, ComingUpResponse, FinanceOverviewResponse, FleetUsageResponse } from "@routiq/contracts";
 import { FLEET_BOARD_DAYS, MONEY_OVERVIEW_READER_ROLES, type Role } from "@routiq/contracts";
-import { CalendarClock, CalendarX } from "lucide-react";
+import { CalendarClock, CalendarX, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMeContext } from "@/auth/me.js";
 import { MetricStrip, metricTiles, type MetricTile } from "@/components/metric-strip.js";
@@ -10,8 +11,9 @@ import { OverviewSummary } from "@/components/overview/overview-summary.js";
 import { ProfitBars } from "@/components/overview/profit-bars.js";
 import { ToDoList, type ToDoItem } from "@/components/overview/to-do-list.js";
 import { ErrorState } from "@/components/page";
+import { InfoPopover } from "@/components/info-popover.js";
 import { StatusBadge } from "@/components/status-badge.js";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatDateRange, formatPercent, localizedLabel, profitOrLoss } from "@/lib/format.js";
 import { contributes } from "@/modules/manifest.js";
@@ -30,6 +32,9 @@ import { useAssetOverview } from "./useAssetOverview.js";
 import { useAssetSummary } from "./useAssetSummary.js";
 
 type Translate = ReturnType<typeof useTranslation>["t"];
+
+/** Papers to renew on the Overview: three rows, then "See all" (the Documents tab lists every one). */
+const DUE_LIMIT = 3;
 
 /** Whole days from an instant to now; the server judged the tile, this only words its example. */
 function daysSince(iso: string, now = Date.now()): number {
@@ -108,13 +113,7 @@ export function TrucksOverview() {
             </StatusBadge>
           )
         }
-        counted={
-          overview === undefined ? null : (
-            <span data-slot="trucks-counted">
-              {t(groundingCounted ? "assets.overview.tiles.canDriveInfo" : "assets.overview.tiles.canDriveInfoNoGrounding")}
-            </span>
-          )
-        }
+        counted={overview === undefined ? null : <TrucksCounted groundingCounted={groundingCounted} />}
       >
         {tiles !== undefined && (
           <MetricStrip
@@ -126,16 +125,18 @@ export function TrucksOverview() {
         {usageQuery.data !== undefined && <KmCoverage usage={usageQuery.data} />}
       </OverviewSummary>
 
-      <FleetBoardCard usage={usageQuery.data} isPending={usageQuery.isPending} isError={usageQuery.isError} onRetry={() => void usageQuery.refetch()} />
-
       {(moneyShown || documentsShown) && (
         <div className="grid gap-4 lg:grid-cols-2">
           {documentsShown && (
-            // On a phone people act first: what is due comes before the chart.
-            <Card className="order-first lg:order-last">
+            // What needs someone comes before the chart.
+            <Card data-slot="trucks-due">
               <CardHeader>
-                <CardTitle>{t("assets.overview.due.title")}</CardTitle>
-                <CardDescription>{t("assets.overview.due.window", { days: FLEET_DOCUMENT_WINDOW_DAYS })}</CardDescription>
+                <CardTitle>{t("assets.overview.due.titleWithin", { days: FLEET_DOCUMENT_WINDOW_DAYS })}</CardTitle>
+                {documentRows.length > DUE_LIMIT && (
+                  <CardAction>
+                    <CardLink to="/assets/documents">{t("assets.overview.due.seeAll", { count: documentRows.length })}</CardLink>
+                  </CardAction>
+                )}
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
                 {comingUpQuery.isPending || todoQuery.isPending ? (
@@ -146,12 +147,12 @@ export function TrucksOverview() {
                   <ToDoList
                     items={documentRows.map((row) => documentItem(row, t, i18n.resolvedLanguage))}
                     empty={t("assets.overview.due.empty", { days: FLEET_DOCUMENT_WINDOW_DAYS })}
+                    limit={DUE_LIMIT}
                   />
                 )}
                 <DueFootnote
                   comingUp={comingUpQuery.data}
                   truncated={fleetDocumentsTruncated(todoQuery.data, comingUpQuery.data)}
-                  rows={documentRows.length}
                 />
               </CardContent>
             </Card>
@@ -161,7 +162,24 @@ export function TrucksOverview() {
           )}
         </div>
       )}
+
+      <FleetBoardCard usage={usageQuery.data} isPending={usageQuery.isPending} isError={usageQuery.isError} onRetry={() => void usageQuery.refetch()} />
     </div>
+  );
+}
+
+/**
+ * What "can drive" counts. Maintenance off, it cannot know about groundings:
+ * a warning, under the tiles when the summary is closed, inside it when open.
+ */
+function TrucksCounted({ groundingCounted }: { groundingCounted: boolean }) {
+  const { t } = useTranslation();
+  if (groundingCounted) return <span data-slot="trucks-counted">{t("assets.overview.tiles.canDriveInfo")}</span>;
+  return (
+    <span data-slot="trucks-counted" className="flex items-center gap-1.5 text-warning-foreground">
+      <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+      {t("assets.overview.tiles.canDriveInfoNoGrounding")}
+    </span>
   );
 }
 
@@ -329,18 +347,20 @@ function onTheRoadTile(usage: FleetUsageResponse | undefined, t: Translate, lang
   };
 }
 
-/** Whose km are known this month, and why some are not: every per-km figure leaves the unknown out. */
+/**
+ * Whose km are unknown this month: every per-km figure leaves them out, so a
+ * gap stays said at rest. When every km is known there is nothing to say.
+ */
 function KmCoverage({ usage }: { usage: FleetUsageResponse }) {
   const { t } = useTranslation();
   if (usage.km === null) return null;
   const { vehicles, knownVehicles } = usage.km.period;
-  if (vehicles === 0) return null;
+  if (vehicles === 0 || knownVehicles === vehicles) return null;
   const tripsWithoutKm = usage.vehicles.reduce((sum, vehicle) => sum + (vehicle.period?.tripsWithoutKm ?? 0), 0);
   return (
-    <p data-slot="km-coverage" className="-mt-2 text-xs text-muted-foreground">
-      {knownVehicles === vehicles
-        ? t("assets.overview.km.all", { count: vehicles })
-        : t("assets.overview.km.some", { known: knownVehicles, total: vehicles, missing: tripsWithoutKm })}
+    <p data-slot="km-coverage" className="-mt-2 flex items-center gap-1.5 text-xs text-warning-foreground">
+      <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+      {t("assets.overview.km.some", { known: knownVehicles, total: vehicles, missing: tripsWithoutKm })}
     </p>
   );
 }
@@ -370,8 +390,15 @@ function FleetBoardCard({
   return (
     <Card data-slot="fleet-board-card">
       <CardHeader>
-        <CardTitle>{t("assets.overview.board.title")}</CardTitle>
-        <CardDescription>{t("assets.overview.board.question", { days: FLEET_BOARD_DAYS })}</CardDescription>
+        <CardTitle className="flex items-center gap-1.5">
+          {t("assets.overview.board.title")}
+          {/* With every module on, where the statuses come from is a definition, one tap away. */}
+          {usage !== undefined && boardBasis(usage) === "assets.overview.board.basis.all" && (
+            <InfoPopover label={t("common.howCalculated")}>{t(boardBasis(usage))}</InfoPopover>
+          )}
+        </CardTitle>
+        {/* The window the board covers stays said: the period basis. */}
+        <CardDescription>{t("assets.overview.board.window", { days: FLEET_BOARD_DAYS })}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {isError ? (
@@ -391,12 +418,12 @@ function FleetBoardCard({
             }))}
           />
         )}
-        <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs text-muted-foreground">
-          {usage !== undefined && <span>{t(boardBasis(usage))}</span>}
-          <Link to="/assets/list" className="ms-auto text-sm font-medium text-foreground underline-offset-4 hover:underline">
-            {t("assets.overview.board.open")}
-          </Link>
-        </div>
+        {/* A module that is off leaves days unrecorded: that stays said at rest. */}
+        {usage !== undefined && boardBasis(usage) !== "assets.overview.board.basis.all" && (
+          <p data-slot="board-basis" className="text-xs text-muted-foreground">
+            {t(boardBasis(usage))}
+          </p>
+        )}
       </CardContent>
     </Card>
   );
@@ -404,7 +431,6 @@ function FleetBoardCard({
 
 function documentItem(row: FleetDocumentRow, t: Translate, language: string | undefined): ToDoItem {
   const type = localizedLabel({ labelFr: row.typeLabelFr, labelEn: row.typeLabelEn }, language);
-  const date = formatDate(row.expiresAt, language);
   const link = fleetDocumentLink(row);
   return {
     key: row.key,
@@ -417,8 +443,8 @@ function documentItem(row: FleetDocumentRow, t: Translate, language: string | un
     title: t("assets.overview.due.rowTitle", { code: row.asset?.assetCode ?? "", type }),
     detail:
       row.state === "EXPIRED"
-        ? t("assets.overview.due.expired", { date, days: Math.abs(row.daysLeft ?? 0) })
-        : t("assets.overview.due.dueIn", { date, days: row.daysLeft ?? 0 }),
+        ? t("assets.overview.due.expired", { days: Math.abs(row.daysLeft ?? 0) })
+        : t("assets.overview.due.dueIn", { days: row.daysLeft ?? 0 }),
     action: {
       label: t("documents.renew"),
       to: link?.to ?? "/assets/documents",
@@ -427,28 +453,42 @@ function documentItem(row: FleetDocumentRow, t: Translate, language: string | un
   };
 }
 
-/** What the list could not count, said in words, and the way to every row. */
-function DueFootnote({
-  comingUp,
-  truncated,
-  rows,
-}: {
-  comingUp: ComingUpResponse | undefined;
-  truncated: boolean;
-  rows: number;
-}) {
+/**
+ * What the list could not count. A gap is a warning at rest, its reason one
+ * tap away, so missing services never pass for "nothing due".
+ */
+function DueFootnote({ comingUp, truncated }: { comingUp: ComingUpResponse | undefined; truncated: boolean }) {
   const { t } = useTranslation();
   const serviceNotCounted = comingUp?.notCounted.includes("SERVICE_DUE_BY_KM") ?? false;
+  if (!serviceNotCounted && !truncated) return null;
   return (
-    <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-      {serviceNotCounted && <p data-slot="service-not-counted">{t("assets.overview.due.serviceNotCounted")}</p>}
-      {truncated && <p>{t("assets.overview.due.truncated")}</p>}
-      {rows > 0 && (
-        <Link to="/assets/documents" className="self-end text-sm font-medium text-foreground underline-offset-4 hover:underline">
-          {t("assets.overview.due.openAll")}
-        </Link>
+    <div className="flex flex-col items-start gap-1 text-xs text-muted-foreground">
+      {serviceNotCounted && (
+        <span data-slot="service-not-counted">
+          <InfoPopover
+            label={t("assets.overview.due.serviceNotCountedShort")}
+            trigger="text"
+            className="text-warning-foreground"
+            icon={<TriangleAlert className="size-4" aria-hidden />}
+          >
+            {t("assets.overview.due.serviceNotCounted")}
+          </InfoPopover>
+        </span>
       )}
+      {truncated && <p>{t("assets.overview.due.truncated")}</p>}
     </div>
+  );
+}
+
+/** A card header's link to the tab or page behind it; a 44 px target on a phone. */
+function CardLink({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <Link
+      to={to}
+      className="inline-flex min-h-11 items-center text-sm font-medium whitespace-nowrap underline-offset-4 hover:underline desktop:min-h-6"
+    >
+      {children}
+    </Link>
   );
 }
 
@@ -464,9 +504,13 @@ function ProfitByTruckCard({ overview, isPending }: { overview: FinanceOverviewR
     <Card data-slot="profit-by-truck">
       <CardHeader>
         <CardTitle>{t("assets.overview.profit.title")}</CardTitle>
-        <CardDescription>
-          {period === undefined ? t("assets.overview.profit.question") : t("assets.overview.profit.questionPeriod", { period })}
-        </CardDescription>
+        {/* The month the figures cover and what the profit includes stay said at rest. */}
+        {period !== undefined && (
+          <CardDescription data-slot="profit-by-truck-period">{t("assets.overview.profit.periodBasis", { period })}</CardDescription>
+        )}
+        <CardAction>
+          <CardLink to="/finance">{t("assets.overview.profit.openMoney")}</CardLink>
+        </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {isPending ? (
@@ -493,12 +537,6 @@ function ProfitByTruckCard({ overview, isPending }: { overview: FinanceOverviewR
             moreLabel={(count) => t("assets.overview.profit.more", { count })}
           />
         )}
-        <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs text-muted-foreground">
-          <span>{t("assets.overview.profit.basis")}</span>
-          <Link to="/finance" className="text-sm font-medium text-foreground underline-offset-4 hover:underline">
-            {t("assets.overview.profit.openMoney")}
-          </Link>
-        </div>
       </CardContent>
     </Card>
   );

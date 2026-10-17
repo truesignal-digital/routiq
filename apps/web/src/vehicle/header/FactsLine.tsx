@@ -31,7 +31,11 @@ export function useFactsLine(): ReactNode[] {
             }),
           {
             value: (
-              <LinkButton onClick={() => panel.openRecord({ kind: "readings" })}>
+              <LinkButton
+                // 44 px to tap on a phone; the negative margin keeps the facts line's height.
+                className="inline-flex min-h-11 items-center -my-2.5 desktop:my-0 desktop:min-h-6"
+                onClick={() => panel.openRecord({ kind: "readings" })}
+              >
                 {t("vehicle.facts.readingValue", {
                   readingType: reading.readingType,
                   value: reading.value,
@@ -41,25 +45,29 @@ export function useFactsLine(): ReactNode[] {
           },
         );
 
-  const lifecycle = withNodes(
-    (slots) =>
-      asset.commissionedAt === null
-        ? slots["status"] ?? ""
-        : t("vehicle.facts.lifecycleSince", {
-            ...slots,
-            since: formatMonth(asset.commissionedAt, locale, { month: "short" }),
-          }),
-    {
-      status: (
-        <span className="font-medium text-foreground">{t(`assets.status.${asset.lifecycleStatus}`)}</span>
-      ),
-    },
-  );
+  // In service is the normal case; only another lifecycle state earns a place here (Details has the date).
+  const lifecycle =
+    asset.lifecycleStatus === "IN_SERVICE"
+      ? null
+      : withNodes(
+          (slots) =>
+            asset.commissionedAt === null
+              ? slots["status"] ?? ""
+              : t("vehicle.facts.lifecycleSince", {
+                  ...slots,
+                  since: formatMonth(asset.commissionedAt, locale, { month: "short" }),
+                }),
+          {
+            status: (
+              <span className="font-medium text-foreground">{t(`assets.status.${asset.lifecycleStatus}`)}</span>
+            ),
+          },
+        );
 
+  // No location is ever reported yet (people report it, there is no GPS): Details says so.
   return [
     <span key="custodian">{custodian}</span>,
     ...(gates.trips ? [<span key="reading">{readingFact}</span>] : []),
-    <span key="location">{t("vehicle.facts.locationNoReport")}</span>,
-    <span key="lifecycle">{lifecycle}</span>,
+    ...(lifecycle === null ? [] : [<span key="lifecycle">{lifecycle}</span>]),
   ];
 }

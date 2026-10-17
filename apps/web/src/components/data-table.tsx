@@ -621,7 +621,14 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
     return (
       <button
         type="button"
-        className="text-left font-medium underline-offset-4 hover:underline focus-visible:underline"
+        data-slot="data-table-row-target"
+        // py-0.5 makes the 20 px line a 24 px target with a mouse (WCAG 2.5.8).
+        // On a phone the ::after stretches over the whole list row, so the row
+        // is the target; the row's other controls sit above it (DataTablePhoneRow).
+        className={cn(
+          "py-0.5 text-left font-medium underline-offset-4 hover:underline focus-visible:underline",
+          !isDesktop && "after:absolute after:inset-0 after:content-['']",
+        )}
         aria-haspopup={rowViewer ? "dialog" : undefined}
         onClick={() => activateRow(cell.row.original)}
       >
@@ -708,6 +715,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                   <RowActionsMenu
                     actions={rowActions(row.original)}
                     row={row.original}
+                    className="relative z-10"
                     // A row with nothing to offer keeps the column, so values
                     // and badges stay aligned down the list.
                     placeholder={<span aria-hidden className="size-11 shrink-0" />}
@@ -879,10 +887,16 @@ function DataTablePhoneRow<TData>({
     <li
       data-slot="data-table-row"
       data-state={selected ? "selected" : undefined}
-      className="flex min-h-15 items-center gap-3 border-b border-border py-2 data-[state=selected]:bg-muted/50"
+      // relative: the title's ::after covers the row; the checkbox, the links
+      // and buttons in the meta and end columns and the ⋯ menu are relative z-10,
+      // so they paint above it wherever they sit in the row.
+      className="relative flex min-h-15 items-center gap-3 border-b border-border py-2 data-[state=selected]:bg-muted/50"
     >
-      {selectionCell &&
-        flexRender(selectionCell.column.columnDef.cell, selectionCell.getContext())}
+      {selectionCell && (
+        <span data-slot="data-table-row-select" className="relative z-10 flex shrink-0">
+          {flexRender(selectionCell.column.columnDef.cell, selectionCell.getContext())}
+        </span>
+      )}
       {/*
         The end column may take at most half of the space between the checkbox
         and the ⋯ menu, so a long status (a cancellation's reason, a month
@@ -900,7 +914,7 @@ function DataTablePhoneRow<TData>({
               data-slot="data-table-row-meta"
               // Cells laid out for the table (flex stacks, wrapping text) still
               // read as one line here, cut with an ellipsis.
-              className="min-w-0 truncate text-xs text-muted-foreground [&_*]:inline [&_*]:whitespace-nowrap"
+              className="min-w-0 truncate text-xs text-muted-foreground [&_*]:inline [&_*]:whitespace-nowrap [&_a]:relative [&_a]:z-10 [&_button:not([data-slot=data-table-row-target])]:relative [&_button:not([data-slot=data-table-row-target])]:z-10"
             >
               {meta.map(({ cell, content }, index) => (
                 <span key={cell.id}>
@@ -932,7 +946,7 @@ function DataTablePhoneRow<TData>({
                 // Badges and buttons are one-line pills elsewhere; here they wrap
                 // too, so nothing pokes out over the title. A wrapped button
                 // grows from its 44 px touch target, never below it.
-                className="flex max-w-full min-w-0 flex-col items-end gap-1 text-left text-xs wrap-anywhere text-muted-foreground [&_[data-slot=badge]]:h-auto [&_[data-slot=badge]]:whitespace-normal [&_[data-slot=button]]:h-auto [&_[data-slot=button]]:min-h-11 [&_[data-slot=button]]:py-1 [&_[data-slot=button]]:whitespace-normal"
+                className="flex max-w-full min-w-0 flex-col items-end gap-1 text-left text-xs wrap-anywhere text-muted-foreground [&_a]:relative [&_a]:z-10 [&_button:not([data-slot=data-table-row-target])]:relative [&_button:not([data-slot=data-table-row-target])]:z-10 [&_[data-slot=badge]]:h-auto [&_[data-slot=badge]]:whitespace-normal [&_[data-slot=button]]:h-auto [&_[data-slot=button]]:min-h-11 [&_[data-slot=button]]:py-1 [&_[data-slot=button]]:whitespace-normal"
               >
                 {status.map(({ cell, content }) => (
                   <span key={cell.id}>{content}</span>

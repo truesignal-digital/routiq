@@ -169,12 +169,14 @@ describe("direct links to a module that is off", () => {
 
   it("the vehicle's status says nothing about trips while Trips is off", async () => {
     await openVehicle(`/assets/${ASSET_ID}`, { role: "DIRECTOR", modules: ["CORE", ...MODULES.filter((m) => m !== "ACTIVITIES")] });
-    expect(await screen.findByText("In service since March 2024.")).toBeTruthy();
-    expect(screen.queryByText(/(trip|activit).* yet/i)).toBeNull();
+    // Since when it is in service moved to Details; with Trips off the block names no trips at all.
+    expect(await screen.findByText("Available.")).toBeTruthy();
+    expect(screen.queryByText(/(trip|activit)/i)).toBeNull();
     cleanup();
     await closeVehicle();
     await openVehicle(`/assets/${ASSET_ID}`, { role: "DIRECTOR", modules: ["CORE", ...MODULES] });
-    expect(await screen.findByText(/^In service since March 2024; no (trips|activities) yet\.$/)).toBeTruthy();
+    expect(await screen.findByText("Available.")).toBeTruthy();
+    expect(await screen.findByText(/^No (trips|activities) yet\.$/)).toBeTruthy();
   });
 
   it.each(TABS)("%s's vehicle section %s says the same", async (code, tab) => {

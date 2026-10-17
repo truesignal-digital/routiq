@@ -123,7 +123,6 @@ export function BranchesScreen() {
     <PageContainer>
       <PageHeader
         title={t("branches.title")}
-        description={t("branches.lead")}
         actions={
           <Button type="button" onClick={() => setAdding(true)}>
             <Plus className="size-4" aria-hidden />

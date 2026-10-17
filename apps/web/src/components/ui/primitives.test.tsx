@@ -208,6 +208,10 @@ describe("touch targets: 44 px on phone by default", () => {
     // The list is 44 px; the trigger inside it reaches the list's edges.
     const trigger = classesOf(screen.getByRole("tab", { name: "A" }))
     expect(trigger).toContain("group-data-horizontal/tabs:before:-inset-y-1")
+    // On a phone the pill list grows to 51 px, so the trigger inside its padding is 44 px.
+    expect(classesOf(screen.getByRole("tablist"))).toEqual(
+      expect.arrayContaining(["group-data-horizontal/tabs:min-h-[51px]", "desktop:group-data-horizontal/tabs:min-h-0"]),
+    )
   })
 
   it("sheet and dialog close buttons", () => {

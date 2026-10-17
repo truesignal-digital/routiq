@@ -237,8 +237,9 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
         enableSorting: false,
         // On a phone the buttons sit under the amount, each a 44 px target.
         meta: { phone: "status", label: t("finance.approvals.columns.decision") },
+        // The first row is the oldest in the queue's order: its Approve is the one filled button.
         cell: ({ row }) => (
-          <RowDecision entry={row.original} onReject={() => openReject(row.original)} />
+          <RowDecision entry={row.original} next={row.index === 0} onReject={() => openReject(row.original)} />
         ),
       },
     ],
@@ -364,12 +365,17 @@ export function WaitingApprovals({ arrivingWidened = false }: { arrivingWidened?
   );
 }
 
-/** Reject opens the reason dialog; Approve commits on the spot and comes last. */
+/**
+ * Reject opens the reason dialog; Approve commits on the spot and comes last.
+ * Only the next row's Approve is filled, so the queue has one next step.
+ */
 function RowDecision({
   entry,
+  next,
   onReject,
 }: {
   entry: PendingApprovalItem;
+  next: boolean;
   onReject: () => void;
 }) {
   const { t } = useTranslation();
@@ -392,6 +398,7 @@ function RowDecision({
       </Button>
       <Button
         type="button"
+        variant={next ? "default" : "outline"}
         size="desktop-sm"
         disabled={submitting}
         aria-label={t("finance.approvals.decideRow", { action: label("approve-entry"), number: entry.entryNumber })}

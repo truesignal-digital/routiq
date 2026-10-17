@@ -26,7 +26,7 @@ export interface SummaryScheduleFormProps {
 }
 
 /**
- * Company settings › Dashboard summary (#669): the Director or an
+ * Company settings › Overview summary (#669): the Director or an
  * Administrator (#711) picks when the summary notice shows on every Overview,
  * for the whole company. The schedule in force is pinned; nothing is picked
  * until they choose.

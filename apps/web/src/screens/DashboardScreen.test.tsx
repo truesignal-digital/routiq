@@ -395,7 +395,7 @@ describe("DashboardScreen — gating", () => {
 
     expect(
       await screen.findByText(
-        "Home has nothing to show: the modules that fill it are switched off for your company. The Company pages in the menu still work.",
+        "The modules behind Home are off for your company. Company pages still work.",
       ),
     ).toBeTruthy();
     expect(kpiKeys()).toEqual([]);
@@ -407,7 +407,7 @@ describe("DashboardScreen — gating", () => {
     await renderHome(membership("DRIVER", ["CORE"]));
 
     expect(
-      await screen.findByText("Home has nothing to show: the modules that fill it are switched off for your company."),
+      await screen.findByText("The modules behind Home are off for your company."),
     ).toBeTruthy();
   });
 
@@ -416,7 +416,7 @@ describe("DashboardScreen — gating", () => {
     await renderHome(membership("DIRECTOR", ["CORE", "ASSETS"]));
 
     await waitFor(() => expect(kpiKeys()).toEqual(["assets"]));
-    expect(screen.queryByText(/Home has nothing to show/)).toBeNull();
+    expect(screen.queryByText(/The modules behind Home are off/)).toBeNull();
   });
 
   it("lets the Administrateur trace totals and recent entries", async () => {
@@ -475,6 +475,16 @@ describe("DashboardScreen — recent entries", () => {
     // No filter controls and no pager: the entries screen owns those.
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
     expect(screen.queryByRole("combobox")).toBeNull();
+  });
+
+  it("links the whole entries list from a 44 px See all", async () => {
+    installFetch();
+    await renderHome(membership("CASHIER", ["CORE", "ASSETS", "FINANCE"]));
+
+    const seeAll = await screen.findByRole("link", { name: "See all" });
+    expect(seeAll.getAttribute("href")).toBe("/finance/entries");
+    expect(seeAll.className).toMatch(/\bmin-h-11\b/);
+    expect(seeAll.className).toMatch(/\bmin-w-11\b/);
   });
 
   it("reuses the entries status chips and money formatting", async () => {

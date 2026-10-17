@@ -30,7 +30,6 @@ export function TripsFrame() {
   return (
     <ModulePage
       title={t("activities.title")}
-      description={t("activities.subtitle")}
       tabsLabel={t("activities.page.tabs.label")}
       tabs={tabs}
       active={activeTripsTab(pathname)}

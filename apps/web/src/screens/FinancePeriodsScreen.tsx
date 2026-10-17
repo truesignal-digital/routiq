@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CalendarRange, Lock, Unlock } from "lucide-react";
 import type { VisibilityState } from "@tanstack/react-table";
-import { formatDate } from "@/lib/format.js";
+import { formatDate, formatMonth } from "@/lib/format.js";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
 import { z } from "zod";
@@ -236,7 +236,6 @@ export function FinancePeriodsScreen() {
       <PageHeader
         title={t("finance.periods.title")}
       />
-      <p className="mt-1 text-sm text-muted-foreground">{t("finance.periods.lead")}</p>
       <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
         {!periodsQuery.isPending && !periodsQuery.isError && (
           <DataTableViewOptions
@@ -286,6 +285,7 @@ export function FinancePeriodsScreen() {
       {actionDialog.open && (
         <ActionDialog
           action={actionDialog.action}
+          month={formatMonth(actionDialog.periodCode, i18n.resolvedLanguage)}
           current={actionDialog.periodCode === currentPeriod}
           onLock={() => handleLock(actionDialog.periodCode)}
           onReopen={(reason) => handleReopen(actionDialog.periodCode, reason)}
@@ -300,6 +300,7 @@ export function FinancePeriodsScreen() {
 
 function ActionDialog({
   action,
+  month,
   current,
   onLock,
   onReopen,
@@ -307,6 +308,8 @@ function ActionDialog({
   error,
 }: {
   action: "lock" | "reopen";
+  /** The month in words, so the decision names what it locks. */
+  month: string;
   /** Locking the current month stops posting; any other month sends late entries to the current one. */
   current: boolean;
   onLock: () => Promise<void>;
@@ -339,7 +342,7 @@ function ActionDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>{label("lock-period")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t(current ? "finance.periods.lockCurrentExplanation" : "finance.periods.lockExplanation")}
+              {t(current ? "finance.periods.lockCurrentExplanation" : "finance.periods.lockExplanation", { month })}
             </AlertDialogDescription>
           </AlertDialogHeader>
 

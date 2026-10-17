@@ -16,7 +16,8 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
     .locator("[role=status]")
     .filter({ hasText: /^(Grounded|Repair done|Available|Immobilisé|Réparation terminée|Disponible)/ })
     .first();
-  const repairedLead = t("Réparation terminée — en attente de remise en service.", "Repair done — waiting for release to service.");
+  const repairedLead = t("Réparation terminée.", "Repair done.");
+  const awaitingRelease = t("Attend sa remise en service par un responsable", "Waiting for a manager to release it");
   const release = t("Remettre en service", "Release to service");
 
   const openVh003 = async () => {
@@ -53,6 +54,9 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
     throw new Error("the header stays red after the repair");
   });
   await settle();
+  if (!((await status.textContent()) ?? "").includes(awaitingRelease)) {
+    throw new Error(`the amber block does not say it waits for release: "${await status.textContent()}"`);
+  }
   if ((await tone()) !== "waiting") throw new Error(`expected amber, got ${await tone()}`);
   if ((await status.getByRole("button", { name: release, exact: true }).count()) !== 0) {
     throw new Error("the technician who completed the repair is offered the release");

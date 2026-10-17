@@ -74,7 +74,7 @@ export function FleetBoard({ rows, days }: { rows: readonly FleetBoardRow[]; day
   const [pointed, setPointed] = useState<string | null>(null);
   const dayLabels = days.map((day) => shortDay(day, language));
 
-  if (isMobile) return <TodayList rows={rows} days={days.length} />;
+  if (isMobile) return <TodayList rows={rows} />;
 
   return (
     <div data-slot="fleet-board" className="flex flex-col gap-2">
@@ -153,7 +153,7 @@ export function FleetBoard({ rows, days }: { rows: readonly FleetBoardRow[]; day
 }
 
 /** The phone's board: one row per vehicle, today's status, and its days on a trip. */
-function TodayList({ rows, days }: { rows: readonly FleetBoardRow[]; days: number }) {
+function TodayList({ rows }: { rows: readonly FleetBoardRow[] }) {
   const { t } = useTranslation();
   return (
     <div data-slot="fleet-board-today" className="flex flex-col gap-1">
@@ -163,17 +163,21 @@ function TodayList({ rows, days }: { rows: readonly FleetBoardRow[]; days: numbe
           const today = row.days[row.days.length - 1] ?? "NOT_RECORDED";
           const { counts } = tally(row);
           return (
-            <li key={row.key} data-slot="fleet-board-today-row" className="flex min-h-11 items-center justify-between gap-3 border-b py-2 text-sm last:border-b-0">
+            // relative: the truck link's ::after makes the whole row its touch target.
+            <li key={row.key} data-slot="fleet-board-today-row" className="relative flex min-h-11 items-center justify-between gap-3 border-b py-2 text-sm last:border-b-0">
               <span className="flex min-w-0 flex-col">
                 {row.to === undefined ? (
                   <span className="font-medium tabular-nums">{row.label}</span>
                 ) : (
-                  <Link to={row.to} className="font-medium tabular-nums underline-offset-4 hover:underline">
+                  <Link
+                    to={row.to}
+                    className="font-medium tabular-nums underline-offset-4 after:absolute after:inset-0 after:content-[''] hover:underline"
+                  >
                     {row.label}
                   </Link>
                 )}
                 <span className="text-xs text-muted-foreground">
-                  {t("overview.fleetBoard.tripDays", { count: counts.ON_TRIP, days })}
+                  {t("overview.fleetBoard.tripDays", { count: counts.ON_TRIP })}
                 </span>
               </span>
               <span className="inline-flex shrink-0 items-center gap-1.5">

@@ -78,10 +78,13 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet, nav }) => 
     const asset = assetItems.find((item) => item.assetCode === code);
     if (asset === undefined) throw new Error(`GET /v1/assets → ${assets.status}, no ${code}`);
     await nav(`/assets/${asset.id}/money`);
-    await page.getByRole("heading", { name: new RegExp(`^${t("Argent", "Money")} · `) }).waitFor();
+    // The tab's heading is its month (period basis).
+    await page.getByRole("heading", { level: 2, name: /^\p{L}+ \d{4}$/u }).waitFor();
     await quiet();
     await page.getByText(t("Dépenses par catégorie", "Expenses by category"), { exact: true }).first().waitFor();
-    const lifetime = page.getByText(new RegExp(t("Depuis l'enregistrement, toutes écritures", "Lifetime, all posted entries")));
+    const lifetime = page.locator("[data-slot=vehicle-money-lifetime]").filter({
+      hasText: t("Depuis l'enregistrement, comptabilisé", "Since registration, posted"),
+    });
     await lifetime.scrollIntoViewIfNeeded();
     const text = (await lifetime.textContent()) ?? "";
     if (!new RegExp(`${word} [^·]*`).test(text) || !amount.test(text) || /\bnet\b/i.test(text)) {

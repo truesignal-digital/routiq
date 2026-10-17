@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { contributes } from "@/modules/manifest.js";
 import { useVehicle, type VehicleGates } from "../context.js";
 import { describeEvent, type EventTone } from "../historyEvents.js";
-import { LinkButton, Sep, TabHeader } from "../parts.js";
+import { LinkButton } from "../parts.js";
 import { useAssetHistory } from "../useVehicle.js";
 
 const HISTORY_PAGE = 30;
@@ -63,7 +63,6 @@ export function HistoryTab() {
 
   return (
     <section className="space-y-5">
-      <TabHeader title={t("vehicle.history.title")} description={t("vehicle.history.description")} />
       <FilterChips
         label={t("vehicle.history.filterLabel")}
         options={[
@@ -135,7 +134,18 @@ function useTimelineEvent(): (item: VehicleHistoryItem) => TimelineEvent {
       id: item.eventId,
       occurredAt: item.occurredAt,
       actor: item.actor,
-      act: <RecordText text={view.title} numbers={[view.titleNumber]} />,
+      // The event's name opens its record: one link per row, not a trailing "Open".
+      act:
+        record === null ? (
+          <RecordText text={view.title} numbers={[view.titleNumber]} />
+        ) : (
+          <LinkButton
+            className="inline-flex min-h-11 items-center text-left underline underline-offset-2 desktop:min-h-6"
+            onClick={() => panel.openRecord(record)}
+          >
+            <RecordText text={view.title} numbers={[view.titleNumber]} />
+          </LinkButton>
+        ),
       note: historyNote(item, t),
       marker: (
         <span className={cn("grid size-7 place-items-center rounded-md", EVENT_TONE_CLASS[view.tone])}>
@@ -155,13 +165,6 @@ function useTimelineEvent(): (item: VehicleHistoryItem) => TimelineEvent {
       detail:
         view.detail === null ? undefined : (
           <p className="mt-0.5 text-sm whitespace-pre-line text-muted-foreground">{view.detail}</p>
-        ),
-      meta:
-        record === null ? undefined : (
-          <>
-            <Sep />
-            <LinkButton onClick={() => panel.openRecord(record)}>{t("vehicle.history.open")}</LinkButton>
-          </>
         ),
     };
   };

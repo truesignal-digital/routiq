@@ -1,9 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Card, CardContent } from "@/components/ui/card.js";
+import { InfoPopover } from "@/components/info-popover.js";
+import { Card } from "@/components/ui/card.js";
 import { Skeleton } from "@/components/ui/skeleton.js";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip.js";
 import { moneyFigure, notRecorded } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
@@ -167,98 +166,93 @@ function Tile({
         (selectable || linked) &&
           "relative transition-colors hover:bg-muted/50 has-focus-visible:ring-2 has-focus-visible:ring-ring",
         tile.selected === true && "bg-muted ring-2 ring-foreground/40",
+        // dt and dd sit directly in the card, the dl's group: a wrapper between them breaks the list (axe dlitem).
+        "gap-1.5 px-(--card-spacing)",
       )}
     >
-      <CardContent className="flex flex-col gap-1.5">
-        <dt className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-          {tone === "warning" && (
-            <span className="size-1.5 shrink-0 rounded-full bg-warning" aria-hidden />
-          )}
-          {selectable ? (
-            <button
-              type="button"
-              data-slot="metric-filter"
-              aria-pressed={tile.selected === true}
-              onClick={tile.onSelect}
-              className={stretch}
-            >
-              {tile.label}
-            </button>
-          ) : linked ? (
-            <Link
-              to={tile.link!.to}
-              {...(tile.link!.search === undefined ? {} : { search: tile.link!.search })}
-              data-slot="metric-link"
-              className={stretch}
-            >
-              {tile.label}
-            </Link>
-          ) : (
-            tile.label
-          )}
-          {tile.info !== undefined && (
-            <Tooltip>
-              <TooltipTrigger
-                className="relative z-10 ml-auto inline-flex rounded-sm text-muted-foreground hover:text-foreground"
-                aria-label={t("common.howCalculated")}
-              >
-                <Info className="size-3.5" aria-hidden />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-64">{tile.info}</TooltipContent>
-            </Tooltip>
-          )}
-        </dt>
-        <dd className="m-0">
-          {state === "pending" ? (
-            <Skeleton className="h-7 w-14" />
-          ) : (
-            <span
-              data-slot="metric-value"
-              className={cn(
-                "font-heading text-2xl font-semibold leading-none tabular-nums break-words",
-                showValue ? TONE_VALUE[tone] : "text-muted-foreground",
-              )}
-            >
-              {state === "error" ? (
-                // The one dash left in the app (guard no-bare-dash): a read
-                // that failed has no value to name, so the label says why.
-                <span role="img" aria-label={t("common.readFailed")}>—</span>
-              ) : showValue ? (
-                tile.unit === undefined ? (
-                  tile.value
-                ) : (
-                  <>
-                    {/* The figure and its unit each stay whole; on a narrow phone tile the unit drops below (#695). */}
-                    <span className="whitespace-nowrap">{tile.value}</span>{" "}
-                    <small className="whitespace-nowrap font-sans text-xs font-medium text-muted-foreground">
-                      {tile.unit}
-                    </small>
-                  </>
-                )
-              ) : tile.withheld === true ? null : (
-                <span className="text-base">{notRecorded()}</span>
-              )}
-            </span>
-          )}
-          {showHint && (
-            <span className="mt-1 block text-xs text-muted-foreground">
-              {tile.hint}
-            </span>
-          )}
-          {ready && tile.secondary !== undefined && (
-            // Lifted above the stretched label, so this line keeps its own
-            // destination instead of inheriting the tile's.
-            <Link
-              to={tile.secondary.to}
-              {...(tile.secondary.search === undefined ? {} : { search: tile.secondary.search })}
-              data-slot="metric-secondary"
-              className="relative z-10 mt-1 inline-block text-xs font-medium underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
-            >
-              {tile.secondary.label}
-            </Link>
-          )}
-        </dd>
-      </CardContent>
+      <dt className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        {tone === "warning" && (
+          <span className="size-1.5 shrink-0 rounded-full bg-warning" aria-hidden />
+        )}
+        {selectable ? (
+          <button
+            type="button"
+            data-slot="metric-filter"
+            aria-pressed={tile.selected === true}
+            onClick={tile.onSelect}
+            className={stretch}
+          >
+            {tile.label}
+          </button>
+        ) : linked ? (
+          <Link
+            to={tile.link!.to}
+            {...(tile.link!.search === undefined ? {} : { search: tile.link!.search })}
+            data-slot="metric-link"
+            className={stretch}
+          >
+            {tile.label}
+          </Link>
+        ) : (
+          tile.label
+        )}
+        {tile.info !== undefined && (
+          // Lifted above the stretched label; a popover, so a phone can open it by tap.
+          <InfoPopover label={t("common.howCalculated")} className="relative z-10 ml-auto desktop:ml-auto">
+            {tile.info}
+          </InfoPopover>
+        )}
+      </dt>
+      <dd className="m-0">
+        {state === "pending" ? (
+          <Skeleton className="h-7 w-14" />
+        ) : (
+          <span
+            data-slot="metric-value"
+            className={cn(
+              "font-heading text-2xl font-semibold leading-none tabular-nums break-words",
+              showValue ? TONE_VALUE[tone] : "text-muted-foreground",
+            )}
+          >
+            {state === "error" ? (
+              // The one dash left in the app (guard no-bare-dash): a read
+              // that failed has no value to name, so the label says why.
+              <span role="img" aria-label={t("common.readFailed")}>—</span>
+            ) : showValue ? (
+              tile.unit === undefined ? (
+                tile.value
+              ) : (
+                <>
+                  {/* The figure and its unit each stay whole; on a narrow phone tile the unit drops below (#695). */}
+                  <span className="whitespace-nowrap">{tile.value}</span>{" "}
+                  <small className="whitespace-nowrap font-sans text-xs font-medium text-muted-foreground">
+                    {tile.unit}
+                  </small>
+                </>
+              )
+            ) : tile.withheld === true ? null : (
+              <span className="text-base">{notRecorded()}</span>
+            )}
+          </span>
+        )}
+        {showHint && (
+          <span className="mt-1 block text-xs text-muted-foreground">
+            {tile.hint}
+          </span>
+        )}
+        {ready && tile.secondary !== undefined && (
+          // Lifted above the stretched label, so this line keeps its own
+          // destination instead of inheriting the tile's.
+          <Link
+            to={tile.secondary.to}
+            {...(tile.secondary.search === undefined ? {} : { search: tile.secondary.search })}
+            data-slot="metric-secondary"
+            className="relative z-10 mt-1 inline-block text-xs font-medium underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          >
+            {tile.secondary.label}
+          </Link>
+        )}
+      </dd>
     </Card>
   );
 }

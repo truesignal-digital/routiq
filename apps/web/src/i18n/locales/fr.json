@@ -18,8 +18,8 @@
     "loadFailed": "Impossible de charger le tableau de bord. Veuillez réessayer.",
     "retry": "Réessayer",
     "empty": {
-      "modulesOff": "L'accueil n'a rien à afficher : les modules qui le remplissent sont désactivés pour votre entreprise.",
-      "modulesOffCompanyPages": "L'accueil n'a rien à afficher : les modules qui le remplissent sont désactivés pour votre entreprise. Les pages Entreprise du menu restent disponibles."
+      "modulesOff": "Les modules de l'accueil sont désactivés pour votre entreprise.",
+      "modulesOffCompanyPages": "Les modules de l'accueil sont désactivés pour votre entreprise. Les pages Entreprise restent disponibles."
     },
     "cards": {
       "pendingApprovals": {
@@ -56,7 +56,7 @@
     },
     "recent": {
       "title": "Écritures récentes",
-      "viewAll": "Voir toutes les écritures",
+      "viewAll": "Tout voir",
       "loading": "Chargement…",
       "loadFailed": "Impossible de charger les écritures. Veuillez réessayer.",
       "empty": "Aucune écriture pour cette agence."
@@ -108,7 +108,6 @@
     }
   },
   "login": {
-    "subtitle": "Connectez-vous pour continuer",
     "workspace": "Espace de travail",
     "username": "Nom d'utilisateur",
     "pin": "Code PIN",
@@ -224,7 +223,6 @@
     },
     "eyebrow": "Parc opérationnel",
     "title": "Actifs",
-    "subtitle": "Suivez chaque véhicule, de son enregistrement à sa mise hors service.",
     "searchLabel": "Rechercher dans les actifs",
     "searchPlaceholder": "Code, plaque ou modèle…",
     "filterLabel": "Filtrer les actifs",
@@ -326,7 +324,7 @@
       "chassisNumber": "Numéro de châssis",
       "acquisitionDate": "Date d'acquisition",
       "acquisitionAmount": "Montant d'acquisition (FCFA)",
-      "description": "Recopiez les papiers. Seuls le code, la classe et l'agence sont nécessaires maintenant.",
+      "description": "Recopiez les papiers du véhicule.",
       "sections": {
         "identity": "Identité",
         "vehicle": "Plaque et marque",
@@ -379,55 +377,51 @@
         "groundedFirst": "{code} · {days, plural, =0 {depuis aujourd'hui} one {# jour} other {# jours}}",
         "documentsDue": "Documents à échéance ≤ {days} jours",
         "documentsDueNone": "Rien à échéance",
-        "documentsDueFirst": "Premier : {code} · {date}",
-        "idle": "Sans sortie depuis {days} jours ou plus",
+        "documentsDueFirst": "{code} · {date}",
+        "idle": "Sans sortie ≥ {days} jours",
         "idleNone": "Tous ont travaillé",
         "idleNever": "{code} · jamais",
         "idleFirst": "{code} · {days, plural, one {# jour} other {# jours}}",
         "onTheRoad": "Sur la route, {days} derniers jours",
-        "onTheRoadChange": "{arrow} {points, plural, one {# pt} other {# pts}} vs les {days} jours d'avant",
-        "onTheRoadSame": "Comme les {days} jours d'avant",
+        "onTheRoadChange": "{arrow} {points, plural, one {# pt} other {# pts}} vs {days} j avant",
+        "onTheRoadSame": "Stable vs {days} j avant",
         "onTheRoadNotRecorded": "{count, plural, one {# jour non renseigné} other {# jours non renseignés}}",
         "onTheRoadChangeNotRecorded": "{change} · {count, plural, one {# jour non renseigné} other {# jours non renseignés}}",
-        "onTheRoadInfo": "Jours-véhicule en activité ÷ jours-véhicule renseignés, {days} derniers jours. Les jours que personne ne pouvait renseigner sont exclus."
+        "onTheRoadInfo": "Jours-véhicule en activité ÷ jours-véhicule renseignés, {days} derniers jours, comparés aux {days} jours d'avant. Les jours que personne ne pouvait renseigner sont exclus."
       },
       "due": {
-        "title": "Documents et entretiens à venir",
-        "window": "Expirés, et à échéance dans les {days} prochains jours",
+        "titleWithin": "À renouveler sous {days} jours",
+        "seeAll": "Tout voir ({count, number})",
+        "serviceNotCountedShort": "Entretiens au km non comptés",
         "loadFailed": "Impossible de charger les échéances.",
         "empty": "Rien d'expiré et rien à échéance dans les {days} prochains jours.",
         "rowTitle": "{code} · {type}",
-        "expired": "Expiré le {date} · {days, plural, =0 {aujourd'hui} one {il y a # jour} other {il y a # jours}}",
-        "dueIn": "{date} · {days, plural, =0 {aujourd'hui} one {dans # jour} other {dans # jours}}",
+        "expired": "{days, plural, =0 {Expiré aujourd'hui} one {Expiré il y a # jour} other {Expiré il y a # jours}}",
+        "dueIn": "{days, plural, =0 {Échéance aujourd'hui} one {Échéance dans # jour} other {Échéance dans # jours}}",
         "serviceNotCounted": "Les entretiens au kilométrage ne sont pas comptés : aucun intervalle d'entretien n'est encore enregistré par véhicule.",
-        "truncated": "Seules les premières lignes sont affichées.",
-        "openAll": "Ouvrir Documents"
+        "truncated": "Seules les premières lignes sont affichées."
       },
       "profit": {
         "title": "Bénéfice par véhicule",
-        "question": "Lesquels gagnent, lesquels perdent ?",
-        "questionPeriod": "Lesquels gagnent, lesquels perdent ? {period}.",
         "empty": "Aucun véhicule n'a d'argent enregistré ce mois-ci.",
         "trips": "{count, plural, one {# clôture} other {# clôtures}}",
         "tripsKm": "{count, plural, one {# clôture} other {# clôtures}} · {km, number} km",
         "more": "{count, plural, one {# autre véhicule dans Argent} other {# autres véhicules dans Argent}}",
-        "basis": "Recettes moins dépenses enregistrées sur le véhicule",
+        "periodBasis": "{period} · recettes − dépenses de chaque véhicule",
         "openMoney": "Ouvrir Argent"
       },
       "km": {
-        "all": "Ce mois-ci, les km sont connus pour chaque véhicule ({count, number}).",
         "some": "Ce mois-ci, les km sont connus pour {known, number} véhicules sur {total, number} : {missing, plural, one {# activité n’a} other {# activités n’ont}} pas de km."
       },
       "board": {
         "title": "Tableau de la flotte",
-        "question": "Qu'a fait chaque véhicule, jour par jour ? {days} derniers jours.",
+        "window": "{days} derniers jours",
         "basis": {
           "all": "Statut tiré des activités, des ordres de travail et des immobilisations.",
           "noMaintenance": "Statut tiré des activités. Les ordres de travail et les immobilisations ne sont pas comptés : la Maintenance est désactivée.",
           "noTrips": "Statut tiré des ordres de travail et des immobilisations seulement ; les autres jours ne sont pas renseignés.",
           "none": "Aucun jour ne peut être renseigné tant que ces modules sont désactivés."
         },
-        "open": "Ouvrir la liste",
         "loadFailed": "Impossible de charger le tableau de la flotte.",
         "empty": "Aucun véhicule à afficher."
       },
@@ -513,7 +507,6 @@
       "soFar": "Jusqu'ici",
       "stillMissing": "Il manque encore",
       "go": "Aller",
-      "goTo": "Aller à {field}",
       "hintWithDraft": "{missing} · brouillon enregistré à {time}",
       "step": "Étape {current} sur {total}",
       "review": "Vérification",
@@ -608,8 +601,7 @@
     },
     "money": {
       "tiles": {
-        "waitingHint": "{amount} · la plus ancienne {age}",
-        "missing": "Justificatif manquant",
+        "waitingHint": "{amount} · depuis le {date}",
         "missingHint": "Le plus ancien : {date}"
       },
       "lens": {
@@ -815,7 +807,6 @@
     },
     "periods": {
       "title": "Mois comptables",
-      "lead": "Chaque mois reçoit des écritures jusqu’à ce que la finance le clôture. Les corrections tardives vont dans le mois ouvert.",
       "columns": {
         "period": "Période",
         "status": "Statut",
@@ -829,8 +820,8 @@
       "statusOpen": "Ouverte",
       "statusLocked": "Verrouillée depuis le {date}",
       "entryCount": "{count, plural, one {# écriture} other {# écritures}}",
-      "lockExplanation": "Les écritures déjà comptabilisées dans ce mois ne pourront plus changer. Une écriture tardive datée de ce mois sera comptabilisée dans le mois en cours et gardera sa date.",
-      "lockCurrentExplanation": "Les écritures déjà comptabilisées dans ce mois ne pourront plus changer, et les écritures datées de ce mois ne pourront pas être comptabilisées avant sa réouverture.",
+      "lockExplanation": "Les écritures comptabilisées en {month} ne pourront plus changer. Une écriture tardive ira dans le mois en cours, avec sa date.",
+      "lockCurrentExplanation": "Les écritures comptabilisées en {month} ne pourront plus changer, et celles datées de ce mois ne passeront pas avant sa réouverture.",
       "reasonLabel": "Motif de la réouverture",
       "reasonPlaceholder": "Expliquez pourquoi cette période doit être rouverte…",
       "cancel": "Annuler",
@@ -848,7 +839,6 @@
       "branchUnknown": "L'agence d'origine"
     },
     "page": {
-      "description": "Toutes les recettes et dépenses.",
       "descriptionOwn": "Les dépenses que vous avez enregistrées.",
       "tabs": {
         "label": "Sections de l’argent",
@@ -866,28 +856,27 @@
         "3-months": "3 mois",
         "12-months": "12 mois"
       },
-      "period": "{period} comparé à {comparison}",
+      "periodShort": "{period} vs {comparison}",
       "change": {
         "moved": "{arrow} {change} vs {period}",
         "same": "Comme {period}"
       },
       "tiles": {
         "expenses": "Dépenses",
-        "revenue": "Recettes",
-        "approve": "À approuver",
-        "monthClose": "Clôture de {month}"
+        "revenue": "Recettes"
       },
       "counted": {
         "posted": "Compté : {count, plural, one {# écriture comptabilisée} other {# écritures comptabilisées}}.",
         "waiting": "Non compté : {count, plural, one {# écriture de la période attend} other {# écritures de la période attendent}} une approbation ({amount}).",
         "missingReceipt": "{count, plural, one {# écriture de la période n’a} other {# écritures de la période n’ont}} pas de justificatif.",
         "openTrips": "{count, plural, one {# activité est encore ouverte} other {# activités sont encore ouvertes}} : leur argent peut encore arriver.",
-        "otherCurrency": "{count, plural, one {# écriture dans une autre devise est laissée} other {# écritures dans une autre devise sont laissées}} de côté."
+        "otherCurrency": "{count, plural, one {# écriture dans une autre devise est laissée} other {# écritures dans une autre devise sont laissées}} de côté.",
+        "open": "Comment c’est compté ?",
+        "incomplete": "Tout n’est pas compté",
+        "waitingShort": "{count, plural, one {# en attente d’approbation} other {# en attente d’approbation}} · {amount}"
       },
       "categories": {
         "title": "Dépenses par catégorie",
-        "question": "Où les dépenses ont-elles changé ?",
-        "description": "Où les dépenses ont-elles changé ? {period} (barre) face à {comparison} (repère).",
         "versus": "vs {amount}",
         "other": "{count, plural, one {# autre catégorie} other {# autres catégories}}",
         "empty": "Aucune dépense sur les deux périodes.",
@@ -898,34 +887,31 @@
         "empty": "Rien ne vous attend.",
         "approve": "{count, plural, one {# écriture attend} other {# écritures attendent}} votre approbation",
         "missing": "{count, plural, one {# écriture n’a} other {# écritures n’ont}} pas de justificatif",
-        "openApprove": "Ouvrir À approuver",
-        "openEntries": "Ouvrir dans les écritures",
         "review": "Vérifier",
-        "closeMonth": "Clôturer {month}"
+        "addReceipts": "Ajouter les justificatifs",
+        "monthOpen": "{month} encore ouvert",
+        "closeAction": "Clôturer le mois",
+        "monthLocked": "Clôturé : {month}"
       },
       "monthClose": {
-        "locked": "Verrouillé",
-        "open": "Ouvert",
-        "none": "Aucune écriture",
         "earlier": "Avant, non clôturés : {months}",
         "earlierMany": "{count} mois précédents non clôturés"
       },
       "fuel": {
         "title": "Carburant par km et par véhicule",
-        "question": "Un véhicule dépense-t-il plus de carburant qu'il ne devrait ? {period}, {currency} par km. Ligne = médiane de la flotte.",
-        "questionShort": "Un véhicule dépense-t-il plus de carburant qu'il ne devrait ?",
         "median": "Médiane de la flotte {amount}",
         "above": "Au-dessus de la médiane de la flotte",
         "detailAbove": "{percent} au-dessus de la médiane · {tally}",
         "valueHeader": "Carburant par km",
         "more": "{count, plural, one {# véhicule de plus} other {# véhicules de plus}}",
         "basis": "Dépenses de carburant ÷ km des étapes ou du compteur.",
+        "basisLabel": "Comment le carburant par km est calculé",
         "notCounted": {
           "kmUnknown": "Non comptés : {count, plural, one {# véhicule dont les km ne sont pas connus} other {# véhicules dont les km ne sont pas connus}}.",
           "noKm": "Non comptés : {count, plural, one {# véhicule sans km sur la période} other {# véhicules sans km sur la période}}.",
           "noFuel": "Non comptés : {count, plural, one {# véhicule sans carburant enregistré} other {# véhicules sans carburant enregistré}}."
         },
-        "empty": "Aucun véhicule n'a à la fois des km et du carburant enregistrés sur la période.",
+        "empty": "Aucun véhicule avec km et carburant.",
         "open": "Voir tous les véhicules"
       }
     }
@@ -1076,7 +1062,6 @@
       "overview": {
         "started": "Départ",
         "ended": "Arrivée",
-        "legs": "Étapes",
         "distance": "Distance"
       },
       "timeline": {
@@ -1119,10 +1104,10 @@
         "branchOnly": "Seules les écritures de vos agences sur cette activité."
       },
       "status": {
-        "openFollow": "Clôturez-la au retour ; les manques sont signalés, jamais inventés.",
-        "gaps": "{count, plural, one {Clôturée, mais # élément manque} other {Clôturée, mais # éléments manquent}}",
-        "gapsFollow": "Son bénéfice n'est pas fiable sans eux : rouvrez-la, ajoutez-les, clôturez-la de nouveau.",
-        "gapsManager": "Son bénéfice n'est pas fiable sans eux ; un responsable la rouvre.",
+        "openFollow": "Son chauffeur ou un responsable la clôture à son retour.",
+        "gaps": "{count, plural, one {# élément manque} other {# éléments manquent}}",
+        "gapsFollow": "Son bénéfice n'est pas fiable sans eux.",
+        "gapsManager": "Bénéfice pas fiable ; un responsable la rouvre.",
         "complete": "Compléter l'activité"
       },
       "sections": {
@@ -1244,7 +1229,7 @@
       "pendingEntries": "{count, plural, one {# ligne en attente d'approbation} other {# lignes en attente d'approbation}}"
     },
     "record": {
-      "subtitle": "Reprenez la feuille de route papier de haut en bas. Tout ce qui n'y figure pas peut rester vide.",
+      "subtitle": "Recopiez la feuille de route papier.",
       "templateLegend": "Type de fiche",
       "sections": {
         "references": "Références",
@@ -1409,7 +1394,6 @@
         "loss": "Perte"
       }
     },
-    "subtitle": "Chaque activité de votre flotte, du départ à la clôture.",
     "metrics": {
       "thisWeek": "Cette semaine",
       "thisWeekHint": "Démarrage depuis lundi",
@@ -1431,16 +1415,16 @@
       "empty": "Rien n'est encore planifié."
     },
     "overview": {
-      "openList": "Voir la liste",
+      "fuelNotCounted": "Le carburant n’est pas compté : Finances est désactivé.",
       "tiles": {
         "weekClosed": "Clôtures cette semaine",
-        "weekClosedHint": "Parmi les démarrages depuis lundi",
+        "weekClosedHint": "Parmi les départs depuis lundi",
         "openNone": "Rien en cours",
         "openOldest": "Début le plus ancien : {date}",
         "missingData": "Clôture avec données manquantes",
         "missingFuelKm": "{fuel, number} sans carburant · {km, number} sans km",
         "missingKm": "{km, number} sans km",
-        "missingDataInfo": "Clôture avec une exception enregistrée. Le carburant et les km sont vérifiés à chaque clôture.",
+        "missingDataInfo": "{fuelCounted, select, yes {Clôture avec une exception enregistrée. Le carburant et les km sont vérifiés à chaque clôture.} other {Clôture avec une exception enregistrée. Les km sont vérifiés à chaque clôture ; le carburant n’est pas compté : Finances est désactivé.}}",
         "emptyKm": "Km à vide",
         "emptyKmChange": "{arrow} {points, plural, one {# pt} other {# pts}} vs {period}",
         "emptyKmSame": "Comme {period}",
@@ -1450,7 +1434,7 @@
       },
       "weeks": {
         "title": "Activités par semaine",
-        "question": "Le travail augmente-t-il ? Démarrages et clôtures, {count, number} dernières semaines.",
+        "info": "Démarrages et clôtures, {count, number} dernières semaines.",
         "closed": "Clôture",
         "open": "En cours",
         "column": "Semaine du {week} : {started, number} démarrages, {closed, number} clôtures",
@@ -1458,25 +1442,20 @@
       },
       "todo": {
         "title": "À faire",
-        "description": "Ce qui reste à clôturer",
         "empty": "Rien ne reste à clôturer.",
         "open": "{count, number} en cours",
-        "oldest": "Depuis le {date} : {number}",
-        "oldestWithTruck": "Depuis le {date} : {number} sur {code}",
-        "openList": "Ouvrir la liste",
-        "noFuel": "{count, number} clôtures sans carburant",
-        "noFuelDetail": "Ajoutez le carburant pour que les coûts soient complets.",
-        "noKm": "{count, number} clôtures sans km",
-        "noKmDetail": "Ajoutez les km pour que les distances soient complètes."
+        "closeTrips": "Clôturer",
+        "complete": "Compléter",
+        "noFuel": "{count, plural, one {# clôture sans carburant} other {# clôtures sans carburant}}",
+        "noKm": "{count, plural, one {# clôture sans km} other {# clôtures sans km}}"
       },
       "routes": {
         "title": "Recettes par km et par itinéraire",
-        "question": "Quels itinéraires rapportent le plus ? {period}, {currency} par km.",
+        "info": "Quels itinéraires rapportent le plus ? {period}, {currency} par km. Les km incluent les retours à vide.",
         "route": "{from} – {to}",
         "detailWithoutKm": "{tally} · {without}",
         "labelHeader": "Itinéraire",
         "valueHeader": "Recettes par km",
-        "basis": "Les km incluent les retours à vide.",
         "noKm": "Non comptés, sans km saisis : {routes}.",
         "noRevenue": "Non comptés, sans recettes enregistrées : {routes}.",
         "otherRoutes": "{count, plural, one {# autre itinéraire n'est pas affiché} other {# autres itinéraires ne sont pas affichés}}.",
@@ -1486,8 +1465,7 @@
       },
       "summary": {
         "sentence": "{started, plural, =0 {Aucune activité n’a encore commencé cette semaine.} one {# activité a commencé cette semaine ; {closed, number} clôturée.} other {# activités ont commencé cette semaine ; {closed, number} clôturées.}}",
-        "open": "{open, plural, =0 {Rien n’est encore ouvert.} one {# activité est encore ouverte.} other {# activités sont encore ouvertes.}}",
-        "counted": "{fuelCounted, select, yes {Activités clôturées incomplètes : {fuel, number} sans carburant et {km, number} sans km.} other {Activités clôturées incomplètes : {km, number} sans km. Le carburant n’est pas compté : Finances est désactivé.}}"
+        "open": "{open, plural, =0 {Rien n’est encore ouvert.} one {# activité est encore ouverte.} other {# activités sont encore ouvertes.}}"
       }
     }
   },
@@ -1499,7 +1477,6 @@
     },
     "workOrders": {
       "tab": "Ordres de travail",
-      "newHint": "Ouvrez un ordre de travail sur un actif, avec ou sans problème à l'origine.",
       "loading": "Chargement des ordres de travail…",
       "loadFailed": "Impossible de charger les ordres de travail. Veuillez réessayer.",
       "emptyHint": "Aucun ordre de travail pour l'instant. Les réparations ouvertes apparaîtront ici.",
@@ -1525,12 +1502,11 @@
         "REJECTED": "Rejeté",
         "CANCELLED": "Annulé"
       },
-      "openOnly": "Seuls les ordres de travail encore ouverts sont affichés.",
+      "openOnly": "Ouverts seulement",
       "showAll": "Tout afficher"
     },
     "issues": {
       "tab": "Problèmes",
-      "newHint": "Décrivez le défaut constaté sur l'actif. Un problème critique pour la sécurité immobilise l'actif immédiatement.",
       "loading": "Chargement des problèmes…",
       "loadFailed": "Impossible de charger les problèmes. Veuillez réessayer.",
       "emptyHint": "Aucun problème pour l'instant. Les défauts constatés apparaîtront ici.",
@@ -1596,7 +1572,6 @@
       "lowerSeverityHint": "Le véhicule reste immobilisé : la remise en service est une étape à part. Le motif reste dans l'historique."
     },
     "close": {
-      "hint": "Indiquez ce qui a été fait et ce que la réparation a coûté.",
       "costSection": "Coût de la réparation",
       "loading": "Chargement des coûts déjà enregistrés…",
       "costsFailed": "Impossible de lire les coûts déjà enregistrés. Réessayez.",
@@ -1635,7 +1610,8 @@
       "preventive": "Préventif — aucun problème",
       "linkedIssue": "Problème lié",
       "unavailableTitle": "Actif immobilisé",
-      "unavailableHint": "Seule la remise en service rouvre la disponibilité."
+      "unavailableHint": "Seule la remise en service rouvre la disponibilité.",
+      "unavailableInfoLabel": "Quand il peut repartir"
     },
     "notify": {
       "success": {
@@ -1655,7 +1631,6 @@
         "severityLowered": "Mention critique retirée"
       }
     },
-    "subtitle": "Problèmes signalés et ordres de travail, de la déclaration à la réparation.",
     "metrics": {
       "newProblems": "Nouveaux problèmes",
       "newProblemsHint": "{count, plural, =0 {Aucun critique pour la sécurité} one {# critique pour la sécurité} other {# critiques pour la sécurité}}",
@@ -1683,14 +1658,18 @@
         "offTheRoadSince": "{code} · depuis le {date}",
         "workOrdersOpen": "Ordres de travail ouverts",
         "workOrdersOpenHint": "{approval, number} en attente d'approbation · {completion, number} en attente de validation",
+        "waitingApproval": "{count, number} en attente d'approbation",
+        "waitingCompletion": "{count, number} en attente de validation",
         "repairCost": "Coût des réparations",
-        "repairCostHint": "{count, plural, =0 {Aucun ordre de travail terminé sur {window} jours} one {# ordre de travail terminé sur {window} jours} other {# ordres de travail terminés sur {window} jours}}"
+        "repairCostHint": "{count, plural, =0 {Aucune réparation sur {window} jours} one {# réparation sur {window} jours} other {# réparations sur {window} jours}}"
       },
       "todo": {
         "title": "À faire",
-        "description": "La sécurité d'abord",
         "empty": "Rien n'attend à l'atelier.",
+        "seeAll": "Tout voir",
         "problem": "{code} · {description}",
+        "safetyProblems": "{count, plural, one {# problème de sécurité à trier} other {# problèmes de sécurité à trier}}",
+        "otherProblems": "{count, plural, one {# problème à trier} other {# problèmes à trier}}",
         "reported": "Signalé {when}",
         "reportedSafety": "Signalé {when} · sécurité",
         "triage": "Trier",
@@ -1700,7 +1679,7 @@
       },
       "offRoad": {
         "title": "Jours à l'arrêt par mois",
-        "question": "Les réparations immobilisent-elles les véhicules plus longtemps ? Jours-véhicule à l'atelier ou immobilisés.",
+        "counted": "Jours-véhicule à l'atelier ou immobilisés, par mois.",
         "column": "{month} : {days, plural, one {# jour-véhicule} other {# jours-véhicule}} à l'arrêt",
         "columnPartial": "{month} (en cours) : {days, plural, one {# jour-véhicule} other {# jours-véhicule}} à l'arrêt",
         "monthPartial": "{month} (en cours)",
@@ -1713,7 +1692,6 @@
       "summary": {
         "sentence": "{open, plural, =0 {Aucun problème ouvert.} one {# problème est ouvert.} other {# problèmes sont ouverts.}}",
         "grounded": "{grounded, plural, =0 {Aucun véhicule n’est à l’arrêt.} one {# véhicule est à l’arrêt.} other {# véhicules sont à l’arrêt.}}",
-        "counted": "Durée et coût des réparations sur les {days, number} derniers jours, d’après {count, plural, =0 {aucun ordre de travail terminé} one {# ordre de travail terminé} other {# ordres de travail terminés}}.",
         "badge": "{count, plural, one {# à l’arrêt} other {# à l’arrêt}}",
         "sentenceSafety": "{open, plural, one {# problème est ouvert, et il touche la sécurité.} other {# problèmes sont ouverts, dont {safety, number} touchant la sécurité.}}"
       }
@@ -1727,7 +1705,7 @@
     "loading": "Chargement du personnel…",
     "loadFailed": "Impossible de charger le personnel.",
     "retry": "Réessayer",
-    "emptyHint": "Aucune personne enregistrée. Ajoutez vos chauffeurs et receveurs pour les affecter aux fiches.",
+    "emptyHint": "Aucune personne enregistrée.",
     "branchEmptyHint": "Aucune personne rattachée à cette agence.",
     "active": "Actif",
     "inactive": "Inactif",
@@ -1753,12 +1731,11 @@
       "field": "Identifiant",
       "placeholder": "Choisir un identifiant",
       "option": "{name} ({username})",
-      "linkHint": "Cette personne se connecte avec l'identifiant choisi. Le travail prévu pour elle, ou avec elle dans l'équipage, s'affiche alors comme le sien.",
-      "relinkHint": "Choisissez l'identifiant avec lequel cette personne se connecte désormais. L'ancien lien reste dans l'historique.",
-      "unlinkHint": "{name} garde ses enregistrements, et l'identifiant reste. Le travail prévu pour {name} ne s'affiche plus pour cet identifiant. Le lien reste dans l'historique.",
+      "linkHint": "Son travail prévu s'affiche alors sur cet identifiant.",
+      "relinkHint": "L'ancien lien reste dans l'historique.",
+      "unlinkHint": "Le travail prévu de {name} quitte cet identifiant. Ses enregistrements restent.",
       "noneFree": "Aucun identifiant n'est libre. Ajoutez d'abord l'utilisateur, dans Utilisateurs."
-    },
-    "lead": "Les personnes avec qui votre flotte travaille : chauffeurs, mécaniciens, équipage. Une personne peut conduire sans se connecter."
+    }
   },
   "users": {
     "title": "Utilisateurs",
@@ -1791,9 +1768,6 @@
       "activeOnly": "Actifs uniquement",
       "includeDeactivated": "Inclure les désactivés"
     },
-    "add": {
-      "description": "Créez l'accès d'un membre de votre équipe. Remettez-lui vous-même son identifiant et son code : ils ne sont envoyés nulle part."
-    },
     "form": {
       "displayName": "Nom complet",
       "username": "Identifiant de connexion",
@@ -1803,6 +1777,7 @@
       "allBranches": "Toutes les agences",
       "pin": "Code PIN",
       "confirmPin": "Confirmer le code PIN",
+      "pinHint": "Remettez-le en main propre : rien n'est envoyé.",
       "pinMismatch": "Les deux codes ne correspondent pas.",
       "pinTooShort": "Le code doit contenir au moins {min} chiffres.",
       "cancel": "Annuler"
@@ -1828,8 +1803,7 @@
         "loginUnlinked": "Identifiant délié"
       },
       "pinResetBody": "Remettez le nouveau code à {name} : il n'apparaît plus nulle part."
-    },
-    "lead": "Qui peut se connecter, avec quel rôle et dans quelles agences."
+    }
   },
   "branches": {
     "title": "Agences",
@@ -1847,12 +1821,9 @@
       "active": "Active",
       "inactive": "Désactivée"
     },
-    "add": {
-      "description": "Créez une agence de votre espace. Elle devient aussitôt disponible dans les formulaires et la portée des utilisateurs."
-    },
     "form": {
       "code": "Code",
-      "codeHint": "Le code apparaît dans les numéros de pièces et ne peut pas changer.",
+      "codeHint": "Ne pourra plus être modifié.",
       "codeInvalid": "2 à 8 caractères, en majuscules ou chiffres (ex. DLA).",
       "nameTooLong": "Le nom ne doit pas dépasser {max} caractères.",
       "name": "Nom",
@@ -1877,8 +1848,7 @@
       "info": {
         "switched": "Vous consultez : {branch}"
       }
-    },
-    "lead": "Les agences regroupent les véhicules, le personnel et l'argent par site. Chaque utilisateur voit les agences qui lui sont confiées."
+    }
   },
   "provenance": {
     "template": "{code} v{version}",
@@ -2420,7 +2390,7 @@
       "submitting": "Enregistrement…"
     },
     "set-summary-schedule": {
-      "label": "Modifier le résumé du tableau de bord",
+      "label": "Modifier le résumé des vues d’ensemble",
       "submit": "Enregistrer",
       "submitting": "Enregistrement…"
     },
@@ -2656,10 +2626,11 @@
       "reading": "{readingType, select, HOURS {Horamètre} other {Compteur}} {value}, {ago}",
       "readingValue": "{value, number} {readingType, select, HOURS {h} other {km}}",
       "noReading": "Aucun relevé de compteur",
-      "locationNoReport": "Position : non signalée",
       "lifecycleSince": "{status} depuis {since}"
     },
     "details": {
+      "reportedLocationInfo": "Les positions sont signalées par des personnes, pas par GPS.",
+      "reportedLocationInfoLabel": "D'où viennent les positions",
       "rightNow": "En ce moment",
       "vehicle": "Véhicule",
       "specifications": "Caractéristiques",
@@ -2671,13 +2642,12 @@
       "lifecycle": "Cycle de vie",
       "lifecycleSince": "{status} depuis le {date}",
       "homeBranch": "Agence de rattachement",
-      "homeBranchValue": "{branch}, rattachement administratif",
       "custodian": "Chauffeur attitré",
       "custodianSince": "{name} depuis le {date}",
       "custodianInactive": "Accès désactivé",
       "nobodyAssigned": "Personne",
       "reportedLocation": "Position signalée",
-      "reportedLocationNone": "Aucune position signalée. Les positions sont signalées par des personnes, pas par GPS.",
+      "reportedLocationNone": "Non signalée",
       "odometer": "Compteur",
       "readingMeta": "{date} · {source} · {by}",
       "fleetCode": "Code flotte",
@@ -2713,43 +2683,38 @@
     },
     "status": {
       "grounded": {
-        "lead": "{days, plural, =0 {Immobilisé depuis aujourd'hui} one {Immobilisé depuis hier} other {Immobilisé depuis # jours}} — problème signalé : « {report} ».",
-        "noWorkOrder": "Personne n'a encore planifié la réparation : le problème {issue} n'a pas d'ordre de travail.",
-        "repairRefused": "La réparation a été refusée ({workOrder}) ; aucune autre n'est encore planifiée.",
-        "awaitingAuthorization": "La réparation ({workOrder}) attend l'autorisation d'un responsable.",
-        "inProgress": "En attente de l'atelier pour terminer la réparation ({workOrder}).",
-        "completionSentBack": "La fin des travaux de {workOrder} a été renvoyée ; en attente de l'atelier.",
-        "awaitingSignOff": "La réparation est terminée ; en attente de la validation de {workOrder} par un responsable.",
-        "awaitingRelease": "La réparation ({workOrder}) est terminée ; en attente d'un responsable pour la remise en service.",
-        "awaitingReleaseSignedOff": "La réparation ({workOrder}) est validée ; en attente d'un responsable pour la remise en service.",
-        "issueClosedAwaitingRelease": "Le problème {issue} a été clos sans réparation ; en attente d'un responsable pour la remise en service.",
-        "otherIssueOpen": "La réparation ({workOrder}) est terminée, mais {count, plural, one {un autre problème critique est encore ouvert : « {description} » ({otherIssue}). Il doit être clos avant la remise en service.} other {# autres problèmes critiques sont encore ouverts, dont « {description} » ({otherIssue}). Ils doivent être clos avant la remise en service.}}",
-        "otherIssueOpenSignedOff": "La réparation ({workOrder}) est validée, mais {count, plural, one {un autre problème critique est encore ouvert : « {description} » ({otherIssue}). Il doit être clos avant la remise en service.} other {# autres problèmes critiques sont encore ouverts, dont « {description} » ({otherIssue}). Ils doivent être clos avant la remise en service.}}",
-        "issueClosedOtherIssueOpen": "Le problème {issue} a été clos sans réparation, mais {count, plural, one {un autre problème critique est encore ouvert : « {description} » ({otherIssue}). Il doit être clos avant la remise en service.} other {# autres problèmes critiques sont encore ouverts, dont « {description} » ({otherIssue}). Ils doivent être clos avant la remise en service.}}",
-        "doNotDrive": "Ne le conduisez pas avant sa remise en service par un responsable."
+        "lead": "{days, plural, =0 {Immobilisé depuis aujourd'hui.} one {Immobilisé depuis hier.} other {Immobilisé depuis # jours.}}",
+        "noWorkOrder": "Réparation pas encore planifiée : {issue}.",
+        "repairRefused": "Réparation refusée ({workOrder}) ; aucune autre planifiée.",
+        "awaitingAuthorization": "Autorisation d'un responsable attendue : {workOrder}.",
+        "inProgress": "En réparation : {workOrder}.",
+        "completionSentBack": "Fin des travaux renvoyée à l'atelier : {workOrder}.",
+        "awaitingSignOff": "Validation d'un responsable attendue : {workOrder}.",
+        "awaitingRelease": "Attend sa remise en service par un responsable ({workOrder}).",
+        "awaitingReleaseSignedOff": "{workOrder} validé ; attend sa remise en service par un responsable.",
+        "issueClosedAwaitingRelease": "Problème {issue} clos sans réparation ; attend sa remise en service par un responsable.",
+        "otherIssueOpen": "{workOrder} terminé, mais {count, plural, one {un autre problème critique est ouvert : {otherIssue} « {description} ».} other {# problèmes critiques sont ouverts, dont {otherIssue} « {description} ».}}",
+        "otherIssueOpenSignedOff": "{workOrder} validé, mais {count, plural, one {un autre problème critique est ouvert : {otherIssue} « {description} ».} other {# problèmes critiques sont ouverts, dont {otherIssue} « {description} ».}}",
+        "issueClosedOtherIssueOpen": "Problème {issue} clos sans réparation, mais {count, plural, one {un autre problème critique est ouvert : {otherIssue} « {description} ».} other {# problèmes critiques sont ouverts, dont {otherIssue} « {description} ».}}",
+        "doNotDrive": "Ne le conduisez pas."
       },
-      "repairedLead": "Réparation terminée — en attente de remise en service.",
+      "repairedLead": "Réparation terminée.",
       "available": {
         "lead": "Disponible.",
-        "sinceAndTrip": "En service depuis {since} ; dernière activité {lastTrip}.",
-        "sinceNoTrips": "En service depuis {since} ; aucune activité pour l'instant.",
-        "sinceOnly": "En service depuis {since}.",
         "lastTripOnly": "Dernière activité {lastTrip}.",
         "noTrips": "Aucune activité pour l'instant."
       },
       "notAssessed": {
         "lead": "Disponibilité non évaluée.",
-        "follow": "Le module maintenance est désactivé : personne n'enregistre si ce véhicule peut rouler."
+        "follow": "Module maintenance désactivé."
       },
       "registered": {
-        "lead": "Enregistré, pas encore en service.",
-        "follow": "Mettez-le en service pour démarrer son historique d'exploitation."
+        "lead": "Enregistré, pas encore en service."
       },
       "disposed": {
-        "lead": "{status, select, SOLD {Vendu.} RETIRED {Retiré du service.} other {Mis au rebut.}}",
-        "follow": "Son historique reste consultable ; plus rien ne peut être enregistré."
+        "lead": "{status, select, SOLD {Vendu.} RETIRED {Retiré du service.} other {Mis au rebut.}}"
       },
-      "alsoDocumentExpired": "Aussi : {document} a expiré le {date}.",
+      "alsoDocumentExpired": "{document} a expiré le {date}.",
       "openRecord": "{kind, select, work_order {Ouvrir l'ordre de travail {ref}} issue {Ouvrir le problème {ref}} other {Ouvrir}}",
       "lockedCaption": "{step} · {reason}"
     },
@@ -2796,22 +2761,20 @@
     },
     "now": {
       "todo": {
+        "showFewer": "Afficher moins",
+        "showMore": "{count, plural, one {Afficher # de plus} other {Afficher # de plus}}",
         "title": "À faire",
-        "description": "Ce qui vous attend sur ce véhicule, le plus urgent d'abord.",
-        "descriptionBesides": "En plus de la réparation ci-dessus, ce qui vous attend sur ce véhicule.",
         "emptyTitle": "Rien ne vous attend pour l'instant.",
         "emptyTitleBesides": "Rien d'autre ne vous attend sur ce véhicule.",
-        "emptyHint": "Quand ce sera le cas, cela apparaîtra ici avec un bouton pour le traiter.",
         "loadFailed": "Impossible de charger ce qui vous attend sur ce véhicule."
       },
       "month": {
-        "description": "Part de ce véhicule",
+        "infoLabel": "Ce que comptent ces montants",
+        "description": "La part de ce véhicule dans chaque écriture. Comptabilisé ne veut pas dire payé ; l'attente d'examen n'est pas dans le comptabilisé.",
         "posted": "Dépenses comptabilisées",
-        "postedHint": "Comptabilisé ne veut pas dire payé",
         "review": "En attente d'examen",
         "reviewHint": "{count, plural, one {# écriture, non comptée} other {# écritures, non comptées}}",
         "missing": "Reçus manquants",
-        "missingHint": "Saisies sans justificatif",
         "seeMoney": "Voir l'argent"
       },
       "recent": {
@@ -2822,12 +2785,12 @@
     },
     "attention": {
       "ISSUE_UNPLANNED": {
-        "title": "Le problème {ref} n'a pas d'ordre de travail",
+        "title": "{ref} sans ordre de travail",
         "detail": "{description}"
       },
       "ISSUE_OPEN_WHILE_AVAILABLE": {
         "title": "Le problème {ref} est toujours ouvert",
-        "detail": "{description}. Le véhicule a été remis en service ; résolvez ou classez le problème."
+        "detail": "{description} · véhicule remis en service"
       },
       "WORK_ORDER_AWAITING_AUTHORIZATION": {
         "title": "{ref} en attente d'autorisation",
@@ -2852,7 +2815,7 @@
       },
       "ASSET_AWAITING_RELEASE": {
         "title": "Prêt pour la remise en service",
-        "detail": "{override, select, yes {Le problème a été clos sans réparation ; la remise en service demande un motif.} other {La réparation est terminée.}}"
+        "detail": "{override, select, yes {Problème clos sans réparation} other {La réparation est terminée.}}"
       },
       "DOCUMENT_EXPIRED": {
         "title": "Document expiré : {type}",
@@ -2864,11 +2827,11 @@
       },
       "ENTRY_AWAITING_REVIEW": {
         "title": "{category} en attente d'examen",
-        "detail": "{ref} · {amount}, saisie par {name}."
+        "detail": "{ref} · {amount} · par {name}"
       },
       "ENTRY_EVIDENCE_MISSING": {
         "title": "Reçu manquant",
-        "detail": "{ref} · {amount}, saisie par {name}."
+        "detail": "{ref} · {amount} · par {name}"
       },
       "DIRECTION_NOTE": {
         "title": "{description}",
@@ -2882,16 +2845,12 @@
       }
     },
     "maintenance": {
-      "title": "Maintenance",
-      "description": "Les problèmes signalés sur ce véhicule et les ordres de travail qui les règlent.",
       "loading": "Chargement de la maintenance…",
       "loadFailed": "Impossible de charger la maintenance.",
       "workOrders": "Ordres de travail",
-      "workOrdersHint": "Travaux en cours. Pièces et main-d'œuvre sont saisies comme écritures liées à l'ordre.",
-      "workOrdersEmpty": "Aucun travail en cours. Planifiez-en un à partir d'un problème signalé.",
+      "workOrdersEmpty": "Aucun travail en cours.",
       "newProblems": "Nouveaux problèmes",
-      "newProblemsHint": "Signalés, mais pas encore planifiés dans un ordre de travail.",
-      "newProblemsEmpty": "Aucun nouveau problème. Signalez-en un si quelque chose ne va pas.",
+      "newProblemsEmpty": "Aucun nouveau problème.",
       "done": "Terminé",
       "doneSummary": "{workOrders, plural, one {# ordre de travail} other {# ordres de travail}}, {problems, plural, one {# problème clos} other {# problèmes clos}}",
       "nextStepYours": "La suite vous revient",
@@ -2910,27 +2869,31 @@
       "safetyCritical": "Critique pour la sécurité"
     },
     "money": {
+      "lifetimeExpenses": "Dépenses {amount}",
+      "lifetimeRevenue": "Recettes {amount}",
+      "lifetimeInfo": "Toutes les écritures comptabilisées depuis l'enregistrement du véhicule, telles que saisies dans ROUTIQ : ni trésorerie, ni impôts, ni remboursements de prêt.",
+      "lifetimeInfoLabel": "Ce que ce total laisse de côté",
+      "lifetimeExcludes": "Comptabilisé, pas payé · hors impôts et emprunts",
+      "lifetimeLabel": "Depuis l'enregistrement, comptabilisé",
+      "entriesInfoLabel": "Comment les annulations apparaissent",
+      "revenueBasis": "Par période comptable. Comptabilisé ne veut pas dire encaissé.",
       "title": "Argent",
-      "titleFor": "Argent · {period}",
-      "description": "La part de ce véhicule dans chaque écriture. L'attente d'examen n'est jamais ajoutée au comptabilisé ; comptabilisé ne veut pas dire payé.",
       "periodLabel": "Mois",
       "periodPrev": "Mois précédent",
       "periodNext": "Mois suivant",
       "loading": "Chargement de l'argent…",
       "loadFailed": "Impossible de charger l'argent de ce véhicule.",
       "posted": "Dépenses comptabilisées",
-      "postedHint": "Toutes couches · comptabilisé n'est pas payé",
-      "postedBasis": "Par période comptable : ce que disent les comptes pour ce mois.",
+      "postedHint": "Toutes couches",
+      "postedBasis": "Par période comptable : ce que disent les comptes pour ce mois. Comptabilisé ne veut pas dire payé.",
       "economicBasis": "Par mois économique : quand l'argent a été dépensé.",
       "review": "En attente d'examen",
       "reviewHint": "{count, plural, one {# écriture · hors comptabilisé} other {# écritures · hors comptabilisé}}",
       "missing": "Reçus manquants",
-      "missingHint": "Saisies sans justificatif",
       "revenue": "Recettes comptabilisées",
-      "revenueHint": "Comptabilisé n'est pas encaissé",
       "entryCount": "{count, plural, one {# écriture} other {# écritures}}",
       "byCategory": "Dépenses par catégorie",
-      "byCategoryHint": "Comptabilisé, {period}",
+      "byCategoryHint": "Comptabilisé",
       "lastSixMonths": "6 derniers mois",
       "lastSixMonthsHint": "Écritures comptabilisées par période",
       "totalPosted": "Total comptabilisé",
@@ -2952,8 +2915,7 @@
       "noEntries": "Aucune écriture pour ce filtre.",
       "forTrip": "pour l'activité {number}",
       "forWorkOrder": "pour l'ordre de travail {ref}",
-      "ofEntry": "sur une écriture de {amount}",
-      "lifetime": "Depuis l'enregistrement, toutes écritures comptabilisées : Recettes {revenue} · Dépenses {expenses} · {result}. Montants saisis dans ROUTIQ : ni trésorerie, ni impôts, ni remboursements de prêt."
+      "ofEntry": "sur une écriture de {amount}"
     },
     "layers": {
       "DIRECT": "Direct",
@@ -2968,10 +2930,8 @@
       "NOT_SUPPLIED": "Sans reçu"
     },
     "trips": {
-      "title": "Activités",
-      "description": "Activités avec ce véhicule",
-      "descriptionWithKm": "Activités avec ce véhicule · {km, number} km enregistrés",
-      "empty": "Aucune activité pour l'instant. Démarrez-en une quand le véhicule quitte le dépôt.",
+      "kmRecorded": "{km, number} km enregistrés",
+      "empty": "Aucune activité pour l'instant.",
       "loading": "Chargement…",
       "loadFailed": "Impossible de charger les activités.",
       "route": "{from} → {to}",
@@ -2998,9 +2958,7 @@
       "openFull": "Ouvrir l'activité complète"
     },
     "documents": {
-      "title": "Documents",
-      "description": "Les dates d'expiration déclenchent les rappels. Un renouvellement conserve toutes les versions précédentes.",
-      "empty": "Aucun document. Ajoutez l'assurance et la visite technique pour recevoir les rappels.",
+      "empty": "Aucun document. Ajoutez l'assurance et la visite technique.",
       "expired": "Expiré",
       "expiresIn": "{count, plural, =0 {Expire aujourd'hui} one {Expire dans # jour} other {Expire dans # jours}}",
       "valid": "Valide",
@@ -3039,8 +2997,6 @@
       }
     },
     "history": {
-      "title": "Historique",
-      "description": "Tout ce qui a été enregistré sur ce véhicule. Rien n'est effacé : les corrections apparaissent à côté de l'original.",
       "filterLabel": "Afficher les événements",
       "filters": {
         "ALL": "Tout",
@@ -3057,7 +3013,6 @@
       "loadFailed": "Impossible de charger l'historique.",
       "empty": "Rien de ce type pour l'instant.",
       "loadMore": "Charger plus",
-      "open": "Ouvrir",
       "event": {
         "asset-registered": "Véhicule enregistré",
         "asset-commissioned": "Mis en service",
@@ -3123,9 +3078,9 @@
       "noteBy": "Note de {name}",
       "noteAppendOnly": "Une note n'est jamais modifiée. Une correction est une nouvelle note.",
       "fromProblem": "Du problème {ref}",
-      "keepsGrounded": "Cet ordre de travail maintient le véhicule immobilisé. Une fois terminé, un responsable le remet en service.",
-      "keepsGroundedUntilRelease": "Les travaux sont terminés, mais le véhicule reste immobilisé jusqu'à sa remise en service par un responsable.",
-      "keepsGroundedOtherIssueOpen": "Les travaux sont terminés, mais le véhicule reste immobilisé : {count, plural, one {un autre problème critique est encore ouvert : « {description} ».} other {# autres problèmes critiques sont encore ouverts, dont « {description} ».}}",
+      "keepsGrounded": "Immobilisé pendant ces travaux.",
+      "keepsGroundedUntilRelease": "Travaux terminés. Immobilisé jusqu'à la remise en service.",
+      "keepsGroundedOtherIssueOpen": "Travaux terminés, toujours immobilisé : {count, plural, one {un autre problème critique est ouvert, « {description} ».} other {# problèmes critiques sont ouverts, dont « {description} ».}}",
       "completionSentBack": "Fin des travaux renvoyée : {reason}",
       "opened": "Ouvert",
       "atBy": "{date} par {name}",
@@ -3288,7 +3243,6 @@
       },
       "all": {
         "title": "Toutes les actions",
-        "description": "Tout ce que vous pouvez faire sur {vehicle}, par domaine.",
         "search": "Rechercher une action",
         "searchPlaceholder": "Rechercher, ex. plein, renouveler, valider",
         "noMatch": "Aucune action ne correspond à « {query} »."
@@ -3316,8 +3270,8 @@
     "hint": {
       "posts": "Vos saisies sont enregistrées directement, quel que soit le montant.",
       "postsAt": "À ce montant, la saisie est enregistrée directement.",
-      "above": "Au-delà de {amount}, cette saisie attend {approver, select, FINANCE_APPROVES {la Finance} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} DIRECTION_APPROVES {la Direction} other {une approbation}}.",
-      "always": "Cette saisie attend {approver, select, FINANCE_APPROVES {la Finance} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} DIRECTION_APPROVES {la Direction} other {une approbation}}."
+      "above": "Au-delà de {amount} : attend {approver, select, FINANCE_APPROVES {la Finance} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} DIRECTION_APPROVES {la Direction} other {une approbation}}.",
+      "always": "Attend {approver, select, FINANCE_APPROVES {la Finance} FINANCE_PEER_APPROVES {un autre membre de la Finance ou la Direction} DIRECTION_APPROVES {la Direction} other {une approbation}}."
     }
   },
   "reasonCodes": {
@@ -3328,13 +3282,14 @@
   },
   "settings": {
     "title": "Paramètres de l'entreprise",
-    "description": "Des règles qui s'appliquent à toute l'entreprise. Seuls la Direction et les Administrateurs peuvent les modifier.",
+    "description": "Seuls la Direction et les Administrateurs peuvent modifier ces règles.",
     "retry": "Réessayer",
     "summary": {
-      "title": "Résumé du tableau de bord",
-      "description": "Quand le résumé s’affiche sur le tableau de bord et chaque vue d’ensemble. Il s’affiche aussi lors d’un changement important, sauf avec Jamais.",
-      "loading": "Chargement du réglage du résumé",
-      "loadFailed": "Le réglage du résumé n’a pas pu être chargé.",
+      "title": "Résumé des vues d’ensemble",
+      "description": "Quand le résumé s’affiche sur la vue d’ensemble de chaque module. Il s’affiche aussi lors d’un changement important, sauf avec Jamais. Le tableau de bord montre toujours son verdict.",
+      "loading": "Chargement du réglage du résumé des vues d’ensemble",
+      "loadFailed": "Le réglage du résumé des vues d’ensemble n’a pas pu être chargé.",
+      "about": "À propos du résumé des vues d’ensemble",
       "closable": "Chacun peut toujours le fermer.",
       "schedule": {
         "MONDAY_AND_MONTH_START": "Chaque lundi et le 1er du mois",
@@ -3353,29 +3308,29 @@
       "description": "Jusqu'à quel montant une saisie d'argent est enregistrée sans contrôle, et qui décide au-delà.",
       "loading": "Chargement des règles d'approbation",
       "loadFailed": "Les règles d'approbation n'ont pas pu être chargées.",
+      "about": "À propos des approbations",
       "chainLabel": "La chaîne d'approbation",
       "noBands": "Les règles d'approbation de cette entreprise ont été réglées à la main ; elles ne se modifient pas ici. Contactez le support ROUTIQ.",
-      "byRole": "Ce que rencontrent les saisies de chaque rôle",
+      "byRole": "Saisies de chaque rôle",
       "byRoleHint": "Personne n'approuve sa propre saisie, et les saisies de la Direction sont toujours enregistrées directement.",
+      "sameAsCompany": "{roles} : comme la règle de l'entreprise",
       "kind": {
         "record-expense": "Dépenses",
         "record-revenue": "Recettes"
       },
       "roleKind": "{role} : {kind}",
       "overrides": "Exceptions pour une agence ou une catégorie",
-      "overridesHint": "Elles gardent leurs propres montants quand vous modifiez les seuils.",
       "override": "{kind, select, record-expense {Dépenses} record-revenue {Recettes} other {Décisions}}, {scope} : {role} {bounded, select, yes {jusqu'à {amount}} other {quel que soit le montant}}",
       "form": {
         "description": "S'applique à toutes les agences, dès la prochaine saisie.",
         "recording": "Enregistré directement jusqu'à",
-        "recordingHint": "Les saisies jusqu'à ce montant sont enregistrées sans contrôle.",
         "ceiling": "La Finance approuve jusqu'à",
-        "ceilingHint": "Au-delà du premier montant et jusqu'à celui-ci, la Finance décide. Au-delà, seule la Direction décide.",
         "whole": "Saisissez le montant en francs entiers, sans décimales.",
         "belowCeiling": "Gardez ce montant sous celui jusqu'auquel la Finance approuve.",
         "unchanged": "Modifiez un montant pour enregistrer.",
         "afterSaving": "Après l'enregistrement",
-        "whoIsTold": "Les membres {roles} verront les nouvelles règles sur leur prochain écran.",
+        "whoIsTold": "Prévenus à leur prochain écran :",
+        "overridesKept": "{count, plural, one {# exception d'agence ou de catégorie garde son montant.} other {# exceptions d'agence ou de catégorie gardent leurs montants.}}",
         "conflictTitle": "Les seuils ont changé pendant votre modification",
         "conflictBody": "Quelqu'un d'autre a enregistré de nouveaux seuils. Actualisez pour les voir, puis refaites votre modification."
       }
@@ -3383,7 +3338,7 @@
     "notify": {
       "success": {
         "thresholdsSaved": "Seuils d'approbation enregistrés",
-        "summaryScheduleSaved": "Résumé du tableau de bord enregistré"
+        "summaryScheduleSaved": "Résumé des vues d’ensemble enregistré"
       }
     }
   },
@@ -3427,7 +3382,9 @@
     },
     "counted": {
       "profitMeans": "Bénéfice = recettes − dépenses enregistrées dans ROUTIQ ; les impôts et les remboursements d’emprunt n’y sont pas.",
-      "postedAndTrips": "Compté : {count, plural, one {# écriture comptabilisée} other {# écritures comptabilisées}} et {closed, plural, one {# activité clôturée} other {# activités clôturées}}."
+      "postedAndTrips": "Compté : {count, plural, one {# écriture comptabilisée} other {# écritures comptabilisées}} et {closed, plural, one {# activité clôturée} other {# activités clôturées}}.",
+      "open": "Comment c’est compté ?",
+      "incomplete": "Tout n’est pas compté"
     },
     "bridge": {
       "title": "Ce qui a changé le bénéfice",
@@ -3451,56 +3408,60 @@
     },
     "todo": {
       "title": "À faire",
-      "description": "Classé par sécurité, puis par montant · toutes vos agences",
+      "scopeShort": "Toutes vos agences",
       "empty": "Rien ne vous attend.",
       "loadFailed": "Impossible de charger vos tâches. Réessayez.",
       "seeAll": "Tout voir ({count})",
       "more": "Les {shown} premières sur {count}.",
       "rows": {
         "VEHICLE_GROUNDED": {
-          "title": "{asset} immobilisé depuis le {since}",
-          "detail": "Immobilisé {days, plural, =0 {aujourd’hui} one {depuis # jour} other {depuis # jours}} · aucun ordre de travail",
-          "detailPlanned": "Immobilisé {days, plural, =0 {aujourd’hui} one {depuis # jour} other {depuis # jours}} · un ordre de travail est prévu",
-          "detailReady": "Immobilisé {days, plural, =0 {aujourd’hui} one {depuis # jour} other {depuis # jours}} · réparé, attend sa remise en service",
-          "action": "Ouvrir"
+          "title": "{asset} immobilisé",
+          "detail": "{days, plural, =0 {Aujourd’hui} one {# jour} other {# jours}} · pas d’ordre de travail",
+          "detailPlanned": "{days, plural, =0 {Aujourd’hui} one {# jour} other {# jours}} · réparation prévue",
+          "detailReady": "{days, plural, =0 {Aujourd’hui} one {# jour} other {# jours}} · réparé",
+          "action": "Planifier la réparation",
+          "actionPlanned": "Voir la réparation",
+          "actionReady": "Remettre en service"
         },
         "ISSUE_UNPLANNED": {
           "title": "{asset} : {description}",
           "titleSafety": "{asset}, sécurité : {description}",
-          "detail": "Signalé le {since} · aucun ordre de travail ne le couvre",
+          "detail": "Signalé le {since}",
           "action": "Planifier la réparation"
         },
         "DOCUMENT_EXPIRED": {
           "title": "{asset} : {type} expiré",
-          "detail": "Expiré le {date}",
-          "action": "Ouvrir"
+          "detail": "Depuis le {date}",
+          "action": "Renouveler"
         },
         "DOCUMENT_EXPIRING": {
           "title": "{asset} : {type} expire {daysLeft, plural, =0 {dans moins d’un jour} one {dans # jour} other {dans # jours}}",
           "detail": "Expire le {date}",
-          "action": "Ouvrir"
+          "action": "Renouveler"
         },
         "ENTRIES_AWAITING_APPROVAL": {
-          "title": "{count, plural, one {# dépense attend} other {# dépenses attendent}} votre approbation",
-          "detail": "{amount} · la plus ancienne depuis le {since}",
+          "title": "{count, plural, one {# dépense à approuver} other {# dépenses à approuver}}",
+          "detail": "{amount} · depuis le {since}",
           "action": "Vérifier"
         },
         "ENTRIES_EVIDENCE_MISSING": {
-          "title": "{count, plural, one {# écriture n’a} other {# écritures n’ont}} pas de justificatif",
-          "detail": "{amount} · la plus ancienne depuis le {since}",
-          "action": "Ouvrir les écritures"
+          "title": "{count, plural, one {# écriture sans justificatif} other {# écritures sans justificatif}}",
+          "detail": "{amount} · depuis le {since}",
+          "action": "Ajouter les justificatifs"
         },
         "PERIOD_OPEN": {
-          "title": "{month} est encore ouvert",
-          "detail": "{submitted, plural, =0 {Rien n’attend d’approbation} one {# écriture attend une approbation} other {# écritures attendent une approbation}} · {missing, plural, =0 {tous les justificatifs sont là} one {# justificatif manquant} other {# justificatifs manquants}}",
+          "title": "{month} encore ouvert",
+          "detail": "{submitted, plural, =0 {Rien à approuver} other {# à approuver}} · {missing, plural, =0 {justificatifs complets} one {# justificatif manquant} other {# justificatifs manquants}}",
           "action": "Clôturer le mois"
         },
         "FUEL_PER_KM_HIGH": {
-          "title": "{asset} dépense {percent} de plus en carburant par km que la flotte",
+          "title": "{asset} : carburant par km {percent} au-dessus de la flotte",
           "detail": "{amount} par km · médiane de la flotte {median}",
           "action": "Ouvrir le véhicule"
         }
-      }
+      },
+      "scope": "Classé par sécurité, puis par argent, sur toutes vos agences.",
+      "scopeLabel": "Comment À faire est classé"
     },
     "vehicles": {
       "title": {
@@ -3512,7 +3473,7 @@
         "costs": "{period} · dépenses enregistrées sur chaque véhicule · les plus coûteux d’abord"
       },
       "atALossTitle": "Véhicules en perte",
-      "noneAtALoss": "Aucun véhicule n’a fait de perte sur cette période.",
+      "noneAtALoss": "Aucun véhicule en perte.",
       "empty": "Aucun véhicule sur cette période.",
       "unavailable": "Les chiffres par véhicule demandent le module Véhicules.",
       "columns": {
@@ -3577,7 +3538,8 @@
         "revenue": "Recettes",
         "expenses": "Dépenses",
         "profit": "Bénéfice des véhicules"
-      }
+      },
+      "companyCostsLabel": "Frais généraux"
     },
     "comingUp": {
       "title": "À venir",
@@ -3596,8 +3558,10 @@
           "title": "{count, plural, one {# activité prévue} other {# activités prévues}}",
           "detail": "{without, plural, =0 {véhicules affectés} one {# sans véhicule pour l’instant} other {# sans véhicule pour l’instant}}"
         }
-      }
-    }
+      },
+      "notCountedLabel": "Non compté"
+    },
+    "periodShort": "{period} vs {comparison}"
   },
   "overview": {
     "fleetBoard": {
@@ -3611,7 +3575,7 @@
       "today": "Aujourd'hui",
       "hint": "Pointez un jour pour le lire.",
       "todayTitle": "Statut du jour",
-      "tripDays": "{count, plural, one {# jour} other {# jours}} sur la route ces {days} derniers jours",
+      "tripDays": "{count, plural, one {# j} other {# j}} sur la route",
       "columns": {
         "vehicle": "Véhicule",
         "onTheRoad": "Sur la route"

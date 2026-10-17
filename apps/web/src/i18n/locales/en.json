@@ -18,8 +18,8 @@
     "loadFailed": "We couldn't load the dashboard. Please retry.",
     "retry": "Try again",
     "empty": {
-      "modulesOff": "Home has nothing to show: the modules that fill it are switched off for your company.",
-      "modulesOffCompanyPages": "Home has nothing to show: the modules that fill it are switched off for your company. The Company pages in the menu still work."
+      "modulesOff": "The modules behind Home are off for your company.",
+      "modulesOffCompanyPages": "The modules behind Home are off for your company. Company pages still work."
     },
     "cards": {
       "pendingApprovals": {
@@ -56,7 +56,7 @@
     },
     "recent": {
       "title": "Recent entries",
-      "viewAll": "View all entries",
+      "viewAll": "See all",
       "loading": "Loading…",
       "loadFailed": "We couldn't load entries. Please retry.",
       "empty": "No entries for this branch."
@@ -108,7 +108,6 @@
     }
   },
   "login": {
-    "subtitle": "Sign in to continue",
     "workspace": "Workspace",
     "username": "Username",
     "pin": "PIN code",
@@ -224,7 +223,6 @@
     },
     "eyebrow": "Operational fleet",
     "title": "Assets",
-    "subtitle": "Track every vehicle from registration through retirement.",
     "searchLabel": "Search assets",
     "searchPlaceholder": "Code, plate or model…",
     "filterLabel": "Filter assets",
@@ -326,7 +324,7 @@
       "chassisNumber": "Chassis number",
       "acquisitionDate": "Acquisition date",
       "acquisitionAmount": "Acquisition amount (FCFA)",
-      "description": "Copy what the papers say. Only the code, class and branch are needed now.",
+      "description": "Copy from the vehicle's papers.",
       "sections": {
         "identity": "Identity",
         "vehicle": "Plate and make",
@@ -379,55 +377,51 @@
         "groundedFirst": "{code} · {days, plural, =0 {since today} one {# day} other {# days}}",
         "documentsDue": "Documents due ≤ {days} days",
         "documentsDueNone": "Nothing due",
-        "documentsDueFirst": "First: {code} · {date}",
+        "documentsDueFirst": "{code} · {date}",
         "idle": "Idle {days}+ days",
         "idleNone": "Every vehicle worked",
         "idleNever": "{code} · never",
         "idleFirst": "{code} · {days, plural, one {# day} other {# days}}",
         "onTheRoad": "On the road, last {days} days",
-        "onTheRoadChange": "{arrow} {points, plural, one {# pt} other {# pts}} vs the {days} days before",
-        "onTheRoadSame": "Same as the {days} days before",
+        "onTheRoadChange": "{arrow} {points, plural, one {# pt} other {# pts}} vs prior {days} days",
+        "onTheRoadSame": "Same as prior {days} days",
         "onTheRoadNotRecorded": "{count, plural, one {# day not recorded} other {# days not recorded}}",
         "onTheRoadChangeNotRecorded": "{change} · {count, plural, one {# day not recorded} other {# days not recorded}}",
-        "onTheRoadInfo": "Vehicle-days on an activity ÷ vehicle-days recorded, last {days} days. Days nobody could record are left out."
+        "onTheRoadInfo": "Vehicle-days on an activity ÷ vehicle-days recorded, last {days} days, against the {days} days before. Days nobody could record are left out."
       },
       "due": {
-        "title": "Documents and services due",
-        "window": "Expired, and due in the next {days} days",
+        "titleWithin": "To renew within {days} days",
+        "seeAll": "See all ({count, number})",
+        "serviceNotCountedShort": "Services by km not counted",
         "loadFailed": "Could not load what is due.",
         "empty": "Nothing expired and nothing due in the next {days} days.",
         "rowTitle": "{code} · {type}",
-        "expired": "Expired {date} · {days, plural, =0 {today} one {# day ago} other {# days ago}}",
-        "dueIn": "{date} · {days, plural, =0 {today} one {in # day} other {in # days}}",
+        "expired": "{days, plural, =0 {Expired today} one {Expired # day ago} other {Expired # days ago}}",
+        "dueIn": "{days, plural, =0 {Due today} one {Due in # day} other {Due in # days}}",
         "serviceNotCounted": "Services by km are not counted: no service interval is recorded per vehicle yet.",
-        "truncated": "Only the first rows are shown.",
-        "openAll": "Open Documents"
+        "truncated": "Only the first rows are shown."
       },
       "profit": {
         "title": "Profit by vehicle",
-        "question": "Which earn, which lose?",
-        "questionPeriod": "Which earn, which lose? {period}.",
         "empty": "No vehicle has money recorded this month.",
         "trips": "{count, plural, one {# closed} other {# closed}}",
         "tripsKm": "{count, plural, one {# closed} other {# closed}} · {km, number} km",
         "more": "{count, plural, one {# more vehicle in Money} other {# more vehicles in Money}}",
-        "basis": "Revenue minus expenses recorded on the vehicle",
+        "periodBasis": "{period} · revenue − expenses on each vehicle",
         "openMoney": "Open Money"
       },
       "km": {
-        "all": "This month, km are known for every vehicle ({count, number}).",
         "some": "This month, km are known for {known, number} of {total, number} vehicles: {missing, plural, one {# activity has} other {# activities have}} no km."
       },
       "board": {
         "title": "Fleet board",
-        "question": "What did each vehicle do, day by day? Last {days} days.",
+        "window": "Last {days} days",
         "basis": {
           "all": "Status from activities, work orders and grounding.",
           "noMaintenance": "Status from activities. Work orders and grounding are not counted: Maintenance is off.",
           "noTrips": "Status from work orders and grounding only; every other day is not recorded.",
           "none": "No day can be recorded while these modules are off."
         },
-        "open": "Open the list",
         "loadFailed": "Could not load the fleet board.",
         "empty": "No vehicle to show."
       },
@@ -513,7 +507,6 @@
       "soFar": "So far",
       "stillMissing": "Still missing",
       "go": "Go",
-      "goTo": "Go to {field}",
       "hintWithDraft": "{missing} · draft saved {time}",
       "step": "Step {current} of {total}",
       "review": "Review",
@@ -608,8 +601,7 @@
     },
     "money": {
       "tiles": {
-        "waitingHint": "{amount} · oldest {age}",
-        "missing": "Missing receipt",
+        "waitingHint": "{amount} · since {date}",
         "missingHint": "Oldest {date}"
       },
       "lens": {
@@ -815,7 +807,6 @@
     },
     "periods": {
       "title": "Accounting months",
-      "lead": "Each month takes entries until finance locks it. Late corrections go into the open month.",
       "columns": {
         "period": "Period",
         "status": "Status",
@@ -829,8 +820,8 @@
       "statusOpen": "Open",
       "statusLocked": "Locked since {date}",
       "entryCount": "{count, plural, one {# entry} other {# entries}}",
-      "lockExplanation": "Entries already posted in this month can no longer change. A late entry dated in this month posts in the current month and keeps its date.",
-      "lockCurrentExplanation": "Entries already posted in this month can no longer change, and entries dated this month can't post until it is reopened.",
+      "lockExplanation": "Posted entries in {month} can no longer change. A late entry posts in the current month, keeping its date.",
+      "lockCurrentExplanation": "Posted entries in {month} can no longer change, and entries dated in it can't post until it is reopened.",
       "reasonLabel": "Reason for reopening",
       "reasonPlaceholder": "Explain why this period needs to be reopened…",
       "cancel": "Cancel",
@@ -848,7 +839,6 @@
       "branchUnknown": "The branch it was recorded in"
     },
     "page": {
-      "description": "Every revenue and expense.",
       "descriptionOwn": "The expenses you recorded.",
       "tabs": {
         "label": "Money sections",
@@ -866,28 +856,27 @@
         "3-months": "3 months",
         "12-months": "12 months"
       },
-      "period": "{period} compared with {comparison}",
+      "periodShort": "{period} vs {comparison}",
       "change": {
         "moved": "{arrow} {change} vs {period}",
         "same": "Same as {period}"
       },
       "tiles": {
         "expenses": "Expenses",
-        "revenue": "Revenue",
-        "approve": "To approve",
-        "monthClose": "{month} close"
+        "revenue": "Revenue"
       },
       "counted": {
         "posted": "Counted: {count, plural, one {# posted entry} other {# posted entries}}.",
         "waiting": "Not counted: {count, plural, one {# entry in the period waits} other {# entries in the period wait}} for approval ({amount}).",
         "missingReceipt": "{count, plural, one {# entry in the period has} other {# entries in the period have}} no receipt.",
         "openTrips": "{count, plural, one {# activity is still open} other {# activities are still open}}: their money may still come.",
-        "otherCurrency": "{count, plural, one {# entry in another currency is} other {# entries in another currency are}} left out."
+        "otherCurrency": "{count, plural, one {# entry in another currency is} other {# entries in another currency are}} left out.",
+        "open": "How is this counted?",
+        "incomplete": "Not everything is counted",
+        "waitingShort": "{count, plural, one {# waits for approval} other {# wait for approval}} · {amount}"
       },
       "categories": {
         "title": "Expenses by category",
-        "question": "Where did spending change?",
-        "description": "Where did spending change? {period} (bar) against {comparison} (mark).",
         "versus": "vs {amount}",
         "other": "{count, plural, one {# other category} other {# other categories}}",
         "empty": "No expenses in either period.",
@@ -898,34 +887,31 @@
         "empty": "Nothing waits for you.",
         "approve": "{count, plural, one {# entry waits} other {# entries wait}} for your approval",
         "missing": "{count, plural, one {# entry has} other {# entries have}} no receipt",
-        "openApprove": "Open To approve",
-        "openEntries": "Open in Entries",
         "review": "Review",
-        "closeMonth": "Close {month}"
+        "addReceipts": "Add receipts",
+        "monthOpen": "{month} still open",
+        "closeAction": "Close month",
+        "monthLocked": "Closed: {month}"
       },
       "monthClose": {
-        "locked": "Locked",
-        "open": "Open",
-        "none": "No entries",
         "earlier": "Earlier, not locked: {months}",
         "earlierMany": "{count} earlier months not locked"
       },
       "fuel": {
         "title": "Fuel per km by vehicle",
-        "question": "Is any vehicle spending more on fuel than it should? {period}, {currency} per km. Line = fleet median.",
-        "questionShort": "Is any vehicle spending more on fuel than it should?",
         "median": "Fleet median {amount}",
         "above": "Above the fleet median",
         "detailAbove": "{percent} above the median · {tally}",
         "valueHeader": "Fuel per km",
         "more": "{count, plural, one {# more vehicle} other {# more vehicles}}",
         "basis": "Fuel expenses ÷ km from legs or the odometer.",
+        "basisLabel": "How fuel per km is worked out",
         "notCounted": {
           "kmUnknown": "Not counted: {count, plural, one {# vehicle whose km are not known} other {# vehicles whose km are not known}}.",
           "noKm": "Not counted: {count, plural, one {# vehicle with no km in this period} other {# vehicles with no km in this period}}.",
           "noFuel": "Not counted: {count, plural, one {# vehicle with no fuel recorded} other {# vehicles with no fuel recorded}}."
         },
-        "empty": "No vehicle has both km and fuel recorded in this period.",
+        "empty": "No vehicle with both km and fuel.",
         "open": "See all vehicles"
       }
     }
@@ -1076,7 +1062,6 @@
       "overview": {
         "started": "Started",
         "ended": "Ended",
-        "legs": "Legs",
         "distance": "Distance"
       },
       "timeline": {
@@ -1119,10 +1104,10 @@
         "branchOnly": "Only the entries of your branches on this activity."
       },
       "status": {
-        "openFollow": "Close it when it is back; gaps are flagged, never invented.",
-        "gaps": "{count, plural, one {Closed, but # thing is missing} other {Closed, but # things are missing}}",
-        "gapsFollow": "Its profit can't be trusted until they are added: reopen it, add them, close it again.",
-        "gapsManager": "Its profit can't be trusted until they are added; a manager reopens it.",
+        "openFollow": "Its driver or a manager closes it on its return.",
+        "gaps": "{count, plural, one {# thing is missing} other {# things are missing}}",
+        "gapsFollow": "Its profit can't be trusted without them.",
+        "gapsManager": "Profit not reliable; a manager reopens it.",
         "complete": "Complete the activity"
       },
       "sections": {
@@ -1244,7 +1229,7 @@
       "pendingEntries": "{count, plural, one {# line awaiting approval} other {# lines awaiting approval}}"
     },
     "record": {
-      "subtitle": "Work down the paper sheet from top to bottom. Anything it does not say can stay empty.",
+      "subtitle": "Copy the paper road sheet.",
       "templateLegend": "Sheet type",
       "sections": {
         "references": "References",
@@ -1409,7 +1394,6 @@
         "loss": "Loss"
       }
     },
-    "subtitle": "Every activity your fleet runs, from start to close.",
     "metrics": {
       "thisWeek": "This week",
       "thisWeekHint": "Started since Monday",
@@ -1431,7 +1415,7 @@
       "empty": "Nothing is planned yet."
     },
     "overview": {
-      "openList": "See the list",
+      "fuelNotCounted": "Fuel is not counted: Money is off.",
       "tiles": {
         "weekClosed": "Closed this week",
         "weekClosedHint": "Of those started since Monday",
@@ -1440,7 +1424,7 @@
         "missingData": "Closed with missing data",
         "missingFuelKm": "{fuel, number} without fuel · {km, number} without km",
         "missingKm": "{km, number} without km",
-        "missingDataInfo": "Closed with an exception recorded at closing. Fuel and km are checked on every closed one.",
+        "missingDataInfo": "{fuelCounted, select, yes {Closed with an exception recorded at closing. Fuel and km are checked on every closed one.} other {Closed with an exception recorded at closing. Km are checked on every closed one; fuel is not counted: Money is off.}}",
         "emptyKm": "Km driven empty",
         "emptyKmChange": "{arrow} {points, plural, one {# pt} other {# pts}} vs {period}",
         "emptyKmSame": "Same as {period}",
@@ -1450,7 +1434,7 @@
       },
       "weeks": {
         "title": "Activities per week",
-        "question": "Is the work growing? Started and closed, last {count, number} weeks.",
+        "info": "Started and closed, last {count, number} weeks.",
         "closed": "Closed",
         "open": "Still open",
         "column": "Week of {week}: {started, number} started, {closed, number} closed",
@@ -1458,25 +1442,20 @@
       },
       "todo": {
         "title": "To do",
-        "description": "What is left to close",
         "empty": "Nothing is left to close.",
         "open": "{count, number} still open",
-        "oldest": "Oldest: {number}, started {date}",
-        "oldestWithTruck": "Oldest: {number} on {code}, started {date}",
-        "openList": "Open the list",
+        "closeTrips": "Close them",
+        "complete": "Complete",
         "noFuel": "{count, number} closed without fuel",
-        "noFuelDetail": "Add the fuel so their costs are complete.",
-        "noKm": "{count, number} closed without km",
-        "noKmDetail": "Add the km so their distances are complete."
+        "noKm": "{count, number} closed without km"
       },
       "routes": {
         "title": "Revenue per km by route",
-        "question": "Which routes pay best? {period}, {currency} per km.",
+        "info": "Which routes pay best? {period}, {currency} per km. Km include empty returns.",
         "route": "{from} – {to}",
         "detailWithoutKm": "{tally} · {without}",
         "labelHeader": "Route",
         "valueHeader": "Revenue per km",
-        "basis": "Km include empty returns.",
         "noKm": "Not counted, no km recorded: {routes}.",
         "noRevenue": "Not counted, no revenue recorded: {routes}.",
         "otherRoutes": "{count, plural, one {# other route is} other {# other routes are}} not shown.",
@@ -1486,8 +1465,7 @@
       },
       "summary": {
         "sentence": "{started, plural, =0 {No activity has started this week yet.} one {# activity started this week; {closed, number} of them closed.} other {# activities started this week; {closed, number} of them closed.}}",
-        "open": "{open, plural, =0 {Nothing is still open.} one {# activity is still open.} other {# activities are still open.}}",
-        "counted": "{fuelCounted, select, yes {Closed activities missing data: {fuel, number} without fuel and {km, number} without km.} other {Closed activities missing data: {km, number} without km. Fuel is not counted: Money is off.}}"
+        "open": "{open, plural, =0 {Nothing is still open.} one {# activity is still open.} other {# activities are still open.}}"
       }
     }
   },
@@ -1499,7 +1477,6 @@
     },
     "workOrders": {
       "tab": "Work orders",
-      "newHint": "Open a work order on an asset, with or without a problem behind it.",
       "loading": "Loading work orders…",
       "loadFailed": "Could not load the work orders. Please try again.",
       "emptyHint": "No work orders yet. Repairs opened here will show up in this list.",
@@ -1525,12 +1502,11 @@
         "REJECTED": "Rejected",
         "CANCELLED": "Cancelled"
       },
-      "openOnly": "Showing the work orders still open.",
+      "openOnly": "Open only",
       "showAll": "Show all"
     },
     "issues": {
       "tab": "Problems",
-      "newHint": "Describe the fault found on the asset. A safety-critical problem grounds the asset immediately.",
       "loading": "Loading problems…",
       "loadFailed": "Could not load the problems. Please try again.",
       "emptyHint": "No problems yet. Faults reported here will show up in this list.",
@@ -1596,7 +1572,6 @@
       "lowerSeverityHint": "The vehicle stays grounded: releasing it to service is a separate step. The reason stays on the audit trail."
     },
     "close": {
-      "hint": "Say what was done and what the repair cost.",
       "costSection": "Repair cost",
       "loading": "Loading costs already recorded…",
       "costsFailed": "Couldn't read the costs already recorded. Try again.",
@@ -1635,7 +1610,8 @@
       "preventive": "Preventive — no problem",
       "linkedIssue": "Linked problem",
       "unavailableTitle": "Asset grounded",
-      "unavailableHint": "Only a return to service reopens availability."
+      "unavailableHint": "Only a return to service reopens availability.",
+      "unavailableInfoLabel": "When it can drive again"
     },
     "notify": {
       "success": {
@@ -1655,7 +1631,6 @@
         "severityLowered": "Safety-critical mark removed"
       }
     },
-    "subtitle": "Problems reported and work orders, from report to repair.",
     "metrics": {
       "newProblems": "New problems",
       "newProblemsHint": "{count, plural, =0 {None safety critical} one {# safety critical} other {# safety critical}}",
@@ -1683,14 +1658,18 @@
         "offTheRoadSince": "{code} · since {date}",
         "workOrdersOpen": "Work orders open",
         "workOrdersOpenHint": "{approval, number} waiting approval · {completion, number} waiting sign-off",
+        "waitingApproval": "{count, number} waiting approval",
+        "waitingCompletion": "{count, number} waiting sign-off",
         "repairCost": "Repair cost",
-        "repairCostHint": "{count, plural, =0 {No work order completed in the last {window} days} one {# work order completed in the last {window} days} other {# work orders completed in the last {window} days}}"
+        "repairCostHint": "{count, plural, =0 {No repair in the last {window} days} one {# repair in the last {window} days} other {# repairs in the last {window} days}}"
       },
       "todo": {
         "title": "To do",
-        "description": "Safety first",
         "empty": "Nothing waits in the workshop.",
+        "seeAll": "See all",
         "problem": "{code} · {description}",
+        "safetyProblems": "{count, plural, one {# safety problem to triage} other {# safety problems to triage}}",
+        "otherProblems": "{count, plural, one {# problem to triage} other {# problems to triage}}",
         "reported": "Reported {when}",
         "reportedSafety": "Reported {when} · safety",
         "triage": "Triage",
@@ -1700,7 +1679,7 @@
       },
       "offRoad": {
         "title": "Days off the road per month",
-        "question": "Are repairs keeping vehicles off the road longer? Vehicle-days in the workshop or grounded.",
+        "counted": "Vehicle-days in the workshop or grounded, per month.",
         "column": "{month}: {days, plural, one {# vehicle-day} other {# vehicle-days}} off the road",
         "columnPartial": "{month} (so far): {days, plural, one {# vehicle-day} other {# vehicle-days}} off the road",
         "monthPartial": "{month} (so far)",
@@ -1713,7 +1692,6 @@
       "summary": {
         "sentence": "{open, plural, =0 {No problem is open.} one {# problem is open.} other {# problems are open.}}",
         "grounded": "{grounded, plural, =0 {No vehicle is off the road.} one {# vehicle is off the road.} other {# vehicles are off the road.}}",
-        "counted": "Repair time and cost over the last {days, number} days, from {count, plural, =0 {no completed work order} one {# completed work order} other {# completed work orders}}.",
         "badge": "{count, plural, one {# off the road} other {# off the road}}",
         "sentenceSafety": "{open, plural, one {# problem is open, and it is safety-critical.} other {# problems are open, {safety, number} of them safety-critical.}}"
       }
@@ -1727,7 +1705,7 @@
     "loading": "Loading people…",
     "loadFailed": "We couldn't load your people. Please retry.",
     "retry": "Try again",
-    "emptyHint": "No one registered yet. Add your drivers and conductors so you can assign them to sheets.",
+    "emptyHint": "No one registered yet.",
     "branchEmptyHint": "No one is attached to this branch.",
     "active": "Active",
     "inactive": "Inactive",
@@ -1753,12 +1731,11 @@
       "field": "Login",
       "placeholder": "Choose a login",
       "option": "{name} ({username})",
-      "linkHint": "This person signs in with the login you choose. Work planned for them, or with them on the crew, then shows as theirs.",
-      "relinkHint": "Choose the login this person signs in with from now on. The old link stays in the history.",
-      "unlinkHint": "{name} keeps their records, and the login stays. Work planned for {name} stops showing for that login. The link stays in the history.",
+      "linkHint": "Their planned work then shows on this login.",
+      "relinkHint": "The old link stays in the history.",
+      "unlinkHint": "{name}'s planned work stops showing on this login. Records stay.",
       "noneFree": "No login is free to link. Add the user first, under Users."
-    },
-    "lead": "The people your fleet works with: drivers, mechanics and crew. A person can drive without signing in."
+    }
   },
   "users": {
     "title": "Users",
@@ -1791,9 +1768,6 @@
       "activeOnly": "Active only",
       "includeDeactivated": "Include deactivated"
     },
-    "add": {
-      "description": "Create access for a member of your team. Hand them their username and PIN yourself: neither is sent anywhere."
-    },
     "form": {
       "displayName": "Full name",
       "username": "Login username",
@@ -1803,6 +1777,7 @@
       "allBranches": "All branches",
       "pin": "PIN",
       "confirmPin": "Confirm PIN",
+      "pinHint": "Hand it over yourself: nothing is sent.",
       "pinMismatch": "The two PINs do not match.",
       "pinTooShort": "The PIN must be at least {min} digits.",
       "cancel": "Cancel"
@@ -1828,8 +1803,7 @@
         "loginUnlinked": "Login unlinked"
       },
       "pinResetBody": "Give the new PIN to {name}: it appears nowhere else."
-    },
-    "lead": "Who can sign in, with which role and in which branches."
+    }
   },
   "branches": {
     "title": "Branches",
@@ -1847,12 +1821,9 @@
       "active": "Active",
       "inactive": "Deactivated"
     },
-    "add": {
-      "description": "Create a branch in your workspace. It becomes available in the forms and in user scope straight away."
-    },
     "form": {
       "code": "Code",
-      "codeHint": "The code appears in record numbers and cannot change.",
+      "codeHint": "Can't be changed later.",
       "codeInvalid": "2 to 8 characters, uppercase letters or digits (e.g. DLA).",
       "nameTooLong": "The name must be at most {max} characters.",
       "name": "Name",
@@ -1877,8 +1848,7 @@
       "info": {
         "switched": "You are viewing: {branch}"
       }
-    },
-    "lead": "Branches group vehicles, people and money by site. Each user sees the branches they are given."
+    }
   },
   "provenance": {
     "template": "{code} v{version}",
@@ -2420,7 +2390,7 @@
       "submitting": "Saving…"
     },
     "set-summary-schedule": {
-      "label": "Change Dashboard summary",
+      "label": "Change Overview summary",
       "submit": "Save",
       "submitting": "Saving…"
     },
@@ -2656,10 +2626,11 @@
       "reading": "{readingType, select, HOURS {Hour meter} other {Odometer}} {value}, {ago}",
       "readingValue": "{value, number} {readingType, select, HOURS {h} other {km}}",
       "noReading": "No odometer reading yet",
-      "locationNoReport": "Location: no report",
       "lifecycleSince": "{status} since {since}"
     },
     "details": {
+      "reportedLocationInfo": "Locations are reported by people, not GPS.",
+      "reportedLocationInfoLabel": "Where locations come from",
       "rightNow": "Right now",
       "vehicle": "Vehicle",
       "specifications": "Specifications",
@@ -2671,13 +2642,12 @@
       "lifecycle": "Lifecycle",
       "lifecycleSince": "{status} since {date}",
       "homeBranch": "Home branch",
-      "homeBranchValue": "{branch}, administrative home",
       "custodian": "Assigned driver",
       "custodianSince": "{name} since {date}",
       "custodianInactive": "Access deactivated",
       "nobodyAssigned": "Nobody assigned",
       "reportedLocation": "Reported location",
-      "reportedLocationNone": "No report. Locations are reported by people, not GPS.",
+      "reportedLocationNone": "No report",
       "odometer": "Odometer",
       "readingMeta": "{date} · {source} · {by}",
       "fleetCode": "Fleet code",
@@ -2713,43 +2683,38 @@
     },
     "status": {
       "grounded": {
-        "lead": "{days, plural, =0 {Grounded since today} one {Grounded since yesterday} other {Grounded for # days}} — reported: “{report}”.",
-        "noWorkOrder": "Nobody has planned the repair yet: problem {issue} has no work order.",
-        "repairRefused": "The repair was refused ({workOrder}); nobody has planned another yet.",
-        "awaitingAuthorization": "The repair ({workOrder}) is waiting for a manager to authorize it.",
-        "inProgress": "Waiting on the workshop to finish the repair ({workOrder}).",
-        "completionSentBack": "The completion of {workOrder} was sent back; waiting on the workshop to finish it.",
-        "awaitingSignOff": "The repair is done; waiting on a manager to sign off {workOrder}.",
-        "awaitingRelease": "The repair ({workOrder}) is completed; waiting on a manager to release it.",
-        "awaitingReleaseSignedOff": "The repair ({workOrder}) is signed off; waiting on a manager to release it.",
-        "issueClosedAwaitingRelease": "Problem {issue} was closed without a repair; waiting on a manager to release it to service.",
-        "otherIssueOpen": "The repair ({workOrder}) is completed, but {count, plural, one {another safety-critical problem is still open: “{description}” ({otherIssue}). It must be closed before release.} other {# other safety-critical problems are still open, including “{description}” ({otherIssue}). They must be closed before release.}}",
-        "otherIssueOpenSignedOff": "The repair ({workOrder}) is signed off, but {count, plural, one {another safety-critical problem is still open: “{description}” ({otherIssue}). It must be closed before release.} other {# other safety-critical problems are still open, including “{description}” ({otherIssue}). They must be closed before release.}}",
-        "issueClosedOtherIssueOpen": "Problem {issue} was closed without a repair, but {count, plural, one {another safety-critical problem is still open: “{description}” ({otherIssue}). It must be closed before release.} other {# other safety-critical problems are still open, including “{description}” ({otherIssue}). They must be closed before release.}}",
-        "doNotDrive": "Do not drive it until a manager releases it to service."
+        "lead": "{days, plural, =0 {Grounded since today.} one {Grounded since yesterday.} other {Grounded for # days.}}",
+        "noWorkOrder": "Repair not planned yet: {issue}.",
+        "repairRefused": "Repair refused ({workOrder}); none planned yet.",
+        "awaitingAuthorization": "Awaiting a manager's authorization: {workOrder}.",
+        "inProgress": "In repair: {workOrder}.",
+        "completionSentBack": "Completion sent back to the workshop: {workOrder}.",
+        "awaitingSignOff": "Awaiting a manager's sign-off: {workOrder}.",
+        "awaitingRelease": "Waiting for a manager to release it ({workOrder}).",
+        "awaitingReleaseSignedOff": "{workOrder} signed off; waiting for a manager to release it.",
+        "issueClosedAwaitingRelease": "Problem {issue} closed without repair; waiting for a manager to release it.",
+        "otherIssueOpen": "{workOrder} done, but {count, plural, one {another safety-critical problem is open: {otherIssue} “{description}”.} other {# safety-critical problems are open, including {otherIssue} “{description}”.}}",
+        "otherIssueOpenSignedOff": "{workOrder} signed off, but {count, plural, one {another safety-critical problem is open: {otherIssue} “{description}”.} other {# safety-critical problems are open, including {otherIssue} “{description}”.}}",
+        "issueClosedOtherIssueOpen": "Problem {issue} closed without repair, but {count, plural, one {another safety-critical problem is open: {otherIssue} “{description}”.} other {# safety-critical problems are open, including {otherIssue} “{description}”.}}",
+        "doNotDrive": "Do not drive it."
       },
-      "repairedLead": "Repair done — waiting for release to service.",
+      "repairedLead": "Repair done.",
       "available": {
         "lead": "Available.",
-        "sinceAndTrip": "In service since {since}; last activity {lastTrip}.",
-        "sinceNoTrips": "In service since {since}; no activities yet.",
-        "sinceOnly": "In service since {since}.",
         "lastTripOnly": "Last activity {lastTrip}.",
         "noTrips": "No activities yet."
       },
       "notAssessed": {
         "lead": "Availability not assessed.",
-        "follow": "The maintenance module is off, so nobody records whether this vehicle may be used."
+        "follow": "Maintenance module off."
       },
       "registered": {
-        "lead": "Registered, not in service yet.",
-        "follow": "Commission it to start its operating history."
+        "lead": "Registered, not in service yet."
       },
       "disposed": {
-        "lead": "{status, select, SOLD {Sold.} RETIRED {Retired.} other {Written off.}}",
-        "follow": "Its history stays readable; nothing new can be recorded."
+        "lead": "{status, select, SOLD {Sold.} RETIRED {Retired.} other {Written off.}}"
       },
-      "alsoDocumentExpired": "Also: {document} expired on {date}.",
+      "alsoDocumentExpired": "{document} expired on {date}.",
       "openRecord": "{kind, select, work_order {Open work order {ref}} issue {Open problem {ref}} other {Open}}",
       "lockedCaption": "{step} · {reason}"
     },
@@ -2796,22 +2761,20 @@
     },
     "now": {
       "todo": {
+        "showFewer": "Show fewer",
+        "showMore": "{count, plural, one {Show # more} other {Show # more}}",
         "title": "To do",
-        "description": "What needs you on this vehicle, most urgent first.",
-        "descriptionBesides": "Besides the repair above, what needs you on this vehicle.",
         "emptyTitle": "Nothing needs you right now.",
         "emptyTitleBesides": "Nothing else needs you on this vehicle.",
-        "emptyHint": "When something does, it shows up here with one button to handle it.",
         "loadFailed": "We couldn't load what needs you on this vehicle."
       },
       "month": {
-        "description": "This vehicle's share",
+        "infoLabel": "What these amounts count",
+        "description": "This vehicle's share of each entry. Posted is not paid; awaiting review is not in posted.",
         "posted": "Posted expenses",
-        "postedHint": "Posted is not the same as paid",
         "review": "Awaiting review",
         "reviewHint": "{count, plural, one {# entry, not counted in posted} other {# entries, not counted in posted}}",
         "missing": "Missing receipts",
-        "missingHint": "Recorded without proof",
         "seeMoney": "See money"
       },
       "recent": {
@@ -2827,7 +2790,7 @@
       },
       "ISSUE_OPEN_WHILE_AVAILABLE": {
         "title": "Problem {ref} is still open",
-        "detail": "{description}. The vehicle was released; resolve or dismiss the problem."
+        "detail": "{description} · vehicle released"
       },
       "WORK_ORDER_AWAITING_AUTHORIZATION": {
         "title": "{ref} awaiting authorization",
@@ -2852,7 +2815,7 @@
       },
       "ASSET_AWAITING_RELEASE": {
         "title": "Ready to release to service",
-        "detail": "{override, select, yes {The problem was closed without a repair; the release needs a reason.} other {The repair is completed.}}"
+        "detail": "{override, select, yes {Problem closed without repair} other {The repair is completed.}}"
       },
       "DOCUMENT_EXPIRED": {
         "title": "{type} expired",
@@ -2864,11 +2827,11 @@
       },
       "ENTRY_AWAITING_REVIEW": {
         "title": "{category} awaiting review",
-        "detail": "{ref} · {amount}, recorded by {name}."
+        "detail": "{ref} · {amount} · by {name}"
       },
       "ENTRY_EVIDENCE_MISSING": {
         "title": "Receipt missing",
-        "detail": "{ref} · {amount}, recorded by {name}."
+        "detail": "{ref} · {amount} · by {name}"
       },
       "DIRECTION_NOTE": {
         "title": "{description}",
@@ -2882,16 +2845,12 @@
       }
     },
     "maintenance": {
-      "title": "Maintenance",
-      "description": "Problems reported on this vehicle, and the work orders that fix them.",
       "loading": "Loading maintenance…",
       "loadFailed": "We couldn't load the maintenance records.",
       "workOrders": "Work orders",
-      "workOrdersHint": "Work in progress. Parts and labour are recorded as entries linked to the order.",
-      "workOrdersEmpty": "No work in progress. Plan one from a reported problem when something needs fixing.",
+      "workOrdersEmpty": "No work in progress.",
       "newProblems": "New problems",
-      "newProblemsHint": "Reported, but not planned into a work order yet.",
-      "newProblemsEmpty": "No new problems. Report one if something is wrong.",
+      "newProblemsEmpty": "No new problems.",
       "done": "Done",
       "doneSummary": "{workOrders, plural, one {# work order} other {# work orders}}, {problems, plural, one {# closed problem} other {# closed problems}}",
       "nextStepYours": "Next step is yours",
@@ -2910,27 +2869,31 @@
       "safetyCritical": "Safety-critical"
     },
     "money": {
+      "lifetimeExpenses": "Expenses {amount}",
+      "lifetimeRevenue": "Revenue {amount}",
+      "lifetimeInfo": "All posted entries since the vehicle was registered, as recorded in ROUTIQ: not cash paid, and taxes and loan repayments are not in it.",
+      "lifetimeInfoLabel": "What this total leaves out",
+      "lifetimeExcludes": "Posted, not paid · no taxes or loans",
+      "lifetimeLabel": "Since registration, posted",
+      "entriesInfoLabel": "How cancellations show",
+      "revenueBasis": "By posting period. Posted is not cash received.",
       "title": "Money",
-      "titleFor": "Money · {period}",
-      "description": "This vehicle's share of each entry. Awaiting review is never added to posted; posted is not paid.",
       "periodLabel": "Month",
       "periodPrev": "Previous month",
       "periodNext": "Next month",
       "loading": "Loading money…",
       "loadFailed": "We couldn't load this vehicle's money.",
       "posted": "Posted expenses",
-      "postedHint": "All layers · posted is not paid",
-      "postedBasis": "By posting period: what the books say for this month.",
+      "postedHint": "All layers",
+      "postedBasis": "By posting period: what the books say for this month. Posted is not paid.",
       "economicBasis": "By economic month: when the money was spent.",
       "review": "Awaiting review",
       "reviewHint": "{count, plural, one {# entry · not in posted} other {# entries · not in posted}}",
       "missing": "Missing receipts",
-      "missingHint": "Recorded without proof",
       "revenue": "Posted revenue",
-      "revenueHint": "Posted is not cash received",
       "entryCount": "{count, plural, one {# entry} other {# entries}}",
       "byCategory": "Expenses by category",
-      "byCategoryHint": "Posted, {period}",
+      "byCategoryHint": "Posted",
       "lastSixMonths": "Last 6 months",
       "lastSixMonthsHint": "Posted entries by posting period",
       "totalPosted": "Total posted",
@@ -2952,8 +2915,7 @@
       "noEntries": "No entries match this filter.",
       "forTrip": "for activity {number}",
       "forWorkOrder": "for work order {ref}",
-      "ofEntry": "of a {amount} entry",
-      "lifetime": "Lifetime, all posted entries since registration: Revenue {revenue} · Expenses {expenses} · {result}. Recorded in ROUTIQ: not cash paid, and taxes and loan repayments are not in it."
+      "ofEntry": "of a {amount} entry"
     },
     "layers": {
       "DIRECT": "Direct",
@@ -2968,10 +2930,8 @@
       "NOT_SUPPLIED": "No receipt"
     },
     "trips": {
-      "title": "Activities",
-      "description": "Activities with this vehicle",
-      "descriptionWithKm": "Activities with this vehicle · {km, number} km recorded",
-      "empty": "No activities yet. Start one when the vehicle leaves the depot.",
+      "kmRecorded": "{km, number} km recorded",
+      "empty": "No activities yet.",
       "loading": "Loading…",
       "loadFailed": "We couldn't load the activities.",
       "route": "{from} → {to}",
@@ -2998,9 +2958,7 @@
       "openFull": "Open the full activity"
     },
     "documents": {
-      "title": "Documents",
-      "description": "Expiry dates drive reminders. Renewing keeps every earlier version.",
-      "empty": "No documents yet. Add the insurance and the inspection so expiry reminders work.",
+      "empty": "No documents yet. Add the insurance and the inspection.",
       "expired": "Expired",
       "expiresIn": "{count, plural, =0 {Expires today} one {Expires in # day} other {Expires in # days}}",
       "valid": "Valid",
@@ -3039,8 +2997,6 @@
       }
     },
     "history": {
-      "title": "History",
-      "description": "Everything recorded on this vehicle. Nothing is edited away: corrections appear next to the original.",
       "filterLabel": "Show events",
       "filters": {
         "ALL": "All",
@@ -3057,7 +3013,6 @@
       "loadFailed": "We couldn't load the history.",
       "empty": "Nothing of this kind recorded yet.",
       "loadMore": "Load more",
-      "open": "Open",
       "event": {
         "asset-registered": "Vehicle registered",
         "asset-commissioned": "Put into service",
@@ -3123,9 +3078,9 @@
       "noteBy": "Note by {name}",
       "noteAppendOnly": "Notes are never edited. A correction is another note.",
       "fromProblem": "From problem {ref}",
-      "keepsGrounded": "This work order keeps the vehicle grounded. Once it is completed, a manager releases it to service.",
-      "keepsGroundedUntilRelease": "The work is done, but the vehicle stays grounded until a manager releases it to service.",
-      "keepsGroundedOtherIssueOpen": "The work is done, but the vehicle stays grounded: {count, plural, one {another safety-critical problem is still open: “{description}”.} other {# other safety-critical problems are still open, including “{description}”.}}",
+      "keepsGrounded": "Grounded during this work.",
+      "keepsGroundedUntilRelease": "Work done. Grounded until released to service.",
+      "keepsGroundedOtherIssueOpen": "Work done, still grounded: {count, plural, one {another safety-critical problem is open, “{description}”.} other {# safety-critical problems are open, including “{description}”.}}",
       "completionSentBack": "Completion sent back: {reason}",
       "opened": "Opened",
       "atBy": "{date} by {name}",
@@ -3288,7 +3243,6 @@
       },
       "all": {
         "title": "All actions",
-        "description": "Everything you can do on {vehicle}, by area.",
         "search": "Search actions",
         "searchPlaceholder": "Search, e.g. fuel, renew, sign off",
         "noMatch": "No action matches “{query}”."
@@ -3316,8 +3270,8 @@
     "hint": {
       "posts": "Your entries post directly at any amount.",
       "postsAt": "At this amount, the entry posts directly.",
-      "above": "Above {amount}, this entry waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or the Director} DIRECTION_APPROVES {the Director} other {approval}}.",
-      "always": "This entry waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or the Director} DIRECTION_APPROVES {the Director} other {approval}}."
+      "above": "Above {amount}: waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or the Director} DIRECTION_APPROVES {the Director} other {approval}}.",
+      "always": "Waits for {approver, select, FINANCE_APPROVES {Finance} FINANCE_PEER_APPROVES {another Finance member or the Director} DIRECTION_APPROVES {the Director} other {approval}}."
     }
   },
   "reasonCodes": {
@@ -3328,13 +3282,14 @@
   },
   "settings": {
     "title": "Company settings",
-    "description": "Rules that apply to everyone in the company. Only the Director and Administrators can change them.",
+    "description": "Only the Director and Administrators can change these rules.",
     "retry": "Try again",
     "summary": {
-      "title": "Dashboard summary",
-      "description": "When the summary shows on the Dashboard and every Overview. It also shows when something big changes, except under Never.",
-      "loading": "Loading the Dashboard summary setting",
-      "loadFailed": "The Dashboard summary setting could not be loaded.",
+      "title": "Overview summary",
+      "description": "When the summary shows on each module's Overview. It also shows when something big changes, except under Never. The Dashboard always shows its verdict.",
+      "loading": "Loading the Overview summary setting",
+      "loadFailed": "The Overview summary setting could not be loaded.",
+      "about": "About the Overview summary",
       "closable": "Each person can still close it.",
       "schedule": {
         "MONDAY_AND_MONTH_START": "Every Monday and on the 1st of the month",
@@ -3353,29 +3308,29 @@
       "description": "Up to which amount a money entry posts without review, and who decides it above that.",
       "loading": "Loading the approval rules",
       "loadFailed": "The approval rules could not be loaded.",
+      "about": "About approvals",
       "chainLabel": "The approval chain",
       "noBands": "This company's approval rules were set by hand, so they can't be changed here. Contact ROUTIQ support.",
-      "byRole": "What each role's own entries meet",
+      "byRole": "Each role's own entries",
       "byRoleHint": "Nobody approves their own entry, and the Director's own entries always post.",
+      "sameAsCompany": "{roles}: same as the company rule",
       "kind": {
         "record-expense": "Expenses",
         "record-revenue": "Revenue"
       },
       "roleKind": "{role}: {kind}",
       "overrides": "Exceptions for a branch or a category",
-      "overridesHint": "These keep their own amounts when you change the thresholds.",
       "override": "{kind, select, record-expense {Expenses} record-revenue {Revenue} other {Decisions}}, {scope}: {role} {bounded, select, yes {up to {amount}} other {at any amount}}",
       "form": {
         "description": "Applies to every branch, from the next entry on.",
         "recording": "Posts directly up to",
-        "recordingHint": "Entries up to this amount post without review.",
         "ceiling": "Finance approves up to",
-        "ceilingHint": "Above the first amount and up to this one, Finance decides. Above it, only the Director decides.",
         "whole": "Enter the amount in whole francs, without decimals.",
         "belowCeiling": "Keep this below the amount Finance approves up to.",
         "unchanged": "Change an amount to save.",
         "afterSaving": "After saving",
-        "whoIsTold": "{roles} members will see the new rules on their next screen.",
+        "whoIsTold": "Told on their next screen:",
+        "overridesKept": "{count, plural, one {# branch or category exception keeps its own amount.} other {# branch or category exceptions keep their own amounts.}}",
         "conflictTitle": "The thresholds changed while you were editing",
         "conflictBody": "Someone else saved new thresholds. Refresh to see them, then make your change again."
       }
@@ -3383,7 +3338,7 @@
     "notify": {
       "success": {
         "thresholdsSaved": "Approval thresholds saved",
-        "summaryScheduleSaved": "Dashboard summary saved"
+        "summaryScheduleSaved": "Overview summary saved"
       }
     }
   },
@@ -3427,7 +3382,9 @@
     },
     "counted": {
       "profitMeans": "Profit = revenue − expenses recorded in ROUTIQ; taxes and loan repayments aren't in it.",
-      "postedAndTrips": "Counted: {count, plural, one {# posted entry} other {# posted entries}} and {closed, plural, one {# closed activity} other {# closed activities}}."
+      "postedAndTrips": "Counted: {count, plural, one {# posted entry} other {# posted entries}} and {closed, plural, one {# closed activity} other {# closed activities}}.",
+      "open": "How is this counted?",
+      "incomplete": "Not everything is counted"
     },
     "bridge": {
       "title": "What changed the profit",
@@ -3451,56 +3408,60 @@
     },
     "todo": {
       "title": "To do",
-      "description": "Ranked by safety, then money · all your branches",
+      "scopeShort": "All your branches",
       "empty": "Nothing waits for you.",
       "loadFailed": "We couldn't load your To do. Try again.",
       "seeAll": "See all {count}",
       "more": "Showing the first {shown} of {count}.",
       "rows": {
         "VEHICLE_GROUNDED": {
-          "title": "{asset} off the road since {since}",
-          "detail": "Grounded {days, plural, =0 {today} one {# day} other {# days}} · no work order yet",
-          "detailPlanned": "Grounded {days, plural, =0 {today} one {# day} other {# days}} · a work order is planned",
-          "detailReady": "Grounded {days, plural, =0 {today} one {# day} other {# days}} · repaired, waits to be released",
-          "action": "Open"
+          "title": "{asset} grounded",
+          "detail": "{days, plural, =0 {Today} one {# day} other {# days}} · no work order",
+          "detailPlanned": "{days, plural, =0 {Today} one {# day} other {# days}} · repair planned",
+          "detailReady": "{days, plural, =0 {Today} one {# day} other {# days}} · repaired",
+          "action": "Plan the repair",
+          "actionPlanned": "See the repair",
+          "actionReady": "Release"
         },
         "ISSUE_UNPLANNED": {
           "title": "{asset}: {description}",
           "titleSafety": "{asset}, safety: {description}",
-          "detail": "Reported {since} · no work order covers it",
+          "detail": "Reported {since}",
           "action": "Plan the repair"
         },
         "DOCUMENT_EXPIRED": {
-          "title": "{asset} {type} has expired",
-          "detail": "Expired on {date}",
-          "action": "Open"
+          "title": "{asset} {type} expired",
+          "detail": "Since {date}",
+          "action": "Renew"
         },
         "DOCUMENT_EXPIRING": {
           "title": "{asset} {type} expires in {daysLeft, plural, =0 {less than a day} one {# day} other {# days}}",
           "detail": "Expires on {date}",
-          "action": "Open"
+          "action": "Renew"
         },
         "ENTRIES_AWAITING_APPROVAL": {
-          "title": "{count, plural, one {# expense waits} other {# expenses wait}} for your approval",
-          "detail": "{amount} · oldest since {since}",
+          "title": "{count, plural, one {# expense to approve} other {# expenses to approve}}",
+          "detail": "{amount} · since {since}",
           "action": "Review"
         },
         "ENTRIES_EVIDENCE_MISSING": {
-          "title": "{count, plural, one {# entry has} other {# entries have}} no receipt",
-          "detail": "{amount} · oldest since {since}",
-          "action": "Open entries"
+          "title": "{count, plural, one {# entry without a receipt} other {# entries without a receipt}}",
+          "detail": "{amount} · since {since}",
+          "action": "Add receipts"
         },
         "PERIOD_OPEN": {
-          "title": "{month} is still open",
-          "detail": "{submitted, plural, =0 {Nothing waits for approval} one {# entry waits for approval} other {# entries wait for approval}} · {missing, plural, =0 {every receipt in} one {# receipt missing} other {# receipts missing}}",
+          "title": "{month} still open",
+          "detail": "{submitted, plural, =0 {Nothing to approve} other {# to approve}} · {missing, plural, =0 {receipts complete} one {# receipt missing} other {# receipts missing}}",
           "action": "Close month"
         },
         "FUEL_PER_KM_HIGH": {
-          "title": "{asset} spends {percent} more on fuel per km than the fleet",
+          "title": "{asset} fuel per km {percent} above the fleet",
           "detail": "{amount} per km · fleet median {median}",
           "action": "Open the vehicle"
         }
-      }
+      },
+      "scope": "Ranked by safety, then money, across all your branches.",
+      "scopeLabel": "How To do is ranked"
     },
     "vehicles": {
       "title": {
@@ -3512,7 +3473,7 @@
         "costs": "{period} · expenses recorded on each vehicle · costliest first"
       },
       "atALossTitle": "Vehicles at a loss",
-      "noneAtALoss": "No vehicle made a loss in this period.",
+      "noneAtALoss": "No vehicle at a loss.",
       "empty": "No vehicle in this period.",
       "unavailable": "Figures by vehicle need the Vehicles module.",
       "columns": {
@@ -3577,7 +3538,8 @@
         "revenue": "Revenue",
         "expenses": "Expenses",
         "profit": "Vehicle profit"
-      }
+      },
+      "companyCostsLabel": "Company costs"
     },
     "comingUp": {
       "title": "Coming up",
@@ -3596,8 +3558,10 @@
           "title": "{count, plural, one {# activity planned} other {# activities planned}}",
           "detail": "{without, plural, =0 {every one has a vehicle} one {# without a vehicle yet} other {# without a vehicle yet}}"
         }
-      }
-    }
+      },
+      "notCountedLabel": "Not counted"
+    },
+    "periodShort": "{period} vs {comparison}"
   },
   "overview": {
     "fleetBoard": {
@@ -3611,7 +3575,7 @@
       "today": "Today",
       "hint": "Point at a day to read it.",
       "todayTitle": "Today's status",
-      "tripDays": "{count, plural, one {# day} other {# days}} on the road in the last {days}",
+      "tripDays": "{count, plural, one {# day} other {# days}} on the road",
       "columns": {
         "vehicle": "Vehicle",
         "onTheRoad": "On the road"

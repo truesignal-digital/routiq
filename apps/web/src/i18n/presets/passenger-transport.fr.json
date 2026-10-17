@@ -53,8 +53,8 @@
     },
     "overview": {
       "tiles": {
-        "idle": "Sans voyage depuis {days} jours ou plus",
-        "onTheRoadInfo": "Jours-véhicule en voyage ÷ jours-véhicule renseignés, {days} derniers jours. Les jours que personne ne pouvait renseigner sont exclus."
+        "idle": "Sans voyage ≥ {days} jours",
+        "onTheRoadInfo": "Jours-véhicule en voyage ÷ jours-véhicule renseignés, {days} derniers jours, comparés aux {days} jours d'avant. Les jours que personne ne pouvait renseigner sont exclus."
       },
       "km": {
         "some": "Ce mois-ci, les km sont connus pour {known, number} véhicules sur {total, number} : {missing, plural, one {# voyage n’a} other {# voyages n’ont}} pas de km."
@@ -124,7 +124,9 @@
       "closedAt": "Clôturé le {date}",
       "loadFailed": "Impossible de charger ce voyage.",
       "status": {
-        "complete": "Compléter le voyage"
+        "complete": "Compléter le voyage",
+        "openFollow": "Son chauffeur ou un responsable le clôture à son retour.",
+        "gapsManager": "Bénéfice pas fiable ; un responsable le rouvre."
       }
     },
     "actions": {
@@ -153,7 +155,6 @@
         "asset": "Véhicule"
       }
     },
-    "subtitle": "Chaque voyage de vos véhicules, du départ à la clôture.",
     "status": {
       "PLANNED": "Planifié",
       "CLOSED": "Clôturé",
@@ -173,20 +174,17 @@
       },
       "summary": {
         "sentence": "{started, plural, =0 {Aucun voyage n’a encore commencé cette semaine.} one {# voyage a commencé cette semaine ; {closed, number} clôturé.} other {# voyages ont commencé cette semaine ; {closed, number} clôturés.}}",
-        "open": "{open, plural, =0 {Rien n’est encore ouvert.} one {# voyage est encore ouvert.} other {# voyages sont encore ouverts.}}",
-        "counted": "{fuelCounted, select, yes {Voyages clôturés incomplets : {fuel, number} sans carburant et {km, number} sans km.} other {Voyages clôturés incomplets : {km, number} sans km. Le carburant n’est pas compté : Finances est désactivé.}}"
+        "open": "{open, plural, =0 {Rien n’est encore ouvert.} one {# voyage est encore ouvert.} other {# voyages sont encore ouverts.}}"
       }
     }
   },
   "maintenance": {
     "workOrders": {
-      "newHint": "Ouvrez un ordre de travail sur un véhicule, avec ou sans problème à l'origine.",
       "columns": {
         "asset": "Véhicule"
       }
     },
     "issues": {
-      "newHint": "Décrivez le défaut constaté sur le véhicule. Un problème critique pour la sécurité immobilise le véhicule immédiatement.",
       "columns": {
         "asset": "Véhicule"
       }
@@ -235,10 +233,7 @@
       "trips": "Voyages"
     },
     "trips": {
-      "title": "Voyages",
-      "description": "Voyages avec ce véhicule",
-      "descriptionWithKm": "Voyages avec ce véhicule · {km, number} km enregistrés",
-      "empty": "Aucun voyage pour l'instant. Démarrez-en un quand le véhicule quitte le dépôt.",
+      "empty": "Aucun voyage pour l'instant.",
       "tripNumber": "Voyage {number}",
       "wholeTrip": "Montants du voyage entier",
       "noMoney": "Aucune écriture liée à ce voyage.",
@@ -262,8 +257,6 @@
     },
     "status": {
       "available": {
-        "sinceAndTrip": "En service depuis {since} ; dernier voyage {lastTrip}.",
-        "sinceNoTrips": "En service depuis {since} ; aucun voyage pour l'instant.",
         "lastTripOnly": "Dernier voyage {lastTrip}.",
         "noTrips": "Aucun voyage pour l'instant."
       }

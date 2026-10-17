@@ -223,6 +223,30 @@ describe("UsersScreen", () => {
     expect(screen.getByText("users.status.DEACTIVATED")).toBeTruthy();
   });
 
+  it("keeps each member's branches on a phone row", async () => {
+    // jsdom matches no width query: the table renders its phone rows.
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+    render(<UsersScreen />);
+
+    expect(await screen.findByText("Amina Fotso")).toBeTruthy();
+    expect(document.querySelector("tr")).toBeNull();
+    expect(screen.getAllByText(/Yaoundé/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/users\.form\.allBranches/).length).toBeGreaterThan(0);
+  });
+
   it.each(["FINANCE", "CASHIER", "TECHNICIAN", "DRIVER"])(
     "shows %s the reason rather than the workspace's usernames",
     async (role) => {

@@ -1,12 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Route, TriangleAlert } from "lucide-react";
+import { Route, TriangleAlert, X } from "lucide-react";
 import type { ActivityDetail } from "@routiq/contracts";
 import { MetricStrip, type MetricTiles } from "@/components/metric-strip.js";
 import { NotRecorded } from "@/components/not-recorded.js";
 import { ContextBox, ContextRow, Fact, FactsSection } from "@/components/record-page.js";
-import { StatusBadge } from "@/components/status-badge.js";
 import type { StatusBlockProps } from "@/components/status-block.js";
 import { formatDateTime, formatMoney, localizedLabel, profitOrLoss } from "@/lib/format.js";
 import { postedNetMinor } from "./ActivityMoney.js";
@@ -53,7 +52,8 @@ export function tripReadings(activity: Pick<ActivityDetail, "segments" | "readin
 /**
  * The status block's sentence for a trip: on the road, waiting to be closed;
  * or closed with things missing, which only a reopen can fill. Nothing for a
- * complete trip.
+ * complete trip. The button is the next step, so the sentence only says who
+ * acts when the viewer cannot; what is missing is a checklist, one fact a line.
  */
 export function useTripStatus(
   activity: ActivityDetail,
@@ -66,7 +66,7 @@ export function useTripStatus(
       tone: "waiting",
       icon: Route,
       lead: t("activities.state.onTheRoad"),
-      follow: t("activities.detail.status.openFollow"),
+      ...(actions.close === null ? { follow: t("activities.detail.status.openFollow") } : {}),
       action: actions.close ?? undefined,
     };
   }
@@ -76,24 +76,13 @@ export function useTripStatus(
       tone: "waiting",
       icon: TriangleAlert,
       lead: t("activities.detail.status.gaps", { count: activity.completenessCodes.length }),
+      // Missing facts make the trip's profit unreliable: said at rest, not behind a tap (§9).
       follow: t(actions.complete === null ? "activities.detail.status.gapsManager" : "activities.detail.status.gapsFollow"),
-      notes: [
-        {
-          key: "codes",
-          icon: TriangleAlert,
-          body: (
-            <ul className="flex flex-wrap gap-2">
-              {activity.completenessCodes.map((code) => (
-                <li key={code}>
-                  <StatusBadge tone="warning" icon={null}>
-                    {t(`warnings.${code}`)}
-                  </StatusBadge>
-                </li>
-              ))}
-            </ul>
-          ),
-        },
-      ],
+      notes: activity.completenessCodes.map((code) => ({
+        key: code,
+        icon: X,
+        body: <span data-slot="trip-missing-fact">{t(`warnings.${code}`)}</span>,
+      })),
       action: actions.complete ?? undefined,
     };
   }
@@ -126,6 +115,7 @@ export function TripOverview({
           unit: t(`activities.detail.readings.units.${reading.readingType}`),
         });
 
+  // Three figures: the leg count is on the Legs tab.
   const tiles: MetricTiles = [
     {
       label: t("activities.detail.overview.started"),
@@ -138,10 +128,6 @@ export function TripOverview({
     {
       label: t("activities.detail.overview.distance"),
       value: activity.distanceKm === null ? null : t("activities.detail.km", { count: activity.distanceKm }),
-    },
-    {
-      label: t("activities.detail.overview.legs"),
-      value: String(activity.legCount),
     },
   ];
 
@@ -160,7 +146,7 @@ export function TripOverview({
                     <Link
                       to="/assets/$assetId"
                       params={{ assetId: segment.assetId }}
-                      className="tabular-nums underline decoration-foreground/25 underline-offset-[3px] hover:decoration-foreground"
+                      className="inline-flex min-h-11 min-w-11 items-center tabular-nums underline decoration-foreground/25 underline-offset-[3px] hover:decoration-foreground desktop:min-h-6 desktop:min-w-0"
                     >
                       {segment.assetCode}
                     </Link>
@@ -232,7 +218,7 @@ export function TripMoneyBox({ entries, onOpen }: { entries: readonly Entry[]; o
         <button
           type="button"
           onClick={onOpen}
-          className="relative text-sm font-medium text-primary underline-offset-4 after:absolute after:-inset-x-2 after:-inset-y-3 hover:underline"
+          className="-my-3 inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline desktop:my-0 desktop:min-h-6"
         >
           {t("record.openTab")}
         </button>

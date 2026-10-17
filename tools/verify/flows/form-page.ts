@@ -86,7 +86,8 @@ async function desktop(ctx: DriveContext) {
     highlight: page.locator("[data-slot=form-page]"),
   });
 
-  await context.getByRole("button", { name: t("Aller à Arrivée", "Go to Arrival") }).click();
+  // A missing item is named by its label, then its section.
+  await context.locator("[data-slot=form-page-missing]").getByRole("button", { name: new RegExp(`^${t("Arrivée", "Arrival")}\\b`) }).click();
   await page.waitForTimeout(600);
   const focusedArrival = await page.evaluate(() => document.activeElement?.closest("[data-field]")?.getAttribute("data-field"));
   if (focusedArrival !== "endedAt") wrong.push(`Go to Arrival focused ${focusedArrival ?? "nothing"}`);
@@ -239,7 +240,7 @@ async function phone(ctx: DriveContext) {
     caption: "Its review lists what is still missing (code and class) with a Go link to each, and Cancel then Register truck",
     highlight: page.locator("[data-slot=form-page-review]"),
   });
-  await page.getByRole("button", { name: t("Aller à Code du camion", "Go to Truck code") }).click();
+  await page.locator("[data-slot=form-page-missing]").getByRole("button", { name: new RegExp(`^${t("Code du camion", "Truck code")}\\b`) }).click();
   await page.waitForTimeout(600);
   const focused = await page.evaluate(() => document.activeElement?.closest("[data-field]")?.getAttribute("data-field"));
   if (focused !== "assetCode") wrong.push(`Go to Truck code focused ${focused ?? "nothing"}`);

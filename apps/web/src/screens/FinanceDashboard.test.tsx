@@ -199,8 +199,12 @@ describe("Dashboard › Overview", () => {
     expect(tileText("canDrive")).toContain("Every vehicle in the fleet can drive");
   });
 
-  it("says what profit is and what was not counted yet", () => {
+  it("says what profit is and what was not counted yet, one tap away instead of on the page", async () => {
     renderTab(<DashboardOverviewTab />);
+    expect(document.querySelector("[data-slot='dashboard-counted']")).toBeNull();
+    // Entries wait for approval, so the way in is a warning at rest, never a neutral question.
+    expect(screen.queryByRole("button", { name: "How is this counted?" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Not everything is counted" }));
     const counted = document.querySelector("[data-slot='dashboard-counted']")?.textContent ?? "";
     expect(counted).toContain("taxes and loan repayments aren't in it");
     expect(counted).toContain("84 posted entries and 27 closed");
@@ -208,7 +212,28 @@ describe("Dashboard › Overview", () => {
     expect(counted).toContain("5 ");
   });
 
-  it("opens on the 1st with last month's summary above the tiles and the expenses jump named (#667)", () => {
+  it("says at rest what waits for approval in the period, to an Administrateur with no approve row", () => {
+    renderTab(<DashboardOverviewTab />, me("ADMIN"));
+    const verdict = document.querySelector("[data-slot='dashboard-verdict']") as HTMLElement;
+    const waiting = verdict.querySelector("[data-slot='dashboard-waiting']")?.textContent?.replace(/\s/g, " ");
+    expect(waiting).toBe("6 wait for approval · 1 140 000 FCFA");
+  });
+
+  it("says the period's whole pending total even when the approver may decide none of it", () => {
+    state.todo = todo(0);
+    renderTab(<DashboardOverviewTab />, me("FINANCE"));
+    expect(document.querySelector("[data-slot='dashboard-waiting']")?.textContent?.replace(/\s/g, " ")).toBe(
+      "6 wait for approval · 1 140 000 FCFA",
+    );
+  });
+
+  it("drops the pending line when nothing in the period waits", () => {
+    state.overview = testOverview({ notCounted: { ...testOverview().notCounted, waitingApproval: { count: 0, amountMinor: 0 } } });
+    renderTab(<DashboardOverviewTab />);
+    expect(document.querySelector("[data-slot='dashboard-waiting']")).toBeNull();
+  });
+
+  it("gives the verdict and its reason under the tiles, the whole summary one tap away (#667)", async () => {
     localStorage.clear();
     state.overview = testOverview({
       summary: {
@@ -230,17 +255,20 @@ describe("Dashboard › Overview", () => {
       },
     });
     renderTab(<DashboardOverviewTab />);
-    const region = screen.getByRole("region", { name: "Summary" });
-    const text = region.textContent?.replace(/\s/g, " ") ?? "";
-    expect(text).toContain("Start of the month summary · Sunday 1 November");
-    expect(text).toContain("In October: a profit of 6 900 000 FCFA on 9 560 000 FCFA revenue, 460 000 FCFA better than September.");
-    expect(text).toContain("Revenue rose by 660 000 FCFA.");
-    expect(text).toContain("Expenses are 26% above September.");
+    // No closable notice on the Dashboard: the verdict and its reason always sit under the tiles.
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+    const verdict = document.querySelector("[data-slot='dashboard-verdict']") as HTMLElement;
+    const text = verdict.textContent?.replace(/\s/g, " ") ?? "";
+    // On 1 November the summary is October's: the verdict names its month, whatever the tiles' range.
+    expect(verdict.querySelector("[data-slot='dashboard-verdict-month']")?.textContent).toBe("October");
     expect(text).toContain("Ahead of September");
-    // Above the tiles, with what it counted inside it.
+    expect(text).toContain("Revenue rose by 660 000 FCFA.");
     const tiles = document.querySelector("[data-slot='metric-strip']")!;
-    expect(region.compareDocumentPosition(tiles) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(region.querySelector("[data-slot='dashboard-counted']")).toBeTruthy();
+    expect(tiles.compareDocumentPosition(verdict) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await userEvent.click(within(verdict).getByRole("button", { name: "Not everything is counted" }));
+    const popover = document.querySelector("[data-slot='info-popover']")?.textContent?.replace(/\s/g, " ") ?? "";
+    expect(popover).toContain("In October: a profit of 6 900 000 FCFA on 9 560 000 FCFA revenue, 460 000 FCFA better than September.");
+    expect(popover).toContain("taxes and loan repayments aren't in it");
   });
 
   it("explains the change in a bridge whose table adds up to this month's profit", async () => {
@@ -275,13 +303,25 @@ describe("Dashboard › Overview", () => {
     expect(digits(rows.at(-1)?.[1])).toBe("1870000");
   });
 
-  it("puts the top five To do rows first on a phone, with a link to all of them", () => {
+  it("leads with what needs me, three rows with their verb, the rest one tap away", async () => {
     renderTab(<DashboardOverviewTab />);
     const card = document.querySelector("[data-slot='dashboard-todo-card']") as HTMLElement;
-    expect(card.className).toContain("order-first");
-    expect(within(card).getAllByRole("listitem")).toHaveLength(5);
+    const tiles = document.querySelector("[data-slot='metric-strip']")!;
+    expect(card.compareDocumentPosition(tiles) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(card).getAllByRole("listitem")).toHaveLength(3);
+    expect(within(card).getAllByRole("link", { name: "Renew" })).toHaveLength(3);
     expect(within(card).getByRole("link", { name: "See all 7" }).getAttribute("href")).toBe("/to-do");
-    expect(within(card).getByText("Ranked by safety, then money · all your branches")).toBeTruthy();
+    // To do ignores the header's branch, so its scope shows at rest; how it is ranked is one tap away.
+    expect(card.querySelector("[data-slot='dashboard-todo-scope']")?.textContent).toContain("All your branches");
+    expect(within(card).getByText("All your branches")).toBeTruthy();
+    await userEvent.click(within(card).getByRole("button", { name: "How To do is ranked" }));
+    expect(screen.getByText("Ranked by safety, then money, across all your branches.")).toBeTruthy();
+    cleanup();
+    state.mobile = true;
+    renderTab(<DashboardOverviewTab />);
+    const phone = document.querySelector("[data-slot='dashboard-todo-card']") as HTMLElement;
+    expect(within(phone).getAllByRole("listitem")).toHaveLength(3);
+    expect(within(phone).getByText("All your branches")).toBeTruthy();
   });
 
   it("lists vehicles losses first, then all vehicles − company costs = company profit", () => {
@@ -301,7 +341,7 @@ describe("Dashboard › Overview", () => {
     ]);
   });
 
-  it("draws revenue and expenses for 12 months and vehicle profit by branch, with company costs left out", () => {
+  it("draws revenue and expenses for 12 months and vehicle profit by branch, with company costs left out", async () => {
     renderTab(<DashboardOverviewTab />);
     expect(screen.getByText("Revenue and expenses per month")).toBeTruthy();
     const branches = document.querySelector("[data-slot='dashboard-branches-card']") as HTMLElement;
@@ -310,16 +350,22 @@ describe("Dashboard › Overview", () => {
       "Yaoundé",
       "Douala",
     ]);
-    expect(branches.querySelector("[data-slot='company-costs-note']")?.textContent).toBe(
+    await userEvent.click(within(branches).getByRole("button", { name: "Company costs" }));
+    expect(document.querySelector("[data-slot='info-popover']")?.textContent).toBe(
       `Company costs (${money(640_000)}) are not split by branch.`,
     );
   });
 
-  it("lists what is coming up and says what it could not count", () => {
+  it("lists what is coming up, and says what it could not count when asked", async () => {
     renderTab(<DashboardOverviewTab />);
     const card = document.querySelector("[data-slot='dashboard-coming-up']") as HTMLElement;
     expect(within(card).getByText("VH005 Roadworthiness test")).toBeTruthy();
-    expect(within(card).getByText(/ROUTIQ doesn't record service intervals yet/)).toBeTruthy();
+    // It ignores the header's branch, so its window and scope are said at rest.
+    expect(card.querySelector("[data-slot='dashboard-coming-up-scope']")?.textContent).toBe("Next 14 days · all your branches");
+    expect(within(card).queryByText(/ROUTIQ doesn't record service intervals yet/)).toBeNull();
+    // That something is left out shows at rest; the detail is one tap away.
+    await userEvent.click(within(card).getByRole("button", { name: "Not counted" }));
+    expect(screen.getByText(/ROUTIQ doesn't record service intervals yet/)).toBeTruthy();
   });
 
   it("shows only the chosen branch's vehicles and branch, and names the rest so the lines still add up", () => {
@@ -398,14 +444,15 @@ describe("Dashboard › Profit by vehicle and Profit by branch", () => {
     }
   });
 
-  it("lists every branch with its vehicles, revenue, expenses and vehicle profit", () => {
+  it("lists every branch with its vehicles, revenue, expenses and vehicle profit", async () => {
     renderTab(<DashboardBranchesTab />);
     const rows = [...document.querySelectorAll("tbody tr")].map((row) => row.querySelector("td")?.textContent);
     expect(rows).toEqual(["Yaoundé", "Douala"]);
     for (const header of ["Branch", "Vehicles", "Revenue", "Expenses", "Vehicle profit"]) {
       expect(screen.getByRole("columnheader", { name: header })).toBeTruthy();
     }
-    expect(document.querySelector("[data-slot='company-costs-note']")?.textContent).toBe(
+    await userEvent.click(screen.getByRole("button", { name: "Company costs" }));
+    expect(document.querySelector("[data-slot='info-popover']")?.textContent).toBe(
       `Company costs (${money(640_000)}) are not split by branch.`,
     );
   });

@@ -244,6 +244,26 @@ describe("the Overview tab and its To do section (#90)", () => {
     expect(localStorage.getItem("routiq-vehicle-todo")).toBe("expanded");
   });
 
+  it("shows the three most urgent rows and the rest one tap away", async () => {
+    const user = userEvent.setup();
+    const waiting = [1, 2, 3, 4, 5].map((n) =>
+      attention("ENTRY_AWAITING_REVIEW", {
+        subject: { entityType: "financial_entry", id: `00000000-0000-4000-8000-00000000000${n}`, number: `DLA-2026-0001${n}`, rowVersion: 1 },
+      }),
+    );
+    await openVehicle(`/assets/${ASSET_ID}`, { role: "FINANCE", attention: waiting });
+    const card = await todoCard();
+    await within(card).findAllByText(/awaiting review$/);
+    expect(within(card).getAllByText(/awaiting review$/)).toHaveLength(3);
+    // The count still says all five.
+    expect(within(card).getByRole("heading", { level: 2 }).textContent).toMatch(/To do\s*5$/);
+
+    await user.click(within(card).getByRole("button", { name: "Show 2 more" }));
+    expect(within(card).getAllByText(/awaiting review$/)).toHaveLength(5);
+    await user.click(within(card).getByRole("button", { name: "Show fewer" }));
+    expect(within(card).getAllByText(/awaiting review$/)).toHaveLength(3);
+  });
+
   it("still opens and collapses when the browser refuses storage", async () => {
     const user = userEvent.setup();
     // Only this preference's key is refused, so the signed-in session still works.

@@ -118,6 +118,51 @@ describe("ApprovalSettings (#354)", () => {
     expect(screen.getByText("Emilienne Mbarga changed them on 5 October 2026.")).toBeTruthy();
   });
 
+  it("folds the roles that meet the company chain into one line, and spells out the ones that differ", () => {
+    renderSettings(recordingClient(saved).client);
+
+    expect(screen.getByRole("list", { name: "Director" }).textContent).toBe("Any amount: posts directly");
+    expect(screen.getByRole("list", { name: "Finance" })).toBeTruthy();
+    expect(screen.queryByRole("list", { name: "Administrator" })).toBeNull();
+    expect(screen.getByText("Administrator: same as the company rule")).toBeTruthy();
+  });
+
+  it("says who may change the rules one tap away, not at rest", async () => {
+    renderSettings(recordingClient(saved).client);
+    const rule = "Only the Director and Administrators can change these rules.";
+    expect(screen.queryByText(rule)).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "About approvals" }));
+    expect(await screen.findByText(rule)).toBeTruthy();
+  });
+
+  it("names the exceptions the new bands leave alone, in the form", async () => {
+    mocks.useApprovalThresholds.mockReturnValue({
+      data: {
+        ...thresholds,
+        overrides: [
+          {
+            commandType: "record-expense",
+            branchName: "Yaoundé",
+            categoryCode: null,
+            amountMinMinor: null,
+            amountMaxMinor: 50_000,
+            requiredRole: "FINANCE",
+          },
+        ],
+      },
+      isPending: false,
+      isError: false,
+    });
+    renderSettings(recordingClient(saved).client);
+    expect(screen.getByRole("heading", { name: "Exceptions for a branch or a category" })).toBeTruthy();
+    // The row's own wording is settings.approvals.override (renders raw today; reported, not this change's).
+    expect(screen.getByRole("heading", { name: "Exceptions for a branch or a category" }).nextElementSibling?.children).toHaveLength(1);
+
+    const form = await openForm();
+    expect(within(form).getByText("1 branch or category exception keeps its own amount.")).toBeTruthy();
+  });
+
   it("sends both bands through update-approval-threshold v2, against the bands it read", async () => {
     const { client, seen } = recordingClient(saved);
     renderSettings(client);
@@ -142,11 +187,16 @@ describe("ApprovalSettings (#354)", () => {
   it("tells Direction, before saving, who will see the new rules", async () => {
     renderSettings(recordingClient(saved).client);
     const form = await openForm();
-    expect(
-      within(form).getByText(
-        "Administrator, Finance, Cashier, Technician, and Driver members will see the new rules on their next screen.",
-      ),
-    ).toBeTruthy();
+    // A whole label, not a sentence the list finishes; the list carries the same name.
+    expect(within(form).getByText("Told on their next screen:")).toBeTruthy();
+    const told = within(form).getByRole("list", { name: "Told on their next screen:" });
+    expect(within(told).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      "Administrator",
+      "Finance",
+      "Cashier",
+      "Technician",
+      "Driver",
+    ]);
   });
 
   it("sends nothing while neither band has changed", async () => {

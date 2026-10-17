@@ -31,7 +31,6 @@ export function TrucksFrame() {
   return (
     <ModulePage
       title={t("assets.title")}
-      description={t("assets.subtitle")}
       tabsLabel={t("assets.page.tabs.label")}
       tabs={tabs}
       active={activeTrucksTab(pathname)}

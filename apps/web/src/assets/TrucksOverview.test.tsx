@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AssetOverview, ModuleCode, Role } from "@routiq/contracts";
@@ -131,15 +132,45 @@ describe("Trucks › Overview (#665)", () => {
     expect(screen.queryByRole("link", { name: "Attention" })).toBeNull();
     expect(linkOf("Documents due ≤ 30 days")).toBe("/assets/documents?expiry=DUE_30");
     expect(linkOf("Idle 5+ days")).toBe("/assets/list?availability=IDLE");
-    expect(await screen.findByText("First: VH005 · 15 October 2026")).toBeTruthy();
+    expect(await screen.findByText("VH005 · 15 October 2026")).toBeTruthy();
     expect(screen.getByText("VH012 · never")).toBeTruthy();
   });
 
-  it("lists the papers due with one button each, and says services by km are not counted", async () => {
-    renderAs("ADMIN");
+  it("lists the papers to renew with one button each, and warns at rest that services by km are not counted", async () => {
+    const { container } = renderAs("ADMIN");
     expect(await screen.findByText("VH005 · Roadworthiness test")).toBeTruthy();
+    expect(screen.getByText("Due in 6 days")).toBeTruthy();
+    const due = container.querySelector<HTMLElement>("[data-slot=trucks-due]")!;
+    expect(within(due).getByText("To renew within 30 days")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Renew" }).getAttribute("href")).toBe("/assets/a5/documents?panel=document%3Ad5");
-    expect(screen.getByText(/Services by km are not counted/)).toBeTruthy();
+    // One row: no "See all", the Documents tab is one tap away.
+    expect(within(due).queryByRole("link", { name: /See all/ })).toBeNull();
+    // The gap is a warning at rest; its reason is one tap away.
+    const gap = within(due).getByRole("button", { name: "Services by km not counted" });
+    expect(gap.className).toContain("text-warning-foreground");
+    await userEvent.click(gap);
+    expect(await screen.findByText("Services by km are not counted: no service interval is recorded per vehicle yet.")).toBeTruthy();
+  });
+
+  it("shows three papers at most, then See all with the count", async () => {
+    const coming = BODIES.find(([prefix]) => prefix === "/v1/coming-up")!;
+    const original = coming[1];
+    const row = (i: number) => ({
+      code: "DOCUMENT_DUE",
+      link: { kind: "document", id: `d${i}`, number: null },
+      asset: { id: `a${i}`, assetCode: `VH00${i}` },
+      branchId: null,
+      dueDate: `2026-10-1${i}`,
+      params: { daysLeft: i, documentTypeLabelFr: "Assurance", documentTypeLabelEn: "Insurance" },
+    });
+    coming[1] = { ...(original as object), rows: [1, 2, 3, 4].map(row), totalCount: 4 };
+    try {
+      const { container } = renderAs("ADMIN");
+      await waitFor(() => expect(container.querySelectorAll("[data-slot=trucks-due] [data-slot=to-do-row]")).toHaveLength(3));
+      expect(screen.getByRole("link", { name: "See all (4)" }).getAttribute("href")).toBe("/assets/documents");
+    } finally {
+      coming[1] = original;
+    }
   });
 
   it("shows profit by truck, losses first and in words, to the roles that read profit", async () => {
@@ -173,7 +204,8 @@ describe("Trucks › Overview (#665)", () => {
     await waitFor(() => expect(container.querySelector("[data-metric=on-the-road] [data-slot=metric-value]")?.textContent).toBe("57%"));
     const tile = container.querySelector("[data-metric=on-the-road]")?.textContent ?? "";
     expect(tile).toContain("On the road, last 30 days");
-    expect(tile).toContain("▼ 10 pts vs the 30 days before · 10 days not recorded");
+    // The change names its comparison window at rest; the days nobody recorded stay said.
+    expect(tile).toContain("▼ 10 pts vs prior 30 days · 10 days not recorded");
     expect(container.querySelector("[data-slot=km-coverage]")?.textContent).toBe(
       "This month, km are known for 3 of 4 vehicles: 1 activity has no km.",
     );
@@ -185,8 +217,44 @@ describe("Trucks › Overview (#665)", () => {
     expect(screen.getByText("Fleet board")).toBeTruthy();
     expect(screen.getByRole("link", { name: "VH007" }).getAttribute("href")).toBe("/assets/a7");
     expect(screen.getByRole("img", { name: "VH003 · 9 Oct · Grounded" })).toBeTruthy();
-    expect(screen.getByText("Status from activities, work orders and grounding.")).toBeTruthy();
+    const board = container.querySelector<HTMLElement>("[data-slot=fleet-board-card]")!;
+    // The window the board covers stays said; where the statuses come from is one tap away.
+    expect(within(board).getByText("Last 30 days")).toBeTruthy();
+    expect(within(board).queryByText("Status from activities, work orders and grounding.")).toBeNull();
+    await userEvent.click(within(board).getByRole("button", { name: "How this is calculated" }));
+    expect(await screen.findByText("Status from activities, work orders and grounding.")).toBeTruthy();
     expect(screen.queryByText(/profit|revenue/i)).toBeNull();
+  });
+
+  it("says at rest what an off module leaves out: groundings and the board's days", async () => {
+    const usage = BODIES.find(([prefix]) => prefix === "/v1/assets/usage")!;
+    const original = usage[1];
+    // The server leaves the off module's figures out of the read.
+    usage[1] = { ...testUsage(), offRoadByMonth: null };
+    try {
+      const { container } = renderAs("ADMIN", ["CORE", "ASSETS", "ACTIVITIES"], { ...OVERVIEW, grounded: null });
+      expect(await screen.findByText("In service today. Grounding is not counted: Maintenance is off.")).toBeTruthy();
+      await waitFor(() =>
+        expect(container.querySelector("[data-slot=board-basis]")?.textContent).toBe(
+          "Status from activities. Work orders and grounding are not counted: Maintenance is off.",
+        ),
+      );
+    } finally {
+      usage[1] = original;
+    }
+  });
+
+  it("names the month profit by truck covers and what the profit includes, at rest", async () => {
+    const { container } = renderAs("ADMIN");
+    await waitFor(() =>
+      expect(container.querySelector("[data-slot=profit-by-truck-period]")?.textContent).toBe(
+        "1–9 October · revenue − expenses on each vehicle",
+      ),
+    );
+    const card = container.querySelector<HTMLElement>("[data-slot=profit-by-truck]")!;
+    expect(within(card).getByRole("link", { name: "Open Money" }).getAttribute("href")).toBe("/finance");
+    // Nothing about the basis hides behind a tap.
+    expect(within(card).queryByRole("button", { name: "How this is calculated" })).toBeNull();
   });
 
   it("says the share is not recorded when no day was, never 0 %", async () => {
@@ -201,18 +269,63 @@ describe("Trucks › Overview (#665)", () => {
     BODIES.splice(BODIES.findIndex(([prefix]) => prefix === "/v1/assets/usage"), 1, ["/v1/assets/usage", usage]);
   });
 
-  it("opens with the summary notice on a Monday, the fleet in one sentence (#667)", async () => {
+  it("opens with the summary notice on a Monday, the fleet in one sentence; closed, it stays closed after a reload (#667)", async () => {
     localStorage.clear();
-    renderAs("ADMIN", undefined, {
+    const monday = {
       ...OVERVIEW,
       notice: { today: "2026-10-05", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: "MONDAY", changes: [] },
-    });
+    };
+    const { container, unmount } = renderAs("ADMIN", undefined, monday);
     const region = await screen.findByRole("region", { name: "Summary" });
     expect(region.textContent).toMatch(/Can drive today: 10 of 12 (vehicles|trucks)\./);
+    expect(region.textContent).toContain("VH003 has been off the road the longest, since 1 October 2026.");
+    expect(within(region).getByText("1 grounded")).toBeTruthy();
     expect(region.querySelector("[data-summary=open]")?.textContent).toBe("In service and not grounded today.");
-    screen.getByRole("button", { name: "Close the summary" }).click();
+    // The notice sits above the tiles.
+    expect(region.compareDocumentPosition(container.querySelector("[data-slot=metric-strip]")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: "Close the summary" }));
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+    // Closed, the counted line sits under the tiles with Show summary.
+    const counted = container.querySelector("[data-slot=trucks-counted]")!;
+    expect(counted.closest("[data-summary=closed]")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Show summary" })).toBeTruthy();
+
+    unmount();
+    renderAs("ADMIN", undefined, monday);
     await screen.findByRole("button", { name: "Show summary" });
     expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Show summary" }));
+    expect((await screen.findByRole("region", { name: "Summary" })).textContent).toMatch(/Can drive today: 10 of 12/);
+  });
+
+  it("on a day it is not due shows only the counted line under the tiles, with Show summary (#667)", async () => {
+    localStorage.clear();
+    const { container } = renderAs("ADMIN", undefined, {
+      ...OVERVIEW,
+      notice: { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] },
+    });
+    const counted = await screen.findByText("In service and not grounded today.");
+    expect(counted.closest("[data-summary=closed]")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Show summary" })).toBeTruthy();
+    expect(container.querySelector("[data-metric=grounded]")?.textContent).toContain("VH003");
+  });
+
+  it("keeps the grounding warning when Maintenance is off, under the tiles with the summary closed and inside it when open (#667)", async () => {
+    localStorage.clear();
+    renderAs("ADMIN", ["CORE", "ASSETS", "ACTIVITIES"], {
+      ...OVERVIEW,
+      grounded: null,
+      notice: { today: "2026-10-09", schedule: "NEVER", scheduledOn: null, scheduledToday: null, changes: [] },
+    });
+    const warning = await screen.findByText("In service today. Grounding is not counted: Maintenance is off.");
+    expect(warning.closest("[data-summary=closed]")).toBeTruthy();
+    expect(warning.className).toContain("text-warning-foreground");
+    await userEvent.click(screen.getByRole("button", { name: "Show summary" }));
+    const region = await screen.findByRole("region", { name: "Summary" });
+    expect(within(region).getByText("In service today. Grounding is not counted: Maintenance is off.")).toBeTruthy();
   });
 
   it("names a grounding once: as the big change, not again as the longest off the road (#667)", () => {

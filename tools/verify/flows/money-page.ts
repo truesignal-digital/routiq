@@ -1,10 +1,10 @@
 import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
- * Money is a module page (#664): one header (Money, one sentence, Record an
- * expense) over Overview · Entries · To approve. The Overview's tiles match
- * `GET /v1/finance/overview` and `GET /v1/finance/summary`, the range picker
- * lives in the address, a tile opens its tab already filtered, Entries starts
+ * Money is a module page (#664): one header (Money, Record an expense) over
+ * Overview · Entries · To approve. The Overview's tiles match
+ * `GET /v1/finance/overview`, its To do rows `GET /v1/finance/summary`, the
+ * range picker lives in the address, a To do verb opens its tab already filtered, Entries starts
  * with its filters (Missing receipt with its count, no tiles), To approve
  * decides an entry, Back lands on the tab you came from, and the old links
  * land on To approve. A role with no queue (the cashier) sees no To approve
@@ -52,7 +52,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   }
   await shot("overview", {
     caption: approver
-      ? "Money opens on Overview: tiles from the overview read, expenses by category, and To do"
+      ? "Money opens on Overview: To do first, then the tiles from the overview read and expenses by category"
       : "A cashier's Money Overview: revenue and expenses, missing receipts; no profit, no To approve tab",
   });
 
@@ -67,7 +67,12 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await page.waitForURL((url) => url.pathname === "/finance" && !url.searchParams.has("range"));
   await quiet();
 
-  await page.locator("[data-metric='missing'] a").click();
+  // Missing receipts are a To do row with their count; its verb opens Entries filtered.
+  const missingRow = page.locator("[data-slot='to-do-row']").filter({ has: page.locator("a[href*='evidence=MISSING']") });
+  if (!digits(await missingRow.locator("p").first().textContent()).startsWith(String(body.missingReceipt.count))) {
+    throw new Error(`Missing receipt row says ${await missingRow.locator("p").first().textContent()}, summary says ${body.missingReceipt.count}`);
+  }
+  await missingRow.getByRole("link", { name: t("Ajouter les justificatifs", "Add receipts"), exact: true }).click();
   await page.waitForURL((url) => url.pathname === "/finance/entries" && url.searchParams.get("evidence") === "MISSING");
   await heading.waitFor();
   await quiet();
@@ -82,7 +87,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
     throw new Error(`Missing receipt filter count ${await missingFilter.textContent()} ≠ ${body.missingReceipt.count}`);
   }
   await shot("entries-missing", {
-    caption: "The Missing receipt tile opens Entries filtered; the list starts with its filters, the count on the filter",
+    caption: "Add receipts opens Entries filtered; the list starts with its filters, the count on the filter",
     highlight: missingFilter,
   });
   if (phone) {

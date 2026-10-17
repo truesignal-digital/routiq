@@ -11,6 +11,7 @@ import {
 
 const open: TripStatusFacts = { status: "OPEN", completeness: null, completenessCodes: [] };
 const closed: TripStatusFacts = { status: "CLOSED", completeness: "COMPLETE", completenessCodes: [] };
+const planned: TripStatusFacts = { status: "PLANNED", completeness: null, completenessCodes: [] };
 const closedWithGaps: TripStatusFacts = {
   status: "CLOSED",
   completeness: "COMPLETE_WITH_EXCEPTIONS",
@@ -33,6 +34,8 @@ describe("trip status badge", () => {
     ["open", open, "bg-info/10", "lucide-route", "On the road"],
     ["closed", closed, "bg-success/10", "lucide-circle-check", "Closed"],
     ["closed with gaps", closedWithGaps, "bg-warning/10", "lucide-triangle-alert", "Closed, 2 gaps"],
+    // A planned trip read "Closed" (sweep 2026-10-17): it has not run.
+    ["planned", planned, "bg-foreground/[0.05]", "lucide-calendar-clock", "Planned"],
   ] as const;
 
   it.each(cases)("shows a trip %s with its one tone, glyph and label", (_, trip, tone, icon, label) => {

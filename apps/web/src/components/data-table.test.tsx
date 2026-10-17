@@ -1196,6 +1196,56 @@ describe("DataTable", () => {
       expect(await screen.findByRole("dialog")).toBeTruthy();
     });
 
+    it("stretches the phone row's title over the row, keeping the ⋯ menu above it", () => {
+      mockDesktop(false);
+      const { container } = render(
+        <DataTable
+          columns={columns}
+          data={[data[0]!]}
+          primaryColumn={primary}
+          rowViewer={viewer}
+          rowActions={() => [{ key: "archive", label: "Archive", onSelect: vi.fn() }]}
+        />,
+      );
+
+      const row = container.querySelector<HTMLElement>('[data-slot="data-table-row"]')!;
+      const target = within(row).getByRole("button", { name: "Ada Lovelace" });
+      // A 44 px touch target: the ::after covers the 60 px row.
+      expect(row.className).toContain("relative");
+      expect(target.className).toContain("after:inset-0");
+      expect(target.className).toContain("after:absolute");
+      const menu = within(row).getByRole("button", { name: /actions/i });
+      expect(menu.closest(".relative")).not.toBe(row);
+      // Positioned alone does not lift a control painted before the title: z-10 does.
+      expect(menu.className).toContain("z-10");
+    });
+
+    it("keeps the phone row's checkbox above the title's stretched target", () => {
+      mockDesktop(false);
+      const { container } = render(
+        <DataTable
+          columns={columns}
+          data={[data[0]!]}
+          primaryColumn={primary}
+          rowViewer={viewer}
+          enableRowSelection
+          onRowSelectionChange={vi.fn()}
+        />,
+      );
+
+      const row = container.querySelector<HTMLElement>('[data-slot="data-table-row"]')!;
+      const wrapper = row.querySelector<HTMLElement>('[data-slot="data-table-row-select"]')!;
+      expect(within(wrapper).getByRole("checkbox")).toBeTruthy();
+      expect(wrapper.className).toContain("relative");
+      expect(wrapper.className).toContain("z-10");
+    });
+
+    it("keeps the desktop primary cell to its own text", () => {
+      render(<DataTable columns={columns} data={[data[0]!]} primaryColumn={primary} rowViewer={viewer} />);
+
+      expect(screen.getByRole("button", { name: "Ada Lovelace" }).className).not.toContain("after:inset-0");
+    });
+
     it("puts the row's decisions last in the footer and lets them close the drawer", async () => {
       render(
         <DataTable

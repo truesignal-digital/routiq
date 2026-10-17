@@ -287,6 +287,16 @@ describe("finance approval command routing", () => {
     expect(within(screen.getByRole("row", { name: /FIN-002/ })).queryByText(/no receipt/)).toBeNull();
   });
 
+  it("fills only the first row's Approve: the queue has one next step", () => {
+    renderScreen(createElement(WaitingApprovals));
+
+    const approves = screen.getAllByRole("button", { name: /^Approve entry FIN-/ });
+    expect(approves.length).toBeGreaterThan(1);
+    expect(approves.map((button) => button.className.includes("bg-primary"))).toEqual(
+      approves.map((_button, index) => index === 0),
+    );
+  });
+
   it("sends the chosen order to the queue read", async () => {
     const user = userEvent.setup();
     renderScreen(createElement(WaitingApprovals));

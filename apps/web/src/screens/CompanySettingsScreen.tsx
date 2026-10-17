@@ -27,7 +27,6 @@ export function CompanySettingsScreen() {
   return (
     <PageContainer>
       <PageHeader title={t("settings.title")} />
-      <p className="mt-2 text-sm text-muted-foreground">{t("settings.description")}</p>
       <div className="mt-6 flex flex-col gap-10">
         <ApprovalSettings />
         <SummaryScheduleSettings />

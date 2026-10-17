@@ -1,5 +1,5 @@
 import type { ActivityDetail, ActivityListItem } from "@routiq/contracts";
-import { CircleCheck, Route, TriangleAlert } from "lucide-react";
+import { CalendarClock, CircleCheck, Route, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { StatusBadge, type StatusBadgeTone } from "@/components/status-badge.js";
 
@@ -11,6 +11,14 @@ export type TripStatusFacts = Pick<ActivityListItem, "status" | "completeness" |
  */
 export function TripStatusBadge({ trip }: { trip: TripStatusFacts }) {
   const { t } = useTranslation();
+  // Not started or called off: never "Closed", which would say the trip ran.
+  if (trip.status === "PLANNED" || trip.status === "CANCELLED") {
+    return (
+      <StatusBadge tone="neutral" icon={trip.status === "PLANNED" ? CalendarClock : null}>
+        {t(`activities.status.${trip.status}`)}
+      </StatusBadge>
+    );
+  }
   if (trip.status === "OPEN") {
     return (
       <StatusBadge tone="info" icon={Route}>

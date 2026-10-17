@@ -191,7 +191,8 @@ export function LatestHistory({
         <button
           type="button"
           onClick={onShowAll}
-          className="relative text-sm font-medium text-primary underline-offset-4 after:absolute after:-inset-x-2 after:-inset-y-3 hover:underline"
+          // 44 px tall on a phone and 24 with a mouse; the negative margins keep the header's height.
+          className="-my-3 inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline desktop:-my-0.5 desktop:min-h-6"
         >
           {t("history.allHistory")}
         </button>
