@@ -41,11 +41,7 @@ function DocumentsSection() {
 
   return (
     <section>
-      <TabHeader
-        title={t("vehicle.documents.title")}
-        description={t("vehicle.documents.description")}
-        action={<TabAction actionKey="add-document" />}
-      />
+      <TabHeader action={<TabAction actionKey="add-document" />} />
       {query.isPending ? (
         <LoadingState label={t("documents.loading")} />
       ) : query.isError ? (

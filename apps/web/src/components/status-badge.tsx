@@ -16,11 +16,12 @@ import { cn } from "@/lib/utils.js"
 const statusBadgeVariants = cva("", {
   variants: {
     tone: {
-      neutral: "bg-foreground/[0.05] text-muted-foreground",
+      // Muted grey on this tint measured 4.27:1 (axe color-contrast); /80 clears 4.5:1.
+      neutral: "bg-foreground/[0.05] text-foreground/80",
       success: "bg-success/10 text-success-foreground",
       warning: "bg-warning/10 text-warning-foreground",
       info: "bg-info/10 text-info-foreground",
-      danger: "bg-destructive/10 text-destructive",
+      danger: "bg-destructive/10 text-destructive-foreground",
     },
   },
   defaultVariants: {

@@ -165,7 +165,8 @@ describe("direct links with Maintenance off", () => {
       modules: ON,
       workOrders: [workOrderRow("APPROVED")],
     });
-    expect(await screen.findByRole("heading", { name: "Maintenance", level: 2 })).toBeTruthy();
+    // The tab is the section's name; its first list heading proves the section drew.
+    expect(await screen.findByRole("heading", { name: /^Work orders/, level: 3 })).toBeTruthy();
     expect(requested(recorded, "/v1/work-orders").length).toBeGreaterThan(0);
     expect(screen.queryByText("This module is not enabled for your company.")).toBeNull();
   });

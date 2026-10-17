@@ -31,6 +31,8 @@ export const FRENCH_AGREEMENT_KEYS: readonly string[] = [
   "activities.completeness.COMPLETE",
   "activities.completeness.COMPLETE_WITH_EXCEPTIONS",
   "activities.detail.closedAt",
+  "activities.detail.status.openFollow",
+  "activities.detail.status.gapsManager",
   "vehicle.trips.gapsNote",
 ];
 

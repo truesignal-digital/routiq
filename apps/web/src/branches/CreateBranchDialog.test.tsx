@@ -233,10 +233,6 @@ describe("CreateBranchDialog", () => {
   it("explains the code will never change", async () => {
     renderDialog(fakeClient(committed));
 
-    expect(
-      screen.getByText(
-        "Le code apparaît dans les numéros de pièces et ne peut pas changer.",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText("Ne pourra plus être modifié.")).toBeTruthy();
   });
 });

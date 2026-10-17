@@ -48,10 +48,20 @@ describe("Dashboard › To do", () => {
     state.todo = todo(7);
     render(<DashboardTodoTab />);
     expect(screen.getAllByRole("listitem")).toHaveLength(7);
-    expect(screen.getAllByRole("link", { name: "Open" })[0]?.getAttribute("href")).toBe(
+    expect(screen.getAllByRole("link", { name: "See the repair" })[0]?.getAttribute("href")).toBe(
       "/assets/00000000-0000-4000-8000-000000000000",
     );
-    expect(screen.getAllByText("Grounded 2 days · a work order is planned")).toHaveLength(7);
+    expect(screen.getAllByText("2 days · repair planned")).toHaveLength(7);
+  });
+
+  it("names its scope at rest and its ranking one tap away, with no title repeating the tab", () => {
+    state.todo = todo(2);
+    render(<DashboardTodoTab />);
+    // To do ignores the header's branch, so the scope stays on screen.
+    expect(screen.getByText("All your branches")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "How To do is ranked" })).toBeTruthy();
+    expect(screen.queryByText(/Ranked by safety/)).toBeNull();
+    expect(screen.queryByText("To do")).toBeNull();
   });
 
   it("says when the server held rows back past its limit", () => {

@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n/index.js";
+import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { testUsage } from "../overview/test-usage.js";
 import { TripsOverview } from "./TripsOverview.js";
@@ -34,7 +36,23 @@ const SUMMARY = {
   weeks: WEEKS,
 };
 
-function renderWith(summary: unknown, usage: unknown = testUsage()) {
+const ME: MeContext = {
+  workspaceId: "ws",
+  principalId: "p",
+  principalType: "HUMAN",
+  membershipId: "m",
+  role: "ADMIN",
+  branchScope: "ALL",
+  enabledModules: ["CORE", "ASSETS", "ACTIVITIES", "FINANCE"],
+  enabledPresets: ["TRUCKING"],
+  timezone: "Africa/Douala",
+  displayName: "Emilienne Ngo",
+  workspaceName: "Transports Ngwa",
+};
+
+const MONDAY = { today: "2026-10-05", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: "MONDAY", changes: [] };
+
+function renderWith(summary: unknown, usage: unknown = testUsage(), me?: MeContext) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: RequestInfo | URL) =>
@@ -43,7 +61,9 @@ function renderWith(summary: unknown, usage: unknown = testUsage()) {
   );
   return render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <TripsOverview />
+      <MeCtx.Provider value={me}>
+        <TripsOverview />
+      </MeCtx.Provider>
     </QueryClientProvider>,
   );
 }
@@ -77,6 +97,21 @@ describe("Trips › Overview (#665)", () => {
     expect(screen.getByText("1,840 km")).toBeTruthy();
   });
 
+  it("says at rest that Closed this week counts only trips started since Monday", async () => {
+    const { container } = renderWith(SUMMARY);
+    await screen.findByText("3 without fuel · 2 without km");
+    const tile = container.querySelector<HTMLElement>("[data-metric=week-closed]")!;
+    expect(within(tile).getByText("Of those started since Monday")).toBeTruthy();
+  });
+
+  it("says at rest under the chart that this week is still running", async () => {
+    const { container } = renderWith(SUMMARY);
+    await screen.findByText("3 without fuel · 2 without km");
+    const card = container.querySelector<HTMLElement>("[data-slot=trips-per-week]")!;
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(within(card).getByText("This week is still running.")).toBeTruthy();
+  });
+
   it("draws twelve weeks, each column a link to its week", async () => {
     const { container } = renderWith(SUMMARY);
     await screen.findByText("3 without fuel · 2 without km");
@@ -86,19 +121,26 @@ describe("Trips › Overview (#665)", () => {
     expect(columns[11]?.getAttribute("aria-label")).toContain("12 started, 11 closed");
   });
 
-  it("lists what is left to close, one button each", async () => {
+  it("leads with what is left to close, one kind a row, its verb the next step", async () => {
     const { container } = renderWith(SUMMARY);
     await screen.findByText("5 still open");
-    const todo = within(container.querySelector("[data-slot=to-do-list]") as HTMLElement);
-    expect(todo.getByText("Oldest: DLA-2026-00031 on VH006, started 6 October 2026")).toBeTruthy();
-    expect(todo.getByText("3 closed without fuel")).toBeTruthy();
-    expect(todo.getByText("2 closed without km")).toBeTruthy();
-    const buttons = todo.getAllByRole("link", { name: "Open the list" }).map((link) => link.getAttribute("href"));
-    expect(buttons).toEqual([
-      "/activities/list?status=OPEN",
-      "/activities/list?missing=fuel",
-      "/activities/list?missing=km",
+    const card = container.querySelector("[data-slot=trips-todo-card]") as HTMLElement;
+    // First on the page, before any figure.
+    expect(container.querySelector("[data-slot=trips-overview]")?.firstElementChild).toBe(card);
+    const todo = within(card.querySelector("[data-slot=to-do-list]") as HTMLElement);
+    expect(todo.getAllByRole("listitem").map((row) => row.querySelector("p")?.textContent)).toEqual([
+      "5 still open",
+      "3 closed without fuel",
+      "2 closed without km",
     ]);
+    const buttons = todo.getAllByRole("link").map((link) => [link.textContent, link.getAttribute("href")]);
+    expect(buttons).toEqual([
+      ["Close them", "/activities/list?status=OPEN"],
+      ["Complete", "/activities/list?missing=fuel"],
+      ["Complete", "/activities/list?missing=km"],
+    ]);
+    // The oldest open trip's date reads once, on the On the road tile.
+    expect(container.querySelector("[data-metric=open]")?.textContent).toContain("6 October 2026");
   });
 
   it("leaves fuel out while Money is off: not counted is never none", async () => {
@@ -136,6 +178,8 @@ describe("Trips › Overview (#665)", () => {
     const { container } = renderWith(SUMMARY);
     await vi.waitFor(() => expect(container.querySelectorAll("[data-slot=ranked-bars-row]")).toHaveLength(2));
     const card = container.querySelector("[data-slot=revenue-per-km-by-route]") as HTMLElement;
+    // The window the ranking covers is said at rest, not only behind the (i).
+    expect(card.querySelector("[data-slot=routes-period]")?.textContent).toBe("1–9 October");
     const rows = [...card.querySelectorAll("[data-slot=ranked-bars-row]")].map((row) => row.textContent ?? "");
     expect(rows[0]).toContain("Douala – Yaoundé");
     expect(rows[1]).toContain("Bafoussam – Douala");
@@ -153,13 +197,76 @@ describe("Trips › Overview (#665)", () => {
     expect(container.querySelector("[data-slot=revenue-per-km-by-route]")).toBeNull();
   });
 
-  it("puts the summary notice over the tiles: hidden on a plain day, the week in whole sentences when shown (#667)", async () => {
-    renderWith({ ...SUMMARY, notice: { today: "2026-10-09", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: null, changes: [] } });
-    const counted = await screen.findByText("Closed activities missing data: 3 without fuel and 2 without km.");
-    expect(counted.closest("[data-summary=closed]")).toBeTruthy();
-    screen.getByRole("button", { name: "Show summary" }).click();
+  it("keeps what the figures leave out at rest, on the missing-data tile, even with a notice due", async () => {
+    localStorage.clear();
+    const { container } = renderWith({ ...SUMMARY, notice: MONDAY }, testUsage(), ME);
+    await screen.findByRole("region", { name: "Summary" });
+    const tile = container.querySelector("[data-metric=incomplete]") as HTMLElement;
+    expect(tile.textContent).toContain("5");
+    expect(tile.textContent).toContain("3 without fuel · 2 without km");
+    // The counts are on the tile, so the summary carries no counted line repeating them.
+    expect(container.querySelector("[data-slot=overview-counted]")).toBeNull();
+  });
+
+  it("puts the summary notice under To do and over the tiles on a Monday; closed, it stays closed after a reload (#667)", async () => {
+    localStorage.clear();
+    const { container, unmount } = renderWith({ ...SUMMARY, notice: MONDAY }, testUsage(), ME);
     const region = await screen.findByRole("region", { name: "Summary" });
+    expect(region.getAttribute("data-reason")).toBe("MONDAY");
     expect(region.textContent).toContain("6 activities started this week; 4 of them closed.");
     expect(region.textContent).toContain("5 activities are still open.");
+    const overview = container.querySelector("[data-slot=trips-overview]") as HTMLElement;
+    expect(overview.firstElementChild?.getAttribute("data-slot")).toBe("trips-todo-card");
+    expect(region.compareDocumentPosition(container.querySelector("[data-slot=metric-strip]")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await userEvent.click(within(region).getByRole("button", { name: "Close the summary" }));
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Show summary" }).closest("[data-summary=closed]")).toBeTruthy();
+
+    unmount();
+    renderWith({ ...SUMMARY, notice: MONDAY }, testUsage(), ME);
+    await screen.findByRole("button", { name: "Show summary" });
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Show summary" }));
+    expect((await screen.findByRole("region", { name: "Summary" })).textContent).toContain("6 activities started this week");
+  });
+
+  it("on a day it is not due shows only the counted line under the tiles, with Show summary (#667)", async () => {
+    localStorage.clear();
+    const { container } = renderWith(
+      { ...SUMMARY, closedMissing: { fuel: null, km: 2 }, notice: { ...MONDAY, today: "2026-10-09", scheduledToday: null } },
+      testUsage(),
+      ME,
+    );
+    const show = await screen.findByRole("button", { name: "Show summary" });
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+    const counted = container.querySelector("[data-slot=trips-counted]") as HTMLElement;
+    expect(counted.textContent).toBe("Fuel is not counted: Money is off.");
+    expect(counted.closest("[data-summary=closed]")).toBe(show.closest("[data-summary=closed]"));
+    // Open, the warning goes with it, inside the notice.
+    await userEvent.click(show);
+    const region = await screen.findByRole("region", { name: "Summary" });
+    expect(within(region).getByText("Fuel is not counted: Money is off.")).toBeTruthy();
+  });
+
+  it("says fuel is not counted while Money is off at rest, with no tap", async () => {
+    const { container } = renderWith({ ...SUMMARY, closedMissing: { fuel: null, km: 2 } });
+    await screen.findByText("2 without km");
+    const counted = container.querySelector("[data-slot=trips-counted]") as HTMLElement;
+    expect(counted.textContent).toBe("Fuel is not counted: Money is off.");
+    expect(counted.closest("[data-slot=trips-overview]")).toBeTruthy();
+    expect(counted.closest("[data-slot=info-popover]")).toBeNull();
+    // The tile's info says it again, with what is still checked.
+    const tile = container.querySelector("[data-metric=incomplete]") as HTMLElement;
+    await userEvent.click(within(tile).getByRole("button", { name: "How this is calculated" }));
+    expect((await screen.findByText(/fuel is not counted: Money is off/)).textContent).toContain("Km are checked");
+  });
+
+  it("says nothing about fuel while Money is on", async () => {
+    const { container } = renderWith(SUMMARY);
+    await screen.findByText("3 without fuel · 2 without km");
+    expect(container.querySelector("[data-slot=trips-counted]")).toBeNull();
+    expect(screen.queryByText(/not counted: Money is off/)).toBeNull();
   });
 });

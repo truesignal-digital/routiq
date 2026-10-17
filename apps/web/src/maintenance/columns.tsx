@@ -226,11 +226,8 @@ export function useIssueColumns(): DataTableColumn<IssueListItem>[] {
       {
         id: "category",
         header: t("maintenance.issues.columns.category"),
-        meta: {
-          phone: "meta",
-          label: t("maintenance.issues.columns.category"),
-          phoneText: (issue) => categoryLabel(issue.category) ?? null,
-        },
+        // A phone row keeps what triage needs (number, fault, when); the category stays on the desk.
+        meta: { phone: "hidden", label: t("maintenance.issues.columns.category") },
         cell: ({ row }) => categoryLabel(row.original.category) ?? <NotRecorded />,
       },
       {

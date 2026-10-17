@@ -115,8 +115,9 @@ describe("which sections a viewer gets", () => {
 
   it("keeps the old documents link: it opens the Documents section", async () => {
     await openVehicle(`/assets/${ASSET_ID}/documents`, { role: "DRIVER", documents: [documentRow()] });
-    expect(await screen.findByRole("heading", { name: "Documents" })).toBeTruthy();
     expect(await screen.findByText("Technical inspection")).toBeTruthy();
+    // The selected tab names the section; no heading repeats it.
+    expect(screen.queryByRole("heading", { name: "Documents" })).toBeNull();
     expect(screen.getByText("Expired")).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Documents", selected: true })).toBeTruthy();
   });
@@ -142,7 +143,7 @@ describe("Details", () => {
   it("opens from its tab and keeps the month on the way", async () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, { role: "ADMIN" });
     const user = userEvent.setup();
-    await screen.findByRole("heading", { name: "Money · August 2026" });
+    await screen.findByRole("heading", { name: "August 2026" });
     await user.click(screen.getByRole("tab", { name: "Details" }));
     await waitFor(() => expect(recorded.history.location.pathname).toBe(`/assets/${ASSET_ID}/details`));
     expect(recorded.history.location.search).toContain("period=2026-08");
@@ -160,6 +161,24 @@ describe("Details", () => {
   });
 });
 
+describe("an (i) beside a heading", () => {
+  it("sits outside the heading, so the heading's name is its title alone", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, { role: "FINANCE" });
+    expect(await screen.findByRole("heading", { level: 3, name: "Entries" })).toBeTruthy();
+    const entriesInfo = screen.getByRole("button", { name: "How cancellations show" });
+    expect(entriesInfo.closest("h1, h2, h3, h4, h5, h6")).toBeNull();
+    cleanup();
+    await closeVehicle();
+
+    await openVehicle(`/assets/${ASSET_ID}`, { role: "FINANCE" });
+    const monthInfo = await screen.findByRole("button", { name: "What these amounts count" });
+    expect(monthInfo.closest("h1, h2, h3, h4, h5, h6")).toBeNull();
+    const month = monthInfo.parentElement?.querySelector("h2");
+    expect(month?.textContent).not.toBe("");
+    expect(screen.getByRole("heading", { level: 2, name: month?.textContent ?? "" })).toBe(month);
+  });
+});
+
 describe("Money", () => {
   it("reads the month from the URL and names each chip's basis in its query", async () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, {
@@ -167,7 +186,7 @@ describe("Money", () => {
       entries: [entryRow({ status: "POSTED", postingPeriodCode: "2026-08" })],
     });
     const user = userEvent.setup();
-    expect(await screen.findByRole("heading", { name: "Money · August 2026" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "August 2026" })).toBeTruthy();
     await waitFor(() => expect(requested(recorded, `/v1/assets/${ASSET_ID}/finance`).at(-1)?.searchParams.get("periodCode")).toBe("2026-08"));
     const posted = requested(recorded, "/v1/finance/entries").at(-1);
     expect(posted?.searchParams.get("status")).toBe("LEDGER");
@@ -194,7 +213,7 @@ describe("Money", () => {
         role: "FINANCE",
         timezone: "Pacific/Kiritimati",
       });
-      expect(await screen.findByRole("heading", { name: "Money · October 2026" })).toBeTruthy();
+      expect(await screen.findByRole("heading", { name: "October 2026" })).toBeTruthy();
       await waitFor(() =>
         expect(requested(recorded, `/v1/assets/${ASSET_ID}/finance`).at(-1)?.searchParams.get("periodCode")).toBe("2026-10"),
       );
@@ -378,11 +397,21 @@ describe("Money", () => {
   it("steps back a month and keeps the lifetime figures at the foot", async () => {
     const recorded = await openVehicle(`/assets/${ASSET_ID}/money?period=2026-08`, { role: "ADMIN" });
     const user = userEvent.setup();
-    await screen.findByRole("heading", { name: "Money · August 2026" });
+    await screen.findByRole("heading", { name: "August 2026" });
     await user.click(screen.getByRole("button", { name: "Previous month" }));
-    await screen.findByRole("heading", { name: "Money · July 2026" });
+    await screen.findByRole("heading", { name: "July 2026" });
     expect(recorded.history.location.search).toContain("period=2026-07");
-    const lifetime = screen.getByText(/Lifetime, all posted entries since registration/).textContent;
+    const foot = document.querySelector("[data-slot=vehicle-money-lifetime]") as HTMLElement;
+    const lifetime = foot.textContent;
+    // Its basis and what it leaves out stay at rest; the long reason is one tap away.
+    expect(lifetime).toMatch(/^Since registration, posted/);
+    const excludes = foot.querySelector("[data-slot=vehicle-money-lifetime-excludes]")?.textContent ?? "";
+    // Cash expenses are in the total, so the line says posted-not-paid, never "excludes cash".
+    expect(excludes).toMatch(/not paid/i);
+    expect(excludes).toMatch(/tax/i);
+    expect(excludes).toMatch(/loan/i);
+    expect(excludes).not.toMatch(/cash/i);
+    expect(within(foot).getByRole("button", { name: "What this total leaves out" })).toBeTruthy();
     expect(lifetime).toMatch(/2\s850\s000/);
     expect(lifetime).toMatch(/Profit 1\s505\s000\sFCFA/);
     expect(lifetime).not.toMatch(/\bnet\b/i);

@@ -24,6 +24,10 @@ Commands
                                call the slot API as a seeded account; prints JSON
   db "<select ...>"            read-only SQL against the slot database
                                --reel records the screen and writes reel.mp4 when it ends
+  measure <file[?query]|url...> [--journey ID] [--viewport 390x844]
+                               measure throwaway prototypes like a journey screen: words,
+                               prose, primary actions, small targets, axe; follows the
+                               data-step="1", "2", … path and checks the journey's budgets
   reel [run-dir] [--before run-dir] [--title "..."]
                                replay a --reel drive as a short captioned reel.mp4 plus
                                reel-sheet.png; with --before, both runs play side by side,
@@ -72,6 +76,10 @@ async function main(command: Command): Promise<boolean> {
       return callApi(command.slot, command.method, command.path, command.role, command.body);
     case "db":
       return db(command.slot, command.sql);
+    case "measure": {
+      const { measurePrototypes } = await import("./journey/prototype.js");
+      return measurePrototypes(command.targets, { journey: command.journey, viewport: command.viewport });
+    }
     case "reel": {
       const path = await import("node:path");
       const { buildReel, latestDriveRun } = await import("./reel.js");

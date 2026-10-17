@@ -74,7 +74,7 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
           <button
             type="button"
             onClick={() => panel.openRecord({ kind: "issue", id: wo.issue?.id ?? "" })}
-            className="flex w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
+            className="flex min-h-11 w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
           >
             <TriangleAlert
               className={cn(

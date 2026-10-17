@@ -139,7 +139,8 @@ export function UsersScreen() {
       {
         id: "branchScope",
         header: t("users.columns.branchScope"),
-        meta: { phone: "hidden", label: t("users.columns.branchScope") },
+        // Branch scope is half of what a member may do: the phone row shows it too.
+        meta: { phone: "meta", label: t("users.columns.branchScope") },
         cell: ({ row }) =>
           branchScopeLabel(row.original.branchScope, branches, t("users.form.allBranches")),
       },
@@ -171,7 +172,6 @@ export function UsersScreen() {
     <PageContainer>
       <PageHeader
         title={t("users.title")}
-        description={t("users.lead")}
         actions={
           <Button type="button" onClick={() => setAdding(true)}>
             <UserPlus className="size-4" aria-hidden />

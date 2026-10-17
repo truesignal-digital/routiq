@@ -188,6 +188,10 @@ describe("AddMemberDialog", () => {
 
     await fillForm();
     expect(screen.getByLabelText("Code PIN").getAttribute("type")).toBe("password");
+    // No email flow: the admin is told, where the PIN is typed, to hand it over.
+    expect(screen.getByLabelText("Code PIN").getAttribute("aria-describedby")).toContain(
+      screen.getByText("Remettez-le en main propre : rien n'est envoyé.").id,
+    );
 
     await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
     await waitFor(() => expect(client.seen).toHaveLength(1));

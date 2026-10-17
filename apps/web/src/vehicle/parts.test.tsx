@@ -14,13 +14,13 @@ const runAround = (link: HTMLElement) => link.closest(".whitespace-nowrap");
 
 describe("withNodes (#435)", () => {
   it.each([
-    { locale: "fr-CM", sentence: "En attente de l'atelier pour terminer la réparation (059DC371)." },
-    { locale: "en", sentence: "Waiting on the workshop to finish the repair (059DC371)." },
+    { locale: "fr-CM", sentence: "Attend sa remise en service par un responsable (059DC371)." },
+    { locale: "en", sentence: "Waiting for a manager to release it (059DC371)." },
   ])("keeps the brackets around a linked reference on its line in $locale", async ({ locale, sentence }) => {
     await i18n.changeLanguage(locale);
     const { container } = render(
       <p>
-        {withNodes((slots) => i18n.t("vehicle.status.grounded.inProgress", slots), {
+        {withNodes((slots) => i18n.t("vehicle.status.grounded.awaitingRelease", slots), {
           workOrder: <button type="button">059DC371</button>,
         })}
       </p>,
@@ -34,13 +34,13 @@ describe("withNodes (#435)", () => {
     await i18n.changeLanguage("en");
     const { container } = render(
       <p>
-        {withNodes((slots) => i18n.t("vehicle.status.grounded.noWorkOrder", slots), {
-          issue: <button type="button">A1B2C3D4</button>,
+        {withNodes((slots) => i18n.t("vehicle.status.grounded.awaitingReleaseSignedOff", slots), {
+          workOrder: <button type="button">A1B2C3D4</button>,
         })}
       </p>,
     );
 
-    expect(container.textContent).toBe("Nobody has planned the repair yet: problem A1B2C3D4 has no work order.");
+    expect(container.textContent).toBe("A1B2C3D4 signed off; waiting for a manager to release it.");
     expect(runAround(screen.getByRole("button", { name: "A1B2C3D4" }))).toBeNull();
   });
 });

@@ -32,12 +32,10 @@ afterAll(async () => {
 afterEach(cleanup);
 
 describe("CompanySettingsScreen (#354, #669, #711)", () => {
-  it.each(["DIRECTOR", "ADMIN"] as const)("shows %s the approvals and Dashboard summary sections (#711)", (role) => {
+  it.each(["DIRECTOR", "ADMIN"] as const)("shows %s the approvals and Overview summary sections (#711)", (role) => {
     as(role);
     expect(screen.getByRole("heading", { name: "Company settings" })).toBeTruthy();
-    expect(
-      screen.getByText("Rules that apply to everyone in the company. Only the Director and Administrators can change them."),
-    ).toBeTruthy();
+    // Who may change the rules is one tap away in Approvals (ApprovalSettings.test.tsx), not a resting sentence.
     expect(screen.getByRole("region", { name: "approvals" })).toBeTruthy();
     expect(screen.getByRole("region", { name: "dashboard summary" })).toBeTruthy();
   });

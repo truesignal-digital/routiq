@@ -50,9 +50,13 @@ describe("ThemeToggle", () => {
       "Dark",
       "Same as phone",
     ]);
-    expect(screen.getByRole("button", { name: "Same as phone" }).getAttribute("aria-pressed")).toBe(
-      "true",
-    );
+    const selected = screen.getByRole("button", { name: "Same as phone" });
+    expect(selected.getAttribute("aria-pressed")).toBe("true");
+    // Like the language buttons: a check on a secondary button, not the filled one.
+    expect(selected.className).toContain("bg-secondary");
+    expect(selected.className).not.toContain("bg-primary");
+    expect(selected.querySelector(".lucide-check")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Light" }).querySelector(".lucide-check")).toBeNull();
   });
 
   it("darkens the document and remembers the choice", async () => {

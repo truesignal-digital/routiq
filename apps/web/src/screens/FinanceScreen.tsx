@@ -38,6 +38,7 @@ function MoneyPage() {
   const me = useMeContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const tabs = visibleMoneyTabs(me?.role, me?.enabledModules);
+  const active = activeMoneyTab(pathname);
   const canApprove = tabs.includes("approve");
   // The approver's queue count, from the read that also feeds the tiles: the
   // same entries the To approve tab lists for the shell's branch.
@@ -58,15 +59,17 @@ function MoneyPage() {
   return (
     <ModulePage
       title={t("finance.entries.title")}
-      description={t(ownOnly ? "finance.page.descriptionOwn" : "finance.page.description")}
+      // The heading and tabs say what the page is; only a driver's narrower scope needs saying.
+      description={ownOnly ? t("finance.page.descriptionOwn") : undefined}
       tabsLabel={t("finance.page.tabs.label")}
       tabs={tabList}
-      active={activeMoneyTab(pathname)}
+      active={active}
       action={
         canRecordFinance(me?.role, me?.enabledModules) ? (
           // A link styled as a button: Base UI's Button would announce it as
-          // a button (#136). The page's one primary action, on every tab.
-          <Link to="/finance/record" className={buttonVariants()}>
+          // a button (#136). The page's primary action, except on To approve,
+          // where the next row's Approve is the one filled button.
+          <Link to="/finance/record" className={buttonVariants({ variant: active === "approve" ? "outline" : "default" })}>
             <Plus aria-hidden />
             {label("record-expense")}
           </Link>

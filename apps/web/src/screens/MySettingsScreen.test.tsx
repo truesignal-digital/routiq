@@ -52,7 +52,10 @@ describe("My settings", () => {
     await userEvent.click(await screen.findByRole("button", { name: "English" }));
     expect(await screen.findByRole("heading", { name: "Language" })).toBeTruthy();
     expect(localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe("en");
-    expect(screen.getByRole("button", { name: "English" }).getAttribute("aria-pressed")).toBe("true");
+    const english = screen.getByRole("button", { name: "English" });
+    expect(english.getAttribute("aria-pressed")).toBe("true");
+    // The current language is a state, not the page's one filled button.
+    expect(english.className).not.toMatch(/\bbg-primary\b/);
 
     await userEvent.click(screen.getByRole("button", { name: "Français" }));
     expect(await screen.findByRole("heading", { name: "Langue" })).toBeTruthy();

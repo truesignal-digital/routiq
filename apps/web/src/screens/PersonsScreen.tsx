@@ -151,7 +151,6 @@ export function PersonsScreen() {
     <PageContainer>
       <PageHeader
         title={t("persons.title")}
-        description={t("persons.lead")}
         actions={
           canRegister ? (
             <>

@@ -127,6 +127,7 @@ function BridgeChart({ labelled, currency }: { labelled: Labelled[]; currency: s
                 <Tooltip>
                   <TooltipTrigger
                     render={<div />}
+                    role="img"
                     aria-label={`${label}: ${exact}`}
                     className={cn(
                       "absolute inset-x-1 rounded-[4px]",

@@ -125,13 +125,10 @@ describe("BranchActionDialog", () => {
     const { onDismiss } = renderDialog("rename", client);
 
     // The code is shown so the admin knows which branch this is, but it is
-    // embedded in every record number the branch has printed.
+    // embedded in every record number the branch has printed: the field is
+    // locked rather than explained.
     expect(screen.getByLabelText("Code")).toHaveProperty("readOnly", true);
-    expect(
-      screen.getByText(
-        "Le code apparaît dans les numéros de pièces et ne peut pas changer.",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByLabelText("Code")).toHaveProperty("disabled", true);
 
     await userEvent.clear(screen.getByLabelText("Nom"));
     await userEvent.type(screen.getByLabelText("Nom"), "Douala Port");

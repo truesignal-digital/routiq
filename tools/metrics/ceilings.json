@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 788742,
+    "ceiling": 789411,
     "raises": [
       {
         "date": "2026-10-06",
@@ -313,11 +313,17 @@
         "from": 781435,
         "to": 788742,
         "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
+      },
+      {
+        "date": "2026-10-17",
+        "from": 788742,
+        "to": 789411,
+        "reason": "UI noise pass (#735): InfoPopover, CountedPopover, at-rest trust lines and the session-end redirect; +669 B gzip while initial JS shrank"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 23462,
+    "ceiling": 23767,
     "raises": [
       {
         "date": "2026-10-06",
@@ -402,11 +408,17 @@
         "from": 23330,
         "to": 23462,
         "reason": "#663 FormPage: container-query grid for the 760 px form column and 300 px So far column, sticky footer above the phone bottom bar (re-recorded on develop 2946600c)"
+      },
+      {
+        "date": "2026-10-17",
+        "from": 23462,
+        "to": 23767,
+        "reason": "UI noise pass (#735): 44 px phone targets on rows, links and tabs, InfoPopover and at-rest trust lines; +305 B gzip"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 285204,
+    "ceiling": 282586,
     "raises": [
       {
         "date": "2026-10-06",

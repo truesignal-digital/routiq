@@ -301,14 +301,14 @@ describe("applyPresetVocabulary", () => {
     const instance = freshInstance();
     const trip = (lng: "fr" | "en") => ({
       tab: instance.t("vehicle.tabs.trips", { lng }),
-      description: instance.t("vehicle.trips.description", { lng }),
+      empty: instance.t("vehicle.trips.empty", { lng }),
       row: instance.t("vehicle.trips.tripNumber", { number: 12, lng }),
       open: instance.t("vehicle.trips.openFull", { lng }),
     });
 
     expect(trip("fr")).toEqual({
       tab: "Activités",
-      description: "Activités avec ce véhicule",
+      empty: "Aucune activité pour l'instant.",
       row: "Activité 12",
       open: "Ouvrir l'activité complète",
     });
@@ -317,7 +317,7 @@ describe("applyPresetVocabulary", () => {
     applyPresetVocabulary(instance, "TRUCKING");
     expect(trip("fr")).toEqual({
       tab: "Trajets",
-      description: "Trajets avec ce camion",
+      empty: "Aucun trajet pour l'instant.",
       row: "Trajet 12",
       open: "Ouvrir le trajet complet",
     });
@@ -326,7 +326,7 @@ describe("applyPresetVocabulary", () => {
     applyPresetVocabulary(instance, "PASSENGER_TRANSPORT");
     expect(trip("fr")).toEqual({
       tab: "Voyages",
-      description: "Voyages avec ce véhicule",
+      empty: "Aucun voyage pour l'instant.",
       row: "Voyage 12",
       open: "Ouvrir le voyage complet",
     });

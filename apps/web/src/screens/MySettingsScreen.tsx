@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/page";
 import { PageContainer } from "@/components/page-container";
@@ -42,12 +43,14 @@ export function MySettingsScreen() {
               <Button
                 key={code}
                 type="button"
-                variant={selected ? "default" : "outline"}
+                // The current choice is a state, not the page's next step, so it is never the filled button.
+                variant={selected ? "secondary" : "outline"}
                 aria-pressed={selected}
                 // The language names stay in their own language, whatever the UI is in.
                 lang={base}
                 onClick={() => void chooseLanguage(i18n, code)}
               >
+                {selected && <Check aria-hidden />}
                 {label}
               </Button>
             );

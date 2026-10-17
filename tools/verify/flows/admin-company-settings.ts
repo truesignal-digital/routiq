@@ -33,10 +33,12 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
   await page.waitForURL((url) => url.pathname === "/more/company");
   const approvals = page.getByRole("region", { name: t("Approbations", "Approvals"), exact: true });
   await approvals.waitFor();
+  // Who may change the rules is one tap away, behind Approvals' (i).
+  await approvals.getByRole("button", { name: t("À propos des approbations", "About approvals"), exact: true }).click();
   const who = page.getByText(
     t(
-      "Des règles qui s'appliquent à toute l'entreprise. Seuls la Direction et les Administrateurs peuvent les modifier.",
-      "Rules that apply to everyone in the company. Only the Director and Administrators can change them.",
+      "Seuls la Direction et les Administrateurs peuvent modifier ces règles.",
+      "Only the Director and Administrators can change these rules.",
     ),
     { exact: true },
   );
@@ -46,6 +48,8 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
     caption: `${account.displayName}, an Administrator for one branch, opens Company settings: the Director and Administrators can change these rules`,
     highlight: who,
   });
+  await page.keyboard.press("Escape");
+  await who.waitFor({ state: "hidden" });
 
   const setRecording = async (amount: string) => {
     const title = t("Modifier les seuils d'approbation", "Change approval thresholds");

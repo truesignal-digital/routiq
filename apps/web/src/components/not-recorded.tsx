@@ -21,9 +21,10 @@ export function NotRecorded({ onAdd, className }: { onAdd?: (() => void) | undef
         <button
           type="button"
           onClick={onAdd}
-          // The hit area grows past the text so a phone thumb finds it without
-          // making the row taller (44 px targets, #23).
-          className="relative ml-2 font-medium text-primary underline-offset-4 after:absolute after:-inset-x-2 after:-inset-y-3 hover:underline focus-visible:underline focus-visible:outline-none"
+          // Padding grows the box past the text (44 px on a phone, 24 with a
+          // mouse, #23) and the negative margins take it back, so the row
+          // keeps its height and the word keeps its 8 px gap.
+          className="-my-3 -mr-3 ml-[-0.25rem] inline-flex min-h-11 items-center px-3 font-medium text-primary underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none desktop:-my-0.5 desktop:min-h-6"
         >
           {t("common.add")}
         </button>

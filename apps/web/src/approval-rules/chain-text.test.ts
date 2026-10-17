@@ -23,15 +23,15 @@ afterAll(async () => {
 describe("the approval hint beside the amount (#534)", () => {
   it("names every band that waits before an amount is typed", () => {
     expect(hint(normal)).toEqual([
-      "Above 100 000 FCFA, this entry waits for Finance.",
-      "Above 1 000 000 FCFA, this entry waits for the Director.",
+      "Above 100 000 FCFA: waits for Finance.",
+      "Above 1 000 000 FCFA: waits for the Director.",
     ]);
   });
 
   it("names the band the typed amount falls in, bounds included", () => {
-    expect(hint(normal, 1_500_000)).toEqual(["Above 1 000 000 FCFA, this entry waits for the Director."]);
-    expect(hint(normal, 1_000_000)).toEqual(["Above 100 000 FCFA, this entry waits for Finance."]);
-    expect(hint(normal, 100_001)).toEqual(["Above 100 000 FCFA, this entry waits for Finance."]);
+    expect(hint(normal, 1_500_000)).toEqual(["Above 1 000 000 FCFA: waits for the Director."]);
+    expect(hint(normal, 1_000_000)).toEqual(["Above 100 000 FCFA: waits for Finance."]);
+    expect(hint(normal, 100_001)).toEqual(["Above 100 000 FCFA: waits for Finance."]);
     expect(hint(normal, 100_000)).toEqual(["At this amount, the entry posts directly."]);
     expect(hint(normal, 0)).toHaveLength(2);
   });
@@ -42,8 +42,8 @@ describe("the approval hint beside the amount (#534)", () => {
       { upToMinor: null, outcome: "DIRECTION_APPROVES" },
     ]);
     expect(hint(always)).toEqual([
-      "This entry waits for another Finance member or the Director.",
-      "Above 1 000 000 FCFA, this entry waits for the Director.",
+      "Waits for another Finance member or the Director.",
+      "Above 1 000 000 FCFA: waits for the Director.",
     ]);
     expect(hint(chain([{ upToMinor: null, outcome: "POSTS_DIRECTLY" }]), 5_000_000)).toEqual([
       "Your entries post directly at any amount.",
@@ -52,7 +52,7 @@ describe("the approval hint beside the amount (#534)", () => {
 
   it("speaks French too", async () => {
     await i18n.changeLanguage("fr-CM");
-    expect(hint(normal, 1_500_000, "fr")).toEqual(["Au-delà de 1 000 000 FCFA, cette saisie attend la Direction."]);
+    expect(hint(normal, 1_500_000, "fr")).toEqual(["Au-delà de 1 000 000 FCFA : attend la Direction."]);
     expect(hint(normal, 50_000, "fr")).toEqual(["À ce montant, la saisie est enregistrée directement."]);
     await i18n.changeLanguage("en");
   });

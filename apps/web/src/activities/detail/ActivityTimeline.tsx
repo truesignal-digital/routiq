@@ -1,7 +1,7 @@
 import type { ActivityDetail } from "@routiq/contracts";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDateTime, notRecorded } from "@/lib/format.js";
+import { formatDate, formatDateTime, formatTime, notRecorded } from "@/lib/format.js";
 import { cn } from "@/lib/utils.js";
 
 export type ActivityTimelineData = Pick<
@@ -107,7 +107,9 @@ export function ActivityTimeline({ activity }: ActivityTimelineProps) {
         ? isRunning
           ? "…"
           : t("activities.detail.timeline.openEnd")
-        : formatDateTime(to, locale);
+        : from !== null && formatDate(from, locale) === formatDate(to, locale)
+          ? formatTime(to, locale) // Same day: the date is said once.
+          : formatDateTime(to, locale);
     return `${left} → ${right}`;
   }
 

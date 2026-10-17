@@ -409,7 +409,8 @@ function CommandFormPanel(props: CommandFormProps) {
             type="button"
             onClick={props.back.onBack}
             aria-label={t("commandForm.backTo", { record: props.back.label })}
-            className="mb-3 flex max-w-full items-center gap-1.5 rounded-md py-0.5 text-left text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+            // 44 px tall on a phone, 24 with a mouse; the margins keep the title where it was.
+            className="-mt-2.5 mb-0.5 flex min-h-11 max-w-full items-center gap-1.5 rounded-md text-left text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring desktop:mt-0 desktop:mb-3 desktop:min-h-6"
           >
             <ArrowLeft className="size-4 shrink-0" aria-hidden />
             <span className="truncate font-medium">{props.back.label}</span>

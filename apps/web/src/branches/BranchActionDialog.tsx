@@ -201,9 +201,6 @@ export function BranchActionDialog({
                     className="tabular-nums"
                     value={branch.code}
                   />
-                  <p className="text-sm text-muted-foreground">
-                    {t("branches.form.codeHint")}
-                  </p>
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="branch-name">{t("branches.form.name")}</Label>

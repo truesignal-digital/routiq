@@ -102,7 +102,8 @@ export function SiteHeader() {
                   </BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink
-                    className="truncate"
+                    // py-0.5: a 24 px target with a mouse (WCAG 2.5.8).
+                    className="truncate py-0.5"
                     render={<Link to={crumb.to} />}
                   >
                     {crumbText(crumb)}

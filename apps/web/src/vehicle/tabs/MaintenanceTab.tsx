@@ -55,17 +55,13 @@ export function MaintenanceTab() {
 
   return (
     <div className="space-y-7">
-      <TabHeader
-        title={t("vehicle.maintenance.title")}
-        description={t("vehicle.maintenance.description")}
-        action={<TabAction actionKey="report-issue" />}
-      />
+      {/* The tab names the section; its own heading would repeat it. */}
+      <TabHeader action={<TabAction actionKey="report-issue" />} />
 
       <section>
         <SubHead
           title={t("vehicle.maintenance.workOrders")}
           count={active.length}
-          description={t("vehicle.maintenance.workOrdersHint")}
         />
         {active.length === 0 ? (
           <EmptyState icon={<Wrench className="size-6" aria-hidden />} message={t("vehicle.maintenance.workOrdersEmpty")} />
@@ -84,7 +80,6 @@ export function MaintenanceTab() {
         <SubHead
           title={t("vehicle.maintenance.newProblems")}
           count={unplanned.length}
-          description={t("vehicle.maintenance.newProblemsHint")}
         />
         {unplanned.length === 0 ? (
           <EmptyState

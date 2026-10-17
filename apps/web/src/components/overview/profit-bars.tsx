@@ -49,13 +49,23 @@ export function ProfitBars({
         {shown.map((row) => {
           const width = (Math.abs(row.value) / scale) * span;
           return (
-            <li key={row.key} data-slot="profit-bars-row" data-loss={row.value < 0 ? "" : undefined} className="flex flex-col gap-1.5">
+            // The row is 44 px (py-1 eaten by -my-1, so the spacing stays) and
+            // the truck link's ::after covers it: a phone-sized target.
+            <li
+              key={row.key}
+              data-slot="profit-bars-row"
+              data-loss={row.value < 0 ? "" : undefined}
+              className="relative -my-1 flex flex-col gap-1.5 py-1"
+            >
               <div className="flex items-baseline justify-between gap-3 text-sm">
                 <span className="min-w-0 truncate">
                   {row.to === undefined ? (
                     <span className="font-medium">{row.label}</span>
                   ) : (
-                    <Link to={row.to} className="font-medium underline-offset-4 hover:underline">
+                    <Link
+                      to={row.to}
+                      className="font-medium underline-offset-4 after:absolute after:inset-0 after:content-[''] hover:underline"
+                    >
                       {row.label}
                     </Link>
                   )}

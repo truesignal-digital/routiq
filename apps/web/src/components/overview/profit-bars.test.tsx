@@ -31,6 +31,9 @@ describe("ProfitBars", () => {
     expect(rows.map((row) => row.textContent)).toEqual(["VH002Loss 86", "VH001Profit 400"]);
     expect(rows[0]?.hasAttribute("data-loss")).toBe(true);
     expect(screen.getByRole("link", { name: "VH001" }).getAttribute("href")).toBe("/assets/a");
+    // The link's ::after covers its 44 px row, so a phone has a full-size target.
+    expect(rows[1]?.className).toContain("relative");
+    expect(screen.getByRole("link", { name: "VH001" }).className).toContain("after:inset-0");
   });
 
   it("keeps the losses when it folds rows away, and says how many it left out", () => {

@@ -60,7 +60,11 @@ describe("FleetBoard", () => {
     const { container } = render(<FleetBoard rows={rows} days={days} />);
     const listed = [...container.querySelectorAll("[data-slot=fleet-board-today-row]")].map((row) => row.textContent);
     expect(listed[0]).toContain("Grounded");
-    expect(listed[0]).toContain("20 days on the road in the last 30");
+    expect(listed[0]).toContain("20 days on the road");
     expect(listed[1]).toContain("Not recorded");
+    // The whole row is the truck link's touch target on a phone.
+    const row = container.querySelector<HTMLElement>("[data-slot=fleet-board-today-row]")!;
+    expect(row.className).toContain("relative");
+    expect(row.querySelector("a")?.className).toContain("after:inset-0");
   });
 });

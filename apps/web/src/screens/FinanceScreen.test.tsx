@@ -83,7 +83,8 @@ describe("Money page (#664)", () => {
     renderAs("FINANCE");
 
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("finance.entries.title");
-    expect(screen.getByText("finance.page.description")).toBeTruthy();
+    // The heading and tabs say what the page is: no lead sentence under them.
+    expect(screen.queryByText("finance.page.description")).toBeNull();
     expect(screen.getByRole("link", { name: /commands\.record-expense\.label/ }).getAttribute("href")).toBe(
       "/finance/record",
     );
@@ -113,6 +114,16 @@ describe("Money page (#664)", () => {
     const selected = screen.getAllByRole("tab").find((tab) => tab.getAttribute("aria-selected") === "true");
     expect(selected?.textContent).toContain(active);
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("finance.entries.title");
+  });
+
+  it("leaves To approve one filled button: the next row's Approve, not Record expense", () => {
+    renderAs("FINANCE", "/finance/approve");
+    const record = screen.getByRole("link", { name: /commands\.record-expense\.label/ });
+    expect(record.className).not.toContain("bg-primary");
+    expect(record.className).toContain("bg-background");
+    cleanup();
+    renderAs("FINANCE", "/finance/entries");
+    expect(screen.getByRole("link", { name: /commands\.record-expense\.label/ }).className).toContain("bg-primary");
   });
 
   it("shows no count when nothing waits", () => {

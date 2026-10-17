@@ -26,7 +26,10 @@ const tabsListVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-muted",
+        // On a phone the pill list is 51 px (3 px padding each side, and the trigger's
+        // calc(100% - 1px)), so the trigger itself is 44 px: a form's Expense / Revenue.
+        default:
+          "bg-muted group-data-horizontal/tabs:min-h-[51px] desktop:group-data-horizontal/tabs:min-h-0",
         line: "gap-1 bg-transparent",
       },
     },

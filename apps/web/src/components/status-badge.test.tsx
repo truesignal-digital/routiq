@@ -49,7 +49,7 @@ describe("StatusBadge", () => {
     expect(container.textContent).toContain("Danger");
     const span = container.querySelector("span");
     expect(span?.className).toContain("bg-destructive/10");
-    expect(span?.className).toContain("text-destructive");
+    expect(span?.className).toContain("text-destructive-foreground");
   });
 
   it("does not use palette classes", () => {

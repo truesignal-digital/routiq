@@ -7,7 +7,7 @@ import { resolveAccount } from "../accounts.js";
  *
  * As the technician (start here): complete VH003's brake work order, then
  * report a second, safety-critical problem; the header names that problem
- * instead of "waiting on a manager to release it" (#562). As Direction: the
+ * instead of "waiting for a manager to release it" (#562). As Direction: the
  * Money tiles read "Expenses in {month}" and "Revenue in
  * {month}" (#563); locking a past month says late entries post in the current
  * month and keep their date, and locking the current month says posting stops
@@ -67,7 +67,7 @@ async function groundedNamesTheOtherProblem(ctx: DriveContext) {
   await form.getByRole("button", { name: t("Terminer les travaux", "Complete work"), exact: true }).click();
   await quiet();
   await closeDialogs(page);
-  await status.getByText(t("en attente d'un responsable", "waiting on a manager to release it")).waitFor();
+  await status.getByText(t("attend sa remise en service par un responsable", "waiting for a manager to release it")).waitFor();
   await settle(ctx);
   await shot("grounded-before", {
     caption: "Repair completed and nothing else open: the vehicle waits on a manager's release",
@@ -88,13 +88,13 @@ async function groundedNamesTheOtherProblem(ctx: DriveContext) {
   await closeDialogs(page);
 
   const sentence = status.getByText(
-    t("un autre problème critique est encore ouvert", "another safety-critical problem is still open"),
+    t("un autre problème critique est ouvert", "another safety-critical problem is open"),
     { exact: false },
   );
   await sentence.waitFor({ timeout: 15_000 });
   const text = (await status.textContent()) ?? "";
   if (!text.includes(STEERING)) throw new Error(`the sentence does not name the open problem: ${text}`);
-  if (/waiting on a manager to release|en attente d'un responsable pour la remise/.test(text)) {
+  if (/waiting for a manager to release it|attend sa remise en service par un responsable/.test(text)) {
     throw new Error(`the sentence still waits on a manager: ${text}`);
   }
   await settle(ctx);

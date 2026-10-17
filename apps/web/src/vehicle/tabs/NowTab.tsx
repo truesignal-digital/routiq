@@ -6,6 +6,7 @@ import type { VehicleHistoryItem } from "@routiq/contracts";
 import { RecordText } from "@/components/record-number";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { InfoPopover } from "@/components/info-popover.js";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateTime, formatMoney, formatMonth } from "@/lib/format.js";
 import { cn } from "@/lib/utils";
@@ -50,7 +51,9 @@ function TodoCard({
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(readTodoOpen);
+  const [all, setAll] = useState(false);
   const mine = todos.filter((todo) => todo.step.kind === "go");
+  const shown = all ? mine : mine.slice(0, TODO_ROWS);
   const others = todos.filter((todo) => todo.step.kind !== "go");
   const toggle = () => {
     setOpen(!open);
@@ -78,9 +81,6 @@ function TodoCard({
             <ChevronRight className={cn("transition-transform", open && "rotate-90")} aria-hidden />
           </Button>
         }
-        description={
-          besidesHeader ? t("vehicle.now.todo.descriptionBesides") : t("vehicle.now.todo.description")
-        }
       />
       {open && (
         <>
@@ -94,19 +94,33 @@ function TodoCard({
           ) : mine.length === 0 ? (
             <div className="flex items-start gap-3 px-4 py-5">
               <CircleCheck className="mt-0.5 size-4 shrink-0 text-success-foreground" aria-hidden />
-              <div>
-                <p className="text-sm font-medium">
-                  {besidesHeader ? t("vehicle.now.todo.emptyTitleBesides") : t("vehicle.now.todo.emptyTitle")}
-                </p>
-                <p className="text-sm text-muted-foreground">{t("vehicle.now.todo.emptyHint")}</p>
-              </div>
+              <p className="text-sm font-medium">
+                {besidesHeader ? t("vehicle.now.todo.emptyTitleBesides") : t("vehicle.now.todo.emptyTitle")}
+              </p>
             </div>
           ) : (
-            <ul className="divide-y">
-              {mine.map((todo) => (
-                <TodoRow key={`${todo.item.code}:${todo.item.subject.id}`} todo={todo} />
-              ))}
-            </ul>
+            <>
+              <ul className="divide-y">
+                {shown.map((todo) => (
+                  <TodoRow key={`${todo.item.code}:${todo.item.subject.id}`} todo={todo} />
+                ))}
+              </ul>
+              {mine.length > TODO_ROWS && (
+                <button
+                  type="button"
+                  data-slot="vehicle-todo-more"
+                  onClick={() => setAll((value) => !value)}
+                  aria-expanded={all}
+                  className="flex min-h-11 w-full items-center gap-2 border-t px-4 text-left text-sm font-medium transition-colors hover:bg-muted/40"
+                >
+                  <ChevronRight
+                    className={cn("size-4 shrink-0 text-muted-foreground transition-transform", all && "rotate-90")}
+                    aria-hidden
+                  />
+                  {all ? t("vehicle.now.todo.showFewer") : t("vehicle.now.todo.showMore", { count: mine.length - TODO_ROWS })}
+                </button>
+              )}
+            </>
           )}
           {others.length > 0 && <WaitingOnOthers todos={others} />}
         </>
@@ -114,6 +128,9 @@ function TodoCard({
     </Card>
   );
 }
+
+/** The most urgent rows; the rest wait one tap away, so the money and history stay in the first view. */
+const TODO_ROWS = 3;
 
 /**
  * Direction's notes read as instructions, not faults (#98): a megaphone in
@@ -301,7 +318,7 @@ function MonthCard() {
             key: "posted",
             label: t("vehicle.now.month.posted"),
             value: money(data.posted.expenseMinor),
-            hint: t("vehicle.now.month.postedHint"),
+            hint: null,
             warn: false,
           },
           {
@@ -315,7 +332,7 @@ function MonthCard() {
             key: "missing",
             label: t("vehicle.now.month.missing"),
             value: t("vehicle.money.entryCount", { count: missing }),
-            hint: t("vehicle.now.month.missingHint"),
+            hint: null,
             warn: missing > 0,
           },
         ];
@@ -324,7 +341,7 @@ function MonthCard() {
     <Card className="gap-0 py-0">
       <CardHead
         title={data === undefined ? t("vehicle.money.title") : periodLabel(data.periodCode, locale)}
-        description={t("vehicle.now.month.description")}
+        info={<InfoPopover label={t("vehicle.now.month.infoLabel")}>{t("vehicle.now.month.description")}</InfoPopover>}
         aside={
           <Button
             variant="ghost"
@@ -348,13 +365,13 @@ function MonthCard() {
         <dl className="divide-y">
           {rows.map((row) => (
             <div key={row.key} className="flex items-start justify-between gap-3 px-4 py-2.5">
-              <div className="min-w-0">
-                <dt className="flex items-center gap-1.5 text-sm">
+              <dt className="min-w-0 text-sm">
+                <span className="flex items-center gap-1.5">
                   {row.warn && <TriangleAlert className="size-3.5 text-warning-foreground" aria-hidden />}
                   {row.label}
-                </dt>
-                <dd className="text-xs text-muted-foreground">{row.hint}</dd>
-              </div>
+                </span>
+                {row.hint !== null && <span className="block text-xs text-muted-foreground">{row.hint}</span>}
+              </dt>
               <dd className="shrink-0 text-sm font-semibold tabular-nums">{row.value}</dd>
             </div>
           ))}
@@ -364,12 +381,15 @@ function MonthCard() {
   );
 }
 
+/** The latest few; History holds the rest. */
+const RECENT_ROWS = 3;
+
 function RecentCard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { asset } = useVehicle();
-  const query = useAssetHistory(asset.id, undefined, 5);
-  const items = query.data?.pages[0]?.items.slice(0, 5) ?? [];
+  const query = useAssetHistory(asset.id, undefined, RECENT_ROWS);
+  const items = query.data?.pages[0]?.items.slice(0, RECENT_ROWS) ?? [];
 
   return (
     <Card className="gap-0 py-0">

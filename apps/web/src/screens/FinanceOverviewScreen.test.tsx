@@ -153,9 +153,13 @@ const summary: FinanceSummaryResponse = {
   waiting: { count: 6, amountMinor: 1_140_000, oldestSubmittedAt: "2026-10-06T08:00:00.000Z" },
 };
 
+const summaryState = { current: summary };
+
 vi.mock("../finance/useFinanceSummary.js", () => ({
-  useFinanceSummary: () => ({ data: summary, isPending: false, isError: false }),
+  useFinanceSummary: () => ({ data: summaryState.current, isPending: false, isError: false }),
 }));
+
+const septemberState = { current: { status: "OPEN" as "OPEN" | "LOCKED", lockedAt: null as string | null } };
 
 vi.mock("../finance/usePeriods.js", () => ({
   usePeriods: () => ({
@@ -163,7 +167,7 @@ vi.mock("../finance/usePeriods.js", () => ({
       currentPeriodCode: "2026-10",
       periods: [
         { periodCode: "2026-10", status: "OPEN", lockedAt: null, entryCount: 40, rowVersion: 1 },
-        { periodCode: "2026-09", status: "OPEN", lockedAt: null, entryCount: 154, rowVersion: 1 },
+        { periodCode: "2026-09", ...septemberState.current, entryCount: 154, rowVersion: 1 },
       ],
     },
     isPending: false,
@@ -216,6 +220,8 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
+  summaryState.current = summary;
+  septemberState.current = { status: "OPEN", lockedAt: null };
   navigate.mockClear();
   routeSearch.current = {};
   state.view = "PROFIT";
@@ -229,35 +235,40 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("Money Overview (#664)", () => {
-  it("shows finance the five tiles, each opening its tab already filtered", () => {
+  it("shows the period's two figures, each opening Entries already filtered; what waits is the To do, not a tile", () => {
     renderAs("FINANCE");
 
-    expect(tiles().map((node) => node.querySelector("dt")?.textContent)).toEqual([
-      "Expenses",
-      "Revenue",
-      "To approve",
-      "Missing receipt",
-      "September 2026 close",
-    ]);
+    expect(tiles().map((node) => node.querySelector("dt")?.textContent)).toEqual(["Expenses", "Revenue"]);
     const href = (id: string) => tile(id).querySelector("a")?.getAttribute("href");
     expect(href("expenses")).toBe("/finance/entries?status=LEDGER&direction=EXPENSE&economicMonth=2026-10");
     expect(href("revenue")).toBe("/finance/entries?status=LEDGER&direction=REVENUE&economicMonth=2026-10");
-    expect(href("approve")).toBe("/finance/approve");
-    expect(href("missing")).toBe("/finance/entries?evidence=MISSING");
-    expect(href("close")).toBe("/finance/entries?periodCode=2026-09");
   });
 
   it("compares each amount with the same days of last month, arrow and words", () => {
     renderAs("FINANCE");
 
-    const text = (node: HTMLElement | null) => node?.textContent?.replace(/\s/g, " ") ?? "";
+    const text = (node: Element | null | undefined) => node?.textContent?.replace(/\s/g, " ") ?? "";
     expect(text(tile("expenses"))).toContain("▲ 11% vs 1–9 Sept");
     expect(text(tile("revenue"))).toContain("▲ 7% vs 1–9 Sept");
-    expect(text(document.querySelector('[data-slot="money-overview-period"]'))).toBe(
-      "1–9 October compared with 1–9 September",
-    );
-    expect(tile("close").textContent).toContain("Open");
-    expect(tile("close").textContent).toContain("154 entries");
+    expect(text(document.querySelector('[data-slot="money-overview-period"]'))).toBe("1–9 Oct vs 1–9 Sept");
+    // The month close's state and its entry count ride on its To do row.
+    const close = [...document.querySelectorAll('[data-slot="to-do-row"]')].at(-1);
+    expect(text(close)).toContain("September 2026 still open");
+    expect(text(close)).toContain("154 entries");
+  });
+
+  it("folds a locked last month into one passed line, with no close row", () => {
+    septemberState.current = { status: "LOCKED", lockedAt: "2026-10-03T08:00:00.000Z" };
+    summaryState.current = { ...summary, unlockedPeriodCodes: [], lastLockedPeriodCode: "2026-09" };
+    renderAs("FINANCE");
+    const card = document.querySelector('[data-slot="money-todo"]') as HTMLElement;
+    expect(card.querySelector('[data-slot="money-month-locked"]')?.textContent).toBe("Closed: September 2026");
+    expect(card.textContent).not.toContain("still open");
+  });
+
+  it("says no month is closed while last month is open", () => {
+    renderAs("FINANCE");
+    expect(document.querySelector('[data-slot="money-month-locked"]')).toBeNull();
   });
 
   it("names the earlier months still not locked under the close (#526)", () => {
@@ -278,46 +289,137 @@ describe("Money Overview (#664)", () => {
     expect(rows[1]).toMatch(/^Repairs.*1 200 000 FCFA vs .*780 000 FCFA$/);
   });
 
-  it("lists what waits, each with its one button", () => {
+  it("leads with what waits, each row one kind of work with its count and its verb", () => {
     renderAs("FINANCE");
 
     const todo = document.querySelector<HTMLElement>('[data-slot="to-do-list"]')!;
+    // First on the page: before the figures.
+    const tilesStrip = document.querySelector('[data-slot="metric-strip"]')!;
+    expect(todo.compareDocumentPosition(tilesStrip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const rows = within(todo).getAllByRole("listitem");
     expect(rows.map((row) => row.querySelector("p")?.textContent)).toEqual([
       "6 entries wait for your approval",
       "4 entries have no receipt",
-      "Close September 2026",
+      "September 2026 still open",
     ]);
+    expect(rows.map((row) => row.querySelector("a")?.textContent)).toEqual(["Review", "Add receipts", "Close month"]);
     expect(rows.map((row) => row.querySelector("a")?.getAttribute("href"))).toEqual([
       "/finance/approve",
       "/finance/entries?evidence=MISSING",
       "/finance/periods",
     ]);
+    expect(rows[0]?.textContent?.replace(/\s/g, " ")).toContain("1 140 000 FCFA");
   });
 
-  it("says what the figures leave out", () => {
+  it("warns at rest that not everything is counted, and says what is left out one tap away (§9)", async () => {
     renderAs("FINANCE");
 
-    const line = document.querySelector('[data-slot="money-counted"]')?.textContent ?? "";
+    const verdict = document.querySelector<HTMLElement>('[data-slot="money-verdict"]')!;
+    // The summary reads its own month whatever the range, so the line names it.
+    expect(verdict.querySelector('[data-slot="money-verdict-month"]')?.textContent).toBe("October");
+    const warning = within(verdict).getByRole("button", { name: "Not everything is counted" });
+    expect(warning.className).toContain("text-warning-foreground");
+    await userEvent.click(warning);
+    const line = (await screen.findByRole("dialog", { name: "Not everything is counted" })).textContent?.replace(/\s/g, " ") ?? "";
+    expect(line).toContain(
+      "So far in October: a profit of 1 870 000 FCFA on 9 560 000 FCFA revenue, 137 000 FCFA worse than September at the same day.",
+    );
     expect(line).toContain("Counted: 148 posted entries.");
     expect(line).toContain("Not counted: 6 entries in the period wait for approval");
     expect(line).toContain("4 entries in the period have no receipt.");
     expect(line).toContain("5 activities are still open");
   });
 
+  it("opens on a Monday with the summary notice under To do and above the tiles; closed, it stays closed after a reload (#667)", async () => {
+    state.notice = { today: "2026-10-05", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: "MONDAY", changes: [] };
+    renderAs("FINANCE");
+    const region = screen.getByRole("region", { name: "Summary" });
+    expect(region.getAttribute("data-reason")).toBe("MONDAY");
+    expect(region.textContent?.replace(/\s/g, " ")).toContain(
+      "So far in October: a profit of 1 870 000 FCFA on 9 560 000 FCFA revenue, 137 000 FCFA worse than September at the same day.",
+    );
+    expect(region.textContent).toContain("Spending on Repairs rose by");
+    // The verdict and the completeness warning are the notice's counted line while it is open.
+    const verdict = region.querySelector<HTMLElement>('[data-slot="money-verdict"]')!;
+    expect(verdict.closest('[data-summary="open"]')).toBeTruthy();
+    expect(within(verdict).getByText("Behind September")).toBeTruthy();
+    expect(within(verdict).getByRole("button", { name: "Not everything is counted" }).className).toContain("text-warning-foreground");
+    const todo = document.querySelector('[data-slot="money-todo"]')!;
+    const strip = document.querySelector('[data-slot="metric-strip"]')!;
+    expect(todo.compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(region.compareDocumentPosition(strip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await userEvent.click(within(region).getByRole("button", { name: "Close the summary" }));
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+    const closed = document.querySelector<HTMLElement>('[data-slot="money-verdict"]')!;
+    expect(closed.closest('[data-summary="closed"]')).toBeTruthy();
+    expect(within(closed).getByRole("button", { name: "Not everything is counted" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Show summary" })).toBeTruthy();
+
+    cleanup();
+    renderAs("FINANCE");
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Show summary" }));
+    expect(screen.getByRole("region", { name: "Summary" }).textContent).toContain("So far in October");
+  });
+
+  it("on a day it is not due shows only the verdict and its warning under the tiles, with Show summary (#667)", () => {
+    renderAs("FINANCE");
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+    const verdict = document.querySelector<HTMLElement>('[data-slot="money-verdict"]')!;
+    const line = verdict.closest<HTMLElement>('[data-summary="closed"]')!;
+    expect(line).toBeTruthy();
+    expect(within(line).getByRole("button", { name: "Show summary" })).toBeTruthy();
+    expect(document.querySelector('[data-slot="metric-strip"]')!.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("gives a cashier revenue and expenses, never profit, and no queue or month close", () => {
     state.view = "REVENUE_AND_EXPENSES";
     renderAs("CASHIER");
 
-    expect(tiles().map((node) => node.querySelector("dt")?.textContent)).toEqual([
-      "Expenses",
-      "Revenue",
-      "Missing receipt",
-    ]);
+    expect(tiles().map((node) => node.querySelector("dt")?.textContent)).toEqual(["Expenses", "Revenue"]);
+    const rows = [...document.querySelectorAll('[data-slot="to-do-row"]')].map((row) => row.querySelector("p")?.textContent);
+    expect(rows).toEqual(["4 entries have no receipt"]);
     const page = document.querySelector('[data-slot="money-overview"]')?.textContent ?? "";
     expect(page).not.toMatch(/profit|loss/i);
     expect(page).not.toContain("wait for your approval");
-    expect(page).not.toContain("Close September");
+    expect(page).not.toContain("September 2026 still open");
+  });
+
+  it("shows what waits for approval at rest to a role with no To approve row, and once only when an approver's row says the same (§9)", () => {
+    state.view = "REVENUE_AND_EXPENSES";
+    renderAs("CASHIER");
+    const waiting = document.querySelector<HTMLElement>('[data-slot="money-waiting"]');
+    // At rest, not behind the counted popover: no dialog is open.
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(waiting?.textContent?.replace(/\s/g, " ")).toBe("6 wait for approval · 1 140 000 FCFA");
+    expect(waiting?.className).toContain("text-warning-foreground");
+
+    cleanup();
+    state.view = "PROFIT";
+    renderAs("FINANCE");
+    // The approver's To do row already carries the count and the amount.
+    expect(document.querySelector('[data-slot="money-waiting"]')).toBeNull();
+    const rows = [...document.querySelectorAll('[data-slot="to-do-row"]')].map((row) => row.textContent?.replace(/\s/g, " ") ?? "");
+    expect(rows.filter((row) => row.includes("1 140 000 FCFA"))).toHaveLength(1);
+    expect(rows[0]).toContain("6 entries wait for your approval");
+  });
+
+  it("still shows the period's pending total to an approver who may decide none of it (§9)", () => {
+    summaryState.current = { ...summary, waiting: { count: 0, amountMinor: 0, oldestSubmittedAt: null } };
+    renderAs("FINANCE");
+    const waiting = document.querySelector<HTMLElement>('[data-slot="money-waiting"]');
+    expect(waiting?.textContent?.replace(/\s/g, " ")).toBe("6 wait for approval · 1 140 000 FCFA");
+    const rows = [...document.querySelectorAll('[data-slot="to-do-row"]')].map((row) => row.textContent ?? "");
+    expect(rows.some((row) => row.includes("wait for your approval"))).toBe(false);
+  });
+
+  it("shows the period's total beside an approver's row when the row counts only part of it", () => {
+    summaryState.current = { ...summary, waiting: { count: 2, amountMinor: 300_000, oldestSubmittedAt: null } };
+    renderAs("FINANCE");
+    expect(document.querySelector('[data-slot="money-waiting"]')?.textContent?.replace(/\s/g, " ")).toBe(
+      "6 wait for approval · 1 140 000 FCFA",
+    );
   });
 
   it("changes the range from the Overview, keeping it in the address", async () => {
@@ -333,7 +435,7 @@ describe("Money Overview (#664)", () => {
     expect(state.ranges.at(-1)).toBe("THREE_MONTHS");
     expect(screen.getByRole("radio", { name: "3 months" }).getAttribute("aria-checked")).toBe("true");
     expect(document.querySelector('[data-slot="money-overview-period"]')?.textContent?.replace(/\s/g, " ")).toBe(
-      "July – September 2026 compared with April – June 2026",
+      "Jul – Sept 2026 vs Apr – Jun 2026",
     );
     // Whole months filter the list by kind; a single month would not match the figure.
     expect(tile("expenses").querySelector("a")?.getAttribute("href")).toBe(
@@ -347,28 +449,11 @@ describe("Money Overview (#664)", () => {
     expect(document.querySelector('[data-slot="money-overview"]')).toBeNull();
   });
 
-  it("opens on a Monday with the summary notice above the tiles; closed, the counted line sits under them (#667)", async () => {
-    state.notice = { today: "2026-10-05", schedule: "MONDAY_AND_MONTH_START", scheduledOn: "2026-10-05", scheduledToday: "MONDAY", changes: [] };
-    renderAs("FINANCE");
-    const region = screen.getByRole("region", { name: "Summary" });
-    expect(region.textContent?.replace(/\s/g, " ")).toContain(
-      "So far in October: a profit of 1 870 000 FCFA on 9 560 000 FCFA revenue, 137 000 FCFA worse than September at the same day.",
-    );
-    expect(region.textContent).toContain("Spending on Repairs rose by");
-    expect(region.querySelector('[data-slot="money-counted"]')).toBeTruthy();
-
-    await userEvent.click(screen.getByRole("button", { name: "Close the summary" }));
-    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
-    const counted = document.querySelector('[data-slot="money-counted"]');
-    expect(counted?.closest('[data-summary="closed"]')).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Show summary" })).toBeTruthy();
-  });
-
   it("tells the cashier about expenses, never profit", async () => {
     state.view = "REVENUE_AND_EXPENSES";
     renderAs("CASHIER");
-    await userEvent.click(screen.getByRole("button", { name: "Show summary" }));
-    const text = screen.getByRole("region", { name: "Summary" }).textContent ?? "";
+    await userEvent.click(screen.getByRole("button", { name: "Not everything is counted" }));
+    const text = (await screen.findByRole("dialog", { name: "Not everything is counted" })).textContent ?? "";
     expect(text.replace(/\s/g, " ")).toContain("So far in October: 7 690 000 FCFA of expenses, 11% more than September at the same day.");
     expect(text).not.toMatch(/profit/i);
   });
@@ -377,7 +462,7 @@ describe("Money Overview (#664)", () => {
 describe("Money Overview › Fuel per km by truck (#668)", () => {
   const card = () => document.querySelector<HTMLElement>('[data-slot="fuel-per-km-by-truck"]');
 
-  it("ranks fuel per km against the fleet median, flags the outlier and links each truck", () => {
+  it("ranks fuel per km against the fleet median, flags the outlier and links each truck", async () => {
     renderAs("FINANCE");
     const found = card();
     if (found === null) throw new Error("no fuel card");
@@ -387,8 +472,18 @@ describe("Money Overview › Fuel per km by truck (#668)", () => {
     expect(rows[0]?.textContent).toContain("24% above the median");
     expect(within(found).getByRole("link", { name: "VH007" }).getAttribute("href")).toBe("/assets/a7");
     expect(found.textContent?.replace(/\s/g, " ")).toMatch(/Fleet median \S*\s?300/);
-    expect(found.textContent).toContain("Not counted: 1 vehicle whose km are not known.");
-    expect(found.textContent).toContain("Fuel expenses ÷ km from legs or the odometer.");
+    // Vehicles left out are a warning at rest; which ones and how it is worked out, one tap away.
+    const warning = within(found).getByRole("button", { name: "Not everything is counted" });
+    expect(warning.className).toContain("text-warning-foreground");
+    await userEvent.click(warning);
+    expect((await screen.findByRole("dialog", { name: "Not everything is counted" })).textContent).toContain(
+      "Not counted: 1 vehicle whose km are not known.",
+    );
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(within(found).getByRole("button", { name: "How fuel per km is worked out" }));
+    expect((await screen.findByRole("dialog", { name: "How fuel per km is worked out" })).textContent).toContain(
+      "Fuel expenses ÷ km from legs or the odometer.",
+    );
   });
 
   it("reads the page's range", () => {

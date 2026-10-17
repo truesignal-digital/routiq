@@ -78,11 +78,6 @@ function Home() {
 }
 
 /**
- * The Dashboard's header and tab bar over the tab's own route. The range the
- * money tabs share rides along in each tab's address; To do counts the whole
- * Branch Scope today, whatever the range, and its tab shows how many wait.
- */
-/**
  * The tab route rendered under Home. Read from the matched child, not the
  * address: while a link out of Home loads, the address has already moved on
  * and this page is still the one on screen.
@@ -91,6 +86,11 @@ function useTabPath(): string {
   return useChildMatches({ select: (matches) => matches[0]?.pathname ?? "/" });
 }
 
+/**
+ * The Dashboard's header and tab bar over the tab's own route. The range the
+ * money tabs share rides along in each tab's address; To do counts the whole
+ * Branch Scope today, whatever the range, and its tab shows how many wait.
+ */
 function DashboardPage() {
   const { t } = useTranslation();
   const pathname = useTabPath();
@@ -108,7 +108,6 @@ function DashboardPage() {
   return (
     <ModulePage
       title={t("home.title")}
-      description={t("dashboard.description")}
       tabsLabel={t("dashboard.tabs.label")}
       tabs={tabs}
       active={activeDashboardTab(pathname)}
@@ -316,7 +315,8 @@ function homeTile(
 /**
  * The first keyset page of the entries read, unfiltered. No pager and no load
  * more: the home screen shows what just happened, and the entries list owns
- * everything past that.
+ * everything past that. Not cut shorter: the read's order can put an entry
+ * still waiting for approval below the first few, and that state must show.
  */
 function RecentEntries({ onOpenEntry }: { onOpenEntry: (entryId: string) => void }) {
   const { t } = useTranslation();
@@ -329,7 +329,10 @@ function RecentEntries({ onOpenEntry }: { onOpenEntry: (entryId: string) => void
       <CardHeader>
         <CardTitle>{t("home.recent.title")}</CardTitle>
         <CardAction>
-          <Link to="/finance/entries" className="text-sm font-medium underline-offset-4 hover:underline">
+          <Link
+            to="/finance/entries"
+            className="-my-3 inline-flex min-h-11 min-w-11 items-center justify-end text-sm font-medium whitespace-nowrap underline-offset-4 hover:underline desktop:my-0 desktop:min-h-6 desktop:min-w-0"
+          >
             {t("home.recent.viewAll")}
           </Link>
         </CardAction>

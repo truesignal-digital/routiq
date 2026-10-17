@@ -21,5 +21,12 @@ export function RuleHint({ commandType }: { commandType: ApprovalChainCommandTyp
   if (data === undefined || chain === undefined) return null;
   const amount = typeof typed === "string" ? parseWholeAmount(typed) : undefined;
   const amountMinor = amount?.kind === "amount" ? amount.minor : null;
-  return <FormDescription>{ruleHint(t, chain, data.currency, amountMinor).join(" ")}</FormDescription>;
+  // One band per line, so each reads as a short rule rather than one paragraph.
+  return (
+    <FormDescription className="flex flex-col">
+      {ruleHint(t, chain, data.currency, amountMinor).map((line) => (
+        <span key={line}>{line}</span>
+      ))}
+    </FormDescription>
+  );
 }

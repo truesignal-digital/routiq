@@ -49,11 +49,12 @@ function TripsSection() {
   return (
     <section>
       <TabHeader
-        title={t("vehicle.trips.title")}
-        description={
-          trips.length > 0
-            ? t("vehicle.trips.descriptionWithKm", { km: totalKm })
-            : t("vehicle.trips.description")
+        aside={
+          trips.length > 0 ? (
+            <span className="text-sm text-muted-foreground tabular-nums">
+              {t("vehicle.trips.kmRecorded", { km: totalKm })}
+            </span>
+          ) : undefined
         }
         action={<TabAction actionKey="start-trip" />}
       />

@@ -54,7 +54,7 @@
     "overview": {
       "tiles": {
         "idle": "No trip for {days}+ days",
-        "onTheRoadInfo": "Vehicle-days on a trip ÷ vehicle-days recorded, last {days} days. Days nobody could record are left out."
+        "onTheRoadInfo": "Vehicle-days on a trip ÷ vehicle-days recorded, last {days} days, against the {days} days before. Days nobody could record are left out."
       },
       "km": {
         "some": "This month, km are known for {known, number} of {total, number} vehicles: {missing, plural, one {# trip has} other {# trips have}} no km."
@@ -150,7 +150,6 @@
         "asset": "Vehicle"
       }
     },
-    "subtitle": "Every trip your vehicles run, from start to close.",
     "loadFailed": "We couldn't load trips. Please retry.",
     "overview": {
       "weeks": {
@@ -161,20 +160,17 @@
       },
       "summary": {
         "sentence": "{started, plural, =0 {No trip has started this week yet.} one {# trip started this week; {closed, number} of them closed.} other {# trips started this week; {closed, number} of them closed.}}",
-        "open": "{open, plural, =0 {Nothing is still open.} one {# trip is still open.} other {# trips are still open.}}",
-        "counted": "{fuelCounted, select, yes {Closed trips missing data: {fuel, number} without fuel and {km, number} without km.} other {Closed trips missing data: {km, number} without km. Fuel is not counted: Money is off.}}"
+        "open": "{open, plural, =0 {Nothing is still open.} one {# trip is still open.} other {# trips are still open.}}"
       }
     }
   },
   "maintenance": {
     "workOrders": {
-      "newHint": "Open a work order on a vehicle, with or without a problem behind it.",
       "columns": {
         "asset": "Vehicle"
       }
     },
     "issues": {
-      "newHint": "Describe the fault found on the vehicle. A safety-critical problem grounds the vehicle immediately.",
       "columns": {
         "asset": "Vehicle"
       }
@@ -223,10 +219,7 @@
       "trips": "Trips"
     },
     "trips": {
-      "title": "Trips",
-      "description": "Trips with this vehicle",
-      "descriptionWithKm": "Trips with this vehicle · {km, number} km recorded",
-      "empty": "No trips yet. Start one when the vehicle leaves the depot.",
+      "empty": "No trips yet.",
       "tripNumber": "Trip {number}",
       "wholeTrip": "Whole-trip amounts",
       "noMoney": "No entries linked to this trip yet.",
@@ -249,8 +242,6 @@
     },
     "status": {
       "available": {
-        "sinceAndTrip": "In service since {since}; last trip {lastTrip}.",
-        "sinceNoTrips": "In service since {since}; no trips yet.",
         "lastTripOnly": "Last trip {lastTrip}.",
         "noTrips": "No trips yet."
       }

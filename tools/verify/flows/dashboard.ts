@@ -157,8 +157,10 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet, account })
 
   await tab("Bénéfice par agence", "Profit by branch").click();
   await page.waitForURL((url) => url.pathname === "/profit-by-branch");
-  await page.locator("[data-slot='company-costs-note']").waitFor();
   await quiet();
+  // Company costs are not split by branch: said behind the title's info button, not resting on the page.
+  await page.getByRole("button", { name: t("Frais généraux", "Company costs"), exact: true }).click();
+  await page.locator("[data-slot='info-popover']").waitFor();
   const branchRows = (overview.branches ?? []).length;
   log(`branches in the read: ${branchRows}`);
   await shot("profit-by-branch", {

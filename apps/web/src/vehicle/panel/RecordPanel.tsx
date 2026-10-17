@@ -48,7 +48,7 @@ export function RecordPanel() {
               <button
                 type="button"
                 onClick={panel.back}
-                className="flex items-center gap-1 self-start px-4 pt-3 text-xs font-medium text-muted-foreground hover:text-foreground"
+                className="flex min-h-11 items-center gap-1 self-start px-4 pt-1 text-xs font-medium text-muted-foreground hover:text-foreground desktop:min-h-6 desktop:pt-3"
               >
                 <ArrowLeft className="size-3.5" aria-hidden />
                 {t("vehicle.panel.backTo", {

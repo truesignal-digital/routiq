@@ -26,6 +26,7 @@ import { useCommandLabel } from "../commands/labels.js";
 import { recordNumberText } from "../lib/record-number.js";
 import { DESTRUCTIVE_STEPS, STEP_COMMANDS, STEP_ICONS } from "./steps.js";
 import { actionDef } from "./actions.js";
+import { groundingStep } from "./flow.js";
 import { useVehicle } from "./context.js";
 import type { Lock as LockReason, OfferedStep, Step, VehicleActionKey } from "./model.js";
 
@@ -173,11 +174,14 @@ export function SafetyMark() {
 
 export function CardHead({
   title,
+  info,
   aside,
   description,
   className,
 }: {
   title: ReactNode;
+  /** An InfoPopover beside the title, outside the heading so its name stays the title. */
+  info?: ReactNode;
   aside?: ReactNode;
   description?: ReactNode;
   className?: string | undefined;
@@ -185,7 +189,10 @@ export function CardHead({
   return (
     <div className={cn("flex items-center justify-between gap-3 border-b px-4 py-3", className)}>
       <div className="min-w-0">
-        <h2 className="flex items-center gap-2 text-sm font-semibold">{title}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="flex items-center gap-2 text-sm font-semibold">{title}</h2>
+          {info}
+        </div>
         {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
       </div>
       {aside}
@@ -193,21 +200,25 @@ export function CardHead({
   );
 }
 
-/** A tab's title, one line of explanation, and its single primary button. */
+/**
+ * A tab's own heading when it says more than the tab's name (Money's month),
+ * and its one action. No explaining sentence: rules show as the rows and locks.
+ */
 export function TabHeader({
   title,
-  description,
+  aside,
   action,
 }: {
-  title: ReactNode;
-  description: ReactNode;
+  title?: ReactNode;
+  /** A short fact beside the title (a total, the basis), or an InfoPopover. */
+  aside?: ReactNode;
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0">
-        <h2 className="text-base font-semibold">{title}</h2>
-        <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-center gap-2">
+        {title !== undefined && <h2 className="text-base font-semibold">{title}</h2>}
+        {aside}
       </div>
       {action}
     </div>
@@ -217,19 +228,21 @@ export function TabHeader({
 export function SubHead({
   title,
   count,
-  description,
+  aside,
 }: {
   title: string;
   count?: number | undefined;
-  description?: string | undefined;
+  /** An InfoPopover with what the list leaves unsaid. */
+  aside?: ReactNode;
 }) {
   return (
-    <div className="mb-2.5">
+    // The aside sits beside the heading, not in it, so the heading's name is its title alone.
+    <div className="mb-2.5 flex items-center gap-2">
       <h3 className="flex items-center gap-2 text-sm font-semibold">
         {title}
         {count !== undefined && <Count>{count}</Count>}
       </h3>
-      {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
+      {aside}
     </div>
   );
 }
@@ -321,14 +334,23 @@ export function useStepLabel() {
       : label(STEP_COMMANDS[step.key], part);
 }
 
-/** The one primary button a tab carries; it starts the action the way the catalogue says. */
+/**
+ * A tab's own action; it starts the action the way the catalogue says. Filled
+ * unless the status block already holds this role's next step: one filled
+ * button per screen.
+ */
 export function TabAction({ actionKey }: { actionKey: VehicleActionKey }) {
   const stepLabel = useStepLabel();
-  const { can, availability, runAction } = useVehicle();
+  const { asset, viewer, can, availability, runAction } = useVehicle();
   if (!can(actionKey) || availability(actionKey).state !== "enabled") return null;
   const Icon = actionDef(actionKey).icon;
+  const statusHoldsNextStep = groundingStep(asset, viewer).step.kind === "go";
   return (
-    <Button className="self-start sm:self-auto desktop:h-9" onClick={() => runAction(actionKey)}>
+    <Button
+      variant={statusHoldsNextStep ? "outline" : "default"}
+      className="self-start sm:self-auto desktop:h-9"
+      onClick={() => runAction(actionKey)}
+    >
       <Icon aria-hidden />
       {stepLabel({ key: actionKey })}
     </Button>

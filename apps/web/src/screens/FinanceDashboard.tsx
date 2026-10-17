@@ -1,15 +1,17 @@
 import type { ReactNode } from "react";
 import { Link, useNavigate, useRouterState, useSearch } from "@tanstack/react-router";
 import type { AssetOverview, FinanceOverviewResponse, FleetUsageResponse } from "@routiq/contracts";
+import { ClipboardCheck, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMeContext } from "@/auth/me.js";
 import { useAssetOverview } from "@/assets/useAssetOverview.js";
 import { FilterChips } from "@/components/filter-chips";
 import { MetricStrip, metricTiles, moneyMetric, type MetricTile } from "@/components/metric-strip.js";
 import { CompareBars } from "@/components/overview/compare-bars.js";
-import { OverviewSummary } from "@/components/overview/overview-summary.js";
 import { ToDoList } from "@/components/overview/to-do-list.js";
+import { InfoPopover } from "@/components/info-popover.js";
 import { ErrorState } from "@/components/page";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { comingUpLine, ComingUpIcon, todoItem } from "@/dashboard/attention-words.js";
@@ -22,7 +24,7 @@ import { dashboardMode, vehicleRows, vehiclesAtALoss, type DashboardMode } from 
 import { ProfitBridge } from "@/finance/dashboard/ProfitBridge.js";
 import { CompanyLinesList, VehicleProfitTable, VehiclesAtALoss } from "@/finance/dashboard/VehicleProfit.js";
 import { useFleetUsage } from "@/overview/useFleetUsage.js";
-import { moneySummaryText } from "@/overview/money-summary.js";
+import { monthName, moneySummaryText } from "@/overview/money-summary.js";
 import { SummaryStatusBadge } from "@/overview/SummaryStatusBadge.js";
 import { useMoneyOverview } from "@/overview/useMoneyOverview.js";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -83,7 +85,7 @@ function RangeBar({ overview, range }: { overview: FinanceOverviewResponse | und
       />
       {windows !== undefined && (
         <p data-slot="dashboard-period" className="text-sm text-muted-foreground">
-          {t("finance.overview.period", { period: windows.period, comparison: windows.comparison })}
+          {t("dashboard.periodShort", { period: windows.periodShort, comparison: windows.comparisonShort })}
         </p>
       )}
     </div>
@@ -96,10 +98,12 @@ function OverviewError({ onRetry }: { onRetry: () => void }) {
 }
 
 /**
- * Dashboard › Overview (#666, dashboards.html#home): are we making money, what
- * changed it, what needs me. Branch and range change every region except To
- * do and Coming up, which count the whole Branch Scope. A company with no
- * revenue (an internal fleet) sees its expenses and costs, never a profit.
+ * Dashboard › Overview (#666, dashboards.html#home), journey-first (tools/verify/journeys/
+ * director-checks-month.ts, admin-clears-today.ts): what needs me comes first, then the
+ * figures, then why they moved. Rules show as figures, badges and one-tap explanations,
+ * not resting sentences. Branch and range change every region except To do and Coming
+ * up, which count the whole Branch Scope. A company with no revenue (an internal fleet)
+ * sees its expenses and costs, never a profit.
  */
 export function DashboardOverviewTab() {
   const { t, i18n } = useTranslation();
@@ -113,7 +117,6 @@ export function DashboardOverviewTab() {
   const fleet = useAssetOverview(showFleet);
   // Cost per km for the same range: a fleet figure, read with the fleet (#668).
   const usage = useFleetUsage(rangeFromParam(range), showFleet);
-  const todo = useTodo();
   const rows = overview === undefined ? [] : vehicleRows(overview, branchId);
   const steps = overview === undefined || mode !== "profit" ? undefined : profitBridge(overview);
   const words = overview === undefined ? undefined : moneySummaryText(overview, t, i18n.resolvedLanguage);
@@ -123,97 +126,69 @@ export function DashboardOverviewTab() {
       <RangeBar overview={overview} range={range} />
       {query.isError && <OverviewError onRetry={() => void query.refetch()} />}
 
-      <OverviewSummary
-        page="dashboard"
-        notice={overview?.notice}
-        sentence={words?.sentence}
-        details={words?.details}
-        badge={words === undefined ? undefined : <SummaryStatusBadge {...words.badge} />}
-        expensesUp={words?.expensesUp}
-        counted={overview === undefined ? null : <CountedLine overview={overview} mode={mode} />}
-      >
-        <OverviewTiles
-          overview={overview}
-          mode={mode}
-          fleet={showFleet ? fleet.data : undefined}
-          showFleet={showFleet}
-          usage={showFleet ? usage.data : undefined}
-          isPending={query.isPending || (showFleet && fleet.isPending)}
-          isError={query.isError}
-          comparisonShort={windows?.comparisonShort}
-        />
-      </OverviewSummary>
+      {/* People act first: what needs them leads, three rows so the figures stay in the first view. */}
+      <NeedsYouCard limit={3} />
 
-      <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
-        <Card data-slot="dashboard-why">
-          <CardHeader>
-            <CardTitle>{t(mode === "profit" ? "dashboard.bridge.title" : "dashboard.categories.title")}</CardTitle>
-            <CardDescription>
-              {windows === undefined || overview === undefined
-                ? t(mode === "profit" ? "dashboard.bridge.question" : "dashboard.categories.question")
-                : t(mode === "profit" ? "dashboard.bridge.description" : "dashboard.categories.description", {
-                    comparison: windows.comparisonShort,
-                    period: windows.periodShort,
-                    currency: currencyUnit(overview.currency),
-                  })}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {overview === undefined ? (
-              <Skeleton className="h-48 w-full" />
-            ) : steps !== undefined && windows !== undefined ? (
-              <ProfitBridge
-                steps={steps}
-                currency={overview.currency}
-                periodLabel={windows.periodShort}
-                comparisonLabel={windows.comparisonShort}
-              />
-            ) : (
-              <CategoryChanges overview={overview} windows={windows} />
-            )}
-          </CardContent>
-        </Card>
+      <OverviewTiles
+        overview={overview}
+        mode={mode}
+        fleet={showFleet ? fleet.data : undefined}
+        showFleet={showFleet}
+        usage={showFleet ? usage.data : undefined}
+        isPending={query.isPending || (showFleet && fleet.isPending)}
+        isError={query.isError}
+        comparisonShort={windows?.comparisonShort}
+      />
+      {/* The line holds its height while the read loads, so nothing below it jumps when it lands. */}
+      {query.isPending && <Skeleton className="-mt-1 h-11 w-72 desktop:h-8" />}
+      {overview !== undefined && words !== undefined && (
+        <div data-slot="dashboard-verdict" className="-mt-1 flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 desktop:min-h-8">
+          {/* The summary reads its own month whatever the range, so the verdict names it (§9, period basis). */}
+          <span data-slot="dashboard-verdict-month" className="text-sm font-semibold">
+            {verdictMonth(overview.summary.period.from, i18n.resolvedLanguage)}
+          </span>
+          <SummaryStatusBadge {...words.badge} />
+          {words.details[0] !== undefined && <span className="text-sm">{words.details[0]}</span>}
+          {/* The whole period's pending total, for every reader: an approver's To do counts only what they may decide (§9, approval pending). */}
+          {overview.notCounted.waitingApproval.count > 0 && (
+            <span data-slot="dashboard-waiting" className="inline-flex items-center gap-1.5 text-sm font-medium text-warning-foreground">
+              <ClipboardCheck className="size-4" aria-hidden />
+              {t("finance.overview.counted.waitingShort", {
+                count: overview.notCounted.waitingApproval.count,
+                amount: formatMoney(overview.notCounted.waitingApproval.amountMinor, { currency: overview.currency }),
+              })}
+            </span>
+          )}
+          <CountedPopover overview={overview} mode={mode} sentence={words.sentence} />
+        </div>
+      )}
 
-        {/* On a phone people act first: To do comes before any chart. */}
-        <Card data-slot="dashboard-todo-card" className="order-first lg:order-none">
-          <CardHeader>
-            <CardTitle>{t("dashboard.todo.title")}</CardTitle>
-            <CardDescription>{t("dashboard.todo.description")}</CardDescription>
-            {todo.data !== undefined && todo.data.totalCount > 0 && (
-              <CardAction>
-                <CardLink to="/to-do">{t("dashboard.todo.seeAll", { count: todo.data.totalCount })}</CardLink>
-              </CardAction>
-            )}
-          </CardHeader>
-          <CardContent>
-            {todo.isError ? (
-              <ErrorState
-                message={t("dashboard.todo.loadFailed")}
-                retryLabel={t("home.retry")}
-                onRetry={() => void todo.refetch()}
-              />
-            ) : todo.data === undefined ? (
-              <Skeleton className="h-32 w-full" />
-            ) : (
-              <ToDoList
-                items={todo.data.rows.map((row) => todoItem(row, t, i18n.resolvedLanguage))}
-                empty={t("dashboard.todo.empty")}
-              />
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <Card data-slot="dashboard-why">
+        <CardHeader>
+          <CardTitle>{t(mode === "profit" ? "dashboard.bridge.title" : "dashboard.categories.title")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {overview === undefined ? (
+            <Skeleton className="h-48 w-full" />
+          ) : steps !== undefined && windows !== undefined ? (
+            <ProfitBridge
+              steps={steps}
+              currency={overview.currency}
+              periodLabel={windows.periodShort}
+              comparisonLabel={windows.comparisonShort}
+            />
+          ) : (
+            <CategoryChanges overview={overview} windows={windows} />
+          )}
+        </CardContent>
+      </Card>
 
+      {/* Full width: the vehicles table needs it, and must not scroll inside its card (desktop-fit). */}
       <Card data-slot="dashboard-vehicles-card">
         <CardHeader>
           <CardTitle>
             {t(isMobile && mode === "profit" ? "dashboard.vehicles.atALossTitle" : `dashboard.vehicles.title.${mode}`)}
           </CardTitle>
-          <CardDescription>
-            {windows === undefined
-              ? null
-              : t(`dashboard.vehicles.description.${mode}`, { period: windows.periodShort })}
-          </CardDescription>
           <CardAction>
             <CardLink to="/profit-by-vehicle" range={range}>
               {t("dashboard.openTab")}
@@ -229,12 +204,8 @@ export function DashboardOverviewTab() {
             <VehiclesAtALoss rows={vehiclesAtALoss(rows)} currency={overview.currency} />
           ) : (
             <>
-              <VehicleProfitTable
-                overview={overview}
-                rows={rows}
-                mode={mode}
-                limit={isMobile ? 3 : OVERVIEW_VEHICLE_ROWS}
-              />
+              <VehicleProfitTable overview={overview} rows={rows} mode={mode} limit={isMobile ? 3 : OVERVIEW_VEHICLE_ROWS} />
+              {/* The lines that make the vehicles add up to company profit stay: a figure that doesn't reconcile isn't trusted. */}
               {!isMobile && (
                 <CompanyLinesList overview={overview} rows={rows} mode={mode} branchChosen={branchId !== undefined} />
               )}
@@ -247,7 +218,6 @@ export function DashboardOverviewTab() {
         <Card data-slot="dashboard-months">
           <CardHeader>
             <CardTitle>{t(`dashboard.months.title.${mode}`)}</CardTitle>
-            <CardDescription>{t(`dashboard.months.description.${mode}`, { currency: currencyUnit(overview?.currency) })}</CardDescription>
             <CardAction>
               <CardLink to="/finance">{t("dashboard.months.open")}</CardLink>
             </CardAction>
@@ -262,12 +232,16 @@ export function DashboardOverviewTab() {
         </Card>
         <Card data-slot="dashboard-branches-card">
           <CardHeader>
-            <CardTitle>{t(`dashboard.branches.title.${mode}`)}</CardTitle>
-            <CardDescription>
-              {windows === undefined || overview === undefined
-                ? null
-                : t(`dashboard.branches.description.${mode}`, { period: windows.periodShort, currency: currencyUnit(overview.currency) })}
-            </CardDescription>
+            <CardTitle className="flex items-center gap-1.5">
+              {t(`dashboard.branches.title.${mode}`)}
+              {overview?.companyProfit != null && (
+                <InfoPopover label={t("dashboard.branches.companyCostsLabel")}>
+                  {t("dashboard.branches.companyCostsNote", {
+                    amount: formatMoney(overview.companyProfit.period.companyCostsMinor, { currency: overview.currency }),
+                  })}
+                </InfoPopover>
+              )}
+            </CardTitle>
             <CardAction>
               <CardLink to="/profit-by-branch" range={range}>
                 {t("dashboard.openTab")}
@@ -280,10 +254,7 @@ export function DashboardOverviewTab() {
             ) : overview.branches === null ? (
               <p className="py-2 text-sm text-muted-foreground">{t("dashboard.vehicles.unavailable")}</p>
             ) : (
-              <>
-                <BranchProfitBars rows={branchRows(overview, branchId)} currency={overview.currency} mode={mode} />
-                <CompanyCostsNote overview={overview} />
-              </>
+              <BranchProfitBars rows={branchRows(overview, branchId)} currency={overview.currency} mode={mode} />
             )}
           </CardContent>
         </Card>
@@ -293,13 +264,62 @@ export function DashboardOverviewTab() {
   );
 }
 
+/**
+ * What needs me (dashboards.html, ToDo), first on the page. Each row is a kind of
+ * work with its count, so the list stays short however much waits; the row's verb
+ * is the next step. The rest is one tap away on the To do tab.
+ */
+function NeedsYouCard({ limit }: { limit: number }) {
+  const { t, i18n } = useTranslation();
+  const todo = useTodo();
+  const count = todo.data?.totalCount ?? 0;
+  return (
+    <Card data-slot="dashboard-todo-card">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          {t("dashboard.todo.title")}
+          {count > 0 && (
+            <Badge variant="secondary" className="tabular-nums">
+              {count}
+            </Badge>
+          )}
+        </CardTitle>
+        {/* To do ignores the header's branch, so the scope stays at rest (CONTEXT.md, Ambient Branch). */}
+        <CardDescription data-slot="dashboard-todo-scope" className="flex items-center gap-1.5">
+          {t("dashboard.todo.scopeShort")}
+          <InfoPopover label={t("dashboard.todo.scopeLabel")}>{t("dashboard.todo.scope")}</InfoPopover>
+        </CardDescription>
+        {count > limit && (
+          <CardAction>
+            <CardLink to="/to-do">{t("dashboard.todo.seeAll", { count })}</CardLink>
+          </CardAction>
+        )}
+      </CardHeader>
+      <CardContent>
+        {todo.isError ? (
+          <ErrorState message={t("dashboard.todo.loadFailed")} retryLabel={t("home.retry")} onRetry={() => void todo.refetch()} />
+        ) : todo.data === undefined ? (
+          // About three rows tall, the most the card shows.
+          <Skeleton className="h-44 w-full" />
+        ) : (
+          <ToDoList
+            items={todo.data.rows.map((row) => todoItem(row, t, i18n.resolvedLanguage))}
+            empty={t("dashboard.todo.empty")}
+            limit={limit}
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 /** A card header's link to the page behind it; the money tabs keep the range. */
 function CardLink({ to, range, children }: { to: string; range?: DashboardRangeParam | undefined; children: ReactNode }) {
   return (
     <Link
       to={to}
       search={range === undefined ? {} : { range }}
-      className="text-sm font-medium whitespace-nowrap underline-offset-4 hover:underline"
+      className="inline-flex min-h-11 items-center text-sm font-medium whitespace-nowrap underline-offset-4 hover:underline desktop:min-h-6"
     >
       {children}
     </Link>
@@ -474,15 +494,48 @@ function profitTile(
   return { ...base, hint: t("dashboard.tiles.profitHint", { change, share }) };
 }
 
+/** "October" / "Octobre": the month leads its line, so French capitalises it in the string, not in CSS (DS-4). */
+function verdictMonth(isoDate: string, language: string | undefined): string {
+  const month = monthName(isoDate, language);
+  return month.charAt(0).toLocaleUpperCase(language) + month.slice(1);
+}
+
 /**
- * What the figures are and what they leave out: profit is what was recorded
- * in ROUTIQ, then what was counted and what was not yet, so a missing receipt
- * or an open trip never passes for a complete month.
+ * The way into what the figures count. While anything is left out (waiting for
+ * approval, no receipt, open trips, other currencies) it is a warning at rest,
+ * so missing data never passes for a complete month (§9, completeness); when
+ * all is counted it is a plain question.
  */
-function CountedLine({ overview, mode }: { overview: FinanceOverviewResponse; mode: DashboardMode }) {
+function CountedPopover({ overview, mode, sentence }: { overview: FinanceOverviewResponse; mode: DashboardMode; sentence: string }) {
+  const { t } = useTranslation();
+  const { notCounted } = overview;
+  const incomplete =
+    notCounted.waitingApproval.count > 0 ||
+    notCounted.missingReceipt.count > 0 ||
+    (notCounted.openTrips ?? 0) > 0 ||
+    notCounted.otherCurrencyEntries > 0;
+  return (
+    <InfoPopover
+      label={t(incomplete ? "dashboard.counted.incomplete" : "dashboard.counted.open")}
+      trigger="text"
+      className={incomplete ? "text-warning-foreground" : undefined}
+      icon={incomplete ? <TriangleAlert className="size-4" aria-hidden /> : undefined}
+    >
+      <p className="font-medium">{sentence}</p>
+      <CountedList overview={overview} mode={mode} />
+    </InfoPopover>
+  );
+}
+
+/**
+ * What the figures are and what they leave out, one line each, behind "How is this
+ * counted?": profit is what was recorded in ROUTIQ, then what was counted and what
+ * was not yet, so a missing receipt or an open trip never passes for a complete month.
+ */
+function CountedList({ overview, mode }: { overview: FinanceOverviewResponse; mode: DashboardMode }) {
   const { t } = useTranslation();
   const { counted, notCounted, currency } = overview;
-  const sentences = [
+  const lines = [
     mode === "profit" ? t("dashboard.counted.profitMeans") : null,
     counted.closedTrips === null
       ? t("finance.overview.counted.posted", { count: counted.postedEntries })
@@ -502,9 +555,13 @@ function CountedLine({ overview, mode }: { overview: FinanceOverviewResponse; mo
     notCounted.otherCurrencyEntries > 0
       ? t("finance.overview.counted.otherCurrency", { count: notCounted.otherCurrencyEntries })
       : null,
-  ].filter((sentence): sentence is string => sentence !== null);
+  ].filter((line): line is string => line !== null);
   return (
-    <span data-slot="dashboard-counted">{sentences.join(" ")}</span>
+    <ul data-slot="dashboard-counted" className="flex list-disc flex-col gap-1 pl-4 text-muted-foreground">
+      {lines.map((line) => (
+        <li key={line}>{line}</li>
+      ))}
+    </ul>
   );
 }
 
@@ -536,18 +593,6 @@ function CategoryChanges({
   );
 }
 
-/** Company costs stay out of the branch figures, and the card says so with the amount. */
-function CompanyCostsNote({ overview }: { overview: FinanceOverviewResponse }) {
-  const { t } = useTranslation();
-  const costs = overview.companyProfit?.period.companyCostsMinor;
-  if (costs === undefined) return null;
-  return (
-    <p data-slot="company-costs-note" className="text-xs text-muted-foreground">
-      {t("dashboard.branches.companyCostsNote", { amount: formatMoney(costs, { currency: overview.currency }) })}
-    </p>
-  );
-}
-
 /** What falls due in the next 14 days, across the whole Branch Scope, and what ROUTIQ could not count. */
 function ComingUpCard() {
   const { t, i18n } = useTranslation();
@@ -556,8 +601,22 @@ function ComingUpCard() {
   return (
     <Card data-slot="dashboard-coming-up">
       <CardHeader>
-        <CardTitle>{t("dashboard.comingUp.title")}</CardTitle>
-        <CardDescription>{t("dashboard.comingUp.description", { days: 14 })}</CardDescription>
+        <CardTitle className="flex items-center gap-1.5">
+          {t("dashboard.comingUp.title")}
+          {data?.notCounted.includes("SERVICE_DUE_BY_KM") === true && (
+            // Something left out is said at rest, as a warning that opens the detail.
+            <InfoPopover
+              label={t("dashboard.comingUp.notCountedLabel")}
+              trigger="text"
+              className="text-xs font-normal text-warning-foreground"
+              icon={<TriangleAlert className="size-3.5" aria-hidden />}
+            >
+              {t("dashboard.comingUp.notCounted.SERVICE_DUE_BY_KM")}
+            </InfoPopover>
+          )}
+        </CardTitle>
+        {/* Coming up ignores the header's branch, so its window and scope stay at rest, as on To do. */}
+        <CardDescription data-slot="dashboard-coming-up-scope">{t("dashboard.comingUp.description", { days: 14 })}</CardDescription>
       </CardHeader>
       <CardContent>
         {comingUp.isError ? (
@@ -592,11 +651,6 @@ function ComingUpCard() {
                 })}
               </ul>
             )}
-            {data.notCounted.includes("SERVICE_DUE_BY_KM") && (
-              <p data-slot="coming-up-not-counted" className="pt-3 text-xs text-muted-foreground">
-                {t("dashboard.comingUp.notCounted.SERVICE_DUE_BY_KM")}
-              </p>
-            )}
           </>
         )}
       </CardContent>
@@ -617,9 +671,6 @@ export function DashboardVehiclesTab() {
       <Card>
         <CardHeader>
           <CardTitle>{t(`dashboard.vehicles.title.${mode}`)}</CardTitle>
-          <CardDescription>
-            {windows === undefined ? null : t(`dashboard.vehicles.description.${mode}`, { period: windows.periodShort })}
-          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {overview === undefined ? (
@@ -642,19 +693,22 @@ export function DashboardVehiclesTab() {
 export function DashboardBranchesTab() {
   const { t } = useTranslation();
   const { query, overview, branchId, mode, range } = useDashboardMoney();
-  const windows = useWindows(overview);
   return (
     <div data-slot="dashboard-branches" data-mode={mode} className="flex flex-col gap-5">
       <RangeBar overview={overview} range={range} />
       {query.isError && <OverviewError onRetry={() => void query.refetch()} />}
       <Card>
         <CardHeader>
-          <CardTitle>{t(`dashboard.branches.title.${mode}`)}</CardTitle>
-          <CardDescription>
-            {windows === undefined || overview === undefined
-              ? null
-              : t(`dashboard.branches.description.${mode}`, { period: windows.periodShort, currency: currencyUnit(overview.currency) })}
-          </CardDescription>
+          <CardTitle className="flex items-center gap-1.5">
+            {t(`dashboard.branches.title.${mode}`)}
+            {overview?.companyProfit != null && (
+              <InfoPopover label={t("dashboard.branches.companyCostsLabel")}>
+                {t("dashboard.branches.companyCostsNote", {
+                  amount: formatMoney(overview.companyProfit.period.companyCostsMinor, { currency: overview.currency }),
+                })}
+              </InfoPopover>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {overview === undefined ? (
@@ -662,10 +716,7 @@ export function DashboardBranchesTab() {
           ) : overview.branches === null ? (
             <p className="py-2 text-sm text-muted-foreground">{t("dashboard.vehicles.unavailable")}</p>
           ) : (
-            <>
-              <BranchProfitTable rows={branchRows(overview, branchId)} currency={overview.currency} mode={mode} />
-              <CompanyCostsNote overview={overview} />
-            </>
+            <BranchProfitTable rows={branchRows(overview, branchId)} currency={overview.currency} mode={mode} />
           )}
         </CardContent>
       </Card>

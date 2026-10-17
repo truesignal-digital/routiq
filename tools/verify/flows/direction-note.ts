@@ -137,7 +137,8 @@ async function asTeam(ctx: DriveContext): Promise<void> {
     caption: "History records who marked it as seen",
     highlight: seenEvent,
   });
-  await seenEvent.getByRole("button", { name: t("Ouvrir", "Open"), exact: true }).click();
+  // The event's name opens its record.
+  await seenEvent.getByRole("button", { name: t("Note marquée comme vue", "Note marked as seen") }).click();
   const panel = page.getByRole("dialog").first();
   const seen = panel.getByText(new RegExp(`^${t("Vu par", "Seen by")} `));
   await seen.waitFor();

@@ -18,7 +18,7 @@ import { LatestHistory, RecordHistory } from "@/components/record-history-sheet.
 import { RecordBody, RecordHeader, RecordTabs, TabCount } from "@/components/record-page.js";
 import { StatusBlock } from "@/components/status-block.js";
 import { Button } from "@/components/ui/button";
-import { formatDate, formatDateTime, localizedLabel } from "@/lib/format.js";
+import { formatDate } from "@/lib/format.js";
 import { OtherBranchNotice } from "@/shell/BranchScopeNotices.js";
 
 export function ActivityDetailScreen() {
@@ -101,14 +101,13 @@ function TripPage({ activity }: { activity: ActivityDetail }) {
       <RecordHeader
         name={activity.activityNumber}
         status={<TripStatusBadge trip={activity} />}
+        // Who, where and when; the type is in Overview, the close in History.
         facts={[
-          localizedLabel(activity.activityType, locale),
           activity.customerName,
           activity.originName !== null && activity.destinationName !== null
             ? t("activities.detail.routeValue", { from: activity.originName, to: activity.destinationName })
             : null,
           activity.startedAt === null ? null : formatDate(activity.startedAt, locale),
-          activity.closedAt === null ? null : t("activities.detail.closedAt", { date: formatDateTime(activity.closedAt, locale) }),
         ]}
         actions={headerButtons.length === 0 ? undefined : headerButtons}
       >
@@ -164,16 +163,20 @@ function TripPage({ activity }: { activity: ActivityDetail }) {
           ) : (
             <ActivityMoney entries={entries} totals={tripTotals} scope={entriesScope(me?.role)} />
           ))}
-        {tab === "history" && <RecordHistory entityType="activity" entityId={activity.id} />}
+        {tab === "history" && (
+          <>
+            <RecordHistory entityType="activity" entityId={activity.id} />
+            {/* Where the record came from belongs with its history, not on every tab. */}
+            <ProvenanceStamp
+              className="mt-8"
+              templateCode={activity.templateCode}
+              templateVersion={activity.templateVersion}
+              createdAt={activity.createdAt}
+              commandId={activity.createdByCommandId}
+            />
+          </>
+        )}
       </RecordBody>
-
-      <ProvenanceStamp
-        className="mt-8"
-        templateCode={activity.templateCode}
-        templateVersion={activity.templateVersion}
-        createdAt={activity.createdAt}
-        commandId={activity.createdByCommandId}
-      />
 
       {actions.forms}
     </PageContainer>

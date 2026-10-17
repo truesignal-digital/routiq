@@ -7,6 +7,7 @@ import { useWorkspaceMonth } from "@/auth/workspace-day.js";
 import { FilterChips } from "@/components/filter-chips";
 import { MetricStrip, moneyMetric, type MetricTile, type MetricTiles } from "@/components/metric-strip.js";
 import { EmptyState, ErrorState, LoadingState } from "@/components/page";
+import { InfoPopover } from "@/components/info-popover.js";
 import { PermissionDenied } from "@/components/permission-denied.js";
 import { RecordText } from "@/components/record-number";
 import { Button } from "@/components/ui/button";
@@ -134,9 +135,9 @@ function MoneySection() {
 
   return (
     <div className="space-y-7">
+      {/* The month is the heading: every figure below is for it (period basis). */}
       <TabHeader
-        title={t("vehicle.money.titleFor", { period: periodLabel(period, locale) })}
-        description={t("vehicle.money.description")}
+        title={periodLabel(period, locale)}
         action={
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <div className="flex items-center" role="group" aria-label={t("vehicle.money.periodLabel")}>
@@ -182,7 +183,7 @@ function MoneySection() {
             <Card className="gap-0 py-0">
               <CardHead
                 title={t("vehicle.money.byCategory")}
-                description={t("vehicle.money.byCategoryHint", { period: periodLabel(period, locale) })}
+                description={t("vehicle.money.byCategoryHint")}
               />
               <CategoryBars finance={finance} money={money} />
             </Card>
@@ -195,7 +196,10 @@ function MoneySection() {
       )}
 
       <section>
-        <SubHead title={t("vehicle.money.entries")} description={t("vehicle.money.entriesHint")} />
+        <SubHead
+          title={t("vehicle.money.entries")}
+          aside={<InfoPopover label={t("vehicle.money.entriesInfoLabel")}>{t("vehicle.money.entriesHint")}</InfoPopover>}
+        />
         <div className="mb-3">
           <FilterChips
             label={t("vehicle.money.filterLabel")}
@@ -244,15 +248,22 @@ function MoneySection() {
         )}
       </section>
 
-      {/* The detail carries it only for ledger readers; this section is theirs anyway. */}
+      {/* The detail carries it only for ledger readers; this section is theirs anyway.
+          Its basis (since registration, posted) and what it leaves out stay at rest; the long reason is one tap away. */}
       {lifetime !== undefined && (
-        <p className="border-t pt-4 text-xs text-muted-foreground">
-          {t("vehicle.money.lifetime", {
-            revenue: money(lifetime.revenueMinor),
-            expenses: money(lifetime.expenseMinor),
-            result: profitOrLoss(lifetime.netMinor, { currency: asset.currency, locale }).text,
-          })}
-        </p>
+        <div
+          data-slot="vehicle-money-lifetime"
+          className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-4 text-xs text-muted-foreground"
+        >
+          <div className="flex items-center gap-1.5 font-medium text-foreground">
+            {t("vehicle.money.lifetimeLabel")}
+            <InfoPopover label={t("vehicle.money.lifetimeInfoLabel")}>{t("vehicle.money.lifetimeInfo")}</InfoPopover>
+          </div>
+          <div className="tabular-nums">{t("vehicle.money.lifetimeRevenue", { amount: money(lifetime.revenueMinor) })}</div>
+          <div className="tabular-nums">{t("vehicle.money.lifetimeExpenses", { amount: money(lifetime.expenseMinor) })}</div>
+          <div className="tabular-nums">{profitOrLoss(lifetime.netMinor, { currency: asset.currency, locale }).text}</div>
+          <div data-slot="vehicle-money-lifetime-excludes">{t("vehicle.money.lifetimeExcludes")}</div>
+        </div>
       )}
     </div>
   );
@@ -289,7 +300,6 @@ function PeriodTiles({
     id: "missing",
     label: t("vehicle.money.missing"),
     value: t("vehicle.money.entryCount", { count: missing }),
-    hint: t("vehicle.money.missingHint"),
     tone: missing > 0 ? "warning" : "neutral",
   };
   const tiles: MetricTiles = showRevenue
@@ -301,8 +311,7 @@ function PeriodTiles({
           id: "revenue",
           label: t("vehicle.money.revenue"),
           ...moneyMetric(finance.posted.revenueMinor, currency),
-          hint: t("vehicle.money.revenueHint"),
-          info: t("vehicle.money.postedBasis"),
+          info: t("vehicle.money.revenueBasis"),
         },
       ]
     : [posted, review, missingTile];

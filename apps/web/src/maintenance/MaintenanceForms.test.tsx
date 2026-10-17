@@ -114,6 +114,10 @@ describe("maintenance forms pinned to one vehicle", () => {
 
     const panel = screen.getByRole("dialog", { name: "Report a problem" });
     expect(within(panel).getByText("DLA-T-001 · Mercedes Actros")).toBeTruthy();
+    // The grounding rule shows where the choice is made, at the safety tick.
+    expect(
+      within(panel).getByText("The asset is grounded from the moment this is filed until it is returned to service."),
+    ).toBeTruthy();
     expect(within(panel).queryByRole("combobox", { name: "Asset" })).toBeNull();
 
     await userEvent.type(within(panel).getByLabelText("Description"), "Left mirror cracked");
@@ -182,6 +186,12 @@ describe("ReleaseForm on the override path", () => {
 
     const submit = screen.getByRole("button", { name: "Release to service" }) as HTMLButtonElement;
     expect(submit.disabled).toBe(true);
+    // Four eyes, said where the release happens: whoever completed the repair may not release it.
+    expect(
+      screen.getByText(
+        "The asset becomes available again. This decision needs someone other than whoever declared the work complete or closed the problem.",
+      ),
+    ).toBeTruthy();
     expect(screen.getByText("Brakes squeal on the descent")).toBeTruthy();
 
     await userEvent.type(

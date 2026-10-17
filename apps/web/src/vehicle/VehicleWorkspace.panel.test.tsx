@@ -278,7 +278,7 @@ it("says the grounding order still has work to do while it is open (#109)", asyn
   const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
   expect(
     within(panel).getByText(
-      "This work order keeps the vehicle grounded. Once it is completed, a manager releases it to service.",
+      "Grounded during this work.",
     ),
   ).toBeTruthy();
 });
@@ -293,7 +293,7 @@ it("says a completed grounding order waits for a manager's release, not its own 
   const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
   expect(
     within(panel).getByText(
-      "The work is done, but the vehicle stays grounded until a manager releases it to service.",
+      "Work done. Grounded until released to service.",
     ),
   ).toBeTruthy();
   expect(within(panel).queryByText(/Once it is completed/)).toBeNull();
@@ -315,7 +315,7 @@ it("names the other safety problem that blocks the release, not a manager (#588)
   const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
   expect(
     within(panel).getByText(
-      "The work is done, but the vehicle stays grounded: another safety-critical problem is still open: “Steering play on the left”.",
+      "Work done, still grounded: another safety-critical problem is open, “Steering play on the left”.",
     ),
   ).toBeTruthy();
   expect(
@@ -392,7 +392,7 @@ describe("the grounding note's tone agrees with the vehicle header (#500)", () =
   };
   const tones = async () => {
     const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
-    const note = within(panel).getByText(/^The work is done, but the vehicle stays grounded/).closest("[data-tone]");
+    const note = within(panel).getByText(/^Work done/).closest("[data-tone]");
     // The open panel hides the page from the accessibility tree; the header is still on screen.
     const header = screen.getAllByRole("status", { hidden: true }).find((el) => el.hasAttribute("data-tone"));
     return { note: note?.getAttribute("data-tone"), header: header?.getAttribute("data-tone") };

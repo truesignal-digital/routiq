@@ -249,7 +249,6 @@ export function FormPage({
                     <button
                       type="button"
                       onClick={() => goTo(item.field)}
-                      aria-label={t("form.page.goTo", { field: item.label })}
                       className="flex min-h-11 w-full items-center gap-3 py-2 text-start text-sm hover:text-primary focus-visible:outline-2 focus-visible:outline-ring"
                     >
                       <span className="flex min-w-0 flex-1 flex-col">

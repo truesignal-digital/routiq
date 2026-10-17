@@ -21,4 +21,10 @@ describe("NotRecorded", () => {
     await userEvent.setup().click(screen.getByRole("button", { name: "Ajouter" }));
     expect(onAdd).toHaveBeenCalledOnce();
   });
+
+  it("gives Add a 44 px box on a phone and 24 px with a mouse, without a taller row", () => {
+    render(<NotRecorded onAdd={vi.fn()} />);
+    const add = screen.getByRole("button").className.split(" ");
+    expect(add).toEqual(expect.arrayContaining(["min-h-11", "-my-3", "desktop:min-h-6", "desktop:-my-0.5"]));
+  });
 });

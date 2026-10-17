@@ -72,7 +72,7 @@ async function completeTheRepair(ctx: DriveContext) {
     .getByRole("dialog")
     .last()
     .locator("[data-tone]")
-    .filter({ hasText: t("reste immobilisé jusqu'à sa remise en service", "stays grounded until a manager releases it") });
+    .filter({ hasText: t("Immobilisé jusqu'à la remise en service", "Grounded until released to service") });
   await note.waitFor({ timeout: 15_000 });
   await page.locator("[role=status][data-tone=waiting]").first().waitFor({ timeout: 15_000 });
   const tone = await note.getAttribute("data-tone");

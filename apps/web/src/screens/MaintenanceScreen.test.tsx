@@ -484,6 +484,11 @@ describe("MaintenanceScreen — row sheet", () => {
     expect(
       within(sheet).getByText("maintenance.detail.unavailableTitle"),
     ).toBeTruthy();
+    // The rule behind it is one tap away, not a resting sentence.
+    expect(within(sheet).queryByText("maintenance.detail.unavailableHint")).toBeNull();
+    expect(
+      within(sheet).getByRole("button", { name: "maintenance.detail.unavailableInfoLabel" }),
+    ).toBeTruthy();
   });
 });
 

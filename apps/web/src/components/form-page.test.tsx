@@ -143,7 +143,11 @@ describe("FormPage on a wide screen", () => {
     Element.prototype.scrollIntoView = scrolled;
     renderPage(<Harness />);
 
-    await user.click(screen.getByRole("button", { name: "Go to Route field" }));
+    const missing = document.querySelector<HTMLElement>("[data-slot=form-page-missing]")!;
+    const link = within(missing).getByRole("button", { name: /^Route field/ });
+    // Its name is its visible words (axe label-content-name-mismatch).
+    expect(link.hasAttribute("aria-label")).toBe(false);
+    await user.click(link);
 
     await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Route field")));
     expect(scrolled).toHaveBeenCalled();

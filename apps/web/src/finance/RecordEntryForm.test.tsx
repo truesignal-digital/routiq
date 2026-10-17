@@ -302,11 +302,9 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
       },
     });
     inPanel(<RecordEntryForm surface="panel" pinnedAssetId={ASSET_ID} onRecorded={vi.fn()} />);
-    expect(
-      screen.getByText(
-        "Above 150 000 FCFA, this entry waits for Finance. Above 1 000 000 FCFA, this entry waits for the Director.",
-      ),
-    ).toBeTruthy();
+    // One band per line.
+    expect(screen.getByText("Above 150 000 FCFA: waits for Finance.")).toBeTruthy();
+    expect(screen.getByText("Above 1 000 000 FCFA: waits for the Director.")).toBeTruthy();
 
     inPanel(
       <RecordEntryForm
@@ -317,11 +315,8 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
         onRecorded={vi.fn()}
       />,
     );
-    expect(
-      screen.getByText(
-        "Above 100 000 FCFA, this entry waits for Finance. Above 1 000 000 FCFA, this entry waits for the Director.",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText("Above 100 000 FCFA: waits for Finance.")).toBeTruthy();
+    expect(screen.getAllByText("Above 1 000 000 FCFA: waits for the Director.")).toHaveLength(2);
   });
 
   it("follows the typed amount to the band that decides it (#534)", async () => {
@@ -332,11 +327,11 @@ describe("RecordEntryForm states the approval rule beside the amount (#422)", ()
     const amount = screen.getByLabelText("Amount (FCFA)");
 
     await userEvent.type(amount, "1500000");
-    expect(await screen.findByText("Above 1 000 000 FCFA, this entry waits for the Director.")).toBeTruthy();
+    expect(await screen.findByText("Above 1 000 000 FCFA: waits for the Director.")).toBeTruthy();
 
     await userEvent.clear(amount);
     await userEvent.type(amount, "250000");
-    expect(await screen.findByText("Above 100 000 FCFA, this entry waits for Finance.")).toBeTruthy();
+    expect(await screen.findByText("Above 100 000 FCFA: waits for Finance.")).toBeTruthy();
 
     await userEvent.clear(amount);
     await userEvent.type(amount, "40000");

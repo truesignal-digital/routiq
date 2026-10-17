@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -17,8 +16,9 @@ import { useLockText, useStepLabel } from "./parts.js";
 
 /**
  * Every action this role has on the vehicle, by area, the role's own area
- * first. One line each says what it does; one that the vehicle's state blocks
- * stays listed, disabled, with what it waits for.
+ * first, each by its verb. One that the vehicle's state blocks stays listed,
+ * disabled, with what it waits for; what an action does is said in its form.
+ * Search still matches what each action does.
  */
 export function AllActionsSheet({
   open,
@@ -30,7 +30,7 @@ export function AllActionsSheet({
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const { asset, viewer, availability, runAction } = useVehicle();
+  const { viewer, availability, runAction } = useVehicle();
   const lockText = useLockText();
   const stepLabel = useStepLabel();
   const [query, setQuery] = useState("");
@@ -70,9 +70,6 @@ export function AllActionsSheet({
           <SheetTitle ref={titleRef} tabIndex={-1} className="text-base font-semibold outline-none">
             {t("vehicle.actions.all.title")}
           </SheetTitle>
-          <SheetDescription>
-            {t("vehicle.actions.all.description", { vehicle: asset.assetCode })}
-          </SheetDescription>
           <div className="relative mt-2.5">
             <Search
               className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
@@ -108,7 +105,7 @@ export function AllActionsSheet({
                           type="button"
                           disabled={lock !== undefined}
                           onClick={() => runAction(action.key)}
-                          className="flex w-full items-start gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring disabled:hover:bg-transparent"
+                          className="flex min-h-11 w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring disabled:hover:bg-transparent"
                         >
                           <span
                             className={cn(
@@ -128,9 +125,9 @@ export function AllActionsSheet({
                               {stepLabel(action)}
                               {lock && <Lock className="size-3" aria-hidden />}
                             </span>
-                            <span className="block text-xs leading-snug text-muted-foreground">
-                              {lock ? lockText(lock) : t(`vehicle.actions.${action.key}.description`)}
-                            </span>
+                            {lock && (
+                              <span className="block text-xs leading-snug text-muted-foreground">{lockText(lock)}</span>
+                            )}
                           </span>
                         </button>
                       </li>

@@ -69,8 +69,9 @@ describe("the status sentence and the step beside it, per role", () => {
   it.each(cases)("$role", async ({ role, button, locked, caption, doNotDrive }) => {
     await openVehicle(`/assets/${ASSET_ID}`, { role, asset: inRepair });
     const block = within(await sentence());
-    expect(block.getByText(/Brake pressure warning on the Kekem descent/)).toBeTruthy();
-    expect(block.getByText(/Waiting on the workshop to finish the repair/)).toBeTruthy();
+    // The sentence names the record that holds the truck and links it; the report is in that record.
+    expect(block.getByText(/In repair:/)).toBeTruthy();
+    expect(block.getByRole("button", { name: WO_REF })).toBeTruthy();
     if (button !== undefined) {
       const go = block.getByRole("button", { name: button }) as HTMLButtonElement;
       expect(go.disabled).toBe(false);
@@ -87,7 +88,7 @@ describe("the status sentence and the step beside it, per role", () => {
       expect(block.getByText(caption)).toBeTruthy();
       expect(block.getByRole("button", { name: `Open work order ${WO_REF}` })).toBeTruthy();
     }
-    expect(block.queryByText("Do not drive it until a manager releases it to service.") !== null).toBe(
+    expect(block.queryByText("Do not drive it.") !== null).toBe(
       doNotDrive === true,
     );
   });
@@ -180,7 +181,7 @@ describe("the status sentence and the step beside it, per role", () => {
       await openVehicle(`/assets/${ASSET_ID}`, { role: "FINANCE", asset: done, workOrderDetails: [direct] });
       const block = await sentence();
       await waitFor(() =>
-        expect(block.textContent).toContain(`The repair (${WO_REF}) is completed; waiting on a manager to release it.`),
+        expect(block.textContent).toContain(`Waiting for a manager to release it (${WO_REF}).`),
       );
       expect(block.textContent).not.toMatch(/signed off/);
     });
@@ -189,25 +190,24 @@ describe("the status sentence and the step beside it, per role", () => {
       await openVehicle(`/assets/${ASSET_ID}`, { role: "FINANCE", asset: done, workOrderDetails: [signedOff] });
       const block = await sentence();
       await waitFor(() =>
-        expect(block.textContent).toContain(`The repair (${WO_REF}) is signed off; waiting on a manager to release it.`),
+        expect(block.textContent).toContain(`${WO_REF} signed off; waiting for a manager to release it.`),
       );
     });
 
     it("says completed when the timeline cannot be read", async () => {
       await openVehicle(`/assets/${ASSET_ID}`, { role: "FINANCE", asset: done });
       const block = await sentence();
-      await waitFor(() => expect(block.textContent).toContain(`The repair (${WO_REF}) is completed;`));
+      await waitFor(() => expect(block.textContent).toContain(`Waiting for a manager to release it (${WO_REF}).`));
+      expect(block.textContent).not.toMatch(/signed off/);
     });
 
     it("says it in French", async () => {
       await openVehicle(`/assets/${ASSET_ID}`, { role: "FINANCE", asset: done, workOrderDetails: [direct], locale: "fr-CM" });
       const block = await sentence();
       await waitFor(() =>
-        expect(block.textContent).toContain(
-          `La réparation (${WO_REF_FR}) est terminée ; en attente d'un responsable pour la remise en service.`,
-        ),
+        expect(block.textContent).toContain(`Attend sa remise en service par un responsable (${WO_REF_FR}).`),
       );
-      expect(block.textContent).not.toMatch(/validée/);
+      expect(block.textContent).not.toMatch(/validé/);
     });
   });
 
@@ -223,10 +223,10 @@ describe("the status sentence and the step beside it, per role", () => {
       const block = await sentence();
       await waitFor(() =>
         expect(block.textContent).toContain(
-          `The repair (${WO_REF}) is completed, but another safety-critical problem is still open: “Steering locks on the left” (${OTHER_REF}). It must be closed before release.`,
+          `${WO_REF} done, but another safety-critical problem is open: ${OTHER_REF} “Steering locks on the left”.`,
         ),
       );
-      expect(block.textContent).not.toMatch(/waiting on a manager/);
+      expect(block.textContent).not.toMatch(/a manager releases/);
       // Each record links under its own number (#608).
       expect(within(block).getByRole("button", { name: WO_REF })).toBeTruthy();
       expect(within(block).getByRole("button", { name: OTHER_REF })).toBeTruthy();
@@ -237,10 +237,10 @@ describe("the status sentence and the step beside it, per role", () => {
       const block = await sentence();
       await waitFor(() =>
         expect(block.textContent).toContain(
-          `La réparation (${WO_REF_FR}) est terminée, mais un autre problème critique est encore ouvert : « Steering locks on the left » (PB-0005). Il doit être clos avant la remise en service.`,
+          `${WO_REF_FR} terminé, mais un autre problème critique est ouvert : PB-0005 «\u202fSteering locks on the left\u202f».`,
         ),
       );
-      expect(block.textContent).not.toMatch(/en attente d'un responsable/);
+      expect(block.textContent).not.toMatch(/attend sa remise en service/);
     });
   });
 
@@ -254,10 +254,11 @@ describe("the status sentence and the step beside it, per role", () => {
     );
   });
 
-  it("speaks French, quoting the report", async () => {
+  it("speaks French, naming the repair that holds it", async () => {
     await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN", asset: inRepair, locale: "fr-CM" });
-    const block = within(await sentence());
-    expect(block.getByText(/« Brake pressure warning on the Kekem descent »/)).toBeTruthy();
+    const block = await sentence();
+    expect(block.textContent).toMatch(new RegExp(`Immobilisé depuis \\d+ jours\\. En réparation : ${WO_REF_FR}\\.`));
+    expect(within(block).getByRole("button", { name: WO_REF_FR })).toBeTruthy();
     expect(screen.getByRole("tab", { name: /Vue d'ensemble/ })).toBeTruthy();
   });
 
@@ -271,7 +272,7 @@ describe("the status sentence and the step beside it, per role", () => {
       ],
     });
     const block = (await screen.findByText("Available.")).closest("[role=status]") as HTMLElement;
-    await waitFor(() => expect(block.textContent).toMatch(/Also: Technical inspection expired on 23 September 2026\./));
+    await waitFor(() => expect(block.textContent).toMatch(/Technical inspection expired on 23 September 2026\./));
     expect(within(block).getByRole("button", { name: "Technical inspection" })).toBeTruthy();
     expect(block.textContent).not.toMatch(/legally/);
   });
@@ -384,7 +385,7 @@ describe("grounded → repaired, waiting for release → available", () => {
   const ready = attention("ASSET_AWAITING_RELEASE", { severity: "CRITICAL", partOfGrounding: true });
   const done = asset({ availability: grounded([groundingWorkOrder("COMPLETED")]) });
   const block = async (lead: RegExp) => (await screen.findByText(lead)).closest("[role=status]") as HTMLElement;
-  const REPAIRED = /^Repair done — waiting for release to service\.$/;
+  const REPAIRED = /^Repair done\.$/;
 
   it("is red while the repair is open", async () => {
     await openVehicle(`/assets/${ASSET_ID}`, {
@@ -400,7 +401,7 @@ describe("grounded → repaired, waiting for release → available", () => {
     await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN", asset: done, attention: [ready] });
     const status = await block(REPAIRED);
     expect(status.dataset.tone).toBe("waiting");
-    expect(status.textContent).toContain(`The repair (${WO_REF}) is completed; waiting on a manager to release it.`);
+    expect(status.textContent).toContain(`Repair done. Waiting for a manager to release it (${WO_REF}).`);
     const release = within(status).getByRole("button", { name: "Release to service" }) as HTMLButtonElement;
     expect(release.disabled).toBe(false);
   });
@@ -410,7 +411,7 @@ describe("grounded → repaired, waiting for release → available", () => {
       await openVehicle(`/assets/${ASSET_ID}`, { role, asset: done, attention: [ready] });
       const status = await block(REPAIRED);
       expect(status.dataset.tone, role).toBe("waiting");
-      expect(status.textContent, role).toContain("waiting on a manager to release it");
+      expect(status.textContent, role).toContain("Waiting for a manager to release it");
       expect(within(status).queryByRole("button", { name: "Release to service" }), role).toBeNull();
       cleanup();
       await closeVehicle();
@@ -448,8 +449,8 @@ describe("grounded → repaired, waiting for release → available", () => {
 
   it("says it in French", async () => {
     await openVehicle(`/assets/${ASSET_ID}`, { role: "ADMIN", asset: done, attention: [ready], locale: "fr-CM" });
-    const status = await block(/^Réparation terminée — en attente de remise en service\.$/);
+    const status = await block(/^Réparation terminée\.$/);
     expect(status.dataset.tone).toBe("waiting");
-    expect(status.textContent).toContain("en attente d'un responsable pour la remise en service");
+    expect(status.textContent).toContain(`Réparation terminée. Attend sa remise en service par un responsable (${WO_REF_FR}).`);
   });
 });

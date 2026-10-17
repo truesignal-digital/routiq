@@ -1,12 +1,15 @@
 import { openSidebar, type DriveScript } from "../browser.js";
 
 /**
- * Company settings › Dashboard summary (#669). Direction or an Administrator
- * (#711) picks when the summary notice shows on every Overview: every Monday and on the 1st (the
+ * Company settings › Overview summary (#669). Direction or an Administrator
+ * (#711) picks when the summary notice is due on every Overview: every Monday and on the 1st (the
  * default), Mondays only, the 1st only, or never. Picks "Never: tiles only",
  * checks every Overview read follows it (`notice.schedule`), shows the
- * Dashboard opening on the tiles with "Show summary" still there, then puts
- * the default back. Writes two set-summary-schedule commands.
+ * Trucks Overview opening with the summary when it is due on the default
+ * schedule and on the tiles under Never (Show summary still opens it), and
+ * the Dashboard leading with its verdict and no summary under either schedule
+ * (that removal waits on the owner's sign-off), then puts the default back.
+ * Writes two set-summary-schedule commands.
  * Run: pnpm verify drive flow:summary-schedule --role director --lang en --reel
  *      (and --viewport 390x844, or --role admin); as Finance, the Cashier, the
  *      Technician or a Driver, /more/company shows a denial.
@@ -28,7 +31,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
     }
   };
 
-  const section = page.getByRole("region", { name: t("Résumé du tableau de bord", "Dashboard summary") });
+  const section = page.getByRole("region", { name: t("Résumé des vues d’ensemble", "Overview summary") });
   const openSettings = async () => {
     await (await openSidebar(page)).getByRole("link", { name: t("Paramètres de l'entreprise", "Company settings"), exact: true }).click();
     await page.waitForURL((url) => url.pathname === "/more/company");
@@ -36,7 +39,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
     await quiet();
   };
   const choose = async (fr: string, en: string) => {
-    await section.getByRole("button", { name: t("Modifier le résumé du tableau de bord", "Change Dashboard summary") }).click();
+    await section.getByRole("button", { name: t("Modifier le résumé des vues d’ensemble", "Change Overview summary") }).click();
     const sheet = page.getByRole("dialog");
     await sheet.waitFor();
     await sheet.getByText(t(fr, en), { exact: true }).click();
@@ -48,21 +51,48 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await expectSchedule("MONDAY_AND_MONTH_START");
 
   const region = page.getByRole("region", { name: t("Résumé", "Summary") });
+  const show = page.getByRole("button", { name: t("Afficher le résumé", "Show summary") });
+  const verdict = page.locator("[data-slot='dashboard-verdict']");
   const openDashboard = async () => {
     await (await openSidebar(page)).getByRole("link", { name: t("Tableau de bord", "Dashboard"), exact: true }).click();
     await page.waitForURL((url) => url.pathname === "/");
+    await verdict.waitFor();
+    await quiet();
+  };
+  // The Dashboard leads with its verdict on any schedule: no summary, open or on request.
+  const expectVerdictOnly = async (schedule: string) => {
+    if ((await region.count()) !== 0) throw new Error(`the Dashboard shows a summary under ${schedule}`);
+    if ((await show.count()) !== 0) throw new Error(`the Dashboard offers Show summary under ${schedule}`);
+  };
+  const openTrucks = async () => {
+    await (await openSidebar(page)).getByRole("link", { name: t("Camions", "Trucks"), exact: true }).click();
+    await page.waitForURL((url) => url.pathname === "/assets");
     await page.locator("[data-slot='metric-strip']").waitFor();
     await quiet();
   };
-  const dueByDefault = (await noticeOf("/v1/finance/overview")).changes.length > 0;
-  if (dueByDefault) {
-    await openDashboard();
+  const trucksNotice = await noticeOf("/v1/assets/overview");
+  const trucksDue = trucksNotice.scheduledToday !== null || trucksNotice.changes.length > 0;
+  await openTrucks();
+  if (trucksDue) {
     await region.waitFor();
-    await shot("dashboard-default", {
-      caption: "On the default schedule, a big change (a truck grounded this week) opens the summary above the tiles",
+    await shot("trucks-default", {
+      caption: "On the default schedule the summary is due (a truck grounded this week), so the Trucks Overview opens with it",
       highlight: region,
     });
+  } else {
+    if ((await region.count()) !== 0) throw new Error("the Trucks summary shows on a day it is not due");
+    await show.waitFor();
   }
+
+  const dueByDefault = (await noticeOf("/v1/finance/overview")).changes.length > 0;
+  await openDashboard();
+  await expectVerdictOnly("MONDAY_AND_MONTH_START");
+  await shot("dashboard-default", {
+    caption: dueByDefault
+      ? "On the default schedule, with a big change due (a truck grounded this week), the Dashboard still leads with its verdict"
+      : "On the default schedule the Dashboard leads with its verdict",
+    highlight: verdict,
+  });
 
   await openSettings();
   await shot("settings-default", {
@@ -85,19 +115,25 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   });
   await expectSchedule("NEVER");
 
-  await openDashboard();
-  if ((await region.count()) !== 0) throw new Error("the summary opened on its own under Never");
-  const show = page.getByRole("button", { name: t("Afficher le résumé", "Show summary") });
+  await openTrucks();
+  if ((await region.count()) !== 0) throw new Error("the Trucks summary opened on its own under Never");
   await show.waitFor();
-  await shot("dashboard-never", {
-    caption: "Under Never the Dashboard opens on the tiles, even with the grounding; the counted line and Show summary stay under them",
+  await shot("trucks-never", {
+    caption: "Under Never the Trucks Overview opens on the tiles, even with the grounding; the counted line and Show summary stay under them",
     highlight: page.locator("[data-slot='overview-counted']"),
   });
   await show.click();
   await region.waitFor();
-  await shot("dashboard-never-asked", {
+  await shot("trucks-never-asked", {
     caption: "Show summary still opens it on request",
     highlight: region,
+  });
+
+  await openDashboard();
+  await expectVerdictOnly("NEVER");
+  await shot("dashboard-never", {
+    caption: "Under Never the Dashboard leads with the same verdict",
+    highlight: verdict,
   });
 
   await openSettings();

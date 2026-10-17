@@ -10,7 +10,7 @@ import { EntryPostings, EntryReceipt } from "@/finance/EntrySummary.js";
 import { ReversalLink } from "@/finance/ReversalLink.js";
 import { amountKind, cancellationReasonWords } from "@/finance/model.js";
 import { useMeContext } from "@/auth/me.js";
-import { formatDate, formatMoney, formatPaymentMethod, localizedLabel } from "@/lib/format.js";
+import { formatDate, formatMoney, formatMonth, formatPaymentMethod, localizedLabel } from "@/lib/format.js";
 
 export const ENTRY_TABS = ["overview", "receipt", "history"] as const;
 export type EntryTab = (typeof ENTRY_TABS)[number];
@@ -167,7 +167,7 @@ export function EntryOverview({
                     key={asset.id}
                     to="/assets/$assetId"
                     params={{ assetId: asset.id }}
-                    className="tabular-nums underline decoration-foreground/25 underline-offset-[3px] hover:decoration-foreground"
+                    className="inline-flex min-h-11 items-center tabular-nums underline decoration-foreground/25 underline-offset-[3px] hover:decoration-foreground desktop:min-h-6"
                   >
                     {asset.code}
                   </Link>
@@ -274,7 +274,7 @@ export function EntryMoneyBox({ entry }: { entry: FinancialEntryDetail }) {
         />
         <ContextRow
           label={t("finance.entries.detail.month")}
-          value={entry.postingPeriodCode ?? t("finance.entries.detail.notPosted")}
+          value={entry.postingPeriodCode === null ? t("finance.entries.detail.notPosted") : formatMonth(entry.postingPeriodCode, locale)}
         />
       </dl>
     </ContextBox>

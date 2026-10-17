@@ -1,7 +1,7 @@
-import { Link } from "@tanstack/react-router";
 import type { ActivitySummary, FleetUsageResponse, FleetUsageRoute } from "@routiq/contracts";
-import { Fuel, Gauge, Route } from "lucide-react";
+import { Fuel, Gauge, Route, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { InfoPopover } from "@/components/info-popover.js";
 import { MetricStrip, metricTiles, type MetricTile } from "@/components/metric-strip.js";
 import { RankedBars } from "@/components/overview/ranked-bars.js";
 import { OverviewSummary } from "@/components/overview/overview-summary.js";
@@ -24,9 +24,12 @@ function shortDay(iso: string, language: string | undefined): string {
 }
 
 /**
- * Trips › Overview (#665, dashboards.html#trips): how much work was done and
- * what is left to close. Every tile and every column opens the Trips tab
- * already filtered, so a number and its list always count the same trips.
+ * Trips › Overview (#665, dashboards.html#trips), journey-first (tools/verify/journeys/
+ * admin-checks-trips.ts): what is left to close comes first, then the figures, then
+ * the weeks and the routes. Every tile, To do row and column opens the Trips tab
+ * already filtered, so a number and its list always count the same trips. What the
+ * figures leave out stays at rest: on the missing-data tile, and in the summary's counted line
+ * while Money is off (under the tiles when the summary is closed).
  */
 export function TripsOverview() {
   const { t, i18n } = useTranslation();
@@ -36,6 +39,9 @@ export function TripsOverview() {
   const usage = usageQuery.data;
   const language = i18n.resolvedLanguage;
   const tiles = metricTiles(tripTiles(summary, t, language, usage));
+  // Revenue per km is vehicle money: only for the roles the server sends it to.
+  const routes =
+    usage?.money != null && usage.trips !== null ? <RoutesCard usage={usage} currency={usage.money.currency} trips={usage.trips} /> : null;
 
   return (
     <div data-slot="trips-overview" className="flex flex-col gap-5">
@@ -46,23 +52,49 @@ export function TripsOverview() {
           onRetry={() => void summaryQuery.refetch()}
         />
       )}
+
+      {/* People act first: what is left to close leads, before any figure. */}
+      <Card data-slot="trips-todo-card">
+        <CardHeader>
+          <CardTitle>{t("activities.overview.todo.title")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {summary === undefined ? (
+            <Skeleton className="h-24 w-full" />
+          ) : (
+            <ToDoList items={tripToDo(summary, t)} empty={t("activities.overview.todo.empty")} limit={3} />
+          )}
+        </CardContent>
+      </Card>
+
       <OverviewSummary
         page="trips"
         notice={summary?.notice}
         sentence={summary === undefined ? undefined : t("activities.overview.summary.sentence", { started: summary.thisWeek, closed: summary.weekClosed })}
         details={summary === undefined ? undefined : [t("activities.overview.summary.open", { open: summary.open })]}
-        counted={summary === undefined ? null : <span data-slot="trips-counted">{tripCounted(summary, t)}</span>}
+        counted={
+          // Money off: fuel is a money fact, so the figures cannot count it, and say so at rest.
+          // The missing fuel and km counts are on their own tile, so the line says nothing more.
+          summary?.closedMissing.fuel === null ? (
+            <span data-slot="trips-counted" className="flex items-center gap-1.5 text-warning-foreground">
+              <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+              {t("activities.overview.fuelNotCounted")}
+            </span>
+          ) : null
+        }
       >
-        {tiles !== undefined && (
-          <MetricStrip tiles={tiles} isPending={summaryQuery.isPending} isError={summaryQuery.isError} />
-        )}
+        {tiles !== undefined && <MetricStrip tiles={tiles} isPending={summaryQuery.isPending} isError={summaryQuery.isError} />}
       </OverviewSummary>
 
-      <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
+      <div className={routes === null ? "grid gap-4" : "grid gap-4 lg:grid-cols-2"}>
         <Card data-slot="trips-per-week">
           <CardHeader>
-            <CardTitle>{t("activities.overview.weeks.title")}</CardTitle>
-            <CardDescription>{t("activities.overview.weeks.question", { count: summary?.weeks.length ?? 12 })}</CardDescription>
+            <CardTitle className="flex items-center gap-1.5">
+              {t("activities.overview.weeks.title")}
+              <InfoPopover label={t("common.howCalculated")}>
+                {t("activities.overview.weeks.info", { count: summary?.weeks.length ?? 12 })}
+              </InfoPopover>
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {summary === undefined ? (
@@ -85,39 +117,16 @@ export function TripsOverview() {
                 }))}
               />
             )}
-            <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs text-muted-foreground">
-              <span>{t("activities.overview.weeks.partial")}</span>
-              <Link to={LIST} className="text-sm font-medium text-foreground underline-offset-4 hover:underline">
-                {t("activities.overview.openList")}
-              </Link>
-            </div>
+            {/* This week's short column is still running: said at rest, so it isn't read as a slow week. */}
+            <p data-slot="trips-week-partial" className="text-xs text-muted-foreground">
+              {t("activities.overview.weeks.partial")}
+            </p>
           </CardContent>
         </Card>
-        {/* On a phone people act first: To do comes before the chart. */}
-        <Card className="order-first lg:order-none">
-          <CardHeader>
-            <CardTitle>{t("activities.overview.todo.title")}</CardTitle>
-            <CardDescription>{t("activities.overview.todo.description")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {summary === undefined ? (
-              <Skeleton className="h-24 w-full" />
-            ) : (
-              <ToDoList items={tripToDo(summary, t, language)} empty={t("activities.overview.todo.empty")} />
-            )}
-          </CardContent>
-        </Card>
-        {/* Revenue per km is vehicle money: only for the roles the server sends it to. */}
-        {usage?.money != null && usage.trips !== null && <RoutesCard usage={usage} currency={usage.money.currency} trips={usage.trips} />}
+        {routes}
       </div>
     </div>
   );
-}
-
-/** What the Trips figures leave out: closed trips missing fuel or km; fuel is a money fact, not counted while Money is off. */
-export function tripCounted(summary: ActivitySummary, t: Translate): string {
-  const { fuel, km } = summary.closedMissing;
-  return t("activities.overview.summary.counted", { fuelCounted: fuel === null ? "no" : "yes", fuel: fuel ?? 0, km });
 }
 
 /**
@@ -140,13 +149,14 @@ export function tripTiles(
       summary === undefined || summary.weekKm === null
         ? null
         : t("activities.metrics.weekKmValue", { km: summary.weekKm }),
-    hint: t("activities.metrics.weekKmHint"),
+    info: t("activities.metrics.weekKmHint"),
   };
   return [
     {
       id: "week-closed",
       label: t("activities.overview.tiles.weekClosed"),
       value: summary === undefined ? null : String(summary.weekClosed),
+      // The basis stays at rest: the server counts only trips started this week, then closed.
       hint: t("activities.overview.tiles.weekClosedHint"),
       link: { to: LIST, search: { status: "CLOSED", ...weekSearch } },
     },
@@ -179,7 +189,8 @@ export function tripTiles(
                 ? t("activities.overview.tiles.missingKm", { km: missing.km })
                 : t("activities.overview.tiles.missingFuelKm", { fuel: missing.fuel, km: missing.km }),
           }),
-      info: t("activities.overview.tiles.missingDataInfo"),
+      // Fuel is a money fact: while Money is off it is not counted, and the tile says so.
+      info: t("activities.overview.tiles.missingDataInfo", { fuelCounted: missing?.fuel === null ? "no" : "yes" }),
       link: { to: LIST, search: { completeness: "COMPLETE_WITH_EXCEPTIONS" } },
     },
   ];
@@ -240,6 +251,7 @@ function RoutesCard({
 }) {
   const { t, i18n } = useTranslation();
   const language = i18n.resolvedLanguage;
+  const period = windowLabel(usage.period, usage.range, language);
   const routeName = (route: FleetUsageRoute) => t("activities.overview.routes.route", { from: route.from, to: route.to });
   const list = (routes: readonly FleetUsageRoute[]) =>
     new Intl.ListFormat(language, { type: "conjunction" }).format(routes.map(routeName));
@@ -256,10 +268,14 @@ function RoutesCard({
   return (
     <Card data-slot="revenue-per-km-by-route">
       <CardHeader>
-        <CardTitle>{t("activities.overview.routes.title")}</CardTitle>
-        <CardDescription>
-          {t("activities.overview.routes.question", { period: windowLabel(usage.period, usage.range, language), currency: currencyUnit(currency) })}
-        </CardDescription>
+        <CardTitle className="flex items-center gap-1.5">
+          {t("activities.overview.routes.title")}
+          <InfoPopover label={t("common.howCalculated")}>
+            {t("activities.overview.routes.info", { period, currency: currencyUnit(currency) })}
+          </InfoPopover>
+        </CardTitle>
+        {/* The window the ranking covers stays said: the period basis. */}
+        <CardDescription data-slot="routes-period">{period}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {counted.length === 0 ? (
@@ -288,47 +304,30 @@ function RoutesCard({
             moreLabel={(count) => t("activities.overview.routes.more", { count })}
           />
         )}
+        {/* What the ranking leaves out stays at rest: a route not counted is never a route at 0. */}
         {notes.length > 0 && (
           <p data-slot="routes-not-counted" className="text-xs text-muted-foreground">
             {notes.join(" ")}
           </p>
         )}
-        <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs text-muted-foreground">
-          <span>{t("activities.overview.routes.basis")}</span>
-          <Link to={LIST} className="text-sm font-medium text-foreground underline-offset-4 hover:underline">
-            {t("activities.overview.openList")}
-          </Link>
-        </div>
       </CardContent>
     </Card>
   );
 }
 
-/** Open trips, then closed trips missing a fact; at most one row each, the list one tap away. */
-export function tripToDo(summary: ActivitySummary, t: Translate, language: string | undefined): ToDoItem[] {
+/**
+ * Open trips, then closed trips missing a fact: one row per kind with its count,
+ * its verb the next step, the list one tap away. The oldest open trip's date is
+ * on the On the road tile.
+ */
+export function tripToDo(summary: ActivitySummary, t: Translate): ToDoItem[] {
   const items: ToDoItem[] = [];
   if (summary.open > 0) {
-    const oldest = summary.oldestOpen;
     items.push({
       key: "open",
       icon: <Route className="size-4" aria-hidden />,
       title: t("activities.overview.todo.open", { count: summary.open }),
-      ...(oldest === null
-        ? {}
-        : {
-            detail:
-              oldest.assetCode === null
-                ? t("activities.overview.todo.oldest", {
-                    number: oldest.activityNumber,
-                    date: formatDate(oldest.startedAt, language),
-                  })
-                : t("activities.overview.todo.oldestWithTruck", {
-                    number: oldest.activityNumber,
-                    code: oldest.assetCode,
-                    date: formatDate(oldest.startedAt, language),
-                  }),
-          }),
-      action: { label: t("activities.overview.todo.openList"), to: LIST, search: { status: "OPEN" } },
+      action: { label: t("activities.overview.todo.closeTrips"), to: LIST, search: { status: "OPEN" } },
     });
   }
   const fuel = summary.closedMissing.fuel;
@@ -337,8 +336,7 @@ export function tripToDo(summary: ActivitySummary, t: Translate, language: strin
       key: "fuel",
       icon: <Fuel className="size-4 text-warning-foreground" aria-hidden />,
       title: t("activities.overview.todo.noFuel", { count: fuel }),
-      detail: t("activities.overview.todo.noFuelDetail"),
-      action: { label: t("activities.overview.todo.openList"), to: LIST, search: { missing: "fuel" } },
+      action: { label: t("activities.overview.todo.complete"), to: LIST, search: { missing: "fuel" } },
     });
   }
   if (summary.closedMissing.km > 0) {
@@ -346,8 +344,7 @@ export function tripToDo(summary: ActivitySummary, t: Translate, language: strin
       key: "km",
       icon: <Gauge className="size-4 text-warning-foreground" aria-hidden />,
       title: t("activities.overview.todo.noKm", { count: summary.closedMissing.km }),
-      detail: t("activities.overview.todo.noKmDetail"),
-      action: { label: t("activities.overview.todo.openList"), to: LIST, search: { missing: "km" } },
+      action: { label: t("activities.overview.todo.complete"), to: LIST, search: { missing: "km" } },
     });
   }
   return items;
