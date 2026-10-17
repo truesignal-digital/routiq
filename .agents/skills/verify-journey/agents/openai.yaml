@@ -1,0 +1,3 @@
+interface:
+  display_name: "Verify a journey"
+  short_description: "Measure screens and prototypes against a user's intent"

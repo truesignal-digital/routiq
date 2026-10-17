@@ -31,6 +31,7 @@ export type Command =
   | { name: "drive"; slot: number; targets: string[]; options: DriveOptions }
   | { name: "api"; slot: number; method: string; path: string; role: string; body: string | undefined }
   | { name: "db"; slot: number; sql: string }
+  | { name: "measure"; targets: string[]; journey: string | undefined; viewport: Viewport | undefined }
   | { name: "reel"; after: string | undefined; before: string | undefined; title: string | undefined };
 
 const BOOLEAN_FLAGS: Record<string, readonly string[]> = {
@@ -48,10 +49,11 @@ const VALUE_FLAGS: Record<string, readonly string[]> = {
   api: ["slot", "role", "json"],
   db: ["slot"],
   reel: ["before", "title"],
+  measure: ["journey", "viewport"],
   status: [],
 };
 
-export const COMMAND_NAMES = ["up", "doctor", "status", "login", "drive", "ui", "api", "db", "logs", "down", "reel"] as const;
+export const COMMAND_NAMES = ["up", "doctor", "status", "login", "drive", "ui", "api", "db", "logs", "down", "reel", "measure"] as const;
 
 interface Parsed {
   positionals: string[];
@@ -179,6 +181,11 @@ export function parseArgs(argv: readonly string[], env: Readonly<Record<string, 
     case "db": {
       if (parsed.positionals.length !== 1) throw new Error('db takes one quoted query: pnpm verify db "select ..."');
       return { name, slot: slot(), sql: parsed.positionals[0] ?? "" };
+    }
+    case "measure": {
+      if (parsed.positionals.length === 0) throw new Error("measure needs a prototype file or URL (add ?query for its variant)");
+      const raw = parsed.values.get("viewport");
+      return { name, targets: parsed.positionals, journey: parsed.values.get("journey"), viewport: raw === undefined ? undefined : parseViewport(raw) };
     }
     case "reel": {
       if (parsed.positionals.length > 1) throw new Error("reel takes at most one run directory (the after run)");

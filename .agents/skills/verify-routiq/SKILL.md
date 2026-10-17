@@ -5,7 +5,7 @@ description: "Run the real ROUTIQ app (Postgres, S3 storage, Fastify API, Vite w
 
 # Verify ROUTIQ
 
-`pnpm verify` (`tools/verify/`) starts a private copy of the stack on a numbered slot, seeds the Transports Ngwa and Littoral Voyages demo workspaces, and drives the web app with Playwright. Evidence lands in `.verify/` at the checkout root and survives teardown. The feature map in [`features/README.md`](features/README.md) says how to reach and prove each feature.
+`pnpm verify` (`tools/verify/`) starts a private copy of the stack on a numbered slot, seeds the Transports Ngwa and Littoral Voyages demo workspaces, and drives the web app with Playwright. Evidence lands in `.verify/` at the checkout root and survives teardown. The feature map in [`features/README.md`](features/README.md) says how to reach and prove each feature. To hold a screen to its user's intent (words, prose, primary actions, taps, first-glance read), use [verify-journey](../verify-journey/SKILL.md) on top of this.
 
 Never touch the owner's dev stack: Postgres on 5435 with volume `routiq_pgdata`, the API on 3001, web on 5173, the demo box on 8080. The CLI refuses those ports and only ever removes `routiq-verify-N` compose projects.
 

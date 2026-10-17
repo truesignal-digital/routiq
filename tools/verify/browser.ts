@@ -67,6 +67,8 @@ export interface DriveContext {
   page: Page;
   account: DemoAccount;
   lang: Lang;
+  /** --throttle: "phone" when the drive runs like a low-end Android on slow 4G. */
+  throttle: DriveOptions["throttle"];
   state: SlotState;
   evidenceDir: string;
   /** In-app navigation without a full load: pushState + popstate. */
@@ -85,10 +87,12 @@ export interface DriveContext {
 export type DriveScript = (ctx: DriveContext) => Promise<void>;
 
 const FLOW_DIR = path.join(REPO_ROOT, "tools/verify/flows");
+const JOURNEY_DIR = path.join(REPO_ROOT, "tools/verify/journeys");
 
-/** `flow:<name>` → tools/verify/flows/<name>.ts; a path → that file (relative to where pnpm was run); otherwise a route. */
+/** `flow:<name>` → tools/verify/flows/<name>.ts; `journey:<name>` → tools/verify/journeys/<name>.ts; a path → that file (relative to where pnpm was run); otherwise a route. */
 export function classifyTarget(target: string, initCwd: string): { kind: "route"; route: string } | { kind: "script"; file: string } {
   if (target.startsWith("flow:")) return { kind: "script", file: path.join(FLOW_DIR, `${target.slice(5)}.ts`) };
+  if (target.startsWith("journey:")) return { kind: "script", file: path.join(JOURNEY_DIR, `${target.slice(8)}.ts`) };
   if (/\.(ts|mts|js|mjs)$/.test(target)) {
     const fromCwd = path.resolve(initCwd, target);
     return { kind: "script", file: existsSync(fromCwd) ? fromCwd : path.resolve(REPO_ROOT, target) };
@@ -472,6 +476,7 @@ export async function drive(slot: number, targets: readonly string[], options: D
               page,
               account,
               lang: options.lang,
+              throttle: options.throttle,
               state,
               evidenceDir,
               nav,
