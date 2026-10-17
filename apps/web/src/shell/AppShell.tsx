@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet } from "@tanstack/react-router";
+import { Outlet, useNavigate } from "@tanstack/react-router";
 import { PageNoticeProvider } from "@/components/page-container";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/toast.js";
@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ApprovalRulesNotice } from "../approval-rules/ApprovalRulesNotice.js";
 import { useRecheckApprovalChainOnNavigation } from "../approval-rules/useApprovalChain.js";
 import { MeCtx, useMe } from "../auth/me.js";
+import { useActiveSession } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
 import { applyPresetVocabulary, presetVocabularyFor } from "../i18n/preset-overlay.js";
 import { AppSidebar } from "./AppSidebar.js";
@@ -31,8 +32,24 @@ function BranchScopeAnnouncer() {
   );
 }
 
+/**
+ * A session can end while the shell is open: a dead token on a refetch (a
+ * reset server, an expired session) drops it in `meQueryOptions`. The route
+ * guard only runs on navigation, so without this the shell stays drawn with
+ * no member and every page waits on skeletons forever.
+ */
+function useSignInAgainWhenSessionEnds() {
+  const session = useActiveSession();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (session !== undefined) return;
+    void navigate({ to: "/login", search: { redirect: window.location.pathname + window.location.search }, replace: true });
+  }, [session, navigate]);
+}
+
 export function AppShell() {
   const me = useMe();
+  useSignInAgainWhenSessionEnds();
   useRecheckApprovalChainOnNavigation();
   const preset = presetVocabularyFor(me.data?.enabledPresets);
 

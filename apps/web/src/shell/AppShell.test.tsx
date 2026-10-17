@@ -30,10 +30,23 @@ const session = {
 };
 const logout = vi.fn();
 
-vi.mock("../auth/store.js", () => ({
-  sessionStore: { logout, getActive: () => session, getToken: () => "token" },
-  useActiveSession: () => session,
-}));
+/** The active session as the store holds it; a test may end it mid-render. */
+const active: { current: typeof session | undefined; listeners: Set<() => void> } = { current: session, listeners: new Set() };
+
+vi.mock("../auth/store.js", async () => {
+  const { useSyncExternalStore } = await import("react");
+  return {
+    sessionStore: { logout, getActive: () => active.current, getToken: () => "token" },
+    useActiveSession: () =>
+      useSyncExternalStore(
+        (onChange) => {
+          active.listeners.add(onChange);
+          return () => active.listeners.delete(onChange);
+        },
+        () => active.current,
+      ),
+  };
+});
 
 /** The shell's branch switcher reads its options from here; no Query client. */
 const branches: { current: Array<{ id: string; code: string; name: string }> } = {
@@ -185,6 +198,22 @@ beforeEach(async () => {
 });
 
 afterEach(cleanup);
+
+describe("AppShell when the session ends while it is open", () => {
+  afterEach(() => {
+    active.current = session;
+  });
+
+  it("goes back to sign-in, keeping the page to return to, instead of waiting on skeletons", async () => {
+    await renderShell("/assets");
+    act(() => {
+      active.current = undefined;
+      for (const notify of active.listeners) notify();
+    });
+    expect(await screen.findByText("login screen")).toBeTruthy();
+    expect(screen.queryByTestId("screen")).toBeNull();
+  });
+});
 
 describe("AppShell offline notice (#576)", () => {
   afterEach(() => vi.restoreAllMocks());
