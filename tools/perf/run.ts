@@ -42,6 +42,16 @@ export function measurableMetrics(): string[] {
   ];
 }
 
+/**
+ * The ready-time metric a route journey counts toward, or nothing for a route
+ * the run only passes through (the Money Overview on the way to Entries).
+ */
+export function readyMetric(journey: string): string | undefined {
+  if (!journey.startsWith("route:")) return undefined;
+  const key = `${journey.slice("route:".length)}.ready_ms`;
+  return measurableMetrics().includes(key) ? key : undefined;
+}
+
 interface OneRun {
   /** metric → value for this run */
   values: Record<string, number>;
@@ -181,10 +191,10 @@ async function measureOnceUnbounded(state: SlotState, db: pg.Client, asset: Vehi
     if (event.kind !== "journey") continue;
     // The sign-in load, not the reload at the end of the run.
     if (event.name === "app:usable") values["login.usable_ms"] ??= event.value;
-    else if (event.name.startsWith("route:")) {
-      const key = `${event.name.slice("route:".length)}.ready_ms`;
+    else {
+      const key = readyMetric(event.name);
       // The first visit to a screen in a run is the one measured.
-      if (values[key] === undefined) values[key] = event.value;
+      if (key !== undefined && values[key] === undefined) values[key] = event.value;
     }
   }
   return { values };
