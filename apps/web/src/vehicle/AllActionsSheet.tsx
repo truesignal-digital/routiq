@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { groupedActions } from "./actions.js";
+import { actionDef, actionPermitted, groupedActions, type VehicleActionDef } from "./actions.js";
 import { useVehicle } from "./context.js";
 import { useLockText, useStepLabel } from "./parts.js";
 
@@ -34,6 +34,11 @@ export function AllActionsSheet({
   const lockText = useLockText();
   const stepLabel = useStepLabel();
   const [query, setQuery] = useState("");
+  // The fuel form only offers the odometer to a viewer who may record a reading.
+  const describe = (action: VehicleActionDef) =>
+    action.key === "log-fuel" && !actionPermitted(actionDef("record-reading"), viewer)
+      ? t("vehicle.actions.log-fuel.descriptionWithoutReading")
+      : t(`vehicle.actions.${action.key}.description`);
 
   const needle = query.trim().toLocaleLowerCase();
   const groups = groupedActions(viewer)
@@ -43,7 +48,7 @@ export function AllActionsSheet({
         if (needle === "") return true;
         const haystack = [
           stepLabel(action),
-          t(`vehicle.actions.${action.key}.description`),
+          describe(action),
           t(`vehicle.actions.groups.${group}`),
         ]
           .join(" ")
@@ -129,7 +134,7 @@ export function AllActionsSheet({
                               {lock && <Lock className="size-3" aria-hidden />}
                             </span>
                             <span className="block text-xs leading-snug text-muted-foreground">
-                              {lock ? lockText(lock) : t(`vehicle.actions.${action.key}.description`)}
+                              {lock ? lockText(lock) : describe(action)}
                             </span>
                           </span>
                         </button>

@@ -373,7 +373,11 @@ const recordMeterReading: CommandDefinition<RecordMeterReadingPayload> = {
           isNull(meterReadings.supersededById),
         ),
       )
-      .orderBy(desc(meterReadings.observedAt))
+      .orderBy(
+        desc(meterReadings.observedAt),
+        desc(meterReadings.createdAt),
+        desc(meterReadings.id),
+      )
       .limit(1);
 
     const warnings: CommandWarningCode[] = [];

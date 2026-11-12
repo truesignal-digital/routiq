@@ -579,7 +579,7 @@ async function loadUsage(
     let knownKm = 0;
     for (const id of vehicleIds) {
       const sums = km.get(id) ?? NO_TRIPS;
-      if (!sums.known) continue;
+      if (!sums.known || sums.km <= 0) continue;
       knownVehicles += 1;
       knownKm += sums.km;
     }

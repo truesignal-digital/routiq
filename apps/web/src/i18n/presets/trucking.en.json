@@ -58,7 +58,7 @@
       },
       "km": {
         "all": "This month, km are known for every truck ({count, number}).",
-        "some": "This month, km are known for {known, number} of {total, number} trucks: {missing, plural, one {# trip has} other {# trips have}} no km."
+        "some": "This month, km are known for {known, number} of {total, number} trucks: {missing, plural, =0 {the others have no finished trip} one {# trip has no km} other {# trips have no km}}."
       },
       "board": {
         "question": "What did each truck do, day by day? Last {days} days.",

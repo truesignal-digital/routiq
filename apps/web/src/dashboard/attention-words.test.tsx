@@ -29,4 +29,20 @@ describe("To do words", () => {
     expect(plain(String(item.detail))).toMatch(/^360 FCFA per km · fleet median 290 FCFA$/);
     expect(item.action).toEqual({ label: "Open the vehicle", to: "/assets/a7" });
   });
+
+  it("never starts the open-month sentence with a lower-case French month", async () => {
+    const row: TodoRow = {
+      code: "PERIOD_OPEN",
+      severity: "INFO",
+      link: { kind: "posting_period", id: "p10", number: "2026-10" },
+      asset: null,
+      branchId: null,
+      since: "2026-11-01T00:00:00.000Z",
+      params: { periodCode: "2026-10", submittedCount: 0, evidenceMissingCount: 1, olderOpenCount: 0, days: 11 },
+    };
+    await i18n.changeLanguage("fr-CM");
+    expect(todoItem(row, i18n.t.bind(i18n), "fr-CM").title).toBe("Mois encore ouvert : octobre 2026");
+    await i18n.changeLanguage("en");
+    expect(todoItem(row, i18n.t.bind(i18n), "en").title).toBe("October 2026 is still open");
+  });
 });

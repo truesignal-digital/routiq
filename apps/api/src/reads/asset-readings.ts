@@ -3,7 +3,7 @@ import {
   assetReadingsResponse,
   type ListSort,
 } from "@routiq/contracts";
-import { and, eq, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
@@ -13,12 +13,10 @@ import { activities, commands, meterReadings, principals } from "../db/schema.js
 import { toActor } from "./actors.js";
 import { requireScopedAsset } from "./asset-scope.js";
 import {
-  afterKeyset,
+  bindTimestampText,
   decodeTimestampCursor,
   encodeKeysetCursor,
-  keysetOrderBy,
   microsecondKey,
-  timestampKeyset,
 } from "./cursor.js";
 import { invalidRequest, sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
@@ -26,8 +24,6 @@ import { readableTripSql } from "./trip-scope.js";
 import { ANY_ROLE, defineRead } from "./define-read.js";
 
 const readingSort: ListSort<"observedAt"> = { field: "observedAt", direction: "desc" };
-
-const observedAtColumn = timestampKeyset(meterReadings.observedAt);
 
 /**
  * Which of an in-scope vehicle's readings the caller may see, by the history
@@ -83,8 +79,20 @@ export function registerAssetReadingReadRoutes(
           if (scope) conditions.push(scope);
           if (readingType) conditions.push(eq(meterReadings.readingType, readingType));
           if (decodedCursor) {
+            // Same-instant readings fall back to the order they were recorded;
+            // the boundary row's created_at is looked up so the cursor keeps its shape.
+            const at = bindTimestampText(decodedCursor.value);
+            const recorded = sql`(select m.created_at from meter_readings m where m.workspace_id = ${auth.workspaceId} and m.id = ${decodedCursor.id})`;
             conditions.push(
-              afterKeyset(observedAtColumn, readingSort.direction, meterReadings.id, decodedCursor),
+              or(
+                sql`${meterReadings.observedAt} < ${at}`,
+                and(sql`${meterReadings.observedAt} = ${at}`, sql`${meterReadings.createdAt} < ${recorded}`),
+                and(
+                  sql`${meterReadings.observedAt} = ${at}`,
+                  sql`${meterReadings.createdAt} = ${recorded}`,
+                  sql`${meterReadings.id} > ${decodedCursor.id}`,
+                ),
+              )!,
             );
           }
 
@@ -125,7 +133,7 @@ export function registerAssetReadingReadRoutes(
             )
             .leftJoin(principals, eq(principals.id, commands.tenantActorPrincipalId))
             .where(and(...conditions))
-            .orderBy(...keysetOrderBy(observedAtColumn, readingSort.direction, meterReadings.id))
+            .orderBy(desc(meterReadings.observedAt), desc(meterReadings.createdAt), asc(meterReadings.id))
             .limit(limit + 1);
         });
 
