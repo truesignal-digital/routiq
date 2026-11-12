@@ -241,6 +241,7 @@ export async function loadLastReading(
     .orderBy(
       sql`(${meterReadings.readingType} = 'ODOMETER') desc`,
       desc(meterReadings.observedAt),
+      desc(meterReadings.createdAt),
       desc(meterReadings.id),
     )
     .limit(1);

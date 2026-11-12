@@ -177,8 +177,9 @@ describe("GET /v1/assets/usage", () => {
     expect(vehicle(body, "VH004").period).toEqual({ km: 0, known: false, tripsClosed: 1, tripsFromOdometer: 0, tripsWithoutKm: 1 });
     // No trip closed: 0 km, known.
     expect(vehicle(body, "VH006").period).toEqual({ km: 0, known: true, tripsClosed: 0, tripsFromOdometer: 0, tripsWithoutKm: 0 });
-    expect(body.km?.period).toEqual({ vehicles: 7, knownVehicles: 6, knownKm: 1300 });
-    expect(body.km?.comparison).toEqual({ vehicles: 7, knownVehicles: 7, knownKm: 0 });
+    // The fleet count names only vehicles with km on file: no trip is not "known".
+    expect(body.km?.period).toEqual({ vehicles: 7, knownVehicles: 3, knownKm: 1300 });
+    expect(body.km?.comparison).toEqual({ vehicles: 7, knownVehicles: 0, knownKm: 0 });
   });
 
   it("divides each vehicle's expenses by its known km, with the fleet medians, and flags fuel above them", async () => {
