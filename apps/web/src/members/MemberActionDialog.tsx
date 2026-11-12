@@ -34,7 +34,7 @@ import { notifyCommandSuccess } from "@/lib/notify.js";
 import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
-import { BranchScopeField, type BranchOption } from "./BranchScopeField.js";
+import { BranchScopeField, isBranchScopeChosen, type BranchOption } from "./BranchScopeField.js";
 import {
   canEditMemberRole,
   canManageMember,
@@ -142,7 +142,7 @@ export function MemberActionDialog({
   const ready =
     !submitting &&
     (action === "role"
-      ? roleChanged || scopeChanged
+      ? (roleChanged || scopeChanged) && isBranchScopeChosen(branchScope)
       : action === "pin"
         ? pinValid
         : true);
