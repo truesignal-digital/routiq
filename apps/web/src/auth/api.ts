@@ -4,7 +4,7 @@ import type { StoredSession } from "./session.js";
 
 export type LoginResult =
   | { ok: true; session: StoredSession }
-  | { ok: false; code: string };
+  | { ok: false; code: string; retryAfterSeconds?: number };
 
 export async function login(
   request: LoginRequest,
@@ -38,5 +38,8 @@ export async function login(
     }
   }
 
-  return { ok: false, code: extractApiError(body, "AUTH_FAILED").code };
+  const { code, metadata } = extractApiError(body, "AUTH_FAILED");
+  // AUTH_LOCKED says how long the lock lasts.
+  const retryAfterSeconds = metadata?.["retryAfterSeconds"];
+  return typeof retryAfterSeconds === "number" ? { ok: false, code, retryAfterSeconds } : { ok: false, code };
 }

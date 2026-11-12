@@ -1,4 +1,5 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryCache, QueryClient } from "@tanstack/react-query";
+import { endSessionIfSignedOut } from "../auth/sign-out.js";
 import { QUERY_DEFAULTS } from "./query-defaults.js";
 
 /**
@@ -8,4 +9,7 @@ import { QUERY_DEFAULTS } from "./query-defaults.js";
  * networkMode: offline they pause, and the screens say so (#576) until the
  * connection returns.
  */
-export const queryClient = new QueryClient({ defaultOptions: { queries: QUERY_DEFAULTS } });
+export const queryClient: QueryClient = new QueryClient({
+  defaultOptions: { queries: QUERY_DEFAULTS },
+  queryCache: new QueryCache({ onError: (error) => endSessionIfSignedOut(queryClient, error.message) }),
+});

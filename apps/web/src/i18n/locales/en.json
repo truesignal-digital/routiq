@@ -113,7 +113,9 @@
     "username": "Username",
     "pin": "PIN code",
     "signIn": "Sign in",
-    "signingIn": "Signing in…"
+    "signingIn": "Signing in…",
+    "sessionEnded": "Your session ended. Sign in again.",
+    "lockedFor": "{minutes, plural, one {Account locked after several attempts. Try again in # minute, or ask an administrator to reset your PIN.} other {Account locked after several attempts. Try again in # minutes, or ask an administrator to reset your PIN.}}"
   },
   "notify": {
     "success": {
@@ -146,7 +148,7 @@
     "READ_FAILED": "Could not load data. Please retry.",
     "AUTH_REQUIRED": "Sign-in required. Please sign in again.",
     "AUTH_INVALID_TOKEN": "Session expired. Please sign in again.",
-    "AUTH_LOCKED": "Account temporarily locked after several attempts. Try again later.",
+    "AUTH_LOCKED": "Account temporarily locked after several attempts. Try again later, or ask an administrator to reset your PIN.",
     "COMMAND_NOT_FOUND": "Unknown action. Update the app and retry.",
     "MODULE_DISABLED": "This module is not enabled for your company.",
     "MODULE_STILL_REQUIRED": "Another module that is on needs this one. Turn that one off first.",

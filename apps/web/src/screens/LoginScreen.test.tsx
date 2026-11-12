@@ -18,16 +18,18 @@ import { i18n } from "../i18n/index.js";
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   login: vi.fn(),
+  search: { redirect: undefined as string | undefined },
 }));
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
-  useSearch: () => ({ redirect: undefined }),
+  useSearch: () => mocks.search,
 }));
 
 vi.mock("../auth/api.js", () => ({ login: mocks.login }));
 
 const { LoginScreen } = await import("./LoginScreen.js");
+const { clearSessionEndedNotice, endSessionIfSignedOut } = await import("../auth/sign-out.js");
 
 function renderLogin(client = new QueryClient()) {
   render(
@@ -48,6 +50,7 @@ afterAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.search.redirect = undefined;
 });
 
 afterEach(() => {
@@ -122,5 +125,70 @@ describe("login form", () => {
       username: "amina",
       pin: "1234",
     });
+  });
+
+  it.each([
+    ["the member whose session ended returns to the kept page", "amina", "/finance/entries"],
+    ["someone else starts on the home screen", "herve", "/"],
+  ])("after a 401 %s", async (_case, username, landing) => {
+    sessionStore.save({
+      username: "amina",
+      workspaceSlug: "sotrafret",
+      token: "revoked",
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    });
+    endSessionIfSignedOut(new QueryClient(), "MEMBERS_401");
+    mocks.search.redirect = "/finance/entries";
+    mocks.login.mockResolvedValue({
+      ok: true,
+      session: { username, workspaceSlug: "sotrafret", token: "token", expiresAt: new Date(Date.now() + 60_000).toISOString() },
+    });
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.clear(screen.getByLabelText("Username"));
+    await user.type(screen.getByLabelText("Username"), username);
+    await user.type(screen.getByLabelText("PIN code"), "1234");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith({ to: landing }));
+    sessionStore.logout({ username, workspaceSlug: "sotrafret" });
+  });
+
+  it.each([
+    [61, "Try again in 2 minutes"],
+    [60, "Try again in 1 minute,"],
+    [5, "Try again in 1 minute,"],
+  ])("says how long a lock lasts (%i s) and that an administrator can reset the PIN", async (seconds, wait) => {
+    mocks.login.mockResolvedValue({ ok: false, code: "AUTH_LOCKED", retryAfterSeconds: seconds });
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.type(screen.getByLabelText("Workspace"), "sotrafret");
+    await user.type(screen.getByLabelText("Username"), "amina");
+    await user.type(screen.getByLabelText("PIN code"), "1234");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    const banner = await screen.findByRole("alert");
+    expect(banner.textContent).toContain(wait);
+    expect(banner.textContent).toContain("ask an administrator to reset your PIN");
+  });
+
+  it("says the last session ended when a 401 sent the member here", () => {
+    sessionStore.save({
+      username: "amina",
+      workspaceSlug: "sotrafret",
+      token: "revoked",
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    });
+    endSessionIfSignedOut(new QueryClient(), "MEMBERS_401");
+    renderLogin();
+    expect(screen.getByRole("status").textContent).toBe("Your session ended. Sign in again.");
+    clearSessionEndedNotice();
+  });
+
+  it("shows no session notice on an ordinary visit", () => {
+    renderLogin();
+    expect(screen.queryByText("Your session ended. Sign in again.")).toBeNull();
   });
 });
