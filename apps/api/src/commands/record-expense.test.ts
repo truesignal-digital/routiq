@@ -361,7 +361,7 @@ describe("record-expense.v1", () => {
           entryId,
           branchCode: "DLA",
           categoryCode: "PARKING",
-          economicDate: "2027-01-10",
+          economicDate: "2099-01-10",
           amountMinor: 2_000,
           paymentMethod: "CASH",
           postings: [{ assetId, amountMinor: 2_000 }],
@@ -377,7 +377,7 @@ describe("record-expense.v1", () => {
       .where(
         and(
           eq(financialEntries.workspaceId, workspaceId),
-          eq(financialEntries.economicDate, "2027-01-10"),
+          eq(financialEntries.economicDate, "2099-01-10"),
         ),
       );
     const sequences = rows
@@ -440,11 +440,13 @@ describe("record-expense.v1", () => {
   });
 
   it("does not treat cash references as evidence and suppresses warnings for declared no-receipt costs", async () => {
+    // The current month: an earlier test locks last month.
+    const economicDate = `${currentPeriodCode(new Date(), "Africa/Douala")}-01`;
     const cash = await postCommand(token, "record-expense", {
       entryId: randomUUID(),
       branchCode: "DLA",
       categoryCode: "FUEL",
-      economicDate: "2026-10-01",
+      economicDate,
       amountMinor: 3_000,
       paymentMethod: "CASH",
       paymentReference: "handwritten-note",
@@ -457,7 +459,7 @@ describe("record-expense.v1", () => {
       entryId: randomUUID(),
       branchCode: "DLA",
       categoryCode: "FUEL",
-      economicDate: "2026-10-01",
+      economicDate,
       amountMinor: 4_000,
       paymentMethod: "BANK",
       paymentReference: "BANK-TRANSFER-42",
@@ -471,7 +473,7 @@ describe("record-expense.v1", () => {
       entryId: parkingEntryId,
       branchCode: "DLA",
       categoryCode: "PARKING",
-      economicDate: "2026-10-01",
+      economicDate,
       amountMinor: 500,
       paymentMethod: "CASH",
       postings: [{ amountMinor: 500 }],

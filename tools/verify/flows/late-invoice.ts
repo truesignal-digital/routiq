@@ -4,6 +4,7 @@ import { openSidebar, signOutThroughNameMenu, type DriveScript } from "../browse
 
 interface WorkOrderRead {
   id: string;
+  number: number;
   status: string;
   description: string;
   actualCostMinor: number | null;
@@ -29,7 +30,8 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   const orders = await apiGet(`/v1/work-orders?assetId=${asset.id}`);
   const order = ((orders.body as { items?: WorkOrderRead[] }).items ?? []).find((o) => o.status === "APPROVED");
   if (order === undefined) throw new Error("no approved work order on VH003 (reseed?)");
-  const ref = order.id.slice(0, 8).toUpperCase();
+  // Records are named by number (#608): WO-0001, OT-0001 in French.
+  const ref = `${t("OT", "WO")}-${String(order.number).padStart(4, "0")}`;
   const readOrder = async () => {
     const response = await apiGet(`/v1/work-orders/${order.id}`);
     if (response.status !== 200) throw new Error(`GET /v1/work-orders/${order.id} → ${response.status}`);

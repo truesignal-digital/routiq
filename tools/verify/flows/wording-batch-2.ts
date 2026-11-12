@@ -62,8 +62,8 @@ async function groundedNamesTheOtherProblem(ctx: DriveContext) {
   const form = page.getByRole("dialog").last();
   await form.waitFor();
   await form.getByLabel(t("Compte rendu", "Work summary")).fill("Brake lines bled, pressure sensor replaced");
-  const noCost = form.getByRole("radio", { name: new RegExp(t("Aucun coût", "No cost"), "i") });
-  if ((await noCost.count()) > 0) await noCost.first().check();
+  const noCost = form.getByRole("button", { name: t("Aucun coût", "No cost"), exact: true });
+  if ((await noCost.count()) > 0) await noCost.first().click();
   await form.getByRole("button", { name: t("Terminer les travaux", "Complete work"), exact: true }).click();
   await quiet();
   await closeDialogs(page);
@@ -116,15 +116,16 @@ async function moneyTiles(ctx: DriveContext) {
   await (await openSidebar(page)).getByRole("link", { name: t("Argent", "Money") }).click();
   await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
   await quiet();
-  const out = page.getByRole("button", { name: new RegExp(`^${t("Dépenses en", "Expenses in")} \\p{L}+`, "u") }).first();
-  const incoming = page.getByRole("button", { name: new RegExp(`^${t("Recettes en", "Revenue in")} \\p{L}+`, "u") }).first();
+  // The Overview tiles (#664) say Expenses and Revenue; the month is in the range chips.
+  const out = page.locator("main").getByText(t("Dépenses", "Expenses"), { exact: true }).first();
+  const incoming = page.locator("main").getByText(t("Recettes", "Revenue"), { exact: true }).first();
   await out.waitFor();
   await incoming.waitFor();
   const body = (await page.locator("main").textContent()) ?? "";
   if (/\bIn in\b/.test(body)) throw new Error('the page still reads "In in"');
   await settle(ctx);
   await shot("money-tiles", {
-    caption: "The Money tiles read Expenses in October and Revenue in October",
+    caption: "The Money tiles read Expenses and Revenue",
     highlight: out.locator("xpath=.."),
   });
   const summary = await apiGet("/v1/finance/summary");

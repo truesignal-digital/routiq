@@ -11,11 +11,12 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   const asset = ((assets.body as { items?: Array<{ id: string; assetCode: string }> }).items ?? []).find((a) => a.assetCode === "VH003");
   if (asset === undefined) throw new Error(`GET /v1/assets?search=VH003 → ${assets.status}`);
   const issues = await apiGet(`/v1/issues?assetId=${asset.id}`);
-  const issue = ((issues.body as { items?: Array<{ id: string; status: string; safetyCritical: boolean; description?: string }> }).items ?? []).find(
+  const issue = ((issues.body as { items?: Array<{ id: string; number: number; status: string; safetyCritical: boolean; description?: string }> }).items ?? []).find(
     (i) => i.status === "OPEN" && !i.safetyCritical,
   );
   if (issue === undefined) throw new Error("no open, non-safety-critical problem on VH003 (reseed?)");
-  const issueRef = issue.id.slice(0, 8).toUpperCase();
+  // Rows name records by number (#608): PRB-0002, PB-0002 in French.
+  const issueRef = `${t("PB", "PRB")}-${String(issue.number).padStart(4, "0")}`;
   log(`problem ${issueRef}: ${issue.description ?? ""}`);
 
   await (await openSidebar(page)).getByRole("link", { name: t("Camions", "Trucks") }).click();
@@ -43,9 +44,9 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   await shot("work-order-opened", { caption: "The work order is open" });
 
   const orders = await apiGet(`/v1/work-orders?assetId=${asset.id}`);
-  const order = ((orders.body as { items?: Array<{ id: string; status: string; issue: { id: string } | null }> }).items ?? []).find((o) => o.issue?.id === issue.id);
+  const order = ((orders.body as { items?: Array<{ id: string; number: number; status: string; issue: { id: string } | null }> }).items ?? []).find((o) => o.issue?.id === issue.id);
   if (order === undefined) throw new Error("the new work order is not in GET /v1/work-orders");
-  const orderRef = order.id.slice(0, 8).toUpperCase();
+  const orderRef = `${t("OT", "WO")}-${String(order.number).padStart(4, "0")}`;
   log(`work order ${orderRef} is ${order.status}`);
   // Opening the order leaves the problem's record panel open on top of the tab.
   for (let i = 0; i < 3 && (await page.getByRole("dialog").count()) > 0; i += 1) {

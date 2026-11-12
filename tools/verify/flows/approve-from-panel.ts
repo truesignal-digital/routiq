@@ -15,7 +15,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
 
   await (await openSidebar(page)).getByRole("link", { name: t("Argent", "Money") }).click();
   await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
-  await page.getByRole("button", { name: t("En attente de votre approbation", "Waiting for your approval"), exact: true }).click();
+  await page.getByRole("navigation", { name: t("Sections de l’argent", "Money sections") }).getByRole("tab", { name: /^(À approuver|To approve)/ }).click();
   await quiet();
   await shot("approvals-queue", {
     caption: `The waiting view: ${entry.entryNumber} waits for a decision`,

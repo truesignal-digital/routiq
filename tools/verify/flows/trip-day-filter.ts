@@ -95,7 +95,8 @@ const flow: DriveScript = async (ctx) => {
   const summary = await apiGet("/v1/activities/summary");
   const thisWeek = (summary.body as { thisWeek?: number }).thisWeek ?? 0;
 
-  const weekTile = page.getByRole("button", { name: new RegExp(t("Cette semaine", "This week")) });
+  // Trips opens on its Overview (#665): this week's column links to the list for the week.
+  const weekTile = page.locator(`a[href="/activities/list?from=${week.from}&to=${week.to}"]`).first();
   await weekTile.click();
   await page.waitForURL((url) => url.searchParams.get("from") === week.from && url.searchParams.get("to") === week.to);
   await quiet();
@@ -114,6 +115,9 @@ const flow: DriveScript = async (ctx) => {
   );
   const mondayCell = page.getByRole("dialog").getByRole("button", { name: mondayLabel, exact: true });
   await mondayCell.click();
+  // The calendar draws its range from the filter; a second click before it redraws restarts the range.
+  await page.waitForURL((url) => url.searchParams.get("from") === monday && !url.searchParams.get("to"));
+  await page.getByRole("dialog").locator("[data-range-end]").waitFor({ state: "detached" });
   await mondayCell.click();
   await page.keyboard.press("Escape");
   await page.waitForURL((url) => url.searchParams.get("from") === monday && url.searchParams.get("to") === monday);

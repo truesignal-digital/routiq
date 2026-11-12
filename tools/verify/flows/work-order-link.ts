@@ -12,7 +12,12 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   type Row = {
     id: string;
     entryNumber: string;
-    links: { workOrderId: string | null; workOrderAssetId: string | null; workOrderDescription: string | null };
+    links: {
+      workOrderId: string | null;
+      workOrderNumber: number | null;
+      workOrderAssetId: string | null;
+      workOrderDescription: string | null;
+    };
   };
   const entries = (list.body as { entries?: Row[] }).entries ?? [];
   const entry = entries.find((e) => e.links.workOrderId !== null);
@@ -21,7 +26,9 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
     throw new Error(`GET /v1/finance/entries?status=POSTED → ${list.status}, no posted work-order entry with a description`);
   }
   const idFragment = (entry.links.workOrderId ?? "").slice(0, 8).toUpperCase();
-  const name = `${t("Ordre de travail :", "Work order:")} ${description}`;
+  // The link names the order by number and description (#608): "Work order WO-0001: …".
+  const ref = `${t("OT", "WO")}-${String(entry.links.workOrderNumber).padStart(4, "0")}`;
+  const name = t(`Ordre de travail ${ref} : ${description}`, `Work order ${ref}: ${description}`);
   log(`${entry.entryNumber} belongs to work order "${description}" (id starts ${idFragment})`);
 
   const noIdFragment = async (where: string, text: string) => {
@@ -30,6 +37,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
 
   await (await openSidebar(page)).getByRole("link", { name: t("Argent", "Money") }).click();
   await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
+  await page.getByRole("navigation", { name: t("Sections de l’argent", "Money sections") }).getByRole("tab", { name: /^(Écritures|Entries)/ }).click();
   await quiet();
   const row = page.getByRole("row").filter({ has: page.getByRole("button", { name: entry.entryNumber, exact: true }) });
   const rowLink = row.getByRole("link", { name, exact: true });

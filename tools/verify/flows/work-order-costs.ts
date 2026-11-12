@@ -40,6 +40,8 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
 
   // The cashier has no Maintenance row; the queue is still theirs to read.
   await nav("/maintenance");
+  // Maintenance opens on its Overview tab.
+  await page.locator("[data-slot='module-page-tabs']").getByRole("tab", { name: t("Ordres de travail", "Work orders") }).click();
   const table = page.getByRole("table").first();
   await table.waitFor();
   await quiet();

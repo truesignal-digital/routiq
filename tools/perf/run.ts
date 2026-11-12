@@ -140,6 +140,11 @@ async function measureOnceUnbounded(state: SlotState, db: pg.Client, asset: Vehi
 
     for (const screen of SCREENS) {
       const key = screenTemplate(screen);
+      // Money opens on its Overview (#664); Entries is a tab there, so count from the Overview.
+      if (screen === "/finance/entries") {
+        await tapTo(page, "/finance");
+        await settle(page, () => inflight, () => lastActivity);
+      }
       const before = apiRequests;
       const start = await pageNow(page);
       if (screen === "/assets/:asset") await tapText(page, asset.code);
