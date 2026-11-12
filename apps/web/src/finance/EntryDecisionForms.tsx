@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { z } from "zod";
 import {
@@ -21,13 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { useCommandLabel } from "../commands/labels.js";
 import { RecordText } from "@/components/record-number.js";
 import { formatMoney, localizedLabel } from "../lib/format.js";
 import { notifyCommandError, notifyCommandSuccess } from "../lib/notify.js";
+import { useMoneyRefresh } from "../lib/useMoneyRefresh.js";
 import { cancellationPayload, validateRejectionReason } from "./model.js";
 
 type ApprovePayload = z.infer<typeof approveEntryPayload>;
@@ -50,23 +49,6 @@ export interface EntryDecisionHost {
   onDismiss: () => void;
 }
 
-/**
- * ADR-0001: a decided entry leaves the queue because the server says so, not
- * because the client crossed it off locally — so a decision refreshes the
- * reads it changed and nothing else.
- */
-function useFinanceRefresh(...reads: ReadonlyArray<"approvals" | "entries" | "entry" | "summary">) {
-  const queryClient = useQueryClient();
-  const session = useActiveSession();
-  return async () => {
-    for (const read of reads) {
-      await queryClient.invalidateQueries({
-        queryKey: ["ws", session?.workspaceSlug, "finance", read],
-      });
-    }
-  };
-}
-
 function useDecisionChrome(host: EntryDecisionHost, refresh: () => Promise<void>) {
   return {
     surface: host.surface,
@@ -82,7 +64,7 @@ function useDecisionChrome(host: EntryDecisionHost, refresh: () => Promise<void>
 export function ApproveEntryForm(host: EntryDecisionHost) {
   const { t } = useTranslation();
   const label = useCommandLabel();
-  const refresh = useFinanceRefresh("approvals", "entries", "entry", "summary");
+  const refresh = useMoneyRefresh();
   const chrome = useDecisionChrome(host, refresh);
   const submission = useCommandSubmission();
   const [note, setNote] = useState("");
@@ -138,7 +120,7 @@ export function ApproveEntryForm(host: EntryDecisionHost) {
  * so tapping again after a dropped connection replays the same envelope.
  */
 export function useApproveEntry(client?: CommandClient) {
-  const refresh = useFinanceRefresh("approvals", "entries", "entry", "summary");
+  const refresh = useMoneyRefresh();
   const [submitting, setSubmitting] = useState(false);
   const intents = useRef(new Map<string, CommandIntent<ApprovePayload>>());
 
@@ -238,7 +220,7 @@ export function RejectEntryForm({ entry, ...rest }: EntryDecisionHost & { entry:
   const host = { ...rest, entry };
   const { t } = useTranslation();
   const label = useCommandLabel();
-  const refresh = useFinanceRefresh("approvals", "entries", "entry", "summary");
+  const refresh = useMoneyRefresh();
   const chrome = useDecisionChrome(host, refresh);
   const submission = useCommandSubmission();
   const [reason, setReason] = useState("");
@@ -318,7 +300,7 @@ export function ReverseEntryForm({
 }) {
   const { t } = useTranslation();
   const label = useCommandLabel();
-  const refresh = useFinanceRefresh("entry", "entries", "summary");
+  const refresh = useMoneyRefresh();
   const chrome = useDecisionChrome(host, refresh);
   const submission = useCommandSubmission();
   const [reversalEntryId] = useState(() => crypto.randomUUID());

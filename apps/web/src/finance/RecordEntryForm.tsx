@@ -13,6 +13,8 @@ import {
 } from "@/components/command-form.js";
 import { MoneyInput } from "@/components/money-input.js";
 import { RuleHint } from "../approval-rules/RuleHint.js";
+import { useMeContext } from "../auth/me.js";
+import { Note } from "../vehicle/parts.js";
 import { RecordText } from "@/components/record-number";
 import { FileUpload } from "@/components/ui/file-upload";
 import {
@@ -54,6 +56,8 @@ import {
   toUpdatePendingEntryPayload,
   type FinanceFormState,
 } from "./model.js";
+import { canReadFinance } from "./permissions.js";
+import { postingWaitsForReopen, usePeriods } from "./usePeriods.js";
 
 export type EntryDirection = "EXPENSE" | "REVENUE";
 
@@ -244,6 +248,10 @@ export function RecordEntryForm({
   const amountInput = form.watch("amountInput");
   const paymentMethod = form.watch("paymentMethod");
   const economicDate = form.watch("economicDate");
+  const me = useMeContext();
+  // role-config: only the ledger readers may read the months; for the others the form stays silent.
+  const periods = usePeriods(editing === undefined && canReadFinance(me?.role, me?.enabledModules));
+  const monthLocked = editing === undefined && postingWaitsForReopen(periods.data, economicDate);
   const description = form.watch("description");
   const categoriesQuery = useCategories(
     direction === "EXPENSE" ? "EXPENSE_CATEGORY" : "REVENUE_CATEGORY",
@@ -560,7 +568,9 @@ export function RecordEntryForm({
                   placeholder={t("finance.record.amountPlaceholder")}
                 />
               </FormControl>
-              {lateCost ? (
+              {monthLocked ? (
+                <Note tone="warning">{t("finance.record.lockedMonthHint")}</Note>
+              ) : lateCost ? (
                 <FormDescription>{t("finance.record.lateCostHint")}</FormDescription>
               ) : (
                 editing === undefined && (

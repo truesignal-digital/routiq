@@ -905,7 +905,7 @@ describe("mid-trip capture", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText("This period is locked. No postings are possible."),
+        screen.getByText("This month is locked. It must first be reopened in Accounting months (Director)."),
       ).toBeTruthy(),
     );
     expect(screen.getByRole("button", { name: "Record the expense" })).toBeTruthy();

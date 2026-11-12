@@ -128,6 +128,12 @@ function FinanceEntriesContent() {
     });
   };
   const setFilter = (key: string, value: string) => changeFilters({ ...filterValues, [key]: value });
+  // Only shown where it is the rows the chip opens: the summary month, by economic date.
+  const chipMonth = filterValues["economicMonth"] ?? "";
+  const missingCount =
+    summary !== undefined && (chipMonth === summary.month || (chipMonth === "" && filterValues["evidence"] !== "MISSING"))
+      ? summary.missingReceipt.count
+      : undefined;
   const changeBooks = (next: boolean) =>
     void navigate({
       to: "/finance/entries",
@@ -233,8 +239,15 @@ function FinanceEntriesContent() {
         render: (
           <MissingReceiptToggle
             pressed={filterValues["evidence"] === "MISSING"}
-            count={summary?.missingReceipt.count}
-            onToggle={(pressed) => setFilter("evidence", pressed ? "MISSING" : "")}
+            count={missingCount}
+            onToggle={(pressed) =>
+              changeFilters({
+                ...filterValues,
+                evidence: pressed ? "MISSING" : "",
+                // The count is the summary month's, so pressing opens that month.
+                economicMonth: pressed && !filterValues["economicMonth"] ? (summary?.month ?? "") : (filterValues["economicMonth"] ?? ""),
+              })
+            }
           />
         ),
       },
@@ -267,7 +280,7 @@ function FinanceEntriesContent() {
           ]
         : []),
     ],
-    [assetOptions, t, filterValues, summary?.missingReceipt.count, canReadBooks, books],
+    [assetOptions, t, filterValues, missingCount, summary?.month, canReadBooks, books],
   );
 
   const allEntries = entriesQuery.data?.pages.flatMap((page) => page.entries) ?? [];

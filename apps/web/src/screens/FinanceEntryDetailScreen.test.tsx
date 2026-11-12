@@ -372,3 +372,28 @@ describe("the money entry as a record page (#662)", () => {
     }
   });
 });
+
+// An entry outside the viewer's branches answers 404: say so, as the vehicle page does, with nothing to retry.
+describe("an entry the viewer may not open", () => {
+  function failing(message: string) {
+    signedIn(OTHER_ID, "CASHIER");
+    mocks.entry.mockReturnValue({ isPending: false, isError: true, error: new Error(message), data: undefined, refetch: vi.fn() });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <FinanceEntryDetailScreen />
+      </QueryClientProvider>,
+    );
+  }
+
+  it("says it does not exist or is outside the viewer's branches, with no retry", () => {
+    failing("ENTRY_404");
+    expect(screen.getByText("This entry does not exist or is outside your branches.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("still offers a retry when the read failed for another reason", () => {
+    failing("ENTRY_500");
+    expect(screen.queryByText("This entry does not exist or is outside your branches.")).toBeNull();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+  });
+});

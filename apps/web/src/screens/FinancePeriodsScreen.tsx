@@ -29,6 +29,7 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -372,6 +373,7 @@ function ActionDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{label("reopen-period")}</DialogTitle>
+          <DialogDescription>{t("finance.periods.reopenExplanation")}</DialogDescription>
         </DialogHeader>
 
         {error && (

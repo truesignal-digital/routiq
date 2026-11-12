@@ -268,11 +268,12 @@ describe("entry evidence fragments, whatever the outer select reads", () => {
     expect(missing).not.toContain(reversalEntryId);
   });
 
-  it("gives the finance summary the entries list's missing-receipt count", async () => {
-    const listed = await api.get(director.token, "/v1/finance/entries?limit=100&evidence=MISSING");
-    expect(listed.status).toBe(200);
+  it("gives the finance summary the entries list's missing-receipt count for its month", async () => {
     const summary = await api.get(director.token, "/v1/finance/summary");
     expect(summary.status, JSON.stringify(summary.body)).toBe(200);
+    const { month } = financeSummaryResponse.parse(summary.body);
+    const listed = await api.get(director.token, `/v1/finance/entries?limit=100&evidence=MISSING&economicMonth=${month}`);
+    expect(listed.status).toBe(200);
     expect(financeSummaryResponse.parse(summary.body).missingReceipt.count).toBe(
       financialEntryListResponse.parse(listed.body).entries.length,
     );

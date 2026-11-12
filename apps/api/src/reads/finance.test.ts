@@ -1296,7 +1296,7 @@ describe("finance reads", () => {
       expect(submitted.recordStatus).toBe("SUBMITTED");
     });
 
-    it("lists auto-created periods with their POSTED entry counts", async () => {
+    it("lists auto-created periods with their ledger entry counts", async () => {
       const body = await fetchPeriods(periodsAdminToken);
 
       expect(body.periods.map((period) => period.periodCode)).toEqual([
@@ -1315,6 +1315,34 @@ describe("finance reads", () => {
       expect(
         body.periods.find((period) => period.periodCode === "2026-06")?.entryCount,
       ).toBe(1);
+    });
+
+    // Like the Dashboard's "écritures comptabilisées": a cancellation is two
+    // rows in the books, the cancelled original and its reversal.
+    it("counts a cancelled entry and its reversal, as the Dashboard does", async () => {
+      const { entryId: originalEntryId, rowVersion } = await recordExpense(periodsAdminToken, {
+        amountMinor: 10_000,
+        economicDate: "2026-06-12",
+      });
+      const reversal = await ctx.app.inject({
+        method: "POST",
+        url: "/v1/commands/reverse-entry",
+        headers: { authorization: `Bearer ${periodsAdminToken}` },
+        payload: {
+          version: 1,
+          envelope: {
+            commandId: randomUUID(),
+            idempotencyKey: `reverse-${randomUUID()}`,
+            origin: "HUMAN_UI",
+            expectedVersion: rowVersion,
+          },
+          payload: { reversalEntryId: randomUUID(), originalEntryId, reason: "Doublon" },
+        },
+      });
+      expect(reversal.statusCode, reversal.body).toBe(200);
+
+      const body = await fetchPeriods(periodsAdminToken);
+      expect(body.periods.find((period) => period.periodCode === "2026-06")?.entryCount).toBe(3);
     });
 
     // The month-lock dialog takes "the current month" from here, not from the

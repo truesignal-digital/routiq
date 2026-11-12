@@ -365,4 +365,25 @@ describe("GET /v1/todo and /v1/coming-up", () => {
       "ISSUE_UNPLANNED",
     );
   });
+
+  it("counts no receipt for either half of a cancelled entry in the open month (#473)", async () => {
+    const before = find(await todo(finance), "PERIOD_OPEN")?.params.evidenceMissingCount;
+    const entryId = randomUUID();
+    const wrong = await api.ok(director.token, "record-expense", {
+      entryId,
+      branchCode: "DLA",
+      categoryCode: "FUEL",
+      economicDate: `${lastMonth}-17`,
+      amountMinor: POSTED_AMOUNT,
+      paymentMethod: "CASH",
+      postings: [{ assetId: dla1, amountMinor: POSTED_AMOUNT }],
+    });
+    await api.ok(
+      finance.token,
+      "reverse-entry",
+      { reversalEntryId: randomUUID(), originalEntryId: entryId, reason: "Doublon" },
+      { expectedVersion: wrong.rowVersion },
+    );
+    expect(find(await todo(finance), "PERIOD_OPEN")?.params.evidenceMissingCount).toBe(before);
+  });
 });
