@@ -14,6 +14,7 @@ import type {
   WorkOrderDetail,
 } from "@routiq/contracts";
 import { sessionStore, useActiveSession } from "../auth/store.js";
+import { useMoneyRefresh } from "../lib/useMoneyRefresh.js";
 import { retryUnlessNotFound } from "../lib/query-retry.js";
 import { maintenanceQueryKey } from "../maintenance/useMaintenance.js";
 import type { PanelRef } from "./model.js";
@@ -234,23 +235,24 @@ export function useVehicleEntries(assetId: string, filter: VehicleEntriesFilter,
 
 /**
  * What a write on the vehicle refreshes: the vehicle's own reads, the
- * maintenance queue, finance, trips and the fleet list. The server decides what
+ * maintenance queue, the money reads, trips and the fleet list. The server decides what
  * each now says; nothing is patched locally.
  */
 export function useVehicleRefresh(assetId: string) {
   const queryClient = useQueryClient();
   const session = useActiveSession();
+  const refreshMoney = useMoneyRefresh();
   const slug = session?.workspaceSlug;
   return async () => {
-    await Promise.all(
-      [
+    await Promise.all([
+      refreshMoney(),
+      ...[
         vehicleQueryKey(slug, assetId),
         maintenanceQueryKey(slug),
-        ["ws", slug, "finance"],
         ["ws", slug, "activities"],
         ["ws", slug, "assets"],
         ["ws", slug, "notes"],
       ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
-    );
+    ]);
   };
 }

@@ -493,9 +493,6 @@ function CountedLine({ overview, mode }: { overview: FinanceOverviewResponse; mo
           amount: formatMoney(notCounted.waitingApproval.amountMinor, { currency }),
         })
       : null,
-    notCounted.missingReceipt.count > 0
-      ? t("finance.overview.counted.missingReceipt", { count: notCounted.missingReceipt.count })
-      : null,
     notCounted.openTrips !== null && notCounted.openTrips > 0
       ? t("finance.overview.counted.openTrips", { count: notCounted.openTrips })
       : null,
@@ -504,7 +501,14 @@ function CountedLine({ overview, mode }: { overview: FinanceOverviewResponse; mo
       : null,
   ].filter((sentence): sentence is string => sentence !== null);
   return (
-    <span data-slot="dashboard-counted">{sentences.join(" ")}</span>
+    <>
+      <span data-slot="dashboard-counted">{sentences.join(" ")}</span>
+      {notCounted.missingReceipt.count > 0 && (
+        <span data-slot="dashboard-missing-receipt" className="block basis-full">
+          {t("finance.overview.counted.missingReceipt", { count: notCounted.missingReceipt.count })}
+        </span>
+      )}
+    </>
   );
 }
 

@@ -167,7 +167,7 @@
     "MAKER_CANNOT_APPROVE": "Vous ne pouvez pas approuver une écriture que vous avez créée.",
     "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été annulée.",
     "ENTRY_IS_REVERSAL": "Cette écriture est elle-même une annulation et ne peut pas être annulée. Pour revenir en arrière, enregistrez à nouveau l'écriture d'origine.",
-    "PERIOD_LOCKED": "Cette période est verrouillée. Aucune écriture n'est possible.",
+    "PERIOD_LOCKED": "Ce mois est verrouillé. Il faut d'abord le rouvrir dans « Mois comptables » (Direction).",
     "CATEGORY_KIND_MISMATCH": "La catégorie choisie ne correspond pas au type d'écriture (recette / dépense).",
     "ACTIVITY_CLOSE_BLOCKED": "Impossible de clôturer : il manque les dates réelles ou au moins un engin affecté.",
     "COMMAND_SCOPE_FORBIDDEN": "Cette opération n'est pas disponible depuis une session d'espace de travail.",
@@ -600,7 +600,7 @@
         "MAKER_CANNOT_APPROVE": "Vous ne pouvez pas approuver une écriture que vous avez créée.",
         "ENTRY_ALREADY_REVERSED": "Cette écriture a déjà été annulée.",
         "ENTRY_IS_REVERSAL": "Cette écriture est elle-même une annulation et ne peut pas être annulée. Pour revenir en arrière, enregistrez à nouveau l'écriture d'origine.",
-        "PERIOD_LOCKED": "Cette période est verrouillée. Aucune écriture n'est possible."
+        "PERIOD_LOCKED": "Ce mois est verrouillé. Il faut d'abord le rouvrir dans « Mois comptables » (Direction)."
       }
     },
     "navigation": {
@@ -642,6 +642,7 @@
       "lateCostReasonLabel": "Raison",
       "lateCostReasonPlaceholder": "Facture reçue après clôture",
       "lateCostHint": "Ces travaux sont terminés : la facture passe en validation, quel que soit son montant.",
+      "lockedMonthHint": "Le mois de cette date est verrouillé : l'écriture attendra sa réouverture dans « Mois comptables » (Direction).",
       "paymentRefLabel": "Référence de paiement (optionnel)",
       "paymentRefPlaceholder": "N° de reçu, N° de virement…",
       "assetLabel": "Actif (optionnel)",
@@ -668,7 +669,7 @@
       },
       "detail": {
         "title": "Écriture",
-        "notFound": "Cette écriture est introuvable.",
+        "notFound": "Cette écriture n'existe pas ou n'est pas dans vos agences.",
         "entryNumber": "Numéro d'écriture",
         "direction": "Direction",
         "status": "Statut",
@@ -815,7 +816,7 @@
     },
     "periods": {
       "title": "Mois comptables",
-      "lead": "Chaque mois reçoit des écritures jusqu’à ce que la finance le clôture. Les corrections tardives vont dans le mois ouvert.",
+      "lead": "Chaque mois reçoit des écritures jusqu’à ce que la finance le clôture. Une écriture datée d’un mois verrouillé va dans le mois en cours ; si celui-ci est aussi verrouillé, elle attend que la Direction le rouvre.",
       "columns": {
         "period": "Période",
         "status": "Statut",
@@ -831,6 +832,7 @@
       "entryCount": "{count, plural, one {# écriture} other {# écritures}}",
       "lockExplanation": "Les écritures déjà comptabilisées dans ce mois ne pourront plus changer. Une écriture tardive datée de ce mois sera comptabilisée dans le mois en cours et gardera sa date.",
       "lockCurrentExplanation": "Les écritures déjà comptabilisées dans ce mois ne pourront plus changer, et les écritures datées de ce mois ne pourront pas être comptabilisées avant sa réouverture.",
+      "reopenExplanation": "Le mois reçoit de nouveau des écritures : celles qui attendaient peuvent être approuvées, et les écritures comptabilisées peuvent être annulées.",
       "reasonLabel": "Motif de la réouverture",
       "reasonPlaceholder": "Expliquez pourquoi cette période doit être rouverte…",
       "cancel": "Annuler",

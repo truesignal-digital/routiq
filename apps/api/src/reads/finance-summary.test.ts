@@ -133,6 +133,51 @@ describe("GET /v1/finance/summary", () => {
     expect(driver.outMinor).toBe(150_000);
   });
 
+  // T6: one definition of "no receipt" — dated in the month, posted or waiting,
+  // never rejected — on the Money tile, the Dashboard sentence and the entries list.
+  it("counts missing receipts the same on the tile, the dashboard and the month's entries", async () => {
+    const count = async () => {
+      const tile = (await summary("director2")).missingReceipt.count;
+      const overview = await ctx.app.inject({
+        method: "GET",
+        url: "/v1/finance/overview",
+        headers: { authorization: `Bearer ${tokens.get("director2")}` },
+      });
+      expect(overview.statusCode, overview.body).toBe(200);
+      const listed = await ctx.app.inject({
+        method: "GET",
+        url: `/v1/finance/entries?evidence=MISSING&economicMonth=${month}&limit=100`,
+        headers: { authorization: `Bearer ${tokens.get("director2")}` },
+      });
+      expect(listed.statusCode, listed.body).toBe(200);
+      return {
+        tile,
+        dashboard: (overview.json() as { notCounted: { missingReceipt: { count: number } } }).notCounted.missingReceipt.count,
+        list: (listed.json() as { entries: unknown[] }).entries.length,
+      };
+    };
+    const before = await count();
+
+    const waiting = await command(tokens.get("driver")!, "record-expense", expense(150_000));
+    expect(waiting.statusCode, waiting.body).toBe(200);
+    const rejectedEntry = expense(160_000);
+    const toReject = await command(tokens.get("driver")!, "record-expense", rejectedEntry);
+    expect(toReject.statusCode, toReject.body).toBe(200);
+    const rejected = await command(
+      tokens.get("director2")!,
+      "reject-entry",
+      { entryId: rejectedEntry.entryId, reason: "Doublon" },
+      1,
+    );
+    expect(rejected.statusCode, rejected.body).toBe(200);
+    const earlier = await command(tokens.get("driver")!, "record-expense", expense(170_000, `${previousPeriodCode(month)}-15`));
+    expect(earlier.statusCode, earlier.body).toBe(200);
+
+    const after = await count();
+    expect(after.tile).toBe(before.tile + 1);
+    expect(after).toEqual({ tile: after.tile, dashboard: after.tile, list: after.tile });
+  });
+
   // #526: the lead names every earlier month still open, not only the latest.
   it("lists every earlier month still open, oldest first, and the last locked one", async () => {
     const [command] = await ctx.db

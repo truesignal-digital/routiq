@@ -106,7 +106,14 @@ export function registerFinanceSummaryReadRoutes(
             oldest: sql<string | null>`min(${financialEntries.economicDate})::text`,
           })
           .from(financialEntries)
-          .where(and(...readable, entryEvidenceMissingSql()));
+          .where(
+            and(
+              ...readable,
+              entryEvidenceMissingSql(),
+              gte(financialEntries.economicDate, from),
+              lt(financialEntries.economicDate, to),
+            ),
+          );
 
         let waiting: {
           count: number;

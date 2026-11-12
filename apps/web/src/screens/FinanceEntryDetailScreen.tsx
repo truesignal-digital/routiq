@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -13,7 +12,6 @@ import { RecordBody, RecordHeader, RecordTabs, TabCount } from "@/components/rec
 import { StatusBlock } from "@/components/status-block.js";
 import { Button } from "@/components/ui/button";
 import { useMeContext } from "@/auth/me.js";
-import { useActiveSession } from "@/auth/store.js";
 import { AttachEvidenceForm } from "@/finance/AttachEvidenceForm.js";
 import {
   entryAssets,
@@ -42,6 +40,8 @@ import {
   ReverseEntryForm,
 } from "@/finance/EntryDecisionForms.js";
 import { localizedLabel } from "@/lib/format.js";
+import { isNotFound } from "@/lib/query-retry.js";
+import { useMoneyRefresh } from "@/lib/useMoneyRefresh.js";
 import { OtherBranchNotice } from "@/shell/BranchScopeNotices.js";
 import { entrySteps } from "@/vehicle/flow.js";
 import { viewerOf } from "@/vehicle/model.js";
@@ -75,8 +75,6 @@ function FinanceEntryDetailContent() {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [recordAgainOpen, setRecordAgainOpen] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const session = useActiveSession();
 
   const canReverse = canReverseEntry(me?.role, entryQuery.data);
   // role-config: an approver decides while the entry waits, never on their own
@@ -105,11 +103,7 @@ function FinanceEntryDetailContent() {
     entrySteps(entryQuery.data, viewerOf(me)).offered.some((offer) => offer.step.key === "attach-evidence");
 
   /** ADR-0001: server truth after the save or the conflict, never a local patch. */
-  const refreshFinance = async () => {
-    await queryClient.invalidateQueries({
-      queryKey: ["ws", session?.workspaceSlug, "finance"],
-    });
-  };
+  const refreshFinance = useMoneyRefresh();
 
   if (entryQuery.isPending) {
     return (
@@ -118,7 +112,8 @@ function FinanceEntryDetailContent() {
       </PageContainer>
     );
   }
-  if (entryQuery.isError) {
+  // Outside the caller's branches is a 404, as for a vehicle: not theirs to see, nothing to retry.
+  if (entryQuery.isError && !isNotFound(entryQuery.error)) {
     return (
       <PageContainer>
         <ErrorState
@@ -130,7 +125,7 @@ function FinanceEntryDetailContent() {
     );
   }
   const entry = entryQuery.data;
-  if (entry === undefined) {
+  if (entryQuery.isError || entry === undefined) {
     return (
       <PageContainer>
         <EmptyState icon={<FileText className="size-7" aria-hidden />} message={t("finance.entries.detail.notFound")} />

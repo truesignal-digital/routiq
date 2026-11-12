@@ -47,6 +47,7 @@ import { MoneyInput } from "@/components/money-input.js";
 import { useMeContext } from "../auth/me.js";
 import { useWorkspaceToday } from "../auth/workspace-day.js";
 import { useActiveSession } from "../auth/store.js";
+import { useMoneyRefresh } from "../lib/useMoneyRefresh.js";
 import { PinnedAssetField } from "../assets/PinnedAssetField.js";
 import { useCategories } from "../categories/useCategories.js";
 import { canAddWorkOrderCost } from "../finance/permissions.js";
@@ -140,10 +141,13 @@ export interface MaintenanceFormHost {
 function useMaintenanceCommit() {
   const queryClient = useQueryClient();
   const session = useActiveSession();
+  const refreshMoney = useMoneyRefresh();
+  // A closed work order books its cost lines as entries (#725).
   const invalidate = () =>
-    queryClient.invalidateQueries({
-      queryKey: maintenanceQueryKey(session?.workspaceSlug),
-    });
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: maintenanceQueryKey(session?.workspaceSlug) }),
+      refreshMoney(),
+    ]);
 
   return {
     commit: async (successKey: string, warnings: readonly string[]) => {

@@ -1070,7 +1070,7 @@ export function registerFinanceReadRoutes(
               and(
                 eq(financialEntries.workspaceId, postingPeriods.workspaceId),
                 eq(financialEntries.postingPeriodId, postingPeriods.id),
-                eq(financialEntries.status, "POSTED"),
+                inArray(financialEntries.status, [...ledgerEntryStatuses]),
               ),
             )
             .where(eq(postingPeriods.workspaceId, auth.workspaceId))

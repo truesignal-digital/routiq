@@ -243,7 +243,7 @@ describe("Money Overview (#664)", () => {
     expect(href("expenses")).toBe("/finance/entries?status=LEDGER&direction=EXPENSE&economicMonth=2026-10");
     expect(href("revenue")).toBe("/finance/entries?status=LEDGER&direction=REVENUE&economicMonth=2026-10");
     expect(href("approve")).toBe("/finance/approve");
-    expect(href("missing")).toBe("/finance/entries?evidence=MISSING");
+    expect(href("missing")).toBe("/finance/entries?evidence=MISSING&economicMonth=2026-10");
     expect(href("close")).toBe("/finance/entries?periodCode=2026-09");
   });
 
@@ -290,7 +290,7 @@ describe("Money Overview (#664)", () => {
     ]);
     expect(rows.map((row) => row.querySelector("a")?.getAttribute("href"))).toEqual([
       "/finance/approve",
-      "/finance/entries?evidence=MISSING",
+      "/finance/entries?evidence=MISSING&economicMonth=2026-10",
       "/finance/periods",
     ]);
   });
@@ -301,8 +301,12 @@ describe("Money Overview (#664)", () => {
     const line = document.querySelector('[data-slot="money-counted"]')?.textContent ?? "";
     expect(line).toContain("Counted: 148 posted entries.");
     expect(line).toContain("Not counted: 6 entries in the period wait for approval");
-    expect(line).toContain("4 entries in the period have no receipt.");
     expect(line).toContain("5 activities are still open");
+    // Most of those entries are in the totals: their own line, not under "Not counted".
+    expect(line).not.toContain("no receipt");
+    expect(document.querySelector('[data-slot="money-missing-receipt"]')?.textContent).toBe(
+      "4 entries in the period have no receipt.",
+    );
   });
 
   it("gives a cashier revenue and expenses, never profit, and no queue or month close", () => {

@@ -32,6 +32,7 @@ import { assetDisplayName } from "../assets/display.js";
 import { useAssets } from "../assets/useAssets.js";
 import { useMeContext } from "../auth/me.js";
 import { useActiveSession } from "../auth/store.js";
+import { useMoneyRefresh } from "../lib/useMoneyRefresh.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
@@ -898,6 +899,7 @@ function TripExpenseForm({
   onDismiss: () => void;
 }) {
   const { invalidate } = useActivityCommit();
+  const refreshMoney = useMoneyRefresh();
   // The truck on the road spends the money: the one running segment's, or the
   // trip's only truck. Otherwise the operator picks it.
   const runningAssetId = running.length === 1 ? running[0]?.assetId : undefined;
@@ -916,6 +918,7 @@ function TripExpenseForm({
       client={client}
       onRecorded={() => {
         void invalidate();
+        void refreshMoney();
         onDismiss();
       }}
       onDismiss={onDismiss}
