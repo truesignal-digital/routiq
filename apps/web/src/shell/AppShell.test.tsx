@@ -30,10 +30,23 @@ const session = {
 };
 const logout = vi.fn();
 
-vi.mock("../auth/store.js", () => ({
-  sessionStore: { logout, getActive: () => session, getToken: () => "token" },
-  useActiveSession: () => session,
-}));
+/** The active session as the store holds it; a test may end it mid-render. */
+const active: { current: typeof session | undefined; listeners: Set<() => void> } = { current: session, listeners: new Set() };
+
+vi.mock("../auth/store.js", async () => {
+  const { useSyncExternalStore } = await import("react");
+  return {
+    sessionStore: { logout, getActive: () => active.current, getToken: () => "token" },
+    useActiveSession: () =>
+      useSyncExternalStore(
+        (onChange) => {
+          active.listeners.add(onChange);
+          return () => active.listeners.delete(onChange);
+        },
+        () => active.current,
+      ),
+  };
+});
 
 /** The shell's branch switcher reads its options from here; no Query client. */
 const branches: { current: Array<{ id: string; code: string; name: string }> } = {
@@ -62,6 +75,7 @@ vi.mock("../approval-rules/ApprovalRulesNotice.js", async () => {
 });
 
 const { AppShell } = await import("./AppShell.js");
+const { clearSessionEndedNotice, endSessionIfSignedOut } = await import("../auth/sign-out.js");
 const { PageContainer } = await import("../components/page-container.js");
 
 function membership(enabledModules: ModuleCode[]): MeContext {
@@ -185,6 +199,37 @@ beforeEach(async () => {
 });
 
 afterEach(cleanup);
+
+describe("AppShell when the session ends while it is open", () => {
+  beforeEach(() => {
+    logout.mockImplementation(() => {
+      active.current = undefined;
+      for (const notify of active.listeners) notify();
+    });
+  });
+
+  afterEach(() => {
+    logout.mockReset();
+    clearSessionEndedNotice();
+    active.current = session;
+  });
+
+  it("goes back to sign-in after a 401, keeping the page to return to, instead of waiting on skeletons", async () => {
+    const router = await renderShell("/finance/entries");
+    act(() => endSessionIfSignedOut(client, "AUTH_INVALID_TOKEN"));
+    expect(await screen.findByText("login screen")).toBeTruthy();
+    expect(screen.queryByTestId("screen")).toBeNull();
+    expect(router.state.location.search).toEqual({ redirect: "/finance/entries" });
+  });
+
+  it("lands a deliberate sign-out on sign-in with no page to return to", async () => {
+    const router = await renderShell("/finance/entries");
+    await userEvent.click(screen.getByRole("button", { name: /^Sali Ahmadou/ }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Sign out" }));
+    expect(await screen.findByText("login screen")).toBeTruthy();
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+  });
+});
 
 describe("AppShell offline notice (#576)", () => {
   afterEach(() => vi.restoreAllMocks());

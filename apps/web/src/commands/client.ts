@@ -33,7 +33,8 @@ export function createCommandClient({
   store,
   getToken,
   baseUrl = "",
-  fetchImpl = fetch,
+  // Looked up per call, so a stubbed global fetch reaches the app's one client.
+  fetchImpl = (input, init) => fetch(input, init),
 }: CommandClientDeps): CommandClient {
   return {
     async submit(submission) {

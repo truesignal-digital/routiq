@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { PoweredByRoutiq, RoutiqLogo, useCompanyLogo } from "@/components/brand/routiq-logo";
 import { login } from "../auth/api.js";
+import { clearSessionEndedNotice, sessionEndedNotice } from "../auth/sign-out.js";
 import { sessionStore } from "../auth/store.js";
 import { ErrorBanner } from "@/components/error-banner.js";
 
@@ -34,6 +35,7 @@ export function LoginScreen() {
   const last = sessionStore.getLastIdentity();
 
   const [errorCode, setErrorCode] = useState<string>();
+  const [lockedMinutes, setLockedMinutes] = useState<number>();
   const companyLogo = useCompanyLogo();
 
   const formSchema = useMemo(
@@ -60,14 +62,20 @@ export function LoginScreen() {
     const result = await login(values);
     if (!result.ok) {
       setErrorCode(result.code);
+      setLockedMinutes(
+        result.retryAfterSeconds === undefined ? undefined : Math.max(1, Math.ceil(result.retryAfterSeconds / 60)),
+      );
       form.setValue("pin", "");
       return;
     }
     // A session that expired never signed out: nothing read under it may
     // render this member's screens.
     queryClient.clear();
+    clearSessionEndedNotice();
     sessionStore.save(result.session);
-    void navigate({ to: safeInternalPath(redirectTo) ?? "/" });
+    // The kept page was the last member's; anyone else starts on their own landing page.
+    const sameMember = last?.workspaceSlug === values.workspaceSlug && last.username === values.username;
+    void navigate({ to: (sameMember ? safeInternalPath(redirectTo) : undefined) ?? "/" });
   }
 
   return (
@@ -76,6 +84,11 @@ export function LoginScreen() {
         <RoutiqLogo markClassName="size-10" wordmarkClassName="text-2xl" />
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">{t("login.subtitle")}</p>
+      {sessionEndedNotice() && (
+        <p role="status" className="mt-6 rounded-lg bg-info/10 px-3 py-2 text-sm">
+          {t("login.sessionEnded")}
+        </p>
+      )}
 
       <Form {...form}>
         <form
@@ -138,7 +151,11 @@ export function LoginScreen() {
             )}
           />
 
-          {errorCode !== undefined && <ErrorBanner code={errorCode} />}
+          {errorCode === "AUTH_LOCKED" && lockedMinutes !== undefined ? (
+            <ErrorBanner message={t("login.lockedFor", { minutes: lockedMinutes })} />
+          ) : (
+            errorCode !== undefined && <ErrorBanner code={errorCode} />
+          )}
 
           <Button
             type="submit"
