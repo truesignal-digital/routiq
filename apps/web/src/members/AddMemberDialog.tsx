@@ -35,7 +35,7 @@ import { notifyCommandSuccess } from "@/lib/notify.js";
 import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
-import { BranchScopeField, type BranchOption } from "./BranchScopeField.js";
+import { BranchScopeField, isBranchScopeChosen, type BranchOption } from "./BranchScopeField.js";
 import {
   pickableRoles,
   type MemberActor,
@@ -134,6 +134,7 @@ export function AddMemberDialog({
 
 
   async function onSubmit(values: AddMemberValues) {
+    if (!isBranchScopeChosen(branchScope)) return;
     setErrorCode(undefined);
     intent.current ??= createCommandIntent<AddMemberPayload>(client, "add-member", 2);
 
@@ -300,7 +301,7 @@ export function AddMemberDialog({
               <Button
                 type="submit"
                 className="flex-1 sm:flex-none"
-                disabled={form.formState.isSubmitting}
+                disabled={form.formState.isSubmitting || !isBranchScopeChosen(branchScope)}
               >
                 {form.formState.isSubmitting
                   ? label("add-member", "submitting")

@@ -200,6 +200,35 @@ describe("the role picker, per actor", () => {
 });
 
 describe("MemberActionDialog", () => {
+  it("names both things the role dialog changes: the role and the branches", async () => {
+    renderDialog("role", fakeClient(committed), { ...member, branchScope: ["branch-dla"] });
+
+    expect(await screen.findByRole("dialog", { name: "Modifier le rôle et les agences" })).toBeTruthy();
+  });
+
+  it("unticking the only branch never widens to every branch (#722)", async () => {
+    const client = fakeClient(committed);
+    renderDialog("role", client, { ...member, branchScope: ["branch-dla"] });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("checkbox", { name: "Douala" }));
+
+    expect(screen.getByRole("checkbox", { name: "Toutes les agences" }).getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByRole("checkbox", { name: "Douala" }).getAttribute("aria-checked")).toBe("false");
+    expect(await screen.findByText("Choisissez au moins une agence.")).toBeTruthy();
+    const save = screen.getByRole("button", { name: "Enregistrer le rôle" });
+    expect((save as HTMLButtonElement).disabled).toBe(true);
+
+    await user.click(screen.getByRole("checkbox", { name: "Yaoundé" }));
+    await waitFor(() => expect((save as HTMLButtonElement).disabled).toBe(false));
+    await user.click(save);
+    await waitFor(() => expect(client.seen).toHaveLength(1));
+    expect(client.seen[0]!.payload).toEqual({
+      principalId: member.principalId,
+      branchScope: ["branch-yde"],
+    });
+  });
+
   it("sends only what changed, at the version the row was rendered", async () => {
     const client = fakeClient(committed);
     const { onDismiss } = renderDialog("role", client);
