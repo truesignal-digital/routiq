@@ -84,6 +84,8 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet, expectRefu
   // Money → the entry's side panel.
   await (await openSidebar(page)).getByRole("link", { name: t("Argent", "Money") }).click();
   await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
+  // Money opens on its Overview (#664); the entries are on the Entries tab.
+  await page.locator("[data-slot='module-page-tabs']").getByRole("tab", { name: t("Écritures", "Entries") }).click();
   await quiet();
   await page.getByRole("button", { name: first.entryNumber, exact: true }).click();
   const panel = page.getByRole("dialog").filter({ has: page.getByRole("heading", { name: first.entryNumber }) });

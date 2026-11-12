@@ -130,7 +130,7 @@ async function asTeam(ctx: DriveContext): Promise<void> {
     .click();
   await page.waitForURL((url) => url.pathname.endsWith("/history"));
   await quiet();
-  const seenEvent = page.locator("li").filter({ hasText: t("Note marquée comme vue", "Note marked as seen") }).first();
+  const seenEvent = page.locator("li:not(:has(li))").filter({ hasText: t("Note marquée comme vue", "Note marked as seen") }).first();
   await seenEvent.waitFor();
   await settle(ctx);
   await shot("history", {

@@ -31,6 +31,9 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet, nav }) => 
   if (lines.length === 0 || lines.some((line) => line.direction !== "EXPENSE")) {
     throw new Error(`trip money for the driver: ${JSON.stringify(lines)}`);
   }
+  // The trip page keeps its money on the Money tab.
+  await page.getByRole("tab", { name: t("Argent", "Money"), exact: true }).click();
+  await quiet();
   const costs = page.getByText(t("Dépenses", "Expenses"), { exact: true }).first();
   await costs.scrollIntoViewIfNeeded();
   if ((await page.getByText(t("Recettes et dépenses", "Revenue and expenses"), { exact: true }).count()) > 0) {
@@ -43,6 +46,9 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet, nav }) => 
 
   await page.goBack();
   await page.getByRole("heading", { level: 1, name: t("Trajets", "Trips") }).waitFor();
+  // On a phone the sheet is a seven-step form; on a desktop its sections, Expenses among them, share one page.
+  const phone = page.viewportSize();
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.getByRole("button", { name: t("Saisir une fiche", "Record a sheet") }).first().click();
   await quiet();
   const sheetCosts = page.getByText(t("Dépenses", "Expenses"), { exact: true }).first();
@@ -51,6 +57,7 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet, nav }) => 
     caption: "Her trip sheet's money card is titled Expenses too: she adds expenses only",
     highlight: sheetCosts.locator("xpath=ancestor::*[@data-slot='card'][1]"),
   });
+  if (phone !== null) await page.setViewportSize(phone);
 
   await nav("/finance/entries");
   await quiet();

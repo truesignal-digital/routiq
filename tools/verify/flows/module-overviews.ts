@@ -177,7 +177,7 @@ async function technician(ctx: Ctx) {
   });
   // Signing in lands on Home's address (the drive then visits My settings for
   // the language); the technician's Home is the workshop's Overview.
-  await (await openSidebar(page)).getByRole("link", { name: ctx.t("Accueil", "Home"), exact: true }).click();
+  await (await openSidebar(page)).getByRole("link", { name: ctx.t("Tableau de bord", "Dashboard"), exact: true }).click();
   await page.waitForURL((url) => url.pathname === "/maintenance");
   await page.getByRole("heading", { level: 1, name: "Maintenance" }).waitFor();
   await page.locator("[data-slot='maintenance-overview'] [data-slot='metric-strip'][data-state='ready']").waitFor();

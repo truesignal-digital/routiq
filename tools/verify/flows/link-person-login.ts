@@ -33,11 +33,12 @@ const flow: DriveScript = async (ctx) => {
   const panel = page.getByRole("dialog", { name: t("Lier un identifiant", "Link login") });
   await panel.waitFor();
   await quiet();
-  const choice = panel.getByText(/\(sali\)/);
+  // The seed already links Sali's login to Sali; Hervé's is free.
+  const choice = panel.getByText(/\(herve\)/);
   await choice.click();
   await settle(ctx);
   await shot("link-panel", {
-    caption: "Link login lists the logins no one holds yet; pick Sali's",
+    caption: "Link login lists the logins no one holds yet; pick Hervé's",
     highlight: panel,
   });
 
