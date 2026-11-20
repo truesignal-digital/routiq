@@ -183,12 +183,12 @@ describe("login form", () => {
     });
     endSessionIfSignedOut(new QueryClient(), "MEMBERS_401");
     renderLogin();
-    expect(screen.getByRole("status").textContent).toBe("Your session ended. Sign in again.");
+    expect(screen.getByRole("status").textContent).toBe("Your session has ended. Sign in again.");
     clearSessionEndedNotice();
   });
 
   it("shows no session notice on an ordinary visit", () => {
     renderLogin();
-    expect(screen.queryByText("Your session ended. Sign in again.")).toBeNull();
+    expect(screen.queryByText("Your session has ended. Sign in again.")).toBeNull();
   });
 });

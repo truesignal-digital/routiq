@@ -114,7 +114,7 @@
     "pin": "PIN code",
     "signIn": "Sign in",
     "signingIn": "Signing in…",
-    "sessionEnded": "Your session ended. Sign in again.",
+    "sessionEnded": "Your session has ended. Sign in again.",
     "lockedFor": "{minutes, plural, one {Account locked after several attempts. Try again in # minute, or ask an administrator to reset your PIN.} other {Account locked after several attempts. Try again in # minutes, or ask an administrator to reset your PIN.}}"
   },
   "notify": {
