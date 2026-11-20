@@ -6,6 +6,7 @@ import { ShieldAlert, TriangleAlert } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge.js";
 import { IssueStatusBadge } from "./IssueStatusBadge.js";
 import { WorkOrderStatusBadge, workOrderStatusTone } from "./WorkOrderStatusBadge.js";
+import { RefusalReasonLine } from "./WorkOrderRefusal.js";
 import { formatDate, formatMoney } from "@/lib/format.js";
 import { recordNumberText } from "@/lib/record-number.js";
 import { useIssueCategoryLabel } from "./issue-category.js";
@@ -135,7 +136,10 @@ export function useWorkOrderColumns(money: WorkOrderMoneyShown): DataTableColumn
         header: t("maintenance.workOrders.columns.status"),
         meta: { phone: "status", label: t("maintenance.workOrders.columns.status") },
         cell: ({ row }) => (
-          <WorkOrderStatusBadge status={row.original.status} />
+          <span className="flex flex-col items-start gap-1">
+            <WorkOrderStatusBadge status={row.original.status} />
+            <RefusalReasonLine workOrder={row.original} />
+          </span>
         ),
       },
     ];

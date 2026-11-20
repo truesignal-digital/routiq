@@ -44,6 +44,8 @@ const listItem = {
   completedAt: null,
   cancelledAt: null,
   rejectedAt: null,
+  rejectReason: null,
+  rejectedBy: null,
   rowVersion: 1,
   createdBy: {
     principalId: "0b8a4c1e-6f2d-4e3a-9c5b-7d1e2f3a4b5c",
@@ -225,7 +227,6 @@ describe("work order detail contract", () => {
     completedAt: "2026-08-13T16:30:00.000Z",
     summary: "Pompe remplacée, circuit purgé",
     cancelReason: null,
-    rejectReason: null,
     completionRejectReason: null,
     resolveLinkedIssue: true,
     createdByCommandId: "cc11dd22-ee33-4f44-8055-667788990011",

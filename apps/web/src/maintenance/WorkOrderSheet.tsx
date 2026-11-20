@@ -23,6 +23,7 @@ import type {
 import { IssueStatusBadge } from "./IssueStatusBadge.js";
 import type { WorkOrderMoneyShown } from "./permissions.js";
 import { useWorkOrder } from "./useMaintenance.js";
+import { WorkOrderRefusal } from "./WorkOrderRefusal.js";
 import { WorkOrderStatusBadge } from "./WorkOrderStatusBadge.js";
 import { useCommandLabel } from "../commands/labels.js";
 import { NotRecorded } from "@/components/not-recorded.js";
@@ -298,6 +299,8 @@ export function WorkOrderSheet({
 
   return (
     <div className="flex flex-col gap-5">
+      <WorkOrderRefusal workOrder={header} />
+
       {/* Availability, not lifecycle status: a grounded truck stays IN_SERVICE
           and only a release re-opens the interval (§3.4). */}
       {linkedIssue?.assetUnavailable === true && (
@@ -385,9 +388,6 @@ export function WorkOrderSheet({
 
       <LabelledText label={t("maintenance.fields.summary")} text={detail?.summary} />
       <LabelledText label={t("maintenance.fields.cancelReason")} text={detail?.cancelReason} />
-      {detail?.status === "REJECTED" && (
-        <LabelledText label={t("maintenance.fields.rejectReason")} text={detail.rejectReason} />
-      )}
       {/* Kept on the row while the order is open again, so the workshop sees
           what to fix before declaring completion a second time. */}
       {detail?.status === "APPROVED" && (

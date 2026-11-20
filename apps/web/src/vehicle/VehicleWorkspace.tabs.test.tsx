@@ -642,6 +642,25 @@ describe("Maintenance and Trips", () => {
     expect(screen.queryByText(/FCFA\s0$/)).toBeNull();
   });
 
+  it("shows a refused order's status and the start of its reason on its row (#746)", async () => {
+    await openVehicle(`/assets/${ASSET_ID}/maintenance`, {
+      role: "ADMIN",
+      workOrders: [
+        workOrderRow("REJECTED", {
+          issue: null,
+          rejectedAt: "2026-09-23T09:00:00.000Z",
+          rejectReason: "Quote too high, ask a second garage",
+        }),
+      ],
+    });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /^Done/ }));
+    const item = screen.getByText("Brake repair: replace pads and air valve").closest("li");
+    if (item === null) throw new Error("no row for the refused order");
+    expect(within(item).getByText("Rejected")).toBeTruthy();
+    expect(within(item).getByText("Quote too high, ask a second garage")).toBeTruthy();
+  });
+
   it("gives each trip one state and shows its start and end as times (#94)", async () => {
     await openVehicle(`/assets/${ASSET_ID}/trips`, {
       role: "ADMIN",

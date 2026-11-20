@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   issueDetail,
   issueListResponse,
+  maintenanceSummary,
   workOrderDetail,
   workOrderListResponse,
 } from "@routiq/contracts";
@@ -937,6 +938,69 @@ describe("work order makers and the issue detail read", () => {
       { expectedVersion: completed.rowVersion },
     );
     expect(await order(workOrderId)).toMatchObject({ status: "APPROVED", completedBy: null });
+  });
+
+  it("names the refusal's reason, refuser and time, filters to refused orders, and counts them in no total (#746)", async () => {
+    const [rule] = await ctx.db
+      .insert(approvalRules)
+      .values({ workspaceId, commandType: "create-work-order", amountMinMinor: 500_000n, requiredRole: "ADMIN" })
+      .returning({ id: approvalRules.id });
+    try {
+      const refusedId = randomUUID();
+      const waitingId = randomUUID();
+      for (const workOrderId of [refusedId, waitingId]) {
+        const created = await api.ok(mechanic.token, "create-work-order", {
+          workOrderId,
+          assetId: truck,
+          description: "Réfection du pont arrière",
+          expectedCostMinor: 750_000,
+        });
+        expect(created.recordStatus).toBe("SUBMITTED");
+      }
+      const summary = async () =>
+        maintenanceSummary.parse((await api.get(admin.token, "/v1/maintenance/summary")).body);
+      const before = await summary();
+
+      await api.ok(
+        admin.token,
+        "reject-work-order",
+        { workOrderId: refusedId, reason: "Devis hors budget, demander un second garage" },
+        { expectedVersion: 1 },
+      );
+
+      const émilienne = { principalId: admin.principalId, displayName: "Émilienne", scope: "WORKSPACE" };
+      const refused = workOrderListResponse.parse(
+        (await api.get(admin.token, `/v1/work-orders?status=REJECTED&assetId=${truck}`)).body,
+      );
+      expect(refused.items.map((item) => item.id)).toEqual([refusedId]);
+      expect(refused.items[0]).toMatchObject({
+        status: "REJECTED",
+        rejectReason: "Devis hors budget, demander un second garage",
+        rejectedBy: émilienne,
+        rejectedAt: expect.any(String),
+      });
+      expect(await order(refusedId)).toMatchObject({
+        rejectReason: "Devis hors budget, demander un second garage",
+        rejectedBy: émilienne,
+        rejectedAt: refused.items[0]?.rejectedAt,
+      });
+
+      const all = workOrderListResponse.parse(
+        (await api.get(admin.token, `/v1/work-orders?assetId=${truck}`)).body,
+      );
+      for (const item of all.items.filter((item) => item.status !== "REJECTED")) {
+        expect(item, item.status).toMatchObject({ rejectReason: null, rejectedBy: null, rejectedAt: null });
+      }
+
+      // Neither waiting (pending) nor repaired (posted): the refused spend leaves every total.
+      const after = await summary();
+      expect(after.waitingApproval).toBe(before.waitingApproval - 1);
+      expect(after.openWorkOrders).toBe(before.openWorkOrders - 1);
+      expect(after.repairsCounted).toBe(before.repairsCounted);
+      expect(after.repairCost).toEqual(before.repairCost);
+    } finally {
+      await ctx.db.delete(approvalRules).where(eq(approvalRules.id, rule!.id));
+    }
   });
 
   it("serves one signalement with its trail, photos and closer", async () => {

@@ -13,6 +13,7 @@ import type {
 import { MeCtx, type MeContext } from "../auth/me.js";
 import { sessionStore } from "../auth/store.js";
 import { openSelect } from "../test-select.js";
+import { formatDateTime } from "../lib/format.js";
 import type {
   UseIssuesParams,
   UseWorkOrdersParams,
@@ -228,6 +229,11 @@ function makeWorkOrder(status: WorkOrderStatus): WorkOrderListItem {
     completedAt: null,
     cancelledAt: null,
     rejectedAt: status === "REJECTED" ? "2026-08-01T10:00:00.000Z" : null,
+    rejectReason: status === "REJECTED" ? "Devis trop élevé, demander un second garage" : null,
+    rejectedBy:
+      status === "REJECTED"
+        ? { principalId: "bbbb0002-0000-4000-8000-000000000002", displayName: "Paul Etoga", scope: "WORKSPACE" }
+        : null,
     rowVersion: 3,
     createdBy: { principalId: null, displayName: null, scope: "WORKSPACE" },
     completedBy: null,
@@ -239,7 +245,6 @@ function makeDetail(row: WorkOrderListItem): WorkOrderDetail {
     ...row,
     summary: null,
     cancelReason: null,
-    rejectReason: null,
     completionRejectReason: null,
     resolveLinkedIssue: false,
     createdByCommandId: "7777aaaa-0000-4000-8000-000000000007",
@@ -401,6 +406,16 @@ describe("MaintenanceScreen — work order queue", () => {
     // Filtering client-side would describe the loaded page, not the workshop.
     await waitFor(() => {
       expect(issuedQueries.some((query) => query.status === "COMPLETED")).toBe(true);
+    });
+  });
+
+  it("filters the queue to refused work orders through the server (#746)", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    await screen.findByText(WORK_ORDER_REFERENCE);
+    await user.click(screen.getByRole("radio", { name: "maintenance.workOrders.status.REJECTED" }));
+    await waitFor(() => {
+      expect(issuedQueries.at(-1)).toEqual({ status: "REJECTED" });
     });
   });
 
@@ -591,12 +606,11 @@ describe("MaintenanceScreen — state-driven actions", () => {
     const user = userEvent.setup();
     me = as("ADMIN");
     workOrderRow = makeWorkOrder("REJECTED");
-    detail = { ...makeDetail(workOrderRow), rejectReason: "Devis trop élevé" };
+    detail = makeDetail(workOrderRow);
     renderScreen();
 
     const sheet = await openSheet(user);
-    expect(within(sheet).getByText("Devis trop élevé")).toBeTruthy();
-    expect(within(sheet).getByText("maintenance.fields.rejectReason")).toBeTruthy();
+    expect(within(sheet).getByRole("region", { name: "maintenance.refusal.title" })).toBeTruthy();
     for (const key of [
       "approve-work-order",
       "reject-work-order",
@@ -608,6 +622,42 @@ describe("MaintenanceScreen — state-driven actions", () => {
     ]) {
       expect(actionButton(sheet, key), key).toBeNull();
     }
+  });
+
+  it("opens a refused work order on its reason, who refused it and when, above everything else (#746)", async () => {
+    const user = userEvent.setup();
+    workOrderRow = makeWorkOrder("REJECTED");
+    detail = makeDetail(workOrderRow);
+    renderScreen();
+
+    const sheet = await openSheet(user);
+    const refusal = within(sheet).getByRole("region", { name: "maintenance.refusal.title" });
+    expect(within(refusal).getByText("Devis trop élevé, demander un second garage")).toBeTruthy();
+    expect(within(refusal).getByText("maintenance.refusal.by")).toBeTruthy();
+    expect(within(refusal).getByText("Paul Etoga")).toBeTruthy();
+    expect(within(refusal).getByText("maintenance.refusal.at")).toBeTruthy();
+    expect(within(refusal).getByText(formatDateTime("2026-08-01T10:00:00.000Z", "en"))).toBeTruthy();
+    // At the top: before the status, the asset and the description.
+    const status = within(sheet).getByText("maintenance.workOrders.columns.status");
+    expect(refusal.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("shows the Refused status and the start of the reason on the list row (#746)", async () => {
+    workOrderRow = makeWorkOrder("REJECTED");
+    detail = makeDetail(workOrderRow);
+    renderScreen();
+
+    const row = (await screen.findByText(WORK_ORDER_REFERENCE)).closest("tr");
+    if (row === null) throw new Error("no row for the work order");
+    expect(within(row).getByText("maintenance.workOrders.status.REJECTED")).toBeTruthy();
+    expect(within(row).getByText("Devis trop élevé, demander un second garage")).toBeTruthy();
+  });
+
+  it("shows no refusal on a work order that was not refused", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+    const sheet = await openSheet(user);
+    expect(within(sheet).queryByRole("region", { name: "maintenance.refusal.title" })).toBeNull();
   });
 
   it("shows why a completion was sent back on the reopened work order", async () => {

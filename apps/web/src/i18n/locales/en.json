@@ -1717,6 +1717,11 @@
         "badge": "{count, plural, one {# off the road} other {# off the road}}",
         "sentenceSafety": "{open, plural, one {# problem is open, and it is safety-critical.} other {# problems are open, {safety, number} of them safety-critical.}}"
       }
+    },
+    "refusal": {
+      "title": "Request refused",
+      "by": "Refused by",
+      "at": "Refused on"
     }
   },
   "persons": {

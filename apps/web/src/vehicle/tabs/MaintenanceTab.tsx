@@ -15,6 +15,7 @@ import { recordNumberText } from "@/lib/record-number.js";
 import { RecordRow, RowIcon, RowMenu, SafetyMark, Sep, SubHead, TabAction, TabHeader } from "../parts.js";
 import { IssueStatusBadge } from "@/maintenance/IssueStatusBadge.js";
 import { WorkOrderStatusBadge } from "@/maintenance/WorkOrderStatusBadge.js";
+import { RefusalReasonLine } from "@/maintenance/WorkOrderRefusal.js";
 import { useIssueCategoryLabel } from "@/maintenance/issue-category.js";
 
 /**
@@ -194,6 +195,7 @@ function WorkOrderRow({ wo }: { wo: WorkOrderListItem }) {
       status={
         <span className="flex flex-col items-start gap-1">
           <WorkOrderStatusBadge status={wo.status} />
+          <RefusalReasonLine workOrder={wo} />
           {steps.primary.kind === "go" && (
             <span className="text-xs font-medium text-foreground">{t("vehicle.maintenance.nextStepYours")}</span>
           )}
