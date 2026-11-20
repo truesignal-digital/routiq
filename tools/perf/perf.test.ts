@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ceilingFor, judge, median, raise, readCeilings, renderReadme, tighten, tolerance, type Ceilings, type Measured, type Run } from "./perf.js";
-import { measurableMetrics, SCREENS, template } from "./run.js";
+import { measurableMetrics, readyMetric, SCREENS, template } from "./run.js";
 
 const time = (value: number) => ({ value, samples: [value], kind: "time" as const });
 const count = (value: number) => ({ value, samples: [value], kind: "count" as const });
@@ -87,6 +87,14 @@ describe("renderReadme", () => {
 });
 
 describe("template", () => {
+  // The run passes through /finance on its way to Entries; a metric from it would get a ceiling no list allows (#740).
+  it("measures ready time only for the screens it lists", () => {
+    expect(readyMetric("route:/finance")).toBeUndefined();
+    expect(readyMetric("route:/finance/entries")).toBe("/finance/entries.ready_ms");
+    expect(readyMetric("route:/assets/:id")).toBe("/assets/:id.ready_ms");
+    expect(readyMetric("route:/")).toBe("/.ready_ms");
+  });
+
   it("groups screens by route, not by record", () => {
     expect(template("/assets/0f8fad5b-d9cb-469f-a165-70867728950e")).toBe("/assets/:id");
   });
