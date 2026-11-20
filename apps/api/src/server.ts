@@ -61,6 +61,7 @@ import { registerFleetUsageReadRoutes } from "./reads/fleet-usage.js";
 import { registerFinanceReadRoutes } from "./reads/finance.js";
 import { registerFinanceOverviewReadRoutes } from "./reads/finance-overview.js";
 import { registerFinanceSummaryReadRoutes } from "./reads/finance-summary.js";
+import { registerEntriesExportReadRoutes } from "./reads/entries-export/route.js";
 import { registerMemberReadRoutes } from "./reads/members.js";
 import { registerBranchReadRoutes } from "./reads/branches.js";
 import { registerHistoryReadRoutes } from "./reads/history.js";
@@ -79,6 +80,8 @@ export interface ServerDeps {
   identity?: IdentityProvider;
   storage?: ObjectStorage;
   logger?: boolean | object;
+  /** Above this many rows the entries export refuses; tests lower it. */
+  entryExportRowLimit?: number;
 }
 
 export function buildServer({
@@ -87,6 +90,7 @@ export function buildServer({
   identity = new LocalSessionProvider(authDb),
   storage,
   logger = true,
+  entryExportRowLimit,
 }: ServerDeps) {
   // Auto request-logging is off because Fastify's completion line binds reply.log
   // before routes can attach commandId/workspaceId (§8: both on every log line).
@@ -146,6 +150,7 @@ export function buildServer({
   registerAssetReadRoutes(app, db, requireAuth);
   registerFinanceReadRoutes(app, db, requireAuth);
   registerFinanceSummaryReadRoutes(app, db, requireAuth);
+  registerEntriesExportReadRoutes(app, db, requireAuth, entryExportRowLimit);
   registerFinanceOverviewReadRoutes(app, db, requireAuth);
   registerDashboardReadRoutes(app, db, requireAuth);
   registerNavCountsReadRoutes(app, db, requireAuth);

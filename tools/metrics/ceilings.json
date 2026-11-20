@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 788742,
+    "ceiling": 790105,
     "raises": [
       {
         "date": "2026-10-06",
@@ -313,6 +313,12 @@
         "from": 781435,
         "to": 788742,
         "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
+      },
+      {
+        "date": "2026-11-20",
+        "from": 788742,
+        "to": 790105,
+        "reason": "Excel export button on the Finance entries list and the vehicle Money tab (#429): ExportEntriesButton downloads the entries as a workbook, with fr/en words for the button (Exporter vers Excel / Export to Excel), the preparing state and the EXPORT_TOO_LARGE message; +345 B initial JS and +1363 B all JS gzip, measured by CI on bf8ffa1d over develop a7e21245; under 2 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   },
@@ -406,7 +412,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 285204,
+    "ceiling": 285549,
     "raises": [
       {
         "date": "2026-10-06",
@@ -683,6 +689,12 @@
         "from": 283840,
         "to": 285204,
         "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
+      },
+      {
+        "date": "2026-11-20",
+        "from": 285204,
+        "to": 285549,
+        "reason": "Excel export button on the Finance entries list and the vehicle Money tab (#429): ExportEntriesButton downloads the entries as a workbook, with fr/en words for the button (Exporter vers Excel / Export to Excel), the preparing state and the EXPORT_TOO_LARGE message; +345 B initial JS and +1363 B all JS gzip, measured by CI on bf8ffa1d over develop a7e21245; under 2 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   }

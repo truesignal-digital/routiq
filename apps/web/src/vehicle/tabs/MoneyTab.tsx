@@ -20,6 +20,7 @@ import { entrySteps } from "../flow.js";
 import { recordNumberText } from "@/lib/record-number.js";
 import { CardHead, LinkButton, RecordRow, RowIcon, RowMenu, Sep, SubHead, TabAction, TabHeader } from "../parts.js";
 import { EntryEventStatus, foldedAmountClass } from "@/finance/EntryCancellation.js";
+import { ExportEntriesButton } from "@/finance/ExportEntriesButton.js";
 import { EvidenceMark } from "../panel/shared.js";
 import { useAssetFinance, useVehicleEntries, type VehicleEntriesFilter } from "../useVehicle.js";
 import { periodLabel } from "./NowTab.js";
@@ -196,7 +197,7 @@ function MoneySection() {
 
       <section>
         <SubHead title={t("vehicle.money.entries")} description={t("vehicle.money.entriesHint")} />
-        <div className="mb-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <FilterChips
             label={t("vehicle.money.filterLabel")}
             options={[
@@ -210,6 +211,7 @@ function MoneySection() {
             value={chip}
             onChange={(next) => go(searchOf(next))}
           />
+          <ExportEntriesButton params={{ assetId: asset.id, ...entriesFilter(chip, period) }} />
         </div>
         {entriesQuery.isPending ? (
           <LoadingState label={t("vehicle.money.loading")} />

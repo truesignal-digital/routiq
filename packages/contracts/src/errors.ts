@@ -20,6 +20,14 @@ export const TELEMETRY_ERROR_CODES = ["RATE_LIMITED"] as const;
 
 export type TelemetryErrorCode = (typeof TELEMETRY_ERROR_CODES)[number];
 
+/**
+ * A read that refuses on its own terms. `EXPORT_TOO_LARGE`: an export above
+ * its row limit (#429); `metadata` carries `limit` and `count`.
+ */
+export const READ_ERROR_CODES = ["EXPORT_TOO_LARGE"] as const;
+
+export type ReadErrorCode = (typeof READ_ERROR_CODES)[number];
+
 export const COMMAND_ERROR_CODES = [
   "COMMAND_NOT_FOUND",
   "ROLE_FORBIDDEN",
@@ -341,7 +349,7 @@ export const TRIP_CONFLICT_CODES = [
 
 export type TripConflictCode = (typeof TRIP_CONFLICT_CODES)[number];
 
-export type ApiErrorCode = AuthErrorCode | ValidationErrorCode | CommandErrorCode;
+export type ApiErrorCode = AuthErrorCode | ValidationErrorCode | CommandErrorCode | ReadErrorCode;
 
 export interface ApiError {
   error: { code: ApiErrorCode; metadata?: Record<string, unknown> };
