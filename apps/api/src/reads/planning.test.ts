@@ -146,7 +146,7 @@ describe("GET /v1/planning (#336)", () => {
       assetId: groundedTruck,
       description: "Freins qui lâchent",
       safetyCritical: true,
-    });
+    }, { clientOccurredAt: "2026-11-01T08:00:00+01:00" });
     // Called off.
     await plan("cancelled", { plannedStartAt: "2026-11-03T08:00:00+01:00", customerName: "Annulé SA" });
     await api.ok(
