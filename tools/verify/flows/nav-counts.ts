@@ -86,7 +86,7 @@ const flow: DriveScript = async ({ page, account, t, shot, quiet, log, apiGet })
 
   if ((counts.moneyWaiting ?? 0) > 0) {
     await (await openSidebar(page)).locator("[data-nav-count='moneyWaiting']").click();
-    await page.waitForURL(/\/finance\/(approvals|entries)/, { timeout: 10_000 });
+    await page.waitForURL(/\/finance\/(approve|approvals|entries)/, { timeout: 10_000 });
     await quiet();
     await shot("money-count-opens-waiting", {
       caption: `The Money count opens the entries waiting for approval: ${counts.moneyWaiting}`,

@@ -56,6 +56,8 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   await page.getByRole("heading", { level: 1, name: t("Mes réglages", "My settings") }).waitFor();
   await quiet();
   await shot("my-settings-phone", { caption: "Phone: My settings fits at 390 px" });
+  // The menu sheet is still closing here; opening the name menu mid-animation clicks a vanishing button.
+  await page.getByRole("navigation", { name: "Navigation" }).waitFor({ state: "hidden" });
 
   await signOutThroughNameMenu(page);
   await shot("signed-out", { caption: "Sign out from the name menu returns to the sign-in screen" });
