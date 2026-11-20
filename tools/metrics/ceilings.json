@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 788742,
+    "ceiling": 789223,
     "raises": [
       {
         "date": "2026-10-06",
@@ -313,6 +313,12 @@
         "from": 781435,
         "to": 788742,
         "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
+      },
+      {
+        "date": "2026-11-20",
+        "from": 788742,
+        "to": 789223,
+        "reason": "Refusal block on the work-order sheet and the vehicle panel and the reason line in list rows (#746): WorkOrderRefusal shows a refused order's reason, who refused it and when, with fr/en words for the title (Request refused), refused by and refused on; +95 B initial JS and +481 B all JS gzip, measured by CI on d21eaa9c over develop a7e21245; under 1 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   },
@@ -406,7 +412,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 285204,
+    "ceiling": 285299,
     "raises": [
       {
         "date": "2026-10-06",
@@ -683,6 +689,12 @@
         "from": 283840,
         "to": 285204,
         "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
+      },
+      {
+        "date": "2026-11-20",
+        "from": 285204,
+        "to": 285299,
+        "reason": "Refusal block on the work-order sheet and the vehicle panel and the reason line in list rows (#746): WorkOrderRefusal shows a refused order's reason, who refused it and when, with fr/en words for the title (Request refused), refused by and refused on; +95 B initial JS and +481 B all JS gzip, measured by CI on d21eaa9c over develop a7e21245; under 1 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   }

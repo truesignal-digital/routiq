@@ -14,6 +14,7 @@ import {
 import { Chronologie, WorkOrderCosts } from "@/maintenance/WorkOrderSheet.js";
 import { useWorkOrder } from "@/maintenance/useMaintenance.js";
 import { WorkOrderStatusBadge } from "@/maintenance/WorkOrderStatusBadge.js";
+import { WorkOrderRefusal } from "@/maintenance/WorkOrderRefusal.js";
 import { useVehicle, type PanelForm } from "../context.js";
 import { groundingFacts, situationOf, workOrderSteps, workOrderWaiting } from "../flow.js";
 import { recordNumberText } from "@/lib/record-number.js";
@@ -70,6 +71,7 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
         }
       />
       <div className="space-y-6 p-4">
+        <WorkOrderRefusal workOrder={wo} />
         {wo.issue !== null && (
           <button
             type="button"
@@ -174,9 +176,9 @@ export function WorkOrderRecord({ id, form }: { id: string; form: PanelForm | un
             <p className="text-sm">{wo.summary}</p>
           </DetailSection>
         )}
-        {(wo.rejectReason ?? wo.cancelReason) !== null && (
+        {wo.cancelReason !== null && (
           <DetailSection title={t("vehicle.panel.reason")}>
-            <p className="text-sm">{wo.rejectReason ?? wo.cancelReason}</p>
+            <p className="text-sm">{wo.cancelReason}</p>
           </DetailSection>
         )}
 

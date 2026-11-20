@@ -73,6 +73,7 @@ function makeDetail(overrides: Partial<WorkOrderDetail> = {}): WorkOrderDetail {
     completedAt: null,
     cancelledAt: null,
     rejectedAt: null,
+    rejectedBy: null,
     rowVersion: 3,
     createdBy: { principalId: null, displayName: null, scope: "WORKSPACE" },
     completedBy: null,

@@ -874,3 +874,27 @@ describe("a note from Direction on its record (#98)", () => {
     expect(within(panel).queryByRole("button", { name: "Mark as seen" })).toBeNull();
   });
 });
+
+it("opens a refused work order on its reason, who refused it and when (#746)", async () => {
+  const rejectedAt = "2026-09-23T09:00:00.000Z";
+  await openVehicle(`/assets/${ASSET_ID}?panel=work_order:${WORK_ORDER_ID}`, {
+    ...scenario,
+    asset: asset(),
+    workOrders: [workOrderRow("REJECTED")],
+    workOrderDetails: [
+      workOrderDetail("REJECTED", {
+        rejectedAt,
+        rejectReason: "Quote too high, ask a second garage",
+        rejectedBy: actor(OTHER_ID, "Paul Etoga"),
+      }),
+    ],
+  });
+  const panel = await screen.findByRole("dialog", { name: /Brake repair/ });
+  const refusal = within(panel).getByRole("region", { name: "Request refused" });
+  expect(within(refusal).getByText("Quote too high, ask a second garage")).toBeTruthy();
+  expect(within(refusal).getByText("Paul Etoga")).toBeTruthy();
+  expect(within(refusal).getByText(formatDateTime(rejectedAt, "en"))).toBeTruthy();
+  // First in the panel body, ahead of the problem link and the facts.
+  const fromProblem = within(panel).getByRole("button", { name: `From problem ${ISSUE_REF}` });
+  expect(refusal.compareDocumentPosition(fromProblem) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});

@@ -124,6 +124,21 @@ function workOrderAmounts(
   };
 }
 
+/** Who refused each REJECTED order's spend (#746). */
+async function refusersOf(
+  tx: TenantTx,
+  workspaceId: string,
+  orders: ReadonlyArray<{ id: string; status: string }>,
+): Promise<Map<string, HistoryActor>> {
+  return lastEventActors(
+    tx,
+    workspaceId,
+    "work_order",
+    orders.filter((order) => order.status === "REJECTED").map((order) => order.id),
+    ["work_order.rejected"],
+  );
+}
+
 /** Statuses in which a completion stands, so its declarer is a live maker. */
 const COMPLETION_DECLARED = new Set(["COMPLETION_SUBMITTED", "COMPLETED"]);
 
@@ -398,6 +413,7 @@ export function registerMaintenanceReadRoutes(
               completedAt: workOrders.completedAt,
               cancelledAt: workOrders.cancelledAt,
               rejectedAt: workOrders.rejectedAt,
+              rejectReason: workOrders.rejectReason,
               rowVersion: workOrders.rowVersion,
               creatorPrincipalId: commands.tenantActorPrincipalId,
               creatorDisplayName: principals.displayName,
@@ -443,8 +459,10 @@ export function registerMaintenanceReadRoutes(
             )
             .limit(limit + 1);
 
-          const completers = await completersOf(tx, auth.workspaceId, rows.slice(0, limit));
-          return { rows, completers };
+          const page = rows.slice(0, limit);
+          const completers = await completersOf(tx, auth.workspaceId, page);
+          const refusers = await refusersOf(tx, auth.workspaceId, page);
+          return { rows, completers, refusers };
         });
 
         if ("error" in result) {
@@ -479,6 +497,8 @@ export function registerMaintenanceReadRoutes(
           completedAt: row.completedAt?.toISOString() ?? null,
           cancelledAt: row.cancelledAt?.toISOString() ?? null,
           rejectedAt: row.rejectedAt?.toISOString() ?? null,
+          rejectReason: row.rejectReason,
+          rejectedBy: result.refusers.get(row.id) ?? null,
           rowVersion: row.rowVersion,
           createdBy: toActor({
             principalId: row.creatorPrincipalId,
@@ -602,6 +622,7 @@ export function registerMaintenanceReadRoutes(
 
           if (!header) return undefined;
           const completers = await completersOf(tx, auth.workspaceId, [header]);
+          const refusers = await refusersOf(tx, auth.workspaceId, [header]);
 
           // A transaction owns one pg connection; keep the child reads
           // sequential so the driver never receives overlapping queries.
@@ -640,6 +661,7 @@ export function registerMaintenanceReadRoutes(
               costRows: null,
               otherBranchesCostMinor: null,
               completedBy: completers.get(header.id) ?? null,
+              rejectedBy: refusers.get(header.id) ?? null,
             };
           }
 
@@ -706,6 +728,7 @@ export function registerMaintenanceReadRoutes(
             costRows,
             otherBranchesCostMinor,
             completedBy: completers.get(header.id) ?? null,
+            rejectedBy: refusers.get(header.id) ?? null,
           };
         });
 
@@ -715,7 +738,7 @@ export function registerMaintenanceReadRoutes(
             .send({ error: { code: "REFERENCE_NOT_FOUND" } });
         }
 
-        const { header, eventRows, costRows, otherBranchesCostMinor, completedBy } = result;
+        const { header, eventRows, costRows, otherBranchesCostMinor, completedBy, rejectedBy } = result;
         const costLine = (line: NonNullable<typeof costRows>[number]) => ({
           ...line,
           amountMinor: serializeMinor(line.amountMinor),
@@ -763,6 +786,7 @@ export function registerMaintenanceReadRoutes(
             scope: header.creatorScope,
           }),
           completedBy,
+          rejectedBy,
           chronologie: eventRows.map((event) => ({
             eventId: event.eventId,
             kind: event.kind,

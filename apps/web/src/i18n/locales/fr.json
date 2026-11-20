@@ -1717,6 +1717,11 @@
         "badge": "{count, plural, one {# à l’arrêt} other {# à l’arrêt}}",
         "sentenceSafety": "{open, plural, one {# problème est ouvert, et il touche la sécurité.} other {# problèmes sont ouverts, dont {safety, number} touchant la sécurité.}}"
       }
+    },
+    "refusal": {
+      "title": "Demande refusée",
+      "by": "Refusé par",
+      "at": "Refusé le"
     }
   },
   "persons": {

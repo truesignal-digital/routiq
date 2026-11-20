@@ -149,6 +149,10 @@ export const workOrderListItem = z.object({
   completedAt: z.iso.datetime().nullable(),
   cancelledAt: z.iso.datetime().nullable(),
   rejectedAt: z.iso.datetime().nullable(),
+  /** Why the spend was refused (terminal REJECTED), so the queue row can say it (#746). */
+  rejectReason: z.string().nullable(),
+  /** Who refused the spend; null unless REJECTED. */
+  rejectedBy: historyActor.nullable(),
   rowVersion: z.number().int().positive(),
   /** Who created the order — the maker approve-work-order refuses. */
   createdBy: historyActor,
@@ -244,8 +248,6 @@ export const workOrderPendingCostLine = z.object({
 export const workOrderDetail = workOrderListItem.extend({
   summary: z.string().nullable(),
   cancelReason: z.string().nullable(),
-  /** Why the spend was refused (terminal REJECTED). */
-  rejectReason: z.string().nullable(),
   /**
    * Why the last declared completion was sent back. Kept while the order is
    * APPROVED again, so the workshop sees what to fix before resubmitting.
