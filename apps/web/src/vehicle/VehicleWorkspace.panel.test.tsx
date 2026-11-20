@@ -537,6 +537,8 @@ it("opens an issue's photo through the issue's own route", async () => {
   const user = userEvent.setup();
   const panel = await screen.findByRole("dialog", { name: /Kekem/ });
   expect(within(panel).getByText("voyant-frein.jpg")).toBeTruthy();
+  // #745: the photo row also opens a preview; download keeps its own button.
+  expect(within(panel).getByRole("button", { name: "View voyant-frein.jpg" })).toBeTruthy();
   await user.click(within(panel).getAllByRole("button", { name: "Open the file" })[0]!);
   const path = `/v1/issues/${ISSUE_ID}/artifacts/00000000-0000-4000-8000-0000000000e1/download-url`;
   await waitFor(() => expect(open).toHaveBeenCalledWith(`https://files.test${path}`, "_blank", "noopener"));

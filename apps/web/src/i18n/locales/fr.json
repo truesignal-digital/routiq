@@ -3175,6 +3175,10 @@
         "ATTACHED": "Joint après coup · {date} · {name}"
       },
       "openFile": "Ouvrir le fichier",
+      "viewPicture": "Voir {name}",
+      "pictureLoading": "Chargement de la photo",
+      "pictureFailed": "Impossible d'afficher la photo. Vous pouvez toujours la télécharger.",
+      "download": "Télécharger",
       "openFullEntry": "Ouvrir l'écriture complète",
       "waitingOn": {
         "authorization": "En attente de l'autorisation de la dépense par un responsable.",

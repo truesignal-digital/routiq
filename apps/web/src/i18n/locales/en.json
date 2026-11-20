@@ -3175,6 +3175,10 @@
         "ATTACHED": "Attached later · {date} · {name}"
       },
       "openFile": "Open the file",
+      "viewPicture": "View {name}",
+      "pictureLoading": "Loading the picture",
+      "pictureFailed": "The picture could not be shown. You can still download it.",
+      "download": "Download",
       "openFullEntry": "Open the full entry",
       "waitingOn": {
         "authorization": "Waiting on a manager to authorize the spending.",
