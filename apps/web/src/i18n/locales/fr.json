@@ -113,7 +113,9 @@
     "username": "Nom d'utilisateur",
     "pin": "Code PIN",
     "signIn": "Se connecter",
-    "signingIn": "Connexion…"
+    "signingIn": "Connexion…",
+    "sessionEnded": "Votre session est terminée. Reconnectez-vous.",
+    "lockedFor": "{minutes, plural, one {Compte verrouillé après plusieurs tentatives. Réessayez dans # minute, ou demandez à un administrateur de réinitialiser votre code PIN.} other {Compte verrouillé après plusieurs tentatives. Réessayez dans # minutes, ou demandez à un administrateur de réinitialiser votre code PIN.}}"
   },
   "notify": {
     "success": {
@@ -146,7 +148,7 @@
     "READ_FAILED": "Impossible de charger les données. Réessayez.",
     "AUTH_REQUIRED": "Connexion requise. Veuillez vous reconnecter.",
     "AUTH_INVALID_TOKEN": "Session expirée. Veuillez vous reconnecter.",
-    "AUTH_LOCKED": "Compte temporairement verrouillé après plusieurs tentatives. Réessayez plus tard.",
+    "AUTH_LOCKED": "Compte temporairement verrouillé après plusieurs tentatives. Réessayez plus tard, ou demandez à un administrateur de réinitialiser votre code PIN.",
     "COMMAND_NOT_FOUND": "Action inconnue. Mettez l'application à jour puis réessayez.",
     "MODULE_DISABLED": "Ce module n'est pas activé pour votre entreprise.",
     "MODULE_STILL_REQUIRED": "Un autre module activé a besoin de celui-ci. Désactivez-le d'abord.",

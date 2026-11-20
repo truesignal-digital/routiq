@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 788742,
+    "ceiling": 790441,
     "raises": [
       {
         "date": "2026-10-06",
@@ -313,6 +313,12 @@
         "from": 781435,
         "to": 788742,
         "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
+      },
+      {
+        "date": "2026-11-20",
+        "from": 788742,
+        "to": 790441,
+        "reason": "Session end and sign-in words (#738): any 401 from a read, a command or /v1/me ends the session once (endSessionIfSignedOut wired into the query client, the command instance and the me read), the login screen's session-ended and lockout lines and the return-to-page logic, fr/en strings; +1271 B initial and +1699 B all JS gzip, measured by CI on 46a800fd over develop a7e21245; under 9 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   },
@@ -406,7 +412,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 285204,
+    "ceiling": 286475,
     "raises": [
       {
         "date": "2026-10-06",
@@ -683,6 +689,12 @@
         "from": 283840,
         "to": 285204,
         "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
+      },
+      {
+        "date": "2026-11-20",
+        "from": 285204,
+        "to": 286475,
+        "reason": "Session end and sign-in words (#738): any 401 from a read, a command or /v1/me ends the session once (endSessionIfSignedOut wired into the query client, the command instance and the me read), the login screen's session-ended and lockout lines and the return-to-page logic, fr/en strings; +1271 B initial and +1699 B all JS gzip, measured by CI on 46a800fd over develop a7e21245; under 9 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   }

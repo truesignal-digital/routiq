@@ -3,14 +3,19 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { CommandSubmission } from "@routiq/contracts";
+import { commandClient } from "../commands/instance.js";
+import { queryClient as appQueryClient } from "../lib/query-client.js";
 import { ASSET_ID } from "../vehicle/test/fixtures.js";
 import { closeVehicle, identity, openVehicle, type Recorded } from "../vehicle/test/harness.js";
 import { useMe } from "./me.js";
+import { clearSessionEndedNotice, sessionEndedNotice } from "./sign-out.js";
 import { sessionStore } from "./store.js";
 
 afterEach(async () => {
   cleanup();
+  clearSessionEndedNotice();
   sessionStore.logout({ username: "herve", workspaceSlug: identity.workspaceSlug });
   await closeVehicle();
 });
@@ -72,4 +77,46 @@ it("forgets every read when /v1/me says the token is dead", async () => {
 
   await waitFor(() => expect(sessionStore.getActive()).toBeUndefined());
   expect(client.getQueryData(["ws", identity.workspaceSlug, "finance", "entries", {}])).toBeUndefined();
+});
+
+describe("any 401 ends the session (T4)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    clearSessionEndedNotice();
+  });
+
+  it("ends it when a read answers 401, and leaves a notice for the sign-in screen", async () => {
+    sessionStore.save({ ...identity, token: "revoked", expiresAt: "2099-01-01T00:00:00.000Z" });
+    await appQueryClient
+      .fetchQuery({ queryKey: ["ws", identity.workspaceSlug, "members"], queryFn: () => Promise.reject(new Error("MEMBERS_401")), retry: false })
+      .catch(() => undefined);
+
+    expect(sessionStore.getActive()).toBeUndefined();
+    expect(sessionEndedNotice()).toBe(true);
+  });
+
+  it("ends it when a command is refused for a dead token", async () => {
+    sessionStore.save({ ...identity, token: "revoked", expiresAt: "2099-01-01T00:00:00.000Z" });
+    vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ error: { code: "AUTH_INVALID_TOKEN" } }), { status: 401 }));
+    const result = await commandClient.submit({
+      name: "add-note",
+      version: 1,
+      envelope: { commandId: crypto.randomUUID(), idempotencyKey: crypto.randomUUID(), origin: "HUMAN_UI", sourceArtifactIds: [] },
+      payload: {},
+    } satisfies CommandSubmission<Record<string, never>>);
+
+    expect(result).toMatchObject({ ok: false, code: "AUTH_INVALID_TOKEN" });
+    expect(sessionStore.getActive()).toBeUndefined();
+    expect(sessionEndedNotice()).toBe(true);
+  });
+
+  it("leaves the session alone for any other refusal", async () => {
+    sessionStore.save({ ...identity, token: "token", expiresAt: "2099-01-01T00:00:00.000Z" });
+    await appQueryClient
+      .fetchQuery({ queryKey: ["ws", identity.workspaceSlug, "members"], queryFn: () => Promise.reject(new Error("MEMBERS_403")), retry: false })
+      .catch(() => undefined);
+
+    expect(sessionStore.getActive()).toBeDefined();
+    expect(sessionEndedNotice()).toBe(false);
+  });
 });

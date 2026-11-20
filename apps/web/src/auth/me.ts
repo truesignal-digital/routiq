@@ -1,7 +1,7 @@
 import { createContext, useContext } from "react";
 import { queryOptions, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type { BranchScope, MeResponse } from "@routiq/contracts";
-import { endSession } from "./sign-out.js";
+import { endSessionIfSignedOut } from "./sign-out.js";
 import { REFERENCE_STALE_MS } from "../lib/query-defaults.js";
 import type { Identity } from "./session.js";
 import { sessionStore, useActiveSession } from "./store.js";
@@ -41,9 +41,7 @@ export function meQueryOptions(queryClient: QueryClient, session: Identity | und
       try {
         return await fetchMe(token, signal);
       } catch (error) {
-        if (error instanceof Error && error.message === "AUTH_REQUIRED" && session) {
-          endSession(queryClient, session);
-        }
+        if (error instanceof Error && session) endSessionIfSignedOut(queryClient, error.message);
         throw error;
       }
     },

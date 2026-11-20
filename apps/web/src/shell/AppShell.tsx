@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet } from "@tanstack/react-router";
+import { Outlet, useNavigate, useRouter } from "@tanstack/react-router";
 import { PageNoticeProvider } from "@/components/page-container";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/toast.js";
@@ -7,6 +7,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ApprovalRulesNotice } from "../approval-rules/ApprovalRulesNotice.js";
 import { useRecheckApprovalChainOnNavigation } from "../approval-rules/useApprovalChain.js";
 import { MeCtx, useMe } from "../auth/me.js";
+import { sessionEndedNotice } from "../auth/sign-out.js";
+import { useActiveSession } from "../auth/store.js";
 import { i18n } from "../i18n/index.js";
 import { applyPresetVocabulary, presetVocabularyFor } from "../i18n/preset-overlay.js";
 import { AppSidebar } from "./AppSidebar.js";
@@ -31,8 +33,27 @@ function BranchScopeAnnouncer() {
   );
 }
 
+/**
+ * A session can end while the shell is open: any read or command answered 401
+ * drops it (`endSessionIfSignedOut`). The route guard only runs on navigation,
+ * so without this the shell stays drawn with no member and every page waits on
+ * skeletons forever. Only a 401 keeps the page to return to; a deliberate
+ * sign-out starts the next member on their own landing page.
+ */
+function useSignInAgainWhenSessionEnds() {
+  const session = useActiveSession();
+  const navigate = useNavigate();
+  const router = useRouter();
+  useEffect(() => {
+    if (session !== undefined) return;
+    const search = sessionEndedNotice() ? { redirect: router.state.location.href } : {};
+    void navigate({ to: "/login", search, replace: true });
+  }, [session, navigate, router]);
+}
+
 export function AppShell() {
   const me = useMe();
+  useSignInAgainWhenSessionEnds();
   useRecheckApprovalChainOnNavigation();
   const preset = presetVocabularyFor(me.data?.enabledPresets);
 
