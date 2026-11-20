@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n/index.js";
+import { errorMessage } from "../lib/error-message.js";
 import { RecordFileRow } from "./record-file-row.js";
 
 const PATH = "/v1/issues/i1/artifacts/a1/download-url";
@@ -89,6 +90,27 @@ describe("RecordFileRow", () => {
     await user.click(screen.getByRole("button", { name: "View photo.jpg" }));
     expect(await screen.findByText("The picture could not be shown. You can still download it.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Download" })).toBeTruthy();
+  });
+
+  it("shows a failed download once, in the open dialog", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(new Response(JSON.stringify({ url: SIGNED }), { status: 200 }))
+        .mockResolvedValue(new Response(JSON.stringify({ error: { code: "NOT_FOUND" } }), { status: 404 })),
+    );
+    const user = userEvent.setup();
+    list(<RecordFileRow name="photo.jpg" mimeType="image/jpeg" downloadPath={PATH} />);
+
+    await user.click(screen.getByRole("button", { name: "View photo.jpg" }));
+    const dialog = await screen.findByRole("dialog", { name: "photo.jpg" });
+    await screen.findByRole("img", { name: "photo.jpg" });
+    await user.click(within(dialog).getByRole("button", { name: "Download" }));
+
+    const text = errorMessage(i18n, "NOT_FOUND");
+    expect(await within(dialog).findByText(text)).toBeTruthy();
+    expect(screen.getAllByText(text)).toHaveLength(1);
   });
 
   it("keeps a PDF on download only", async () => {

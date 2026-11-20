@@ -48,6 +48,7 @@ export function RecordFileRow({
   const { t, i18n } = useTranslation();
   const [error, setError] = useState<string>();
   const [preview, setPreview] = useState<Preview>({ kind: "loading" });
+  const [open, setOpen] = useState(false);
   const previewable = PREVIEWABLE.has(mimeType);
 
   async function download() {
@@ -79,7 +80,14 @@ export function RecordFileRow({
         <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
         <div className="min-w-0 flex-1">
           {previewable ? (
-            <Dialog onOpenChange={(open) => open && void loadPreview()}>
+            <Dialog
+              open={open}
+              onOpenChange={(next) => {
+                setOpen(next);
+                setError(undefined);
+                if (next) void loadPreview();
+              }}
+            >
               <DialogTrigger
                 aria-label={t("vehicle.panel.viewPicture", { name })}
                 className="block w-full min-w-0 rounded-sm text-left outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
@@ -121,7 +129,7 @@ export function RecordFileRow({
           ) : (
             label
           )}
-          {error !== undefined && <p className="text-xs text-destructive">{errorMessage(i18n, error)}</p>}
+          {error !== undefined && !open && <p className="text-xs text-destructive">{errorMessage(i18n, error)}</p>}
         </div>
       </div>
       <Button variant="ghost" size="desktop-icon-sm" aria-label={t("vehicle.panel.openFile")} onClick={() => void download()}>
