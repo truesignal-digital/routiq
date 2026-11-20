@@ -42,6 +42,7 @@ import { lazyScreen, retryFailedScreens } from "./shell/lazy-screen.js";
  * and search validation run before a screen's code arrives.
  */
 const AssetRegisterScreen = lazyScreen(() => import("./screens/AssetRegisterScreen.js"), "AssetRegisterScreen");
+const ImportVehiclesScreen = lazyScreen(() => import("./assets/import/ImportVehiclesScreen.js"), "ImportVehiclesScreen");
 // The Trucks page's frame, its Overview and its list load as one chunk, like
 // the Money tabs (#664); the Documents tab is the Documents module's own file.
 const TrucksFrame = lazyScreen(() => import("./assets/TrucksPage.js"), "TrucksFrame");
@@ -316,6 +317,13 @@ const assetsNewRoute = createRoute({
   path: "/assets/new",
   pendingComponent: ScreenPending,
   component: AssetRegisterScreen,
+});
+
+const assetsImportRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/assets/import",
+  pendingComponent: ScreenPending,
+  component: ImportVehiclesScreen,
 });
 
 /**
@@ -672,8 +680,9 @@ const routeTree = rootRoute.addChildren([
   appRoute.addChildren([
     homeRoute.addChildren([indexRoute, dashboardTodoRoute, dashboardVehiclesRoute, dashboardBranchesRoute]),
     assetsRoute.addChildren([assetsOverviewRoute, assetsListRoute, assetsDocumentsRoute]),
-    // Before the $assetId route, or "new" reads as an asset id.
+    // Before the $assetId route, or "new" and "import" read as an asset id.
     assetsNewRoute,
+    assetsImportRoute,
     assetDetailRoute.addChildren([
       vehicleNowRoute,
       vehicleMaintenanceRoute,
@@ -777,6 +786,7 @@ export const SCREENS_BY_USE = [
   FinanceApproveScreen,
   ActivitySheetScreen,
   AssetRegisterScreen,
+  ImportVehiclesScreen,
   MySettingsScreen,
   FinancePeriodsScreen,
   PersonsScreen,

@@ -456,6 +456,68 @@
       "loading": "Chargement des documents…",
       "empty": "Rien d'expiré et rien à échéance dans les {days} prochains jours.",
       "emptyExpired": "Aucun document n'a expiré."
+    },
+    "import": {
+      "action": "Importer",
+      "title": "Importer des véhicules",
+      "description": "Enregistrez plusieurs véhicules à partir d'un fichier CSV. Chaque ligne passe par le même enregistrement que le formulaire.",
+      "back": "Retour à la liste",
+      "template": {
+        "title": "Modèle de fichier",
+        "hint": "Une colonne par champ du formulaire, nommée dans votre langue. Les en-têtes en français et en anglais sont acceptés.",
+        "dateHint": "Écrivez les dates en jour/mois/année (29/07/2026) ou 2026-07-29.",
+        "download": "Télécharger le modèle",
+        "fileName": "modele-vehicules.csv"
+      },
+      "file": {
+        "title": "Fichier à importer",
+        "hint": "CSV séparé par des virgules ou des points-virgules, 500 lignes au plus.",
+        "choose": "Choisir un fichier CSV",
+        "another": "Choisir un autre fichier"
+      },
+      "columns": {
+        "line": "Ligne",
+        "status": "État",
+        "detail": "Détail"
+      },
+      "lineNumber": "Ligne {line}",
+      "status": {
+        "ready": "Prête",
+        "error": "À corriger",
+        "created": "Enregistré",
+        "replayed": "Déjà importé",
+        "approval": "Approbation requise",
+        "failed": "Échec"
+      },
+      "preview": {
+        "summary": "{ready, plural, one {# ligne prête} other {# lignes prêtes}}, {errors, plural, one {# ligne à corriger} other {# lignes à corriger}}"
+      },
+      "confirm": "{count, plural, =0 {Aucune ligne à importer} one {Importer # véhicule} other {Importer # véhicules}}",
+      "sending": "Envoi en cours : {done} sur {total}",
+      "result": {
+        "summary": "{created, plural, one {# enregistré} other {# enregistrés}}, {approval, plural, one {# en attente d'approbation} other {# en attente d'approbation}}, {failed, plural, one {# en échec} other {# en échec}}, {skipped, plural, one {# ligne non envoyée} other {# lignes non envoyées}}"
+      },
+      "failedWith": "{message} ({code})",
+      "issues": {
+        "REQUIRED": "{field} : obligatoire",
+        "INVALID": "{field} : valeur non valide",
+        "TOO_LONG": "{field} : trop long",
+        "UNKNOWN_REFERENCE": "{field} : introuvable dans votre espace",
+        "DUPLICATE_IN_FILE": "{field} : répété dans le fichier",
+        "ALREADY_REGISTERED": "{field} : déjà enregistré",
+        "AMBIGUOUS_NUMBER": "{field} : nombre ambigu. Écrivez 1500 pour mille cinq cents, ou 1,5 pour un et demi"
+      },
+      "fileErrors": {
+        "NOT_CSV": "Choisissez un fichier .csv.",
+        "READ_FAILED": "Le fichier n'a pas pu être lu.",
+        "EMPTY_FILE": "Le fichier est vide.",
+        "UNCLOSED_QUOTE": "Guillemet non fermé à la ligne {line}.",
+        "UNKNOWN_HEADER": "Colonne inconnue : « {header} ». Utilisez les en-têtes du modèle.",
+        "UNNAMED_COLUMN": "Une colonne sans en-tête contient des valeurs.",
+        "DUPLICATE_HEADER": "La colonne « {header} » apparaît deux fois.",
+        "MISSING_HEADER": "Colonne obligatoire manquante : « {header} ».",
+        "TOO_MANY_ROWS": "Le fichier contient {count} lignes ; {max} au plus."
+      }
     }
   },
   "nameMenu": {

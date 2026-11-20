@@ -456,6 +456,68 @@
       "loading": "Loading documents…",
       "empty": "Nothing expired and nothing due in the next {days} days.",
       "emptyExpired": "No document has expired."
+    },
+    "import": {
+      "action": "Import",
+      "title": "Import vehicles",
+      "description": "Register several vehicles from a CSV file. Each row goes through the same registration as the form.",
+      "back": "Back to the list",
+      "template": {
+        "title": "File template",
+        "hint": "One column per form field, named in your language. French and English headers are both accepted.",
+        "dateHint": "Write dates as day/month/year (29/07/2026) or 2026-07-29.",
+        "download": "Download the template",
+        "fileName": "vehicles-template.csv"
+      },
+      "file": {
+        "title": "File to import",
+        "hint": "CSV separated by commas or semicolons, 500 rows at most.",
+        "choose": "Choose a CSV file",
+        "another": "Choose another file"
+      },
+      "columns": {
+        "line": "Row",
+        "status": "Status",
+        "detail": "Detail"
+      },
+      "lineNumber": "Row {line}",
+      "status": {
+        "ready": "Ready",
+        "error": "To fix",
+        "created": "Registered",
+        "replayed": "Already imported",
+        "approval": "Approval required",
+        "failed": "Failed"
+      },
+      "preview": {
+        "summary": "{ready, plural, one {# row ready} other {# rows ready}}, {errors, plural, one {# row to fix} other {# rows to fix}}"
+      },
+      "confirm": "{count, plural, =0 {No rows to import} one {Import # vehicle} other {Import # vehicles}}",
+      "sending": "Sending: {done} of {total}",
+      "result": {
+        "summary": "{created} registered, {approval} awaiting approval, {failed} failed, {skipped, plural, one {# row not sent} other {# rows not sent}}"
+      },
+      "failedWith": "{message} ({code})",
+      "issues": {
+        "REQUIRED": "{field}: required",
+        "INVALID": "{field}: not a valid value",
+        "TOO_LONG": "{field}: too long",
+        "UNKNOWN_REFERENCE": "{field}: not found in your workspace",
+        "DUPLICATE_IN_FILE": "{field}: repeated in the file",
+        "ALREADY_REGISTERED": "{field}: already registered",
+        "AMBIGUOUS_NUMBER": "{field}: unclear number. Write 1500 for one thousand five hundred, or 1,5 for one and a half"
+      },
+      "fileErrors": {
+        "NOT_CSV": "Choose a .csv file.",
+        "READ_FAILED": "The file could not be read.",
+        "EMPTY_FILE": "The file is empty.",
+        "UNCLOSED_QUOTE": "Unclosed quote on line {line}.",
+        "UNKNOWN_HEADER": "Unknown column: \"{header}\". Use the template's headers.",
+        "UNNAMED_COLUMN": "A column with no header holds values.",
+        "DUPLICATE_HEADER": "The column \"{header}\" appears twice.",
+        "MISSING_HEADER": "Required column missing: \"{header}\".",
+        "TOO_MANY_ROWS": "The file has {count} rows; {max} at most."
+      }
     }
   },
   "nameMenu": {

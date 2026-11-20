@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 788742,
+    "ceiling": 798519,
     "raises": [
       {
         "date": "2026-10-06",
@@ -313,6 +313,12 @@
         "from": 781435,
         "to": 788742,
         "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
+      },
+      {
+        "date": "2026-11-20",
+        "from": 788742,
+        "to": 798519,
+        "reason": "Vehicle import screen (#747): lazy ImportVehiclesScreen with the CSV reader, row checks and sending through register-asset; its route, and about 60 fr/en words (template, file, row statuses, row issues, file errors) in the always-loaded catalog; +2236 B initial JS and +9777 B all JS gzip, measured by CI on c6aaf7c9 over develop a7e21245; about 11 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   },
@@ -406,7 +412,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 285204,
+    "ceiling": 287440,
     "raises": [
       {
         "date": "2026-10-06",
@@ -683,6 +689,12 @@
         "from": 283840,
         "to": 285204,
         "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
+      },
+      {
+        "date": "2026-11-20",
+        "from": 285204,
+        "to": 287440,
+        "reason": "Vehicle import screen (#747): lazy ImportVehiclesScreen with the CSV reader, row checks and sending through register-asset; its route, and about 60 fr/en words (template, file, row statuses, row issues, file errors) in the always-loaded catalog; +2236 B initial JS and +9777 B all JS gzip, measured by CI on c6aaf7c9 over develop a7e21245; about 11 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   }
