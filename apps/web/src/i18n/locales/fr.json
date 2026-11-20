@@ -465,6 +465,7 @@
       "template": {
         "title": "Modèle de fichier",
         "hint": "Une colonne par champ du formulaire, nommée dans votre langue. Les en-têtes en français et en anglais sont acceptés.",
+        "dateHint": "Écrivez les dates en jour/mois/année (29/07/2026) ou 2026-07-29.",
         "download": "Télécharger le modèle",
         "fileName": "modele-vehicules.csv"
       },

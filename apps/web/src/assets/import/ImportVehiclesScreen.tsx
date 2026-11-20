@@ -171,6 +171,7 @@ export function ImportVehiclesScreen() {
             <CardHeader>
               <CardTitle>{t("assets.import.template.title")}</CardTitle>
               <CardDescription>{t("assets.import.template.hint")}</CardDescription>
+              <CardDescription>{t("assets.import.template.dateHint")}</CardDescription>
             </CardHeader>
             <CardContent>
               <Button type="button" variant="outline" onClick={downloadTemplate}>

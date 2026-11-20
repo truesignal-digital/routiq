@@ -465,6 +465,7 @@
       "template": {
         "title": "File template",
         "hint": "One column per form field, named in your language. French and English headers are both accepted.",
+        "dateHint": "Write dates as day/month/year (29/07/2026) or 2026-07-29.",
         "download": "Download the template",
         "fileName": "vehicles-template.csv"
       },
