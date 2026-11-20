@@ -49,15 +49,18 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet, nav }) => 
     await nav(`/activities/${id}`);
     await page.getByRole("heading", { name: number }).first().waitFor();
     await quiet();
-    const tile = page.locator("[data-slot='metric-tile']").filter({ has: page.getByText(word, { exact: true }) });
+    // The record page's money box (#662) leads with the profit or loss.
+    const tile = page.locator("[data-slot='context-box'] dl > div").filter({ has: page.getByText(word, { exact: true }) });
     await tile.waitFor();
     const tileText = (await tile.textContent()) ?? "";
     if (!amount.test(tileText) || tileText.includes("−")) throw new Error(`${number} tile reads "${tileText}"`);
     await assertNoRetiredWords(number);
     await shot(`${number}-tile`, { caption: `Trip ${number} ${caption}`, highlight: tile });
 
-    // The money card's closing row, not the overview tile's label (also a <dt>).
-    const row = page.locator("xpath=//dt[not(ancestor::*[@data-slot='metric-tile'])]").filter({ hasText: word }).first();
+    // The Money tab's card closes on the same word.
+    await page.getByRole("tab", { name: t("Argent", "Money"), exact: true }).click();
+    await quiet();
+    const row = page.locator("[data-slot='card'] dt").filter({ hasText: word }).first();
     await row.scrollIntoViewIfNeeded();
     const value = (await row.locator("xpath=following-sibling::dd[1]").textContent()) ?? "";
     if (!amount.test(value) || value.includes("−")) throw new Error(`${number} money row reads "${value}"`);

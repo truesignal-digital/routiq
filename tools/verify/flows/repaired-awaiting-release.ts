@@ -39,8 +39,8 @@ const flow: DriveScript = async ({ page, t, shot, quiet, log, apiGet }) => {
   const dialog = page.getByRole("dialog").last();
   await dialog.waitFor();
   await dialog.getByLabel(t("Compte rendu", "Work summary")).fill("Brake lines bled, pressure sensor replaced");
-  const noCost = dialog.getByRole("radio", { name: new RegExp(t("Aucun coût", "No cost"), "i") });
-  if ((await noCost.count()) > 0) await noCost.first().check();
+  const noCost = dialog.getByRole("button", { name: t("Aucun coût", "No cost"), exact: true });
+  if ((await noCost.count()) > 0) await noCost.first().click();
   await dialog.getByRole("button", { name: t("Terminer les travaux", "Complete work"), exact: true }).click();
   await page.getByText(new RegExp(`^${t("Travaux terminés", "Work completed")}`)).first().waitFor();
   await quiet();

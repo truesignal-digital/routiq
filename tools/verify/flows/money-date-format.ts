@@ -14,7 +14,8 @@ const flow: DriveScript = async ({ page, t, nav, shot, quiet, log, apiGet }) => 
   const months = "(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*";
   const oldForms: Array<[RegExp, string]> = [
     // innerText puts a newline or tab between cells, so a figure on the next line is not a match.
-    [/FCFA[ \u00a0]?[−+-]?\d/, "the unit before the amount"],
+    // A share drawn beside an amount ("55 000 FCFA55%") has no space; the old form always had one.
+    [/FCFA[ \u00a0][−+-]?\d/, "the unit before the amount"],
     [/\d,\d{3}\s?FCFA/, "a comma between thousands of an amount"],
     [/\bXAF\b/, "XAF instead of FCFA"],
     [/\b\d{1,2}\/\d{1,2}\/\d{2}\b(?!\d)/, "a two-digit year"],
