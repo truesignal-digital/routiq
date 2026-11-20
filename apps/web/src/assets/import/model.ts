@@ -149,7 +149,8 @@ export type RowIssueCode =
   | "TOO_LONG"
   | "UNKNOWN_REFERENCE"
   | "DUPLICATE_IN_FILE"
-  | "ALREADY_REGISTERED";
+  | "ALREADY_REGISTERED"
+  | "AMBIGUOUS_NUMBER";
 
 export interface RowIssue {
   field: ImportField;
@@ -270,7 +271,9 @@ function validateRow(row: ParsedRow, context: ImportContext): RowVerdict {
     return parse(text) ?? fail(field, "INVALID");
   };
   const modelYear = number("modelYear", parseInteger);
-  const capacityValue = number("capacityValue", parseDecimal);
+  const decimal = (field: ImportField, text: string) =>
+    isThousandsGrouped(text) ? fail(field, "AMBIGUOUS_NUMBER") : (parseDecimal(text) ?? fail(field, "INVALID"));
+  const capacityValue = cells.capacityValue === undefined ? undefined : decimal("capacityValue", cells.capacityValue);
   const acquisitionAmountMinor = number("acquisitionAmount", parseXafAmount);
   const acquisitionDate =
     cells.acquisitionDate === undefined ? undefined : (parseDate(cells.acquisitionDate) ?? fail("acquisitionDate", "INVALID"));
@@ -285,7 +288,12 @@ function validateRow(row: ParsedRow, context: ImportContext): RowVerdict {
       if (templateCode !== undefined) fail(field as ImportField, "INVALID");
       continue;
     }
-    const value = def.type === "number" ? parseDecimal(text) : def.type === "boolean" ? parseBoolean(text) : text;
+    if (def.type === "number") {
+      const value = decimal(field as ImportField, text);
+      if (value !== undefined) customValues[key] = value;
+      continue;
+    }
+    const value = def.type === "boolean" ? parseBoolean(text) : text;
     if (value === undefined) fail(field as ImportField, "INVALID");
     else customValues[key] = value;
   }
@@ -346,6 +354,11 @@ const GROUPING = /[\s  ]/g;
 function parseInteger(text: string): number | undefined {
   const digits = text.replace(GROUPING, "");
   return /^-?\d+$/.test(digits) ? Number(digits) : undefined;
+}
+
+/** 30,000 or 30.000 could mean thirty or thirty thousand; the row asks instead of guessing. */
+function isThousandsGrouped(text: string): boolean {
+  return /^-?\d+(?:[.,]\d{3})+$/.test(text.replace(GROUPING, ""));
 }
 
 function parseDecimal(text: string): number | undefined {

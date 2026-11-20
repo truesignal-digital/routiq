@@ -503,7 +503,8 @@
         "TOO_LONG": "{field}: too long",
         "UNKNOWN_REFERENCE": "{field}: not found in your workspace",
         "DUPLICATE_IN_FILE": "{field}: repeated in the file",
-        "ALREADY_REGISTERED": "{field}: already registered"
+        "ALREADY_REGISTERED": "{field}: already registered",
+        "AMBIGUOUS_NUMBER": "{field}: unclear number. Write 1500 for one thousand five hundred, or 1,5 for one and a half"
       },
       "fileErrors": {
         "NOT_CSV": "Choose a .csv file.",

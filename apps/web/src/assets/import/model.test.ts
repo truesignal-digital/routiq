@@ -17,6 +17,7 @@ const FR: Partial<Record<ImportField, string>> = {
   registrationNumber: "Immatriculation",
   acquisitionAmount: "Montant d'acquisition (FCFA)",
   acquisitionDate: "Date d'acquisition",
+  capacityValue: "Capacité",
   "custom.axleCount": "Nombre d'essieux",
 };
 const EN: Partial<Record<ImportField, string>> = {
@@ -26,6 +27,7 @@ const EN: Partial<Record<ImportField, string>> = {
   registrationNumber: "Registration number",
   acquisitionAmount: "Acquisition amount (FCFA)",
   acquisitionDate: "Acquisition date",
+  capacityValue: "Capacity",
   "custom.axleCount": "Axle count",
 };
 
@@ -169,6 +171,36 @@ describe("validateRows", () => {
       [{ field: "assetCode", code: "DUPLICATE_IN_FILE" }, { field: "registrationNumber", code: "DUPLICATE_IN_FILE" }],
       [{ field: "assetCode", code: "ALREADY_REGISTERED" }],
       [{ field: "registrationNumber", code: "ALREADY_REGISTERED" }],
+    ]);
+  });
+
+  it("refuses a number grouped by thousands with a comma or a point", () => {
+    const rows = rowsOf(
+      "Code de l'actif;Classe d'actif;Agence;Capacité;Nombre d'essieux\n" +
+        "VH1;TRUCK;DLA;30,000;3\nVH2;TRUCK;DLA;30.000;3\nVH3;TRUCK;DLA;1,500,000;3\nVH4;TRUCK;DLA;12;1.500\nVH5;TRUCK;DLA;12;1,500\n",
+    );
+    const issues = validateRows(rows, CONTEXT).map((verdict) => (verdict.status === "error" ? verdict.issues : []));
+    expect(issues).toEqual([
+      [{ field: "capacityValue", code: "AMBIGUOUS_NUMBER" }],
+      [{ field: "capacityValue", code: "AMBIGUOUS_NUMBER" }],
+      [{ field: "capacityValue", code: "AMBIGUOUS_NUMBER" }],
+      [{ field: "custom.axleCount", code: "AMBIGUOUS_NUMBER" }],
+      [{ field: "custom.axleCount", code: "AMBIGUOUS_NUMBER" }],
+    ]);
+  });
+
+  it("keeps plain decimals and space-grouped numbers", () => {
+    const rows = rowsOf(
+      "Code de l'actif;Classe d'actif;Agence;Capacité;Nombre d'essieux\n" +
+        "VH1;TRUCK;DLA;1,5;3\nVH2;TRUCK;DLA;12.75;2,5\nVH3;TRUCK;DLA;30 000;3\n",
+    );
+    const values = validateRows(rows, CONTEXT).map((verdict) =>
+      verdict.status === "ready" ? [verdict.payload.capacityValue, verdict.payload.customValues] : verdict,
+    );
+    expect(values).toEqual([
+      [1.5, { axleCount: 3 }],
+      [12.75, { axleCount: 2.5 }],
+      [30_000, { axleCount: 3 }],
     ]);
   });
 
