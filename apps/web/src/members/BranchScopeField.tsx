@@ -38,16 +38,9 @@ export function BranchScopeField({
   const selected = value === "ALL" ? [] : value;
 
   function toggleBranch(branchId: string, checked: boolean) {
-    const next = checked
-      ? [...selected, branchId]
-      : selected.filter((id) => id !== branchId);
-    // An empty pick list is not a scope the command accepts. Without "all
-    // branches" to fall back on, the last branch simply stays ticked.
-    if (next.length === 0) {
-      if (allowAll) onChange("ALL");
-      return;
-    }
-    onChange(next);
+    // An empty pick is allowed while editing; the form holds submit until a
+    // scope is chosen (`isBranchScopeChosen`). Never widen it here (#722).
+    onChange(checked ? [...selected, branchId] : selected.filter((id) => id !== branchId));
   }
 
   return (
@@ -59,7 +52,7 @@ export function BranchScopeField({
           <Checkbox
             checked={value === "ALL"}
             onCheckedChange={(checked) =>
-              onChange(checked ? "ALL" : (branches[0] ? [branches[0].id] : "ALL"))
+              onChange(checked ? "ALL" : [])
             }
           />
           {t("users.form.allBranches")}
@@ -84,8 +77,17 @@ export function BranchScopeField({
           ))}
         </div>
       )}
+
+      {!isBranchScopeChosen(value) && (
+        <p className="text-sm text-destructive">{t("users.form.branchScopeEmpty")}</p>
+      )}
     </fieldset>
   );
+}
+
+/** The command needs every branch or at least one (`memberBranchScope`). */
+export function isBranchScopeChosen(scope: MemberBranchScope): boolean {
+  return scope === "ALL" || scope.length > 0;
 }
 
 /** What a row's scope reads as, once branch ids are given their names. */

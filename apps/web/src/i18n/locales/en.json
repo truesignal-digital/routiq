@@ -1801,6 +1801,7 @@
       "rolePlaceholder": "Choose a role",
       "branchScope": "Branch scope",
       "allBranches": "All branches",
+      "branchScopeEmpty": "Choose at least one branch.",
       "pin": "PIN",
       "confirmPin": "Confirm PIN",
       "pinMismatch": "The two PINs do not match.",
@@ -2475,7 +2476,7 @@
       "submitting": "Adding…"
     },
     "update-member-role": {
-      "label": "Change role",
+      "label": "Change role and branches",
       "submit": "Save role",
       "submitting": "Saving…"
     },

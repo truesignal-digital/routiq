@@ -149,11 +149,28 @@ describe("AddMemberDialog", () => {
 
     await fillForm();
     await userEvent.click(screen.getByRole("checkbox", { name: "Toutes les agences" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Douala" }));
     await userEvent.click(screen.getByRole("checkbox", { name: "Yaoundé" }));
     await userEvent.click(screen.getByRole("button", { name: "Ajouter l'utilisateur" }));
 
     await waitFor(() => expect(client.seen).toHaveLength(1));
     expect(client.seen[0]!.payload.branchScope).toEqual(["branch-dla", "branch-yde"]);
+  });
+
+  it("never picks a branch by itself, and holds submit until one is chosen (#722)", async () => {
+    const client = fakeClient(committed);
+    renderDialog(client);
+
+    await fillForm();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Toutes les agences" }));
+
+    expect(screen.getByRole("checkbox", { name: "Douala" }).getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByRole("checkbox", { name: "Yaoundé" }).getAttribute("aria-checked")).toBe("false");
+    expect(await screen.findByText("Choisissez au moins une agence.")).toBeTruthy();
+    const submit = screen.getByRole("button", { name: "Ajouter l'utilisateur" });
+    expect((submit as HTMLButtonElement).disabled).toBe(true);
+    await userEvent.click(submit);
+    expect(client.seen).toHaveLength(0);
   });
 
   it("answers a taken username on the username field, not as a toast", async () => {

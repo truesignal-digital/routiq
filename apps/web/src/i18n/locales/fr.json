@@ -1801,6 +1801,7 @@
       "rolePlaceholder": "Choisir un rôle",
       "branchScope": "Portée des agences",
       "allBranches": "Toutes les agences",
+      "branchScopeEmpty": "Choisissez au moins une agence.",
       "pin": "Code PIN",
       "confirmPin": "Confirmer le code PIN",
       "pinMismatch": "Les deux codes ne correspondent pas.",
@@ -2475,7 +2476,7 @@
       "submitting": "Ajout…"
     },
     "update-member-role": {
-      "label": "Modifier le rôle",
+      "label": "Modifier le rôle et les agences",
       "submit": "Enregistrer le rôle",
       "submitting": "Enregistrement…"
     },
