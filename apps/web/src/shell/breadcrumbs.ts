@@ -38,6 +38,7 @@ export const PAGE_TRAILS: readonly PageTrail[] = [
   { pattern: "/profit-by-vehicle", trail: [{ labelKey: "dashboard.tabs.vehicles" }] },
   { pattern: "/profit-by-branch", trail: [{ labelKey: "dashboard.tabs.branches" }] },
   { pattern: "/assets/new", trail: [{ labelKey: "commands.register-asset.label" }] },
+  { pattern: "/assets/import", trail: [{ labelKey: "assets.import.title" }] },
   // The module pages' tabs (#665): Overview is the section itself, the others
   // name their tab under it. Before the record patterns, or "list" reads as a
   // vehicle or a trip.

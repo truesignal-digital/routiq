@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { FileUp, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMeContext } from "@/auth/me.js";
 import { useCommandLabel } from "@/commands/labels.js";
@@ -37,11 +37,17 @@ export function TrucksFrame() {
       active={activeTrucksTab(pathname)}
       action={
         canManage ? (
-          // A link styled as a button (#136); on a phone the round button below stands in.
-          <Link to="/assets/new" className={cn(buttonVariants(), "hidden sm:inline-flex")}>
-            <Plus aria-hidden />
-            {label("register-asset")}
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/assets/import" className={buttonVariants({ variant: "outline" })}>
+              <FileUp aria-hidden />
+              {t("assets.import.action")}
+            </Link>
+            {/* A link styled as a button (#136); on a phone the round button below stands in. */}
+            <Link to="/assets/new" className={cn(buttonVariants(), "hidden sm:inline-flex")}>
+              <Plus aria-hidden />
+              {label("register-asset")}
+            </Link>
+          </div>
         ) : undefined
       }
     >

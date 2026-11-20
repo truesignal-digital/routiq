@@ -25,6 +25,7 @@ const NO_LOADER: Record<string, string> = {
   "/app/assets/$assetId/maintenance": "not yet: #504",
   "/app/assets/$assetId/money": "not yet: #504",
   "/app/assets/$assetId/trips": "not yet: #504",
+  "/app/assets/import": "the reference and identity reads start with the screen; it opens from the list, where both are warm",
   "/app/assets/new": "not yet: #504",
   "/app/finance/entries/$entryId": "not yet: #504",
   "/app/finance/periods": "not yet: #504",

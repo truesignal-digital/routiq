@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { assets } from "../db/schema.js";
+import { assets, commands } from "../db/schema.js";
 import { apiClient, seedActor, type Actor } from "../test/client.js";
 import { createTestApp } from "../test/fixture.js";
 import { seedWorkspace } from "../test/seed.js";
@@ -94,6 +94,45 @@ describe("register-asset (#122: one set of identity rules with the Details edit)
     it("lets another workspace carry the same plate", async () => {
       expect((await register(admin, 2, { registrationNumber: "OW 303 AA" })).status).toBe(200);
       expect((await register(otherAdmin, 2, { registrationNumber: "OW 303 AA" })).status).toBe(200);
+    });
+  });
+
+  describe("spreadsheet import (#747): one register-asset per row, origin CSV_IMPORT", () => {
+    function importRow(key: string, commandId: string, assetId: string, assetCode: string) {
+      return api.send(
+        admin.token,
+        "register-asset",
+        { assetId, assetCode, assetClassCode: "TRUCK", templateCode: "TRUCKING", branchCode: "DLA" },
+        { commandId, idempotencyKey: key, origin: "CSV_IMPORT" },
+        2,
+      );
+    }
+
+    it("takes the import origin from a signed-in member and records it on the receipt", async () => {
+      const commandId = randomUUID();
+      const assetId = randomUUID();
+      const reply = await importRow(`csv-${randomUUID()}`, commandId, assetId, `CSV-${randomUUID().slice(0, 8)}`);
+      expect(reply.status).toBe(200);
+      const [receipt] = await ctx.db.select().from(commands).where(eq(commands.id, commandId));
+      expect(receipt?.origin).toBe("CSV_IMPORT");
+      expect(await row(assetId)).toBeDefined();
+    });
+
+    it("sending the same row twice creates the vehicle once and replays the first answer", async () => {
+      const key = `csv-${randomUUID()}`;
+      const commandId = randomUUID();
+      const assetId = randomUUID();
+      const assetCode = `CSV-${randomUUID().slice(0, 8)}`;
+      const first = await importRow(key, commandId, assetId, assetCode);
+      const second = await importRow(key, commandId, assetId, assetCode);
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
+      expect(second.body).toMatchObject({ recordId: assetId, idempotentReplay: true });
+      const saved = await ctx.db
+        .select({ id: assets.id })
+        .from(assets)
+        .where(and(eq(assets.workspaceId, workspaceId), eq(assets.assetCode, assetCode)));
+      expect(saved).toHaveLength(1);
     });
   });
 
