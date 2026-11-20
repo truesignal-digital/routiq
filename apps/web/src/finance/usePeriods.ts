@@ -27,3 +27,16 @@ export function usePeriods(enabled = true) {
     },
   });
 }
+
+/**
+ * Whether an entry dated `economicDate` (YYYY-MM-DD) would wait instead of
+ * posting: its month is locked, and so is the current month it would otherwise
+ * post late into (the server's `resolvePostingPeriod`). Unknown periods read
+ * as not locked; a guess would be worse than silence.
+ */
+export function postingWaitsForReopen(periods: PeriodsResponse | undefined, economicDate: string): boolean {
+  if (periods === undefined) return false;
+  const locked = (code: string) =>
+    periods.periods.some((period) => period.periodCode === code && period.status === "LOCKED");
+  return locked(economicDate.slice(0, 7)) && locked(periods.currentPeriodCode);
+}

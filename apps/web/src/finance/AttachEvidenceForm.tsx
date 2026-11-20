@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useCommandLabel } from "@/commands/labels.js";
 import type { AttachEvidencePayload } from "@routiq/contracts";
@@ -11,10 +10,10 @@ import {
   type CommandSurface,
 } from "@/components/command-form.js";
 import { FileUpload } from "@/components/ui/file-upload";
-import { useActiveSession } from "../auth/store.js";
 import { commandClient, type CommandClient } from "../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../commands/intent.js";
 import { notifyCommandSuccess } from "../lib/notify.js";
+import { useMoneyRefresh } from "../lib/useMoneyRefresh.js";
 
 export interface AttachEvidenceFormProps {
   surface: CommandSurface;
@@ -41,8 +40,7 @@ export function AttachEvidenceForm({
 }: AttachEvidenceFormProps) {
   const { t } = useTranslation();
   const label = useCommandLabel();
-  const queryClient = useQueryClient();
-  const session = useActiveSession();
+  const refreshMoney = useMoneyRefresh();
   const submission = useCommandSubmission();
   const intent = useRef<CommandIntent<AttachEvidencePayload> | undefined>(undefined);
   const [artifactIds, setArtifactIds] = useState<string[]>([]);
@@ -61,7 +59,7 @@ export function AttachEvidenceForm({
     });
     if (!result.ok) return;
     notifyCommandSuccess("vehicle", "evidenceAttached", result.outcome.warnings);
-    await queryClient.invalidateQueries({ queryKey: ["ws", session?.workspaceSlug, "finance"] });
+    await refreshMoney();
     onDone?.();
     onDismiss();
   }

@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 788742,
+    "ceiling": 789545,
     "raises": [
       {
         "date": "2026-10-06",
@@ -313,6 +313,12 @@
         "from": 781435,
         "to": 788742,
         "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
+      },
+      {
+        "date": "2026-11-20",
+        "from": 788742,
+        "to": 789545,
+        "reason": "Money refresh and one missing-receipt rule (#725, #737): useMoneyRefresh shared by every money write, the locked-month hint on the record form, the reopen explanation and clearer PERIOD_LOCKED and entry-not-found words in fr/en; +262 B initial and +803 B all JS gzip, measured by CI on 5b017fc4 over develop a7e21245; under 5 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   },
@@ -406,7 +412,7 @@
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 285204,
+    "ceiling": 285466,
     "raises": [
       {
         "date": "2026-10-06",
@@ -683,6 +689,12 @@
         "from": 283840,
         "to": 285204,
         "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
+      },
+      {
+        "date": "2026-11-20",
+        "from": 285204,
+        "to": 285466,
+        "reason": "Money refresh and one missing-receipt rule (#725, #737): useMoneyRefresh shared by every money write, the locked-month hint on the record form, the reopen explanation and clearer PERIOD_LOCKED and entry-not-found words in fr/en; +262 B initial and +803 B all JS gzip, measured by CI on 5b017fc4 over develop a7e21245; under 5 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   }

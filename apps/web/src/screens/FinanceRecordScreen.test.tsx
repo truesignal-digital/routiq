@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
@@ -89,12 +90,16 @@ const recorder: MeContext = {
   timezone: "Africa/Douala",
 };
 
-function renderScreen(me: MeContext = recorder) {
+function renderScreen(me: MeContext = recorder, client = new QueryClient()) {
   return render(
     createElement(
-      MeCtx.Provider,
-      { value: me },
-      createElement(FinanceRecordScreen),
+      QueryClientProvider,
+      { client },
+      createElement(
+        MeCtx.Provider,
+        { value: me },
+        createElement(FinanceRecordScreen),
+      ),
     ),
   );
 }
@@ -277,6 +282,49 @@ describe("finance record form", () => {
         .queryAllByRole("button", { name: "Close" })
         .every((button) => button.getAttribute("data-slot") === "sheet-close"),
     ).toBe(true);
+  });
+
+  // #725: the list, totals and Home behind the panel showed the new entry only after a reload.
+  it("refreshes the entries, totals and Home once the entry is recorded", async () => {
+    const client = new QueryClient();
+    const reads = [
+      ["ws", "sotrafret", "finance", "entries", {}],
+      ["ws", "sotrafret", "finance", "summary"],
+      ["ws", "sotrafret", "dashboard", 90, "ALL"],
+      ["ws", "sotrafret", "attention", "todo"],
+    ];
+    for (const key of reads) client.setQueryData(key, { cached: true });
+    const user = userEvent.setup();
+    renderScreen(recorder, client);
+    await chooseFuelCategory(user);
+
+    await user.type(screen.getByLabelText("Amount (FCFA)"), "125000");
+    await user.click(screen.getByRole("button", { name: "Record the expense" }));
+
+    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith({ to: "/finance/entries" }));
+    for (const key of reads) expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+  });
+
+  // T5: with this month locked the entry waits for a reopen; the form said it posts directly.
+  it("warns that the entry will wait when the month of its date is locked", async () => {
+    const month = new Date().toISOString().slice(0, 7);
+    const periods = (status: "OPEN" | "LOCKED") => ({
+      currentPeriodCode: month,
+      periods: [{ periodCode: month, status, lockedAt: null, entryCount: 0, rowVersion: 1 }],
+    });
+    const warning = "The month of this date is locked: the entry will wait until it is reopened in Accounting months (Director).";
+
+    const locked = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
+    locked.setQueryData(["ws", "sotrafret", "finance", "periods"], periods("LOCKED"));
+    renderScreen(recorder, locked);
+    expect(await screen.findByText(warning)).toBeTruthy();
+    cleanup();
+
+    const open = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
+    open.setQueryData(["ws", "sotrafret", "finance", "periods"], periods("OPEN"));
+    renderScreen(recorder, open);
+    expect(screen.getByLabelText("Amount (FCFA)")).toBeTruthy();
+    expect(screen.queryByText(warning)).toBeNull();
   });
 
   it("carries a server warning as a line on the same success toast", async () => {

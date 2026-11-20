@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { PeriodRead } from "@routiq/contracts";
 import { mergeImplicitCurrentPeriod, validateReopenReason } from "./model.js";
 import { canManagePeriods } from "./permissions.js";
+import { postingWaitsForReopen } from "./usePeriods.js";
 
 // The current month comes from the server, cut in the workspace's time zone;
 // the device clock never decides it (#591).
@@ -124,5 +125,30 @@ describe("FinancePeriods - canManagePeriods", () => {
 
   it("denies access for undefined role", () => {
     expect(canManagePeriods(undefined, ["FINANCE"])).toBe(false);
+  });
+});
+
+// resolvePostingPeriod: a locked month posts late into the current one, unless that is locked too.
+describe("postingWaitsForReopen", () => {
+  const row = (periodCode: string, status: "OPEN" | "LOCKED"): PeriodRead => ({
+    periodCode,
+    status,
+    lockedAt: null,
+    entryCount: 0,
+    rowVersion: 1,
+  });
+
+  it("waits when the date's month and the current month are both locked", () => {
+    const periods = { currentPeriodCode: "2026-11", periods: [row("2026-11", "LOCKED"), row("2026-10", "LOCKED")] };
+    expect(postingWaitsForReopen(periods, "2026-11-12")).toBe(true);
+    expect(postingWaitsForReopen(periods, "2026-10-03")).toBe(true);
+  });
+
+  it("does not wait when the date's month is open or the late entry can post in the current month", () => {
+    expect(postingWaitsForReopen({ currentPeriodCode: "2026-11", periods: [row("2026-11", "LOCKED")] }, "2026-09-03")).toBe(false);
+    expect(
+      postingWaitsForReopen({ currentPeriodCode: "2026-11", periods: [row("2026-10", "LOCKED")] }, "2026-10-03"),
+    ).toBe(false);
+    expect(postingWaitsForReopen(undefined, "2026-11-12")).toBe(false);
   });
 });

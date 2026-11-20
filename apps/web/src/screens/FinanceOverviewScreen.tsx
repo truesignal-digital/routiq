@@ -376,7 +376,7 @@ function OverviewTiles({
     ...(missing?.oldestEconomicDate
       ? { hint: t("finance.money.tiles.missingHint", { date: formatDate(missing.oldestEconomicDate) }) }
       : {}),
-    link: { to: "/finance/entries", search: { evidence: "MISSING" } },
+    link: { to: "/finance/entries", search: { evidence: "MISSING", economicMonth: summary?.month } },
   });
   if (close !== undefined && close.month !== undefined) {
     const period = close.period;
@@ -444,9 +444,6 @@ function CountedLine({ overview }: { overview: FinanceOverviewResponse }) {
           amount: formatMoney(notCounted.waitingApproval.amountMinor, { currency }),
         })
       : null,
-    notCounted.missingReceipt.count > 0
-      ? t("finance.overview.counted.missingReceipt", { count: notCounted.missingReceipt.count })
-      : null,
     notCounted.openTrips !== null && notCounted.openTrips > 0
       ? t("finance.overview.counted.openTrips", { count: notCounted.openTrips })
       : null,
@@ -455,7 +452,14 @@ function CountedLine({ overview }: { overview: FinanceOverviewResponse }) {
       : null,
   ].filter((sentence): sentence is string => sentence !== null);
   return (
-    <span data-slot="money-counted">{sentences.join(" ")}</span>
+    <>
+      <span data-slot="money-counted">{sentences.join(" ")}</span>
+      {notCounted.missingReceipt.count > 0 && (
+        <span data-slot="money-missing-receipt" className="block basis-full">
+          {t("finance.overview.counted.missingReceipt", { count: notCounted.missingReceipt.count })}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -557,7 +561,7 @@ function toDoItems({
       ...(missing.oldestEconomicDate
         ? { detail: t("finance.money.tiles.missingHint", { date: formatDate(missing.oldestEconomicDate) }) }
         : {}),
-      action: { label: t("finance.overview.todo.openEntries"), to: "/finance/entries", search: { evidence: "MISSING" } },
+      action: { label: t("finance.overview.todo.openEntries"), to: "/finance/entries", search: { evidence: "MISSING", economicMonth: summary?.month } },
     });
   }
   if (close?.month !== undefined && close.period?.status === "OPEN") {

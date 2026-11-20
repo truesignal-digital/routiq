@@ -768,6 +768,29 @@ describe("Entries tab (#664)", () => {
     );
   });
 
+  it("opens the month its count is for, and shows no count on a list of another window", async () => {
+    const user = userEvent.setup();
+    render(<FinanceEntriesScreen />);
+    await user.click(screen.getByRole("button", { name: /finance\.money\.lens\.missing/ }));
+    expect(navigate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: expect.objectContaining({ evidence: "MISSING", economicMonth: "2026-10" }) }),
+    );
+
+    // The To-do opens every month still due: the chip's month count would not be these rows.
+    cleanup();
+    routeSearch.current = { evidence: "MISSING" };
+    render(<FinanceEntriesScreen />);
+    expect(issuedQueries.at(-1)).not.toHaveProperty("economicMonth");
+    const allDue = screen.getByRole("button", { name: /finance\.money\.lens\.missing/ });
+    expect(allDue.textContent).not.toContain("1");
+
+    cleanup();
+    routeSearch.current = { evidence: "MISSING", economicMonth: "2026-10" };
+    render(<FinanceEntriesScreen />);
+    expect(issuedQueries.at(-1)).toMatchObject({ evidence: "MISSING", economicMonth: "2026-10" });
+    expect(screen.getByRole("button", { name: /finance\.money\.lens\.missing/ }).textContent).toContain("1");
+  });
+
   it("names the month an Overview tile opened it on, and drops it on request", async () => {
     const user = userEvent.setup();
     routeSearch.current = { status: "LEDGER", direction: "EXPENSE", economicMonth: "2026-10" };

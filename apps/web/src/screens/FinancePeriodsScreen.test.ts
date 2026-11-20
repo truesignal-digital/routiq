@@ -310,6 +310,29 @@ describe("finance period command routing", () => {
     expect(mocks.createCommandIntent).not.toHaveBeenCalled();
   });
 
+  // T5: a Director reopening a month is told what reopening does.
+  it("says what reopening does in the reopen dialog", async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    await chooseRowAction(user, 1, "Reopen period");
+
+    expect(screen.getByRole("dialog", { name: "Reopen period" }).textContent).toContain(
+      "The month takes entries again: entries that were waiting can be approved, and posted entries can be cancelled.",
+    );
+  });
+
+  // T5: "late corrections go into the open month" was false when the current month is the locked one.
+  it("says a late entry waits when the current month is locked too", () => {
+    renderScreen();
+
+    expect(
+      screen.getByText(
+        "Each month takes entries until finance locks it. An entry dated in a locked month goes into the current month; if that month is locked too, it waits until the Director reopens it.",
+      ),
+    ).toBeTruthy();
+  });
+
   // The periods read is unpaginated, so client-side sorting reorders the whole
   // list — the reason these headers carry a sort control and the entries table's
   // headers do not.

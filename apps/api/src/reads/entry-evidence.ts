@@ -80,15 +80,16 @@ export function entryEvidenceStateSql(): SQL<string> {
 }
 
 /**
- * Still waiting for paperwork: NOT_SUPPLIED, and neither half of a
- * cancellation. A reversal needs no receipt of its own, and once it has posted
- * the spend it cancelled asks for none either (#473). The client's copy is
+ * Still waiting for paperwork: posted or waiting for approval (never rejected
+ * or cancelled), NOT_SUPPLIED, and not a reversal — a reversal needs no
+ * receipt of its own (#473). The one definition every count of missing
+ * receipts shares; each caller adds its own period. The client's copy is
  * `missingReceipt` in apps/web/src/vehicle/flow.ts.
  */
 export function entryEvidenceMissingSql(): SQL {
-  return sql`(${entryEvidenceStateSql()} = 'NOT_SUPPLIED'
-    and ${financialEntries.reversesEntryId} is null
-    and ${financialEntries.status} <> 'REVERSED')`;
+  return sql`(${financialEntries.status} in ('POSTED', 'SUBMITTED')
+    and ${entryEvidenceStateSql()} = 'NOT_SUPPLIED'
+    and ${financialEntries.reversesEntryId} is null)`;
 }
 
 /**

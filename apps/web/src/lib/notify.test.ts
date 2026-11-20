@@ -35,7 +35,7 @@ describe("command notifications", () => {
     expect(mocks.add).toHaveBeenNthCalledWith(2, {
       type: "error",
       priority: "high",
-      title: "This period is locked. No postings are possible.",
+      title: "This month is locked. It must first be reopened in Accounting months (Director).",
     });
   });
 

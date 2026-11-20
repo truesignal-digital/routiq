@@ -298,7 +298,7 @@ describe("finance approval command routing", () => {
     });
   });
 
-  it("invalidates only the reads an approval changes, never the whole workspace", async () => {
+  it("invalidates only the money reads an approval changes, never the whole workspace", async () => {
     successfulIntentRecorder([]);
     const { client, keys } = recordingClient();
     const user = userEvent.setup();
@@ -306,12 +306,11 @@ describe("finance approval command routing", () => {
 
     await chooseRowAction(user, 0, "Approve entry");
 
-    await waitFor(() => expect(keys.length).toBe(4));
+    await waitFor(() => expect(keys.length).toBe(3));
     expect(keys).toEqual([
-      ["ws", "sotrafret", "finance", "approvals"],
-      ["ws", "sotrafret", "finance", "entries"],
-      ["ws", "sotrafret", "finance", "entry"],
-      ["ws", "sotrafret", "finance", "summary"],
+      ["ws", "sotrafret", "finance"],
+      ["ws", "sotrafret", "dashboard"],
+      ["ws", "sotrafret", "attention"],
     ]);
   });
 

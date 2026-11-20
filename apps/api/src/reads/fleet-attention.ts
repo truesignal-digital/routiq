@@ -33,6 +33,7 @@ import { decidablePendingEntries } from "./approvals-queue.js";
 import { daysBetween, documentAttentionRows, evidenceStillDueSql, maintenanceItems } from "./asset-attention.js";
 import { addDays, currentBusinessDate } from "./business-date.js";
 import { defineRead } from "./define-read.js";
+import { entryEvidenceMissingSql } from "./entry-evidence.js";
 import { fuelOutliers } from "./fleet-usage.js";
 import { readableEntrySql } from "./money-scope.js";
 import { invalidRequest } from "./read-gate.js";
@@ -238,7 +239,11 @@ async function approvalRows(tx: TenantTx, auth: AuthContext, today: Today): Prom
   return [...byCurrency.values()].map((sum) => summedRow("ENTRIES_AWAITING_APPROVAL", sum, today));
 }
 
-/** Entries the caller may read that still owe a receipt (ENTRY_EVIDENCE_MISSING), per currency. */
+/**
+ * Entries the caller may read that still owe a receipt, per currency, in any
+ * month: the rows `/v1/finance/entries?evidence=MISSING` lists with no month.
+ * A locked month still takes a receipt (attach-evidence ignores the lock).
+ */
 async function evidenceRows(tx: TenantTx, auth: AuthContext, today: Today): Promise<TodoRow[]> {
   const sums = await tx
     .select({
@@ -248,7 +253,7 @@ async function evidenceRows(tx: TenantTx, auth: AuthContext, today: Today): Prom
       oldest: sql<Date>`min(${financialEntries.createdAt})`.mapWith(financialEntries.createdAt),
     })
     .from(financialEntries)
-    .where(and(readableEntrySql(auth), evidenceStillDueSql()))
+    .where(and(readableEntrySql(auth), entryEvidenceMissingSql()))
     .groupBy(financialEntries.currency);
   return sums.map((sum) =>
     summedRow("ENTRIES_EVIDENCE_MISSING", { ...sum, amountMinor: BigInt(sum.amountMinor) }, today),

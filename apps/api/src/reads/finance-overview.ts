@@ -732,11 +732,7 @@ async function loadGaps(tx: TenantTx, readable: SQL[], currency: string, period:
   const absolute = sql`abs(${financialEntries.amountMinor})`;
   const isPosted = inArray(financialEntries.status, [...ledgerEntryStatuses]);
   const waiting = eq(financialEntries.status, "SUBMITTED");
-  const missing = and(
-    or(waiting, eq(financialEntries.status, "POSTED")),
-    eq(financialEntries.currency, currency),
-    entryEvidenceMissingSql(),
-  );
+  const missing = and(eq(financialEntries.currency, currency), entryEvidenceMissingSql());
   const [row] = await tx
     .select({
       postedEntries: sql<number>`count(*) filter (where ${and(isPosted, eq(financialEntries.currency, currency))})::int`,

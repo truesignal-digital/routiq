@@ -206,6 +206,10 @@ describe("Dashboard › Overview", () => {
     expect(counted).toContain("84 posted entries and 27 closed");
     expect(counted).toContain("6 entries in the period wait for approval");
     expect(counted).toContain("5 ");
+    expect(counted).not.toContain("no receipt");
+    expect(document.querySelector("[data-slot='dashboard-missing-receipt']")?.textContent).toBe(
+      "4 entries in the period have no receipt.",
+    );
   });
 
   it("opens on the 1st with last month's summary above the tiles and the expenses jump named (#667)", () => {
