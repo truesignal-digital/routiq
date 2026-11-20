@@ -1,6 +1,6 @@
 {
   "web.all-js-gzip": {
-    "ceiling": 788742,
+    "ceiling": 790704,
     "raises": [
       {
         "date": "2026-10-06",
@@ -313,11 +313,17 @@
         "from": 781435,
         "to": 788742,
         "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
+      },
+      {
+        "date": "2026-11-20",
+        "from": 788742,
+        "to": 790704,
+        "reason": "Picture preview dialog in the shared file row (#745): RecordFileRow opens JPEG, PNG and WebP files on receipts, document scans and issue photos in a Base UI dialog, full screen on a phone, with fr/en words for view, loading and load failure; +228 B initial JS, +151 B initial CSS and +1962 B all JS gzip, measured by CI on 094caab1 over develop a7e21245; under 5 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   },
   "web.initial-css-gzip": {
-    "ceiling": 23462,
+    "ceiling": 23613,
     "raises": [
       {
         "date": "2026-10-06",
@@ -402,11 +408,17 @@
         "from": 23330,
         "to": 23462,
         "reason": "#663 FormPage: container-query grid for the 760 px form column and 300 px So far column, sticky footer above the phone bottom bar (re-recorded on develop 2946600c)"
+      },
+      {
+        "date": "2026-11-20",
+        "from": 23462,
+        "to": 23613,
+        "reason": "Picture preview dialog in the shared file row (#745): RecordFileRow opens JPEG, PNG and WebP files on receipts, document scans and issue photos in a Base UI dialog, full screen on a phone, with fr/en words for view, loading and load failure; +228 B initial JS, +151 B initial CSS and +1962 B all JS gzip, measured by CI on 094caab1 over develop a7e21245; under 5 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   },
   "web.initial-js-gzip": {
-    "ceiling": 285204,
+    "ceiling": 285432,
     "raises": [
       {
         "date": "2026-10-06",
@@ -683,6 +695,12 @@
         "from": 283840,
         "to": 285204,
         "reason": "Record pages share one frame (#662): fr/en words for the record header, status block sentences (waiting, rejected, cancelled, missing receipt, trip on the road or closed with gaps), Overview sections, context column and tabs, about 1.8 kB gzip in the always-loaded catalog after trimming duplicates and preset overlays; under 10 ms on a pilot phone at about 5 ms per kB (re-recorded on develop 677b3f7b)"
+      },
+      {
+        "date": "2026-11-20",
+        "from": 285204,
+        "to": 285432,
+        "reason": "Picture preview dialog in the shared file row (#745): RecordFileRow opens JPEG, PNG and WebP files on receipts, document scans and issue photos in a Base UI dialog, full screen on a phone, with fr/en words for view, loading and load failure; +228 B initial JS, +151 B initial CSS and +1962 B all JS gzip, measured by CI on 094caab1 over develop a7e21245; under 5 ms on a pilot phone at about 5 ms per kB"
       }
     ]
   }
