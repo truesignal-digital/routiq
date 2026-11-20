@@ -6,7 +6,7 @@ import { useMeContext } from "@/auth/me.js";
 import { EntryLinks, visibleEntryLinks } from "@/finance/EntryLinks.js";
 import { EntryStatusBadge } from "@/finance/EntryStatusBadge.js";
 import { useEntry } from "@/finance/useEntry.js";
-import { RecordFileRow } from "@/vehicle/panel/shared.js";
+import { RecordFileRow } from "@/components/record-file-row.js";
 import {
   formatDate,
   formatDateTime,
@@ -234,6 +234,7 @@ function ReceiptFileRow({ entryId, file }: { entryId: string; file: EntryEvidenc
   return (
     <RecordFileRow
       name={file.originalFileName ?? file.mimeType}
+      mimeType={file.mimeType}
       meta={t(`finance.entries.detail.evidenceVia.${file.via}`, {
         date: formatDateTime(file.attachedAt, i18n.language),
         name: file.attachedBy.displayName ?? t("history.actor.unknown"),

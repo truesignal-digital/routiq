@@ -20,9 +20,9 @@ import {
   PanelFooter,
   PanelLoading,
   PanelMissing,
-  RecordFileRow,
   useFormHost,
 } from "./shared.js";
+import { RecordFileRow } from "@/components/record-file-row.js";
 import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 
 /** This vehicle's signed share of the entry: its own posting lines, nothing else. */
@@ -280,6 +280,7 @@ function EvidenceFileRow({ entryId, file }: { entryId: string; file: EntryEviden
   return (
     <RecordFileRow
       name={file.originalFileName ?? file.mimeType}
+      mimeType={file.mimeType}
       meta={t(`vehicle.panel.evidenceVia.${file.via}`, {
         date: formatDateTime(file.attachedAt, i18n.language),
         name: file.attachedBy.displayName ?? t("history.actor.unknown"),

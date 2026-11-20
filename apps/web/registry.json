@@ -1113,6 +1113,27 @@
       ]
     },
     {
+      "name": "record-file-row",
+      "type": "registry:component",
+      "files": [
+        {
+          "path": "src/components/record-file-row.tsx",
+          "type": "registry:file",
+          "target": "components/record-file-row.tsx"
+        }
+      ],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "skeleton",
+        "error-message"
+      ],
+      "dependencies": [
+        "lucide-react",
+        "react-i18next"
+      ]
+    },
+    {
       "name": "record-number",
       "type": "registry:component",
       "files": [

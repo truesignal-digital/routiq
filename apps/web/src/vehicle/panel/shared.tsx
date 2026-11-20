@@ -1,13 +1,11 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Download, FileText, Hourglass, Lock, Paperclip, TriangleAlert } from "lucide-react";
+import { Hourglass, Lock, Paperclip, TriangleAlert } from "lucide-react";
 import type { FinancialEntryListItem } from "@routiq/contracts";
 import type { CommandFormBack } from "@/components/command-form.js";
-import { sessionStore } from "@/auth/store.js";
 import { LoadingState } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { SheetDescription, SheetFooter, SheetTitle } from "@/components/ui/sheet";
-import { errorMessage } from "@/lib/error-message.js";
 import { cn } from "@/lib/utils";
 import { useVehicle } from "../context.js";
 import type { RecordSteps } from "../flow.js";
@@ -161,51 +159,3 @@ export function EvidenceMark({
   );
 }
 
-/**
- * One file behind a record. It opens through the record-scoped route the host
- * names (entry evidence, a document's scan, an issue's photo): that route
- * checks the record is readable, the generic artifact route never serves it.
- */
-export function RecordFileRow({
-  name,
-  meta,
-  downloadPath,
-}: {
-  name: string;
-  meta?: string | undefined;
-  downloadPath: string;
-}) {
-  const { t, i18n } = useTranslation();
-  const [error, setError] = useState<string>();
-
-  async function open() {
-    setError(undefined);
-    const token = sessionStore.getToken();
-    const response = await fetch(downloadPath, {
-      headers: token === undefined ? {} : { authorization: `Bearer ${token}` },
-    });
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { error?: { code?: string } } | null;
-      setError(body?.error?.code ?? "READ_FAILED");
-      return;
-    }
-    const { url } = (await response.json()) as { url: string };
-    window.open(url, "_blank", "noopener");
-  }
-
-  return (
-    <li className="flex items-start justify-between gap-3 px-3 py-2.5">
-      <div className="flex min-w-0 gap-2">
-        <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{name}</p>
-          {meta !== undefined && <p className="text-xs text-muted-foreground">{meta}</p>}
-          {error !== undefined && <p className="text-xs text-destructive">{errorMessage(i18n, error)}</p>}
-        </div>
-      </div>
-      <Button variant="ghost" size="desktop-icon-sm" aria-label={t("vehicle.panel.openFile")} onClick={() => void open()}>
-        <Download aria-hidden />
-      </Button>
-    </li>
-  );
-}

@@ -8,7 +8,8 @@ import { useVehicle, type PanelForm } from "../context.js";
 import type { RecordSteps } from "../flow.js";
 import { may } from "../flow.js";
 import { DetailHeader, DetailSection, FactList, Note } from "../parts.js";
-import { PanelFooter, PanelLoading, PanelMissing, RecordFileRow, useFormHost } from "./shared.js";
+import { RecordFileRow } from "@/components/record-file-row.js";
+import { PanelFooter, PanelLoading, PanelMissing, useFormHost } from "./shared.js";
 
 /** The versions a document replaced, newest first, by following `supersedes`. */
 export function earlierVersions(doc: AssetDocument, all: readonly AssetDocument[]): AssetDocument[] {
@@ -105,6 +106,7 @@ function DocumentRecordBody({ id, form }: { id: string; form: PanelForm | undefi
                 <RecordFileRow
                   key={file.artifactId}
                   name={file.originalFileName ?? t("vehicle.documents.fileNumber", { number: index + 1 })}
+                  mimeType={file.mimeType}
                   downloadPath={`/v1/assets/${asset.id}/documents/${doc.id}/artifacts/${file.artifactId}/download-url`}
                 />
               ))}

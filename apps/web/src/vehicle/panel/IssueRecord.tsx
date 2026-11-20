@@ -15,7 +15,8 @@ import { RecordNumber } from "@/components/record-number";
 import { recordNumberText } from "@/lib/record-number.js";
 import { DetailHeader, DetailSection, FactList, LinkButton, Note, SafetyMark } from "../parts.js";
 import { useIssue } from "../useVehicle.js";
-import { PanelFooter, PanelLoading, PanelMissing, RecordFileRow, useFormHost } from "./shared.js";
+import { RecordFileRow } from "@/components/record-file-row.js";
+import { PanelFooter, PanelLoading, PanelMissing, useFormHost } from "./shared.js";
 import { RecordHistorySheet } from "@/components/record-history-sheet.js";
 
 const TITLE_MAX = 120;
@@ -124,6 +125,7 @@ export function IssueRecord({ id, form }: { id: string; form: PanelForm | undefi
                 <RecordFileRow
                   key={file.artifactId}
                   name={file.originalFileName ?? t("vehicle.panel.photoNumber", { number: index + 1 })}
+                  mimeType={file.mimeType}
                   downloadPath={`/v1/issues/${issue.id}/artifacts/${file.artifactId}/download-url`}
                 />
               ))}
