@@ -362,6 +362,9 @@ describe("header, phone bar and all-actions sheet, per role", () => {
     const review = within(sheet).getByRole("button", { name: /Review entry/ });
     expect((review as HTMLButtonElement).disabled).toBe(true);
     expect(review.textContent).toContain("Nothing waiting for review.");
+    // Finance records no reading, so the fuel line leaves the odometer out.
+    expect(within(sheet).getByText("Fuel paid for this vehicle.")).toBeTruthy();
+    expect(within(sheet).queryByText(/odometer/)).toBeNull();
     await user.type(within(sheet).getByRole("textbox", { name: "Search actions" }), "commission");
     await waitFor(() => expect(within(sheet).queryByRole("button", { name: /Review entry/ })).toBeNull());
     expect(within(sheet).getByText(/No action matches/)).toBeTruthy();

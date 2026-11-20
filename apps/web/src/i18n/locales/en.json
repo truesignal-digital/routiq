@@ -416,7 +416,7 @@
       },
       "km": {
         "all": "This month, km are known for every vehicle ({count, number}).",
-        "some": "This month, km are known for {known, number} of {total, number} vehicles: {missing, plural, one {# activity has} other {# activities have}} no km."
+        "some": "This month, km are known for {known, number} of {total, number} vehicles: {missing, plural, =0 {the others have no finished activity} one {# activity has no km} other {# activities have no km}}."
       },
       "board": {
         "title": "Fleet board",
@@ -2591,6 +2591,7 @@
       "lastReading": "{readingType, select, HOURS {Last reading: {value, number} h} other {Last reading: {value, number} km}}",
       "fuel": {
         "description": "Records the fuel expense, then the odometer if you enter it.",
+        "descriptionWithoutReading": "Records the fuel expense.",
         "when": "Date and time",
         "expenseStands": "The fuel expense is recorded. The odometer reading was not saved.",
         "readingSaved": "Odometer reading saved"
@@ -3214,7 +3215,8 @@
     },
     "actions": {
       "log-fuel": {
-        "description": "Fuel paid for this vehicle, with the odometer if you read it. The expense is saved first."
+        "description": "Fuel paid for this vehicle, with the odometer if you read it. The expense is saved first.",
+        "descriptionWithoutReading": "Fuel paid for this vehicle."
       },
       "record-expense": {
         "description": "Any cost for this vehicle. Above the threshold it waits for finance review."

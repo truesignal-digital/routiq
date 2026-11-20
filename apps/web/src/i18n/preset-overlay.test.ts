@@ -542,3 +542,60 @@ describe("applyPresetVocabulary", () => {
     );
   });
 });
+
+// French takes the singular for 0 ("0 camion sur 6"), and a document type's
+// gender is unknown, so no participle agrees with it.
+describe("French counts and document words", () => {
+  const fleets = [
+    [undefined, "véhicule", "activité", "aucune activité"],
+    ["TRUCKING", "camion", "trajet", "aucun trajet"],
+    ["PASSENGER_TRANSPORT", "véhicule", "voyage", "aucun voyage"],
+  ] as const;
+
+  for (const [preset, vehicle, trip, noTrip] of fleets) {
+    it(`keeps a count of 0 singular (${preset ?? "base"})`, () => {
+      const instance = freshInstance();
+      if (preset !== undefined) applyPresetVocabulary(instance, preset);
+      const t = (key: string, values: Record<string, unknown>) => instance.t(key, { lng: "fr", ...values });
+
+      expect(t("assets.overview.km.some", { known: 0, total: 6, missing: 2 })).toContain(`pour 0 ${vehicle} sur 6 :`);
+      expect(t("assets.overview.km.some", { known: 4, total: 6, missing: 2 })).toContain(`pour 4 ${vehicle}s sur 6 :`);
+      expect(t("assets.overview.summary.sentence", { total: 6, canDrive: 0 })).toBe(
+        `En état de rouler aujourd’hui : 0 ${vehicle} sur 6.`,
+      );
+      expect(t("assets.overview.summary.sentence", { total: 6, canDrive: 5 })).toBe(
+        `En état de rouler aujourd’hui : 5 ${vehicle}s sur 6.`,
+      );
+      expect(t("activities.overview.summary.sentence", { started: 3, closed: 0 })).toMatch(/ ; 0 clôturée?\.$/);
+      expect(
+        t("overview.summary.money.notEnoughTrips", { window: "lastMonth", month: "octobre", total: 5, closed: 0 }),
+      ).toContain(`${noTrip} sur 5 n’a été clôturé`);
+      expect(
+        t("overview.summary.money.notEnoughTrips", { window: "current", month: "novembre", total: 5, closed: 3 }),
+      ).toContain(`3 ${trip}s sur 5 sont clôturé`);
+    });
+  }
+
+  it("keeps the week columns and the to-do counts singular for 0 and 1", () => {
+    const instance = freshInstance();
+    const t = (key: string, values: Record<string, unknown>) => instance.t(key, { lng: "fr", ...values });
+
+    expect(t("activities.overview.weeks.column", { week: "3 nov.", started: 0, closed: 2 })).toBe(
+      "Semaine du 3 nov. : 0 démarrage, 2 clôtures",
+    );
+    expect(t("activities.overview.todo.noFuel", { count: 1 })).toBe("1 clôture sans carburant");
+    expect(t("activities.overview.todo.noKm", { count: 1 })).toBe("1 clôture sans km");
+  });
+
+  it("names an expired document without agreeing with its type", () => {
+    const instance = freshInstance();
+    const t = (key: string, values: Record<string, unknown>) => instance.t(key, { lng: "fr", ...values });
+
+    expect(t("dashboard.todo.rows.DOCUMENT_EXPIRED.title", { asset: "DLA-T-001", type: "Assurance" })).toBe(
+      "DLA-T-001 : Assurance, date d’expiration dépassée",
+    );
+    expect(t("vehicle.documents.expiredOn", { type: "Visite technique", date: "3 mai 2026" })).toBe(
+      "Visite technique : fin de validité le 3 mai 2026.",
+    );
+  });
+});

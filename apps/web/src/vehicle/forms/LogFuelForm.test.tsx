@@ -4,11 +4,13 @@ import {
   recordExpensePayload,
   recordMeterReadingPayload,
   type CommandWarningCode,
+  type Role,
 } from "@routiq/contracts";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { MeCtx, type MeContext } from "../../auth/me.js";
 import { sessionStore } from "../../auth/store.js";
 import type { CommandClient, SubmitResult } from "../../commands/client.js";
 import { i18n } from "../../i18n/index.js";
@@ -57,23 +59,45 @@ function committed(
   };
 }
 
-function renderForm(client: CommandClient, handlers = { onDone: vi.fn(), onDismiss: vi.fn() }) {
+function membership(role: Role): MeContext {
+  return {
+    workspaceId: "11111111-1111-4111-8111-111111111111",
+    principalId: "22222222-2222-4222-8222-222222222222",
+    principalType: "HUMAN",
+    membershipId: "33333333-3333-4333-8333-333333333333",
+    role,
+    branchScope: "ALL",
+    enabledModules: ["CORE", "ASSETS", "ACTIVITIES", "FINANCE"],
+    enabledPresets: ["TRUCKING"],
+    timezone: "Africa/Douala",
+    displayName: "Moussa Bello",
+    workspaceName: "Sotrafret",
+  };
+}
+
+function renderForm(
+  client: CommandClient,
+  handlers = { onDone: vi.fn(), onDismiss: vi.fn() },
+  role: Role = "DRIVER",
+) {
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <Sheet open>
-        <SheetContent>
-          <LogFuelForm
-            surface="panel"
-            assetId={ASSET_ID}
-            assetLabel="DLA-T-001 · Mercedes Actros"
-            branchCode="DLA"
-            lastReading={{ readingType: "ODOMETER", value: 412_000 }}
-            back={{ label: "DLA-T-001", onBack: vi.fn() }}
-            client={client}
-            {...handlers}
-          />
-        </SheetContent>
-      </Sheet>
+      <MeCtx.Provider value={membership(role)}>
+        <Sheet open>
+          <SheetContent>
+            <LogFuelForm
+              surface="panel"
+              assetId={ASSET_ID}
+              assetLabel="DLA-T-001 · Mercedes Actros"
+              branchCode="DLA"
+              lastReading={{ readingType: "ODOMETER", value: 412_000 }}
+              back={{ label: "DLA-T-001", onBack: vi.fn() }}
+              client={client}
+              {...handlers}
+            />
+          </SheetContent>
+        </Sheet>
+      </MeCtx.Provider>
     </QueryClientProvider>,
   );
   return handlers;
@@ -118,15 +142,17 @@ afterEach(() => {
 describeCommandForm("LogFuelForm", {
   command: { command: "record-expense", intent: "fuel" },
   render: ({ client, onDismiss }) => (
-    <LogFuelForm
-      surface="sheet"
-      assetId={ASSET_ID}
-      assetLabel="DLA-T-001 · Mercedes Actros"
-      branchCode="DLA"
-      lastReading={{ readingType: "ODOMETER", value: 412_000 }}
-      client={client}
-      onDismiss={onDismiss}
-    />
+    <MeCtx.Provider value={membership("DRIVER")}>
+      <LogFuelForm
+        surface="sheet"
+        assetId={ASSET_ID}
+        assetLabel="DLA-T-001 · Mercedes Actros"
+        branchCode="DLA"
+        lastReading={{ readingType: "ODOMETER", value: 412_000 }}
+        client={client}
+        onDismiss={onDismiss}
+      />
+    </MeCtx.Provider>
   ),
   opened: () => {
     expect(screen.getByText("DLA-T-001 · Mercedes Actros")).toBeTruthy();
@@ -292,6 +318,32 @@ describe("LogFuelForm", () => {
     expect(onDismiss).toHaveBeenCalledOnce();
     // The host still refreshes: a recorded expense is there to show.
     expect(onDone).toHaveBeenCalledOnce();
+  });
+
+  it("offers no odometer to a role the reading command refuses (FINANCE)", async () => {
+    const client = scriptedClient({ "record-expense": [committed("POSTED")] });
+    const { onDismiss } = renderForm(client, { onDone: vi.fn(), onDismiss: vi.fn() }, "FINANCE");
+
+    await screen.findByLabelText("Amount paid");
+    expect(screen.queryByLabelText("Reading")).toBeNull();
+    expect(screen.getByText("Records the fuel expense.")).toBeTruthy();
+    expect(screen.queryByText(/odometer/i)).toBeNull();
+
+    await fill({ amount: "45000" });
+    await userEvent.click(screen.getByRole("button", { name: "Save fuel" }));
+
+    await waitFor(() => expect(onDismiss).toHaveBeenCalledOnce());
+    expect(client.seen.map((submission) => submission.name)).toEqual(["record-expense"]);
+  });
+
+  it("shows the receipt photo without opening the optional details, last before the buttons", async () => {
+    renderForm(scriptedClient({}));
+
+    const receipt = await screen.findByText("Receipt photo");
+    expect(receipt.closest("[hidden]")).toBeNull();
+    const optional = document.querySelector('[data-slot="form-optional"]')!;
+    expect(optional.contains(receipt)).toBe(false);
+    expect(optional.compareDocumentPosition(receipt) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("sends no reading when the expense itself is refused", async () => {

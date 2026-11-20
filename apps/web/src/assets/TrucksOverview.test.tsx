@@ -129,10 +129,35 @@ describe("Trucks › Overview (#665)", () => {
     expect(linkOf("Grounded")).toBe("/assets/list?availability=GROUNDED");
     // Five tiles at most: with every module on, Attention gives its place to "on the road".
     expect(screen.queryByRole("link", { name: "Attention" })).toBeNull();
-    expect(linkOf("Documents due ≤ 30 days")).toBe("/assets/documents?expiry=DUE_30");
+    expect(linkOf("Expired, and due in the next 30 days")).toBe("/assets/documents");
     expect(linkOf("Idle 5+ days")).toBe("/assets/list?availability=IDLE");
     expect(await screen.findByText("First: VH005 · 15 October 2026")).toBeTruthy();
     expect(screen.getByText("VH012 · never")).toBeTruthy();
+  });
+
+  it("counts on the documents tile the expired papers the list under it shows", async () => {
+    const expired = (id: string, assetCode: string, expiresAt: string, daysLeft: number) => ({
+      code: "DOCUMENT_EXPIRED",
+      severity: "CRITICAL",
+      link: { kind: "document", id, number: null },
+      asset: { id: `a-${id}`, assetCode },
+      branchId: null,
+      since: `${expiresAt}T00:00:00.000Z`,
+      params: { expiresAt, daysLeft, documentTypeLabelFr: "Assurance", documentTypeLabelEn: "Insurance" },
+    });
+    const todo = BODIES.find(([prefix]) => prefix === "/v1/todo")!;
+    const empty = todo[1];
+    todo[1] = { businessDate: "2026-10-09", scope, rows: [expired("d1", "VH001", "2026-10-01", -8), expired("d2", "VH002", "2026-09-20", -19)], totalCount: 2 };
+    try {
+      renderAs("ADMIN");
+      expect(await screen.findByText("VH002 · Insurance")).toBeTruthy();
+      expect(linkOf("Expired, and due in the next 30 days")).toBe("/assets/documents");
+      const value = () => document.querySelector('[data-metric="documents-due"] [data-slot="metric-value"]')?.textContent;
+      await waitFor(() => expect(value()).toBe("3"));
+      expect(screen.getByText("First: VH002 · 20 September 2026")).toBeTruthy();
+    } finally {
+      todo[1] = empty;
+    }
   });
 
   it("lists the papers due with one button each, and says services by km are not counted", async () => {
@@ -198,6 +223,25 @@ describe("Trucks › Overview (#665)", () => {
     const { container } = renderAs("ADMIN");
     await waitFor(() => expect(container.querySelector("[data-metric=on-the-road]")?.textContent).toContain("120 days not recorded"));
     expect(container.querySelector("[data-metric=on-the-road] [data-slot=metric-value]")?.textContent).toBe("Not recorded");
+    BODIES.splice(BODIES.findIndex(([prefix]) => prefix === "/v1/assets/usage"), 1, ["/v1/assets/usage", usage]);
+  });
+
+  it("says the others have no finished activity when no km is known and none is missing", async () => {
+    const usage = testUsage();
+    BODIES.splice(BODIES.findIndex(([prefix]) => prefix === "/v1/assets/usage"), 1, [
+      "/v1/assets/usage",
+      {
+        ...usage,
+        vehicles: usage.vehicles.map((vehicle) => ({ ...vehicle, period: { km: 0, known: true, tripsClosed: 0, tripsFromOdometer: 0, tripsWithoutKm: 0 } })),
+        km: { ...usage.km, period: { vehicles: 4, knownVehicles: 0, knownKm: 0 } },
+      },
+    ]);
+    const { container } = renderAs("ADMIN");
+    await waitFor(() =>
+      expect(container.querySelector("[data-slot=km-coverage]")?.textContent).toBe(
+        "This month, km are known for 0 of 4 vehicles: the others have no finished activity.",
+      ),
+    );
     BODIES.splice(BODIES.findIndex(([prefix]) => prefix === "/v1/assets/usage"), 1, ["/v1/assets/usage", usage]);
   });
 

@@ -709,6 +709,23 @@ describe("GET /v1/assets/:assetId header facts", () => {
     });
   });
 
+  it("shows the reading recorded last when two share the same observed minute", async () => {
+    const assetId = await seedAsset(ctx.app, admin.token);
+    const reading = (readingId: string, value: number) =>
+      api.ok(driver.token, "record-meter-reading", {
+        readingId,
+        assetId,
+        readingType: "ODOMETER",
+        value,
+        observedAt: "2026-08-03T08:00:00Z",
+      });
+    // The earlier entry gets the larger id, so an id tie-break picks it.
+    const [smaller, larger] = [randomUUID(), randomUUID()].sort() as [string, string];
+    await reading(larger, 12_500);
+    await reading(smaller, 12_620);
+    expect((await detail(admin.token, assetId)).lastReading).toMatchObject({ value: 12_620 });
+  });
+
   it("falls back to hours for plant that has no odometer", async () => {
     const assetId = await seedAsset(ctx.app, admin.token);
     await api.ok(driver.token, "record-meter-reading", {

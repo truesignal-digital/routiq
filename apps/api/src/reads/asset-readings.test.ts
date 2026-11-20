@@ -136,6 +136,38 @@ describe("GET /v1/assets/:assetId/readings", () => {
     expect(times).toEqual([...times].sort().reverse());
   });
 
+  it("lists same-instant readings newest-recorded first, across pages", async () => {
+    const tiedAsset = await seedAsset(ctx.app, admin.token, { assetCode: "RD-TIE" });
+    // Recorded in this order; ids ascend with it so the id tie-break lists the oldest first.
+    // Random ids: test files share one database, so a fixed id would collide.
+    const ids = [randomUUID(), randomUUID(), randomUUID()].sort();
+    const recorded = [
+      [ids[0]!, 12_500],
+      [ids[1]!, 12_560],
+      [ids[2]!, 12_620],
+    ] as const;
+    for (const [readingId, value] of recorded) {
+      await api.ok(admin.token, "record-meter-reading", {
+        readingId,
+        assetId: tiedAsset,
+        readingType: "ODOMETER",
+        value,
+        observedAt: "2026-08-03T08:00:00Z",
+      });
+    }
+    const values: number[] = [];
+    let cursor: string | null = null;
+    do {
+      const query: string = `?limit=1${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`;
+      const response = await api.get(admin.token, `/v1/assets/${tiedAsset}/readings${query}`);
+      expect(response.status).toBe(200);
+      const body = assetReadingsResponse.parse(response.body);
+      values.push(...body.items.map((item) => item.value));
+      cursor = body.nextCursor;
+    } while (cursor !== null);
+    expect(values).toEqual([12_620, 12_560, 12_500]);
+  });
+
   it("lists a superseded reading, flagged with its correction and reason", async () => {
     const body = await page(admin.token);
     expect(body.items.find((item) => item.id === typoId)).toMatchObject({

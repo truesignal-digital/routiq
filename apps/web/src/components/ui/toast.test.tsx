@@ -55,7 +55,7 @@ describe("toast surface", () => {
     await i18n.changeLanguage("en");
   });
 
-  it("anchors the viewport bottom-right", () => {
+  it("anchors the viewport at the top on a phone and bottom-right from md up", () => {
     render(<Toaster />);
 
     act(() => {
@@ -66,7 +66,11 @@ describe("toast surface", () => {
       '[data-slot="toast-viewport"]',
     );
     expect(viewport).not.toBeNull();
-    expect(viewport!.className).toContain("bottom-4");
+    // A phone's bottom edge belongs to the bottom bar and the floating action bars.
+    expect(viewport!.className).toContain("top-[calc(0.5rem+env(safe-area-inset-top))]");
+    expect(viewport!.className).not.toMatch(/(^|\s)bottom-/);
+    expect(viewport!.className).toContain("md:top-auto");
+    expect(viewport!.className).toContain("md:bottom-4");
     expect(viewport!.className).toContain("sm:right-4");
     expect(viewport!.className).toContain("sm:left-auto");
   });

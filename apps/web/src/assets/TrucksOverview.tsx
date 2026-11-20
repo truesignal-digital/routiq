@@ -76,6 +76,7 @@ export function TrucksOverview() {
       overview: overviewQuery.data,
       summary: summaryQuery.data,
       comingUp: documentsShown ? comingUpQuery.data : null,
+      documents: todoQuery.data === undefined || comingUpQuery.data === undefined ? undefined : documentRows,
       usage: usageQuery.data,
       groundingCounted,
       t,
@@ -182,6 +183,7 @@ export function overviewTiles({
   overview,
   summary,
   comingUp,
+  documents,
   usage,
   groundingCounted,
   t,
@@ -191,6 +193,8 @@ export function overviewTiles({
   summary: AssetSummary | undefined;
   /** Null when this viewer gets no Documents tab. */
   comingUp: ComingUpResponse | undefined | null;
+  /** The rows the documents card lists (expired, then due), undefined while either read loads. */
+  documents?: FleetDocumentRow[] | undefined;
   /** The km and daily-status read; its board days give "on the road". */
   usage?: FleetUsageResponse | undefined;
   groundingCounted: boolean;
@@ -236,13 +240,13 @@ export function overviewTiles({
   // Trips off: no day can be on the road, so the tile goes rather than reading 0 %.
   if (usage === undefined || usage.trips !== null) tiles.push(onTheRoadTile(usage, t, language));
   if (comingUp !== null) {
-    const due = comingUp?.rows.filter((row) => row.code === "DOCUMENT_DUE") ?? [];
-    const first = due[0];
+    // The same rows as the card under it: expired papers count too.
+    const first = documents?.[0];
     tiles.push({
       id: "documents-due",
-      label: t("assets.overview.tiles.documentsDue", { days: FLEET_DOCUMENT_WINDOW_DAYS }),
-      value: comingUp === undefined ? null : String(due.length),
-      ...(comingUp === undefined
+      label: t("assets.overview.due.window", { days: FLEET_DOCUMENT_WINDOW_DAYS }),
+      value: documents === undefined ? null : String(documents.length),
+      ...(documents === undefined
         ? {}
         : {
             hint:
@@ -250,10 +254,10 @@ export function overviewTiles({
                 ? t("assets.overview.tiles.documentsDueNone")
                 : t("assets.overview.tiles.documentsDueFirst", {
                     code: first.asset?.assetCode ?? "",
-                    date: formatDate(first.dueDate, language),
+                    date: formatDate(first.expiresAt, language),
                   }),
           }),
-      link: { to: "/assets/documents", search: { expiry: "DUE_30" } },
+      link: { to: "/assets/documents" },
     });
   }
   if (overview === undefined || overview.idle !== null) {

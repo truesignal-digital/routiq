@@ -14,8 +14,10 @@ import { ChoiceField, FileField, MoneyField, ReadingField, TextField } from "@/c
 import { FormGroup, FormLayout, FormOptional } from "@/components/form/form-layout.js";
 import { useCommandForm, type CommandFormSent } from "@/components/use-command-form.js";
 import { localToIso, nowLocal } from "../../activities/local-time.js";
+import { canRecordReadings } from "../../activities/permissions.js";
 import type { LastReading } from "../../activities/ReadingForm.js";
 import { PinnedAssetField } from "../../assets/PinnedAssetField.js";
+import { useMeContext } from "../../auth/me.js";
 import { useActiveSession } from "../../auth/store.js";
 import { commandClient, type CommandClient } from "../../commands/instance.js";
 import { createCommandIntent, type CommandIntent } from "../../commands/intent.js";
@@ -76,6 +78,9 @@ export function LogFuelForm({
   const label = useCommandLabel();
   const queryClient = useQueryClient();
   const session = useActiveSession();
+  const me = useMeContext();
+  // A role the reading command refuses (FINANCE) is not offered the field.
+  const withReading = canRecordReadings(me?.role, me?.enabledModules);
 
   // Both ids are minted once per opening, so any retry replays rather than
   // booking a second fill-up or a second reading.
@@ -169,7 +174,7 @@ export function LogFuelForm({
       form={fuel}
       surface={surface}
       title={label({ command: "record-expense", intent: "fuel" })}
-      description={t("vehicle.forms.fuel.description")}
+      description={t(withReading ? "vehicle.forms.fuel.description" : "vehicle.forms.fuel.descriptionWithoutReading")}
       hint={t("vehicle.forms.logFuel.hint")}
       pinned={<PinnedAssetField assetId={assetId} label={assetLabel} />}
       back={back}
@@ -195,19 +200,23 @@ export function LogFuelForm({
         />
         <DateTimeField name="at" label={t("vehicle.forms.logFuel.when")} disabled={expenseLocked} />
       </FormGroup>
-      <FormGroup title={t("form.group.odometer")}>
-        <ReadingField
-          name="odometer"
-          label={t("vehicle.forms.logFuel.odometer")}
-          readingType="ODOMETER"
-          last={odometerLast}
-        />
-      </FormGroup>
+      {withReading && (
+        <FormGroup title={t("form.group.odometer")}>
+          <ReadingField
+            name="odometer"
+            label={t("vehicle.forms.logFuel.odometer")}
+            readingType="ODOMETER"
+            last={odometerLast}
+          />
+        </FormGroup>
+      )}
       {!expenseLocked && (
-        <FormOptional>
-          <TextField name="station" label={t("vehicle.forms.logFuel.station")} maxLength={160} />
+        <>
+          <FormOptional>
+            <TextField name="station" label={t("vehicle.forms.logFuel.station")} maxLength={160} />
+          </FormOptional>
           <FileField name="receipt" label={t("vehicle.forms.logFuel.receipt")} camera />
-        </FormOptional>
+        </>
       )}
     </FormLayout>
   );
