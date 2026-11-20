@@ -1,4 +1,10 @@
-import { isModuleOn, MODULE_CODES, type ModuleCode, type Role } from "@routiq/contracts";
+import {
+  isModuleOn,
+  MODULE_CODES,
+  type ModuleCode,
+  type ReadErrorCode,
+  type Role,
+} from "@routiq/contracts";
 import { eq } from "drizzle-orm";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { AuthContext } from "../auth/types.js";
@@ -9,7 +15,8 @@ type RefusalCode =
   | "VALIDATION_FAILED"
   | "ROLE_FORBIDDEN"
   | "MODULE_DISABLED"
-  | "REFERENCE_NOT_FOUND";
+  | "REFERENCE_NOT_FOUND"
+  | ReadErrorCode;
 
 /**
  * A read that answers with a stable error code instead of data. Thrown from

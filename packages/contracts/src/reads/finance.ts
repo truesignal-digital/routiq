@@ -67,6 +67,18 @@ export const financialEntryFilters = z.object({
   view: z.enum(["events", "books"]).optional(),
 });
 
+/**
+ * `GET /v1/finance/entries/export` (#429): the list's filters, without the
+ * view (the file holds both), and the language its headers are written in.
+ */
+export const financialEntryExportQuery = financialEntryFilters.omit({ view: true }).extend({
+  lang: z.enum(["fr", "en"]).optional(),
+});
+export type FinancialEntryExportQuery = z.infer<typeof financialEntryExportQuery>;
+
+/** Above this many rows the export refuses with EXPORT_TOO_LARGE: narrow the filters. */
+export const ENTRY_EXPORT_ROW_LIMIT = 50_000;
+
 /** The cancellation of an original entry, as its line in a money list names it (#427). */
 export const entryCancellation = z.object({
   entryId: z.uuid(),

@@ -1,6 +1,7 @@
 import {
   AUTH_ERROR_CODES,
   COMMAND_ERROR_CODES,
+  READ_ERROR_CODES,
   VALIDATION_ERROR_CODES,
 } from "@routiq/contracts";
 import { describe, expect, it } from "vitest";
@@ -14,6 +15,7 @@ const ALL_CODES = [
   ...AUTH_ERROR_CODES,
   ...VALIDATION_ERROR_CODES,
   ...COMMAND_ERROR_CODES,
+  ...READ_ERROR_CODES,
   ...CLIENT_CODES,
 ];
 

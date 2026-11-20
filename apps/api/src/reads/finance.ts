@@ -11,7 +11,7 @@ import {
   type ListSort,
 } from "@routiq/contracts";
 import { entryEvidenceState } from "@routiq/domain";
-import { and, asc, desc, eq, exists, gte, inArray, lt, not, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, not, sql, type SQL } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { RequireAuth } from "../auth/plugin.js";
@@ -62,6 +62,7 @@ import {
   foldedCancellationSql,
   toEntryCancellation,
 } from "./entry-cancellation.js";
+import type { AuthContext } from "../auth/types.js";
 import { canReadEntry, readableEntrySql } from "./money-scope.js";
 import { sendReadFailure } from "./read-gate.js";
 import { serializeMinor } from "./serialize-minor.js";
@@ -182,6 +183,53 @@ export function monthBounds(month: string): { from: string; to: string } {
     from: `${month}-01`,
     to: `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`,
   };
+}
+
+export type EntryFilters = Omit<z.infer<typeof financialEntryFilters>, "view">;
+
+/**
+ * The rows `/v1/finance/entries` lists for these filters, before folding and
+ * paging: the caller's workspace, branch and money scope (#264), then each
+ * filter. Reads `postingPeriods` as the list joins it. The Excel export (#429)
+ * reads through this too, so the file and the list cannot disagree.
+ */
+export function entryFilterConditions(auth: AuthContext, filters: EntryFilters): SQL[] {
+  const { status, direction, periodCode, economicMonth, evidence, assetId, branchId } = filters;
+  const conditions: SQL[] = [readableEntrySql(auth)];
+  if (branchId) {
+    conditions.push(eq(financialEntries.branchId, branchId));
+  }
+  if (status === "LEDGER") {
+    conditions.push(inArray(financialEntries.status, [...ledgerEntryStatuses]));
+  } else if (status) {
+    conditions.push(eq(financialEntries.status, status));
+  }
+  if (direction) {
+    conditions.push(eq(financialEntries.direction, direction));
+  }
+  if (periodCode) {
+    conditions.push(eq(postingPeriods.periodCode, periodCode));
+  }
+  if (economicMonth) {
+    const { from, to } = monthBounds(economicMonth);
+    conditions.push(gte(financialEntries.economicDate, from));
+    conditions.push(lt(financialEntries.economicDate, to));
+  }
+  if (evidence === "MISSING") {
+    conditions.push(entryEvidenceMissingSql());
+  }
+  // EXISTS, not a join: an entry may carry several postings on the same
+  // asset, and duplicated rows would corrupt the keyset page size. Correlated
+  // on workspace_id as well as the entry id, so it only sees the caller's tenant.
+  if (assetId) {
+    conditions.push(sql`exists (
+      select 1 from ${financialPostings}
+      where ${financialPostings.workspaceId} = ${financialEntries.workspaceId}
+        and ${financialPostings.financialEntryId} = ${financialEntries.id}
+        and ${financialPostings.assetId} = ${assetId}
+    )`);
+  }
+  return conditions;
 }
 
 /**
@@ -487,66 +535,20 @@ export function registerFinanceReadRoutes(
             return { error: "VALIDATION_FAILED" };
           }
 
-          // Workspace, branch scope and the caller's money scope (#264).
-          const conditions: SQL[] = [readableEntrySql(auth)];
-
-          // Also apply branchId filter if provided (works for both ALL and scoped)
-          if (branchId) {
-            conditions.push(eq(financialEntries.branchId, branchId));
-          }
-
-          if (status === "LEDGER") {
-            conditions.push(inArray(financialEntries.status, [...ledgerEntryStatuses]));
-          } else if (status) {
-            conditions.push(eq(financialEntries.status, status));
-          }
-          if (direction) {
-            conditions.push(eq(financialEntries.direction, direction));
-          }
-
-          if (periodCode) {
-            conditions.push(eq(postingPeriods.periodCode, periodCode));
-          }
-          if (economicMonth) {
-            const { from, to } = monthBounds(economicMonth);
-            conditions.push(gte(financialEntries.economicDate, from));
-            conditions.push(lt(financialEntries.economicDate, to));
-          }
-          if (evidence === "MISSING") {
-            conditions.push(entryEvidenceMissingSql());
-          }
+          const conditions = entryFilterConditions(auth, {
+            status,
+            direction,
+            periodCode,
+            economicMonth,
+            evidence,
+            assetId,
+            branchId,
+          });
           // One line per event (#427): a cancellation in its original's window
           // folds into the original's line. A WHERE condition, so the keyset
           // page size stays exact.
           if (view === "events") {
             conditions.push(not(foldedCancellationSql(auth, periodCode)));
-          }
-
-          // EXISTS, not a join: an entry may carry several postings on the same
-          // asset, and duplicated rows would corrupt the keyset page size. The
-          // subquery is correlated on workspace_id as well as the entry id, so
-          // it can only ever see postings inside the caller's tenant.
-          if (assetId) {
-            conditions.push(
-              exists(
-                tx
-                  .select({ one: sql`1` })
-                  .from(financialPostings)
-                  .where(
-                    and(
-                      eq(
-                        financialPostings.workspaceId,
-                        financialEntries.workspaceId,
-                      ),
-                      eq(
-                        financialPostings.financialEntryId,
-                        financialEntries.id,
-                      ),
-                      eq(financialPostings.assetId, assetId),
-                    ),
-                  ),
-              ),
-            );
           }
 
           if (decodedCursor) {

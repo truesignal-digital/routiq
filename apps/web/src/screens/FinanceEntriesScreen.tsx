@@ -19,6 +19,7 @@ import { useMeContext } from "@/auth/me.js";
 import { assetDisplayName } from "@/assets/display.js";
 import { useAssets } from "@/assets/useAssets.js";
 import { EntrySummary } from "@/finance/EntrySummary.js";
+import { ExportEntriesButton } from "@/finance/ExportEntriesButton.js";
 import { ReverseEntryForm } from "@/finance/EntryDecisionForms.js";
 import { RecordAgainSheet } from "@/finance/RecordAgainSheet.js";
 import {
@@ -34,9 +35,10 @@ import {
   useFinanceEntryColumns,
   type FinanceEntryColumnId,
 } from "@/finance/entryColumns.js";
-import { useEntries } from "@/finance/useEntries.js";
+import { useEntries, type UseEntriesParams } from "@/finance/useEntries.js";
 import { formatDate, formatMonth } from "@/lib/format.js";
 import { BranchScopedEmptyState, BranchScopeLine } from "@/shell/BranchScopeNotices.js";
+import { useBranchScopedParams } from "@/shell/branch-scope.js";
 
 const STATUS_OPTIONS = financialEntryFilters.shape.status.unwrap().options;
 const DIRECTION_OPTIONS = financialEntryFilters.shape.direction.unwrap().options;
@@ -151,16 +153,21 @@ function FinanceEntriesContent() {
 
   // `sort` rides in the query key, so reordering starts a fresh cursor rather
   // than stitching pages from two different orders together.
-  const entriesQuery = useEntries({
+  const listFilters: Omit<UseEntriesParams, "view" | "sort"> = {
     ...(filterValues["status"] ? { status: filterValues["status"] } : {}),
     ...(filterValues["direction"] ? { direction: filterValues["direction"] } : {}),
     ...(periodCode ? { periodCode } : {}),
     ...(filterValues["economicMonth"] ? { economicMonth: filterValues["economicMonth"] } : {}),
     ...(filterValues["evidence"] === "MISSING" ? { evidence: "MISSING" as const } : {}),
     ...(filterValues["assetId"] ? { assetId: filterValues["assetId"] } : {}),
+  };
+  const entriesQuery = useEntries({
+    ...listFilters,
     ...(books ? { view: "books" as const } : {}),
     ...(sort ? { sort } : {}),
   });
+  // The file holds both views (Entries and Books sheets), so only the filters ride along.
+  const exportParams = useBranchScopedParams(listFilters);
 
   const assetsQuery = useAssets();
   const {
@@ -266,8 +273,13 @@ function FinanceEntriesContent() {
             },
           ]
         : []),
+      {
+        columnId: "export",
+        type: "custom" as const,
+        render: <ExportEntriesButton params={exportParams} />,
+      },
     ],
-    [assetOptions, t, filterValues, summary?.missingReceipt.count, canReadBooks, books],
+    [assetOptions, t, filterValues, summary?.missingReceipt.count, canReadBooks, books, exportParams],
   );
 
   const allEntries = entriesQuery.data?.pages.flatMap((page) => page.entries) ?? [];

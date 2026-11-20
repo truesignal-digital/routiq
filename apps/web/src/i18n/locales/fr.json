@@ -211,7 +211,8 @@
     "NOTE_NOT_FROM_DIRECTION": "Seules les notes de la Direction attendent d'être marquées comme vues.",
     "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE": "Vous avez écrit cette note : elle attend que quelqu'un d'autre la marque comme vue.",
     "DRIVER_INELIGIBLE": "Cette personne ne peut pas conduire cette activité : elle n'est plus active, ou son poste habituel n'est pas chauffeur.",
-    "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "Le montant enregistré directement doit rester inférieur au montant jusqu'auquel la Finance approuve."
+    "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "Le montant enregistré directement doit rester inférieur au montant jusqu'auquel la Finance approuve.",
+    "EXPORT_TOO_LARGE": "Trop de lignes pour un seul fichier. Choisissez un mois ou ajoutez un filtre."
   },
   "assets": {
     "notify": {
@@ -928,6 +929,10 @@
         "empty": "Aucun véhicule n'a à la fois des km et du carburant enregistrés sur la période.",
         "open": "Voir tous les véhicules"
       }
+    },
+    "export": {
+      "button": "Exporter vers Excel",
+      "preparing": "Préparation du fichier…"
     }
   },
   "common": {

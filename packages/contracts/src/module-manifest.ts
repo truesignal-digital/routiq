@@ -108,6 +108,7 @@ export const MODULE_MANIFESTS: readonly ModuleManifest[] = [
       "/v1/finance/approvals",
       "/v1/finance/entries",
       "/v1/finance/entries/:entryId",
+      "/v1/finance/entries/export",
       "/v1/finance/overview",
       "/v1/finance/periods",
       "/v1/finance/summary",

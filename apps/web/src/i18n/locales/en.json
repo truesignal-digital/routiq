@@ -211,7 +211,8 @@
     "NOTE_NOT_FROM_DIRECTION": "Only notes from the Director wait to be marked as seen.",
     "NOTE_AUTHOR_CANNOT_ACKNOWLEDGE": "You wrote this note: it waits for someone else to mark it as seen.",
     "DRIVER_INELIGIBLE": "This person cannot drive this activity: they are no longer active, or their usual job is not driver.",
-    "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "The amount that posts directly must stay below the amount Finance approves up to."
+    "RECORDING_THRESHOLD_NOT_BELOW_CEILING": "The amount that posts directly must stay below the amount Finance approves up to.",
+    "EXPORT_TOO_LARGE": "Too many rows for one file. Pick a month or add a filter."
   },
   "assets": {
     "notify": {
@@ -928,6 +929,10 @@
         "empty": "No vehicle has both km and fuel recorded in this period.",
         "open": "See all vehicles"
       }
+    },
+    "export": {
+      "button": "Export to Excel",
+      "preparing": "Preparing the file…"
     }
   },
   "common": {
