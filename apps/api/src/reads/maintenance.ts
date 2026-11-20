@@ -124,14 +124,6 @@ function workOrderAmounts(
   };
 }
 
-/** Statuses in which a completion stands, so its declarer is a live maker. */
-const COMPLETION_DECLARED = new Set(["COMPLETION_SUBMITTED", "COMPLETED"]);
-
-/**
- * Who declared each order complete, for the orders whose completion stands. A
- * completion sent back returns the order to APPROVED, and its old declarer is
- * nobody's maker until the work is declared again.
- */
 /** Who refused each REJECTED order's spend (#746). */
 async function refusersOf(
   tx: TenantTx,
@@ -147,6 +139,14 @@ async function refusersOf(
   );
 }
 
+/** Statuses in which a completion stands, so its declarer is a live maker. */
+const COMPLETION_DECLARED = new Set(["COMPLETION_SUBMITTED", "COMPLETED"]);
+
+/**
+ * Who declared each order complete, for the orders whose completion stands. A
+ * completion sent back returns the order to APPROVED, and its old declarer is
+ * nobody's maker until the work is declared again.
+ */
 async function completersOf(
   tx: TenantTx,
   workspaceId: string,
