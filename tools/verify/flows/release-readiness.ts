@@ -63,8 +63,8 @@ async function completeTheRepair(ctx: DriveContext) {
   const form = page.getByRole("dialog").last();
   await form.waitFor();
   await form.getByLabel(t("Compte rendu", "Work summary")).fill("Brake lines bled, pressure sensor replaced");
-  const noCost = form.getByRole("radio", { name: new RegExp(t("Aucun coût", "No cost"), "i") });
-  if ((await noCost.count()) > 0) await noCost.first().check();
+  const noCost = form.getByRole("button", { name: t("Aucun coût", "No cost"), exact: true });
+  if ((await noCost.count()) > 0) await noCost.first().click();
   await form.getByRole("button", { name: t("Terminer les travaux", "Complete work"), exact: true }).click();
   await quiet();
 
@@ -108,7 +108,8 @@ async function releaseLocked(ctx: DriveContext, assetId: string) {
   const release = status.getByRole("button", { name: t("Remettre en service", "Release to service"), exact: true });
   await release.waitFor();
   if (!(await release.isDisabled())) throw new Error("Release to service is offered while the steering problem is open");
-  const reason = status.getByText(STEERING, { exact: false });
+  // The header sentence and the release hint both name it now.
+  const reason = status.getByText(STEERING, { exact: false }).first();
   await reason.waitFor({ timeout: 5_000 }).catch(() => {
     throw new Error("the locked release does not name the open steering problem");
   });
@@ -138,7 +139,7 @@ async function approverHint(ctx: DriveContext) {
   const hint = form.getByText(new RegExp(t("attend la Finance", "waits for Finance"))).first();
   await hint.waitFor();
   const both = await hint.textContent();
-  if (!both?.includes(t("la Direction", "Direction"))) throw new Error(`the hint names one band only: ${both}`);
+  if (!both?.includes(t("la Direction", "the Director"))) throw new Error(`the hint names one band only: ${both}`);
   await settle(ctx);
   await shot("hint-bands", { caption: "Before an amount is typed, the hint names both approval bands", highlight: hint });
 
@@ -171,7 +172,8 @@ async function rejectDialog(ctx: DriveContext) {
   await (await openSidebar(page)).getByRole("link", { name: t("Argent", "Money") }).click();
   await page.getByRole("heading", { level: 1, name: t("Argent", "Money") }).waitFor();
   await quiet();
-  await page.getByRole("button", { name: t("En attente de votre approbation", "Waiting for your approval"), exact: true }).click();
+  // Money opens on its Overview (#664); the queue is the To approve tab.
+  await page.locator("[data-slot='module-page-tabs']").getByRole("tab", { name: new RegExp(`^${t("À approuver", "To approve")}`) }).click();
   const row = page.locator("tr, [data-slot='data-table-row']").filter({ hasText: entry.entryNumber, visible: true });
   await row.waitFor();
   await quiet();
